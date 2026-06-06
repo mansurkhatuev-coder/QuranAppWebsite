@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Коран и Азкары — чтение Корана, азкары, время намаза и прослушивание с несколькими переводами. Скачайте для Android и iOS."
+    />
+    <title>Коран и Азкары — скачать приложение</title>
+    <link rel="icon" href="assets/icon.png" type="image/png" />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="site-header container">
+      <img class="app-icon" src="assets/icon.png" width="96" height="96" alt="Иконка приложения Коран и Азкары" />
+      <h1 class="app-title">Коран и Азкары</h1>
+      <p class="app-tagline">Чтение, азкары, намаз и прослушивание — спокойно и без лишнего</p>
+    </header>
+
+    <main class="hero container">
+      <section class="card">
+        <ul class="features">
+          <li>Чтение Корана с переводами и закладками</li>
+          <li>Азкары и утренние/вечерние поминания</li>
+          <li>Время намаза по вашему местоположению</li>
+          <li>Режим прослушивания с офлайн-озвучкой</li>
+        </ul>
+
+        <div class="download-section">
+          <h2>Скачать приложение</h2>
+          <div class="download-buttons">
+            <a
+              id="btn-rustore"
+              class="btn btn-primary btn-disabled"
+              aria-disabled="true"
+              rel="noopener noreferrer"
+            >
+              RuStore
+            </a>
+            <a
+              id="btn-apk"
+              class="btn btn-secondary btn-disabled"
+              aria-disabled="true"
+              rel="noopener noreferrer"
+            >
+              Скачать APK
+            </a>
+            <a
+              id="btn-appstore"
+              class="btn btn-secondary btn-disabled"
+              aria-disabled="true"
+            >
+              App Store
+              <span class="btn-badge">Скоро</span>
+            </a>
+          </div>
+          <p class="apk-note">
+            При установке APK вне магазина разрешите установку из неизвестных источников в настройках Android.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer container">
+      <nav class="footer-links" aria-label="Дополнительные страницы">
+        <a href="privacy.html">Политика конфиденциальности</a>
+        <a href="support.html">Поддержка</a>
+      </nav>
+      <p>© <span id="copyright-year"></span> Коран и Азкары</p>
+    </footer>
+
+    <script>
+      document.getElementById('copyright-year').textContent = String(new Date().getFullYear());
+    </script>
+    <script src="links.js"></script>
+    <script src="site.js"></script>
+  </body>
+</html>

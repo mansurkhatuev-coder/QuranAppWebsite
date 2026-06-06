@@ -1,0 +1,9 @@
+{
+  "rustore": "https://www.rustore.ru/catalog/app/XXXXXXXX",
+  "apk": "https://disk.yandex.ru/d/XXXXXXXX",
+  "appStore": "",
+  "supportEmail": "you@example.com",
+  "supportTelegram": "https://t.me/your_username",
+  "appVersion": "1.0.3",
+  "appPackage": "com.sheyhmansur.quranapp"
+}
