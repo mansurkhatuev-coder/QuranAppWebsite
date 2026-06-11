@@ -3,6 +3,14 @@
    Colors from constants/theme.ts + premium-floating-tab-bar
    ============================================================ */
 
+@font-face {
+  font-family: 'Kitab';
+  src: url('assets/fonts/Kitab-Regular.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
 .app-screen {
   --app-bg: #071610;
   --app-surface: #162d22;
@@ -254,13 +262,14 @@
 }
 
 .app-arabic {
-  font-family: var(--font-arabic);
+  font-family: 'Kitab', var(--font-arabic);
   direction: rtl;
   text-align: right;
-  font-size: 1.05rem;
-  line-height: 1.85;
+  font-size: 1.2rem;
+  line-height: 2;
   color: var(--app-text);
   margin: 0 0 0.45rem;
+  font-feature-settings: 'liga' 1;
 }
 
 .app-translation {
