@@ -536,35 +536,104 @@
   background: rgba(44, 33, 24, 0.13);
 }
 
-/* ---- Full mushaf page ---- */
+/* ---- Full mushaf page (matches mushaf-screen-content) ---- */
 
 .phone--mushaf {
   width: 290px;
 }
 
-.mushaf-sheet {
+.mushaf-viewport {
   flex: 1;
   min-height: 0;
   display: flex;
   flex-direction: column;
-  padding: 0.35rem 0.45rem 0.3rem;
+  padding: 0.28rem 0.42rem 0.22rem;
   overflow: hidden;
 }
 
-.mushaf-sura-band {
-  text-align: center;
-  margin-bottom: 0.35rem;
-  padding: 0.28rem 0.4rem;
-  border-radius: 8px;
-  background: var(--app-tint-soft);
-  border: 1px solid rgba(201, 162, 77, 0.22);
+.mushaf-page-card {
+  flex: 1;
+  min-height: 0;
+  border-radius: 14px;
+  border: 1px solid;
+  padding: 0.55rem 0.5rem 0.45rem;
+  box-shadow: 0 8px 18px rgba(0, 0, 0, 0.28);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
-.mushaf-sura-band span {
+.mushaf-page-card--light {
+  background: #fffdf7;
+  border-color: #d2b98a;
+  box-shadow: 0 8px 18px rgba(96, 72, 34, 0.14);
+}
+
+.mushaf-page-card--dark {
+  background: #1c221d;
+  border-color: rgba(201, 162, 77, 0.35);
+}
+
+.mushaf-sura-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  margin-bottom: 0.2rem;
+}
+
+.mushaf-sura-row--peek {
+  margin-top: 0.15rem;
+  margin-bottom: 0;
+  opacity: 0.92;
+}
+
+.mushaf-sura-line {
+  flex: 1;
+  max-width: 2.2rem;
+  border-top: 1px solid;
+}
+
+.mushaf-page-card--light .mushaf-sura-line {
+  border-color: rgba(0, 0, 0, 0.24);
+}
+
+.mushaf-page-card--dark .mushaf-sura-line {
+  border-color: rgba(201, 162, 77, 0.35);
+}
+
+.mushaf-sura-badge {
+  flex-shrink: 0;
+  padding: 0.22rem 0.55rem;
+  border-radius: 999px;
+  border: 1px solid;
   font-family: 'Kitab', var(--font-arabic);
-  font-size: 0.62rem;
-  color: var(--app-tint);
+  font-size: 0.52rem;
+  line-height: 1.35;
   direction: rtl;
+  white-space: nowrap;
+}
+
+.mushaf-page-card--light .mushaf-sura-badge {
+  background: #f2e1bd;
+  border-color: rgba(0, 0, 0, 0.16);
+  color: #2a1b0f;
+}
+
+.mushaf-page-card--dark .mushaf-sura-badge {
+  background: #1f201a;
+  border-color: rgba(201, 162, 77, 0.25);
+  color: #f2e7cf;
+}
+
+.mushaf-basmala {
+  margin: 0 0 0.15rem;
+  font-family: 'Kitab', var(--font-arabic);
+  font-size: 0.54rem;
+  line-height: 1.7;
+  text-align: center;
+  direction: rtl;
+  color: #e6e6e6;
 }
 
 .mushaf-flow {
@@ -576,57 +645,93 @@
 .mushaf-flow p {
   margin: 0;
   font-family: 'Kitab', var(--font-arabic);
-  font-size: 0.58rem;
-  line-height: 1.95;
+  font-size: 0.56rem;
+  line-height: 1.88;
   text-align: justify;
   text-align-last: center;
   direction: rtl;
-  color: var(--app-text);
   hyphens: none;
+}
+
+.mushaf-page-card--light .mushaf-flow p {
+  color: #17100b;
+}
+
+.mushaf-page-card--dark .mushaf-flow p {
+  color: #e6e6e6;
 }
 
 .mushaf-marker {
   display: inline;
-  color: var(--app-tint);
-  font-size: 0.5rem;
-  opacity: 0.85;
-  margin-inline: 0.08rem;
+  font-size: 0.48rem;
+  opacity: 0.66;
+  margin-inline: 0.06rem;
   vertical-align: middle;
 }
 
-.mushaf-footer {
+.mushaf-page-card--light .mushaf-marker {
+  color: rgba(44, 31, 20, 0.62);
+}
+
+.mushaf-page-card--dark .mushaf-marker {
+  color: rgba(232, 245, 233, 0.72);
+}
+
+/* Tajweed highlight colors (from TajweedText.tsx) */
+.tj-grey { color: #8f959b; }
+.tj-green { color: #3f9a55; }
+.tj-orange { color: #d97a2b; }
+.tj-blue { color: #4fb6d3; }
+.tj-red { color: #8b1e2d; }
+
+.mushaf-page-break {
   flex-shrink: 0;
-  display: grid;
-  grid-template-columns: 1fr auto 1fr;
+  display: flex;
   align-items: center;
-  gap: 0.25rem;
-  padding-top: 0.35rem;
-  margin-top: 0.25rem;
-  border-top: 1px solid var(--app-border);
-  font-size: 0.48rem;
-  color: var(--app-muted);
+  justify-content: center;
+  gap: 0.35rem;
+  margin: 0.28rem 0 0.12rem;
 }
 
-.mushaf-juz {
-  text-align: left;
+.mushaf-page-break--dark {
+  margin: 0 0 0.22rem;
 }
 
-.mushaf-pagenum {
-  font-family: 'Kitab', var(--font-arabic);
+.mushaf-page-break-line {
+  flex: 1;
+  border-top: 1px solid;
+}
+
+.mushaf-page-break--light .mushaf-page-break-line {
+  border-color: rgba(44, 33, 24, 0.3);
+}
+
+.mushaf-page-break--dark .mushaf-page-break-line {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.mushaf-page-break-badge {
+  flex-shrink: 0;
+  min-width: 2.6rem;
+  height: 1.35rem;
+  padding: 0 0.45rem;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
   font-size: 0.72rem;
-  color: var(--app-tint);
-  text-align: center;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
 }
 
-.mushaf-nav {
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+.mushaf-page-break--light .mushaf-page-break-badge {
+  background: #f4e7cc;
+  color: #6d4a16;
 }
 
-.mushaf-topbar-meta {
-  font-size: 0.5rem;
-  color: var(--app-muted);
-  font-variant-numeric: tabular-nums;
+.mushaf-page-break--dark .mushaf-page-break-badge {
+  background: #18251f;
+  color: #e7d8b7;
 }
 
 /* Dual phone showcase */
