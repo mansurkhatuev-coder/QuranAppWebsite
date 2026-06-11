@@ -1,0 +1,482 @@
+/* ============================================================
+   App UI mockups — mirrors QuranApp dark theme in CSS
+   Colors from constants/theme.ts + premium-floating-tab-bar
+   ============================================================ */
+
+.app-screen {
+  --app-bg: #071610;
+  --app-surface: #162d22;
+  --app-surface-strong: #1e3a2b;
+  --app-text: #e8f5e9;
+  --app-muted: #a5d6a7;
+  --app-tint: #c9a24d;
+  --app-tint-soft: rgba(201, 162, 77, 0.2);
+  --app-border: rgba(255, 255, 255, 0.08);
+  --app-tab-shell: #102a20;
+  --app-tab-active: #183629;
+  --app-tab-active-border: rgba(218, 175, 85, 0.26);
+  --app-azkar: #7ba37e;
+  --app-header: rgba(15, 31, 23, 0.92);
+
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  background: var(--app-bg) !important;
+  color: var(--app-text);
+  font-family: var(--font-body);
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+/* ---- Top bar ---- */
+
+.app-topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.4rem;
+  padding: 0.55rem 0.75rem 0.45rem;
+  background: var(--app-header);
+  border-bottom: 1px solid var(--app-border);
+}
+
+.app-topbar-title {
+  flex: 1;
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-align: center;
+  color: var(--app-text);
+}
+
+.app-topbar-spacer {
+  width: 1.1rem;
+}
+
+.app-topbar-toggle {
+  width: 1.35rem;
+  height: 1.35rem;
+  border-radius: 999px;
+  border: 1px solid rgba(201, 162, 77, 0.45);
+  background: rgba(201, 162, 77, 0.18);
+  display: grid;
+  place-items: center;
+  font-size: 0.62rem;
+}
+
+/* ---- Scrollable content ---- */
+
+.app-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 0.45rem 0.55rem 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.app-body-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 0.38rem;
+}
+
+/* ---- Cards (matches components/ui/card.tsx) ---- */
+
+.app-card {
+  border-radius: 10px;
+  padding: 0.55rem 0.6rem;
+  background: var(--app-surface);
+  border: 1px solid var(--app-border);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.28);
+}
+
+.app-card-header {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.25rem;
+}
+
+.app-card-icon {
+  width: 0.85rem;
+  height: 0.85rem;
+  color: var(--app-tint);
+  flex-shrink: 0;
+}
+
+.app-card-title {
+  margin: 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--app-text);
+}
+
+.app-card-sub {
+  margin: 0 0 0.2rem;
+  font-size: 0.58rem;
+  color: var(--app-muted);
+}
+
+.app-stat {
+  margin: 0.1rem 0 0.25rem;
+  font-size: 1.55rem;
+  font-weight: 700;
+  line-height: 1.05;
+  color: var(--app-tint);
+  font-variant-numeric: tabular-nums;
+}
+
+.app-stat--green {
+  color: var(--app-azkar);
+}
+
+.app-stat-label {
+  margin: 0 0 0.3rem;
+  font-size: 0.58rem;
+  color: var(--app-muted);
+}
+
+/* ---- Progress bar ---- */
+
+.app-progress {
+  height: 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 0.5px solid var(--app-border);
+  overflow: hidden;
+  margin: 0.2rem 0;
+}
+
+.app-progress > i {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--app-tint);
+}
+
+.app-progress--green > i {
+  background: var(--app-azkar);
+}
+
+/* ---- Floating tab bar ---- */
+
+.app-tabbar {
+  flex-shrink: 0;
+  padding: 0.28rem 0.45rem 0.42rem;
+  background: var(--app-bg);
+}
+
+.app-tabbar-shell {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.15rem;
+  padding: 0.28rem 0.35rem;
+  border-radius: 999px;
+  background: var(--app-tab-shell);
+  border: 1px solid rgba(212, 175, 99, 0.12);
+  box-shadow: 0 6px 18px rgba(4, 12, 9, 0.34);
+}
+
+.app-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.12rem;
+  padding: 0.22rem 0.1rem;
+  border-radius: 999px;
+  color: rgba(230, 220, 199, 0.68);
+  min-width: 0;
+}
+
+.app-tab svg {
+  width: 0.75rem;
+  height: 0.75rem;
+}
+
+.app-tab span {
+  font-size: 0.44rem;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.app-tab.is-active {
+  background: var(--app-tab-active);
+  border: 1px solid var(--app-tab-active-border);
+  color: var(--app-tint);
+  box-shadow: 0 0 12px rgba(218, 175, 85, 0.12);
+}
+
+/* ---- Quran read screen ---- */
+
+.app-mode-switch {
+  display: flex;
+  gap: 0.25rem;
+  padding: 0.2rem;
+  border-radius: 999px;
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  margin-bottom: 0.35rem;
+}
+
+.app-mode-pill {
+  flex: 1;
+  text-align: center;
+  padding: 0.22rem 0.35rem;
+  border-radius: 999px;
+  font-size: 0.55rem;
+  font-weight: 600;
+  color: var(--app-muted);
+}
+
+.app-mode-pill.is-active {
+  background: var(--app-tint-soft);
+  color: var(--app-tint);
+  border: 1px solid rgba(201, 162, 77, 0.35);
+}
+
+.app-ayah-ref {
+  font-size: 0.52rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--app-tint);
+  margin-bottom: 0.35rem;
+}
+
+.app-arabic {
+  font-family: var(--font-arabic);
+  direction: rtl;
+  text-align: right;
+  font-size: 1.05rem;
+  line-height: 1.85;
+  color: var(--app-text);
+  margin: 0 0 0.45rem;
+}
+
+.app-translation {
+  font-size: 0.62rem;
+  line-height: 1.5;
+  color: var(--app-muted);
+  border-left: 2px solid var(--app-tint-soft);
+  padding-left: 0.45rem;
+  margin: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.app-read-footer {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.35rem;
+  font-size: 0.5rem;
+  color: rgba(165, 214, 167, 0.65);
+}
+
+.app-bookmark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.2rem;
+  padding: 0.12rem 0.38rem;
+  border-radius: 999px;
+  background: var(--app-tint-soft);
+  color: var(--app-tint);
+  font-size: 0.48rem;
+}
+
+/* ---- Listening screen ---- */
+
+.app-layer-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.22rem;
+  margin-bottom: 0.35rem;
+}
+
+.app-layer-chip {
+  font-size: 0.5rem;
+  padding: 0.18rem 0.42rem;
+  border-radius: 999px;
+  border: 1px solid var(--app-border);
+  color: var(--app-muted);
+}
+
+.app-layer-chip.is-active {
+  border-color: rgba(201, 162, 77, 0.45);
+  background: var(--app-tint-soft);
+  color: var(--app-tint);
+}
+
+.app-playback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  margin: 0.35rem 0;
+}
+
+.app-play-btn {
+  width: 1.65rem;
+  height: 1.65rem;
+  border-radius: 50%;
+  background: var(--app-tint);
+  color: #1a1408;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 14px rgba(201, 162, 77, 0.35);
+}
+
+.app-play-btn svg {
+  width: 0.7rem;
+  height: 0.7rem;
+  margin-left: 0.05rem;
+}
+
+.app-play-meta {
+  font-size: 0.55rem;
+  color: var(--app-muted);
+}
+
+/* ---- Namaz screen ---- */
+
+.app-city {
+  font-size: 0.58rem;
+  color: var(--app-muted);
+  margin: 0 0 0.35rem;
+}
+
+.app-prayer-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.22rem;
+}
+
+.app-prayer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.38rem 0.5rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--app-border);
+  font-size: 0.62rem;
+}
+
+.app-prayer-row.is-next {
+  border-color: rgba(201, 162, 77, 0.35);
+  background: rgba(201, 162, 77, 0.08);
+}
+
+.app-prayer-row.is-next .app-prayer-name {
+  color: var(--app-tint);
+  font-weight: 700;
+}
+
+.app-prayer-row.is-next .app-prayer-time {
+  color: var(--app-tint);
+  font-weight: 700;
+}
+
+.app-prayer-name {
+  color: var(--app-text);
+}
+
+.app-prayer-time {
+  color: var(--app-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.app-qibla-btn {
+  margin-top: 0.35rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.45rem 0.55rem;
+  border-radius: 8px;
+  background: var(--app-surface-strong);
+  border: 1px solid var(--app-border);
+  font-size: 0.58rem;
+}
+
+.app-qibla-btn strong {
+  color: var(--app-tint);
+}
+
+/* ---- Quran page flip (inside app-screen) ---- */
+
+.app-pages {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+}
+
+.app-page {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: rotateY(-12deg) translateX(16px);
+  transform-origin: left center;
+  transition: opacity 0.75s var(--ease-out), transform 0.75s var(--ease-out);
+  pointer-events: none;
+}
+
+.app-page.is-active {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+/* ---- Showcase panes ---- */
+
+.app-screen--showcase {
+  position: relative;
+  overflow: hidden;
+}
+
+.app-pane {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  opacity: 0;
+  transform: translateX(12px);
+  transition: opacity 0.55s cubic-bezier(0.22, 1, 0.36, 1), transform 0.55s cubic-bezier(0.22, 1, 0.36, 1);
+  pointer-events: none;
+}
+
+.app-pane.is-active {
+  opacity: 1;
+  transform: none;
+  pointer-events: auto;
+}
+
+.app-pane .app-body,
+.app-pane .app-body-scroll {
+  flex: 1;
+  min-height: 0;
+}
+
+.app-body .app-pages {
+  flex: 1;
+  min-height: 9rem;
+}
+
+/* Phone frame tweak for app UI */
+.phone .app-screen {
+  border-radius: 33px;
+}

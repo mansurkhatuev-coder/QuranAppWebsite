@@ -174,7 +174,7 @@
   }
 
   /* ---------- Quran page turn ---------- */
-  var quranPages = document.querySelectorAll('#quran-pages .quran-page');
+  var quranPages = document.querySelectorAll('#quran-pages .app-page');
   if (quranPages.length > 1 && !reducedMotion) {
     var pageIdx = 0;
     setInterval(function () {
@@ -201,7 +201,7 @@
     });
   }
 
-  var panes = document.querySelectorAll('.screen-pane');
+  var panes = document.querySelectorAll('.app-pane');
   var dots = document.querySelectorAll('.showcase-dots button');
   var paneIdx = 0;
   var paneTimer = null;
