@@ -752,6 +752,10 @@ img {
   color: var(--text-2);
   border-left: 2px solid var(--gold-faint);
   padding-left: 0.7rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .quran-page .page-meter {
@@ -906,6 +910,35 @@ img {
   font-weight: 600;
 }
 
+.pane-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.pane-chip {
+  font-size: 0.62rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.pane-chip.is-active {
+  border-color: var(--gold-soft);
+  color: var(--gold);
+  background: var(--gold-faint);
+}
+
+.pane-khatm {
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--gold);
+  line-height: 1;
+  margin: 0.15rem 0 0.35rem;
+}
+
 .pane-bar {
   height: 5px;
   border-radius: 3px;
@@ -982,7 +1015,7 @@ img {
 
 .trust-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.25rem;
 }
 
@@ -990,11 +1023,18 @@ img {
   display: flex;
   gap: 1rem;
   align-items: flex-start;
+  min-width: 0;
   padding: 1.6rem 1.5rem;
   border-radius: var(--radius);
   background: rgba(18, 24, 32, 0.4);
   border: 1px solid var(--line);
   transition: border-color 0.3s, transform 0.3s var(--ease-out);
+  overflow: hidden;
+}
+
+.trust-card-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .trust-card:hover {
@@ -1010,12 +1050,16 @@ img {
 .trust-card h3 {
   margin: 0 0 0.3rem;
   font-size: 1rem;
+  overflow-wrap: anywhere;
 }
 
 .trust-card p {
   margin: 0;
   font-size: 0.85rem;
+  line-height: 1.55;
   color: var(--text-2);
+  overflow-wrap: anywhere;
+  hyphens: auto;
 }
 
 /* ============ Final CTA ============ */
