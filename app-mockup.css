@@ -479,4 +479,9 @@
 /* Phone frame tweak for app UI */
 .phone .app-screen {
   border-radius: 33px;
+  --notch-safe: 34px; /* clears .phone::before notch (top 18px + h 22px − padding 10px) */
+}
+
+.phone .app-topbar {
+  padding-top: calc(var(--notch-safe) + 0.35rem);
 }
