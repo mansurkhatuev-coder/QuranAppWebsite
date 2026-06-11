@@ -5,6 +5,7 @@ const LINKS = {
   appStore: '',
   supportEmail: 'ne.kradi@mail.ru',
   supportTelegram: '',
-  appVersion: '1.0.3',
+  appVersion: '1.0.4',
+  appVersionCode: 5,
   appPackage: 'com.sheyhmansur.quranapp',
 };

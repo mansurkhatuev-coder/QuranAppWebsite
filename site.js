@@ -50,7 +50,9 @@
 
   var versionEl = document.getElementById('app-version');
   if (versionEl && LINKS.appVersion) {
-    versionEl.textContent = LINKS.appVersion;
+    versionEl.textContent = LINKS.appVersionCode
+      ? LINKS.appVersion + ' (' + LINKS.appVersionCode + ')'
+      : LINKS.appVersion;
   }
 
   var packageEl = document.getElementById('app-package');
