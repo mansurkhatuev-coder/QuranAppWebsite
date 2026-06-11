@@ -64,10 +64,10 @@
         </p>
         <div class="hero-actions" data-stage="4">
           <a id="btn-rustore" class="btn btn-gold btn-disabled" aria-disabled="true" data-magnetic data-ripple>
-            Скачать для Android
+            Скачать для Android с RuStore
           </a>
           <a id="btn-apk" class="btn btn-ghost btn-disabled" aria-disabled="true" data-magnetic data-ripple>
-            Скачать APK
+            Скачать для Android APK
           </a>
         </div>
         <p class="hero-note" data-stage="5">Бесплатно · Android · iOS — скоро</p>
@@ -142,75 +142,122 @@
 
       <!-- QURAN EXPERIENCE -->
       <section class="section">
-        <div class="container quran-layout">
-          <div class="quran-copy reveal">
+        <div class="container">
+          <div class="quran-copy center reveal" style="max-width: 40rem; margin-inline: auto">
             <span class="section-label">Чтение</span>
-            <h2 class="section-title">Чтение, к которому хочется возвращаться</h2>
-            <p class="section-sub">
-              Крупный арабский текст, аккуратные переводы и ничего лишнего на экране.
+            <h2 class="section-title">Мусхаф, как в руках</h2>
+            <p class="section-sub" style="margin-inline: auto">
+              Постраничное чтение шрифтом Kitab, переводы рядом с аятом — и спокойная светлая тема для днём.
             </p>
-            <ul class="check-list">
-              <li><strong>Мусхаф</strong> — чтение по страницам, как в печатном Коране</li>
-              <li><strong>Переводы</strong> — русский Кулиев и чеченские издания</li>
-              <li><strong>Тафсир</strong> — пояснение аята без лишних переходов</li>
-              <li><strong>Хатм</strong> — прогресс по 604 страницам и дневная цель</li>
-            </ul>
           </div>
 
-          <div class="quran-stage reveal" style="--d: 0.15s">
-            <div class="phone">
-              <div class="phone-screen app-screen">
-                <header class="app-topbar">
-                  <span class="app-topbar-spacer"></span>
-                  <h2 class="app-topbar-title">Коран</h2>
-                  <span class="app-topbar-toggle" aria-hidden="true">🌙</span>
-                </header>
-                <div class="app-body">
-                  <div class="app-mode-switch" aria-hidden="true">
-                    <span class="app-mode-pill is-active">Мусхаф</span>
-                    <span class="app-mode-pill">Суры</span>
-                  </div>
-                  <div class="app-pages" id="quran-pages">
-                    <div class="app-page is-active">
-                      <span class="app-ayah-ref">Аль-Фатиха · 1:1 · Кулиев</span>
-                      <p class="app-arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-                      <p class="app-translation">Во имя Аллаха, Милостивого, Милосердного!</p>
-                      <div class="app-read-footer">
-                        <span class="app-bookmark">🔖 Закладка</span>
-                        <span>Стр. 1 · Джуз 1</span>
-                      </div>
+          <div class="mushaf-phones" style="margin-top: 2.5rem">
+            <!-- Dark: full mushaf page 1 -->
+            <div class="reveal" style="--d: 0s">
+              <span class="mushaf-phones-label">Тёмная тема · Мусхаф</span>
+              <div class="phone phone--mushaf">
+                <div class="phone-screen app-screen">
+                  <header class="app-topbar">
+                    <span class="app-topbar-spacer mushaf-topbar-meta">1 / 604</span>
+                    <h2 class="app-topbar-title">Коран</h2>
+                    <span class="app-topbar-toggle" aria-hidden="true">🌙</span>
+                  </header>
+                  <div class="mushaf-sheet">
+                    <div class="app-mode-switch" aria-hidden="true">
+                      <span class="app-mode-pill is-active">Мусхаф</span>
+                      <span class="app-mode-pill">Суры</span>
                     </div>
-                    <div class="app-page">
-                      <span class="app-ayah-ref">Аль-Фатиха · 1:2 · Кулиев</span>
-                      <p class="app-arabic">الْحَمْدُ لِلَّهِ رَبِّ الْعَالَمِينَ</p>
-                      <p class="app-translation">Хвала Аллаху, Господу миров!</p>
-                      <div class="app-read-footer">
-                        <span>Стр. 1 · Джуз 1</span>
-                      </div>
+                    <div class="mushaf-sura-band">
+                      <span>سُورَةُ الْفَاتِحَةِ</span>
                     </div>
-                    <div class="app-page">
-                      <span class="app-ayah-ref">Аль-Фатиха · 1:1 · Ибрагимов</span>
-                      <p class="app-arabic">بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ</p>
-                      <p class="app-translation">Аллах1а ц1арца доладо аса, Ша дуьненахь бусулбанех а…</p>
-                      <div class="app-read-footer">
-                        <span class="app-bookmark">🔖 Закладка</span>
-                        <span>Нохчийн</span>
-                      </div>
+                    <div class="mushaf-flow">
+                      <p>
+                        بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ <span class="mushaf-marker">﴿١﴾</span>
+                        ٱلْحَمْدُ لِلَّهِ رَبِّ ٱلْعَٰلَمِينَ <span class="mushaf-marker">﴿٢﴾</span>
+                        ٱلرَّحْمَٰنِ ٱلرَّحِيمِ <span class="mushaf-marker">﴿٣﴾</span>
+                        مَٰلِكِ يَوْمِ ٱلدِّينِ <span class="mushaf-marker">﴿٤﴾</span>
+                        إِيَّاكَ نَعْبُدُ وَإِيَّاكَ نَسْتَعِينُ <span class="mushaf-marker">﴿٥﴾</span>
+                        ٱهْدِنَا ٱلصِّرَٰطَ ٱلْمُسْتَقِيمَ <span class="mushaf-marker">﴿٦﴾</span>
+                        صِرَٰطَ ٱلَّذِينَ أَنْعَمْتَ عَلَيْهِمْ غَيْرِ ٱلْمَغْضُوبِ عَلَيْهِمْ وَلَا ٱلضَّآلِّينَ <span class="mushaf-marker">﴿٧﴾</span>
+                      </p>
+                    </div>
+                    <div class="mushaf-footer">
+                      <span class="mushaf-juz">جُزْءُ ١</span>
+                      <span class="mushaf-pagenum">١</span>
+                      <span class="mushaf-nav">← 1 · 604 →</span>
                     </div>
                   </div>
+                  <nav class="app-tabbar" aria-hidden="true">
+                    <div class="app-tabbar-shell">
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Главная</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Намаз</span></div>
+                      <div class="app-tab is-active"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h9a2 2 0 0 1 2 2v13l-5-3-5 3V6a2 2 0 0 0-2-2z"/></svg><span>Коран</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg><span>Азкары</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg><span>Ещё</span></div>
+                    </div>
+                  </nav>
                 </div>
-                <nav class="app-tabbar" aria-hidden="true">
-                  <div class="app-tabbar-shell">
-                    <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Главная</span></div>
-                    <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Намаз</span></div>
-                    <div class="app-tab is-active"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 4h9a2 2 0 0 1 2 2v13l-5-3-5 3V6a2 2 0 0 0-2-2z"/></svg><span>Коран</span></div>
-                    <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg><span>Азкары</span></div>
-                    <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg><span>Ещё</span></div>
+              </div>
+            </div>
+
+            <!-- Light: home screen -->
+            <div class="reveal" style="--d: 0.12s">
+              <span class="mushaf-phones-label">Светлая тема · Главная</span>
+              <div class="phone">
+                <div class="phone-screen app-screen app-screen--light">
+                  <header class="app-topbar">
+                    <span class="app-topbar-spacer"></span>
+                    <h2 class="app-topbar-title">Главная</h2>
+                    <span class="app-topbar-toggle" aria-hidden="true">☀️</span>
+                  </header>
+                  <div class="app-body-scroll">
+                    <div class="app-card">
+                      <div class="app-card-header">
+                        <svg class="app-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20V10l8-5 8 5v10"/><path d="M9 20v-6h6v6"/></svg>
+                        <h3 class="app-card-title">До асра</h3>
+                      </div>
+                      <p class="app-card-sub">Грозный</p>
+                      <p class="app-stat">1:12:34</p>
+                      <div class="app-progress"><i style="width: 62%"></i></div>
+                    </div>
+                    <div class="app-card">
+                      <div class="app-card-header">
+                        <svg class="app-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                        <h3 class="app-card-title">Прогресс чтения Корана</h3>
+                      </div>
+                      <p class="app-stat">42%</p>
+                      <div class="app-progress"><i style="width: 42%"></i></div>
+                      <p class="app-stat-label">254 из 604 стр.</p>
+                    </div>
+                    <div class="app-card">
+                      <div class="app-card-header">
+                        <svg class="app-card-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--app-azkar)"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg>
+                        <h3 class="app-card-title">Азкары</h3>
+                      </div>
+                      <p class="app-stat app-stat--green">68%</p>
+                      <div class="app-progress app-progress--green"><i style="width: 68%"></i></div>
+                    </div>
                   </div>
-                </nav>
+                  <nav class="app-tabbar" aria-hidden="true">
+                    <div class="app-tabbar-shell">
+                      <div class="app-tab is-active"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></svg><span>Главная</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Намаз</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h9a2 2 0 0 1 2 2v13l-5-3-5 3V6a2 2 0 0 0-2-2z"/></svg><span>Коран</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 12h8M12 8v8"/><circle cx="12" cy="12" r="9"/></svg><span>Азкары</span></div>
+                      <div class="app-tab"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/></svg><span>Ещё</span></div>
+                    </div>
+                  </nav>
+                </div>
               </div>
             </div>
           </div>
+
+          <ul class="check-list reveal" style="--d: 0.2s; max-width: 36rem; margin: 2.5rem auto 0">
+            <li><strong>Мусхаф</strong> — 604 страницы, шрифт Kitab, навигация ← →</li>
+            <li><strong>Переводы</strong> — Кулиев, чеченские Ибрагимов и Магомедов</li>
+            <li><strong>Светлая тема</strong> — кремовый фон #F5EAD9, как в приложении</li>
+            <li><strong>Хатм</strong> — прогресс чтения и дневная цель на главной</li>
+          </ul>
         </div>
       </section>
 

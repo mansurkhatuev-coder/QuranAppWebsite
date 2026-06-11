@@ -173,18 +173,6 @@
     });
   }
 
-  /* ---------- Quran page turn ---------- */
-  var quranPages = document.querySelectorAll('#quran-pages .app-page');
-  if (quranPages.length > 1 && !reducedMotion) {
-    var pageIdx = 0;
-    setInterval(function () {
-      if (document.hidden) return;
-      quranPages[pageIdx].classList.remove('is-active');
-      pageIdx = (pageIdx + 1) % quranPages.length;
-      quranPages[pageIdx].classList.add('is-active');
-    }, 4200);
-  }
-
   /* ---------- Showcase: 3D phone + screen cycling ---------- */
   var stage = document.getElementById('showcase-stage');
   var phone = document.getElementById('showcase-phone');
