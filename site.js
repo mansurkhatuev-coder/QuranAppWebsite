@@ -8,6 +8,7 @@
   if (rustoreBtn) {
     if (LINKS.rustore) {
       rustoreBtn.href = LINKS.rustore;
+      rustoreBtn.rel = 'noopener noreferrer';
       rustoreBtn.removeAttribute('aria-disabled');
       rustoreBtn.classList.remove('btn-disabled');
     } else {
@@ -22,6 +23,7 @@
   if (apkBtn) {
     if (LINKS.apk) {
       apkBtn.href = LINKS.apk;
+      apkBtn.rel = 'noopener noreferrer';
       apkBtn.removeAttribute('aria-disabled');
       apkBtn.classList.remove('btn-disabled');
     } else {
@@ -34,6 +36,7 @@
   if (appStoreBtn) {
     if (LINKS.appStore) {
       appStoreBtn.href = LINKS.appStore;
+      appStoreBtn.rel = 'noopener noreferrer';
       appStoreBtn.removeAttribute('aria-disabled');
       appStoreBtn.classList.remove('btn-disabled');
       var appStoreBadge = appStoreBtn.querySelector('.btn-badge');
