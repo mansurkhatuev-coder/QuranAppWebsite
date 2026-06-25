@@ -41,7 +41,7 @@ npx --yes serve .
 
 Workflow: [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml) — деплой всего репозитория на Pages.
 
-**Сайт:** `https://mansurkhatuev-coder.github.io/QuranAppWebsite/`
+**Сайт:** `https://waydean.ru/` (домен в `CNAME`, зеркало: `https://mansurkhatuev-coder.github.io/QuranAppWebsite/`)
 
 **Обновление:** измените файлы, затем из папки `website/`:
 
@@ -53,7 +53,7 @@ git push
 
 **Первый раз на GitHub:** Settings → Pages → Source: **GitHub Actions**, затем Actions → Deploy to GitHub Pages → Run workflow.
 
-**Свой домен с reg.ru:** Settings → Pages → Custom domain → `www.ваш-домен.ru`. В DNS reg.ru: CNAME `www` → `mansurkhatuev-coder.github.io`.
+**Свой домен:** файл `CNAME` содержит `waydean.ru`. В GitHub: Settings → Pages → Custom domain. В DNS: A-записи на GitHub Pages или CNAME `www` → `mansurkhatuev-coder.github.io`.
 
 APK по-прежнему раздавайте через Яндекс.Диск (`links.js`), а не через GitHub.
 
@@ -92,9 +92,9 @@ APK по-прежнему раздавайте через Яндекс.Диск 
 
 В консоли RuStore укажите:
 
-- **Сайт разработчика:** `https://ваш-домен.ru/`
-- **Политика конфиденциальности:** `https://ваш-домен.ru/privacy.html`
-- **Поддержка:** email с `support.html` или ссылка на `https://ваш-домен.ru/support.html`
+- **Сайт разработчика:** `https://waydean.ru/`
+- **Политика конфиденциальности:** `https://waydean.ru/privacy.html`
+- **Поддержка:** email с `support.html` или ссылка на `https://waydean.ru/support.html`
 
 Подробнее: [RUSTORE_RELEASE.md](../RUSTORE_RELEASE.md).
 
@@ -104,7 +104,43 @@ APK по-прежнему раздавайте через Яндекс.Диск 
 
 ---
 
-## Домен (domain.ru / reg.ru) и DNS
+## Индексация в поисковиках (Google, Яндекс)
+
+Сайт **не появится в поиске сам по себе** — нужны технические файлы и регистрация в вебмастерах.
+
+### Что уже есть в репозитории
+
+- `robots.txt` — разрешает индексацию, указывает на карту сайта
+- `sitemap.xml` — список всех страниц для роботов
+- Meta-теги `canonical`, Open Graph и JSON-LD на главной
+
+После изменений задеплойте сайт (см. GitHub Pages выше).
+
+### 1. Google Search Console
+
+1. Откройте [search.google.com/search-console](https://search.google.com/search-console)
+2. Добавьте ресурс: `https://waydean.ru/`
+3. Подтвердите владение (HTML-тег, DNS или файл в корне сайта)
+4. **Карта сайта** → добавьте URL: `https://waydean.ru/sitemap.xml`
+5. **Проверка URL** → `https://waydean.ru/` → «Запросить индексирование»
+
+### 2. Яндекс Вебмастер
+
+1. [webmaster.yandex.ru](https://webmaster.yandex.ru/)
+2. Добавьте `https://waydean.ru/`
+3. Подтвердите права (meta-тег или DNS)
+4. **Индексирование** → **Файлы Sitemap** → `https://waydean.ru/sitemap.xml`
+5. **Переобход страниц** → `https://waydean.ru/`
+
+### 3. Два адреса (github.io и waydean.ru)
+
+Если оба открываются — в Search Console и Вебмастере регистрируйте **только** `waydean.ru`. Canonical на всех страницах уже указывает на этот домен.
+
+### Сроки
+
+Первая индексация обычно **от нескольких дней до 2–4 недель**. Ускоряет: ссылка на сайт в карточке RuStore, соцсетях, подписи email.
+
+---
 
 ### Вариант A — NS хостинга (проще)
 
