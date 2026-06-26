@@ -1,0 +1,50 @@
+name: Sync APK link on release
+
+on:
+  release:
+    types: [published, edited]
+
+permissions:
+  contents: write
+
+jobs:
+  update-links:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Resolve APK download URL
+        id: apk
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          APK_ASSET=$(echo '${{ toJson(github.event.release.assets) }}' | jq -r '[.[] | select(.name | endswith(".apk"))][0].name // empty')
+          if [ -z "$APK_ASSET" ]; then
+            echo "No .apk asset on release $TAG — skipping."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          URL="https://github.com/${{ github.repository }}/releases/download/${TAG}/${APK_ASSET}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "APK URL: $URL"
+
+      - name: Update links.js
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          sed -i "s|apk: '[^']*'|apk: '${{ steps.apk.outputs.url }}'|" links.js
+          grep "apk:" links.js
+
+      - name: Commit and push
+        if: steps.apk.outputs.skip != 'true'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add links.js
+          if git diff --staged --quiet; then
+            echo "links.js already up to date."
+            exit 0
+          fi
+          git commit -m "Sync APK download link for ${{ github.event.release.tag_name }}"
+          git push

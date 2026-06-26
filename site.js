@@ -24,6 +24,7 @@
     if (LINKS.apk) {
       apkBtn.href = LINKS.apk;
       apkBtn.rel = 'noopener noreferrer';
+      apkBtn.setAttribute('download', '');
       apkBtn.removeAttribute('aria-disabled');
       apkBtn.classList.remove('btn-disabled');
     } else {
@@ -47,6 +48,16 @@
       appStoreBtn.classList.add('btn-disabled');
     }
   }
+
+  document.querySelectorAll('[data-link="apk"]').forEach(function (el) {
+    if (LINKS.apk) {
+      el.href = LINKS.apk;
+      el.rel = 'noopener noreferrer';
+      el.setAttribute('download', '');
+      el.removeAttribute('aria-disabled');
+      el.classList.remove('btn-disabled');
+    }
+  });
 
   var versionEl = document.getElementById('app-version');
   if (versionEl && LINKS.appVersion) {

@@ -55,23 +55,47 @@ git push
 
 **Свой домен:** файл `CNAME` содержит `waydean.ru`. В GitHub: Settings → Pages → Custom domain. В DNS: A-записи на GitHub Pages или CNAME `www` → `mansurkhatuev-coder.github.io`.
 
-APK по-прежнему раздавайте через Яндекс.Диск (`links.js`), а не через GitHub.
+APK раздаётся через **GitHub Releases** — прямое скачивание без регистрации.
+
+## Публикация APK (GitHub Release)
+
+1. Соберите релиз: `npm run build:android:apk` →  
+   `android/app/build/outputs/apk/release/app-release.apk`
+2. Создайте [Personal Access Token](https://github.com/settings/tokens) с правом `repo` для репозитория `QuranAppWebsite`.
+3. Опубликуйте одной командой из корня QuranApp:
+
+```powershell
+$env:GITHUB_TOKEN = "ghp_..."
+npm run publish:website-apk
+```
+
+Скрипт загрузит APK в [Releases](https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases), обновит `links.js` и запушит сайт.
+
+**Вручную:** GitHub → QuranAppWebsite → Releases → New release → тег `v1.0.4` → прикрепите `koran-i-azkary-1.0.4.apk`. Workflow автоматически обновит `links.js`.
+
+Прямая ссылка для `links.js`:
+
+`https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.4/koran-i-azkary-1.0.4.apk`
+
+### Яндекс.Диск (устарело)
+
+Раньше APK раздавали через Яндекс.Диск — он иногда просит регистрацию. Используйте GitHub Release (см. выше).
 
 ## Настройка ссылок (`links.js`)
 
 | Поле | Описание |
 |------|----------|
 | `rustore` | Ссылка на карточку в RuStore. Пустая строка → кнопка «RuStore» с бейджем «Скоро». |
-| `apk` | Публичная ссылка Яндекс.Диска на APK. Пустая → кнопка неактивна. |
+| `apk` | Прямая ссылка на APK (GitHub Release). Пустая → кнопка неактивна. |
 | `appStore` | Ссылка App Store. Пустая → «Скоро». |
 | `supportEmail` | Email для поддержки и политики. |
 | `supportTelegram` | Ссылка `https://t.me/...`. Пустая → строка скрыта. |
-| `appVersion` | Версия из `app.json` (сейчас `1.0.3`). |
+| `appVersion` | Версия из `app.json` (сейчас `1.0.4`). |
 | `appPackage` | `com.sheyhmansur.quranapp` |
 
 **Не коммитьте** реальные прод-URL в git, если не хотите — достаточно править `links.js` только на хостинге.
 
-### Яндекс.Диск — APK без VPN
+### ~~Яндекс.Диск — APK без VPN~~ (устарело)
 
 1. Соберите релиз: `npm run build:android:apk` → файл  
    `android/app/build/outputs/apk/release/app-release.apk`

@@ -3,7 +3,7 @@ const LINKS = {
   /** Canonical site URL for SEO (no trailing slash). Update when using a custom domain. */
   siteUrl: 'https://waydean.ru',
   rustore: 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp',
-  apk: 'https://disk.yandex.ru/d/HG4T652FybHYSg',
+  apk: 'https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.4/koran-i-azkary-1.0.4.apk',
   appStore: '',
   supportEmail: 'ne.kradi@mail.ru',
   supportTelegram: '',
