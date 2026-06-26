@@ -1,0 +1,57 @@
+name: Publish APK Release
+
+on:
+  push:
+    branches:
+      - apk-source
+  workflow_dispatch:
+    inputs:
+      version:
+        description: App version (e.g. 1.0.4)
+        required: false
+        default: '1.0.4'
+
+permissions:
+  contents: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout apk-source branch
+        uses: actions/checkout@v4
+        with:
+          ref: apk-source
+
+      - name: Resolve APK file
+        id: apk
+        run: |
+          FILE=$(ls downloads/*.apk 2>/dev/null | head -1)
+          if [ -z "$FILE" ]; then
+            echo "No APK in downloads/ on apk-source branch."
+            exit 1
+          fi
+          BASENAME=$(basename "$FILE" .apk)
+          VERSION="${BASENAME#koran-i-azkary-}"
+          if [ -n "${{ github.event.inputs.version }}" ]; then
+            VERSION="${{ github.event.inputs.version }}"
+          fi
+          echo "file=$FILE" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Publishing $FILE as v$VERSION"
+
+      - name: Create or update GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.apk.outputs.version }}
+          name: Коран и Азкары v${{ steps.apk.outputs.version }}
+          body: |
+            APK для Android.
+
+            Прямое скачивание без регистрации.
+
+            Установка: разрешите установку из неизвестных источников в настройках Android.
+          files: ${{ steps.apk.outputs.file }}
+          fail_on_unmatched_files: true
+          make_latest: true
+          overwrite_files: true
