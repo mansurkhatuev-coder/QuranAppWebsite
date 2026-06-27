@@ -1,0 +1,51 @@
+name: Deploy QF API Worker
+
+on:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - 'qf-proxy/**'
+      - '.github/workflows/deploy-qf-worker.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: qf-worker
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Wrangler
+        run: npm install --prefix qf-proxy wrangler@4
+
+      - name: Upload QF client secret
+        working-directory: qf-proxy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          QF_CLIENT_SECRET: ${{ secrets.QF_CLIENT_SECRET }}
+        run: |
+          if [ -z "$QF_CLIENT_SECRET" ]; then
+            echo "QF_CLIENT_SECRET GitHub secret is not set — worker may return 503 until configured."
+            exit 0
+          fi
+          printf '%s' "$QF_CLIENT_SECRET" | npx wrangler secret put QF_CLIENT_SECRET
+
+      - name: Deploy worker
+        uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          workingDirectory: qf-proxy
+          command: deploy

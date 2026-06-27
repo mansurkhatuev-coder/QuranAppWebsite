@@ -1,0 +1,12 @@
+{
+  "name": "quranapp-qf-proxy",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Cloudflare Worker proxy for Quran Foundation API",
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "wrangler": "^4.105.0"
+  }
+}

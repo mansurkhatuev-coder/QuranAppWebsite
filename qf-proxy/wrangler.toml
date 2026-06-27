@@ -1,0 +1,7 @@
+name = "quranapp-qf"
+main = "src/worker.js"
+compatibility_date = "2024-06-01"
+
+[vars]
+QF_ENV = "production"
+QF_CLIENT_ID = "0252a362-767b-485b-8735-3fe2e3562845"
