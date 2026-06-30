@@ -49,15 +49,27 @@
     }
   }
 
-  document.querySelectorAll('[data-link="apk"]').forEach(function (el) {
-    if (LINKS.apk) {
-      el.href = LINKS.apk;
-      el.rel = 'noopener noreferrer';
-      el.setAttribute('download', '');
-      el.removeAttribute('aria-disabled');
-      el.classList.remove('btn-disabled');
-    }
-  });
+  function wireLinkButtons(selector, url, options) {
+    document.querySelectorAll(selector).forEach(function (el) {
+      if (url) {
+        el.href = url;
+        el.rel = 'noopener noreferrer';
+        el.removeAttribute('aria-disabled');
+        el.classList.remove('btn-disabled');
+        if (options && options.download) {
+          el.setAttribute('download', '');
+        } else {
+          el.removeAttribute('download');
+        }
+        var badge = el.querySelector('.btn-badge');
+        if (badge) badge.remove();
+      }
+    });
+  }
+
+  wireLinkButtons('[data-link="rustore"]', LINKS.rustore);
+  wireLinkButtons('[data-link="appstore"]', LINKS.appStore);
+  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true });
 
   var versionEl = document.getElementById('app-version');
   if (versionEl && LINKS.appVersion) {

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android."
+      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android и iOS."
     />
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow" />
@@ -16,7 +16,7 @@
     <meta property="og:title" content="Коран и Азкары — Коран, Азкары и Намаз в одном приложении" />
     <meta
       property="og:description"
-      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android."
+      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android и iOS."
     />
     <meta property="og:url" content="https://waydean.ru/" />
     <meta property="og:image" content="https://waydean.ru/assets/icon.png" />
@@ -34,12 +34,15 @@
         "@context": "https://schema.org",
         "@type": "MobileApplication",
         "name": "Коран и Азкары",
-        "operatingSystem": "Android",
+        "operatingSystem": ["Android", "iOS"],
         "applicationCategory": "LifestyleApplication",
         "description": "Чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы.",
         "url": "https://waydean.ru/",
         "image": "https://waydean.ru/assets/icon.png",
-        "downloadUrl": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
+        "downloadUrl": [
+          "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
+          "https://apps.apple.com/app/id6782619598"
+        ],
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -105,11 +108,14 @@
           <a id="btn-rustore" class="btn btn-gold btn-disabled" aria-disabled="true" data-magnetic data-ripple>
             Скачать для Android с RuStore
           </a>
+          <a id="btn-appstore" class="btn btn-gold btn-disabled" aria-disabled="true" data-magnetic data-ripple>
+            Скачать в App Store
+          </a>
           <a id="btn-apk" class="btn btn-ghost btn-disabled" aria-disabled="true" data-magnetic data-ripple>
             Скачать для Android APK
           </a>
         </div>
-        <p class="hero-note" data-stage="5">Бесплатно · Android · iOS — скоро</p>
+        <p class="hero-note" data-stage="5">Бесплатно · Android · iOS</p>
       </div>
       <div class="hero-scroll-hint" aria-hidden="true"></div>
     </header>
@@ -498,18 +504,17 @@
             <span class="section-label">Скачать</span>
             <h2 class="section-title">Начните сегодня</h2>
             <p class="section-sub" style="margin-inline: auto">
-              Бесплатно для Android. Версия для iOS — скоро.
+              Бесплатно для Android и iOS.
             </p>
             <div class="hero-actions">
               <a class="btn btn-gold btn-disabled" data-link="rustore" aria-disabled="true" data-magnetic data-ripple>
                 Скачать для Android
               </a>
+              <a class="btn btn-gold btn-disabled" data-link="appstore" aria-disabled="true" data-magnetic data-ripple>
+                Скачать в App Store
+              </a>
               <a class="btn btn-ghost btn-disabled" data-link="apk" aria-disabled="true" data-magnetic data-ripple>
                 Скачать APK
-              </a>
-              <a id="btn-appstore" class="btn btn-ghost btn-disabled" aria-disabled="true" data-magnetic data-ripple>
-                App Store
-                <span class="btn-badge">Скоро</span>
               </a>
             </div>
             <p class="hero-note">

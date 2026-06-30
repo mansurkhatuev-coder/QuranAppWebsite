@@ -4,7 +4,7 @@ const LINKS = {
   siteUrl: 'https://waydean.ru',
   rustore: 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp',
   apk: 'https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.5/koran-i-azkary-1.0.5.apk',
-  appStore: '',
+  appStore: 'https://apps.apple.com/app/id6782619598',
   supportEmail: 'ne.kradi@mail.ru',
   supportTelegram: '',
   appVersion: '1.0.5',
