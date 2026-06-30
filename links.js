@@ -10,4 +10,8 @@ const LINKS = {
   appVersion: '1.0.5',
   appVersionCode: 6,
   appPackage: 'com.sheyhmansur.quranapp',
+  /** Yandex Metrika counter ID (numeric). Leave empty until the counter is created. */
+  yandexMetrikaId: '',
+  /** JavaScript goal identifier for the share button in Metrika. */
+  yandexMetrikaGoal: 'share_site',
 };

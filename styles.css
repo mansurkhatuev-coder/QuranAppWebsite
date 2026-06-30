@@ -444,6 +444,42 @@ img {
   color: var(--text-2);
 }
 
+.btn-share {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+}
+
+.btn-share-icon {
+  flex-shrink: 0;
+  opacity: 0.9;
+}
+
+.share-toast {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  z-index: 1000;
+  transform: translate(-50%, 12px);
+  padding: 0.75rem 1.1rem;
+  border-radius: 999px;
+  background: rgba(18, 24, 32, 0.92);
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  color: var(--text);
+  font-size: 0.9rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity 0.25s var(--ease-out),
+    transform 0.25s var(--ease-out);
+}
+
+.share-toast--visible {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
 .btn .ripple {
   position: absolute;
   border-radius: 50%;
