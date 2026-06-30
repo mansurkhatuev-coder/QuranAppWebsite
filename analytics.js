@@ -7,6 +7,8 @@
   function initYandexMetrika() {
     if (!counterId) return;
 
+    var tagSrc = 'https://mc.yandex.ru/metrika/tag.js?id=' + counterId;
+
     (function (m, e, t, r, i, k, a) {
       m[i] =
         m[i] ||
@@ -22,13 +24,17 @@
       k.async = 1;
       k.src = r;
       a.parentNode.insertBefore(k, a);
-    })(window, document, 'script', 'https://mc.yandex.ru/metrika/tag.js', 'ym');
+    })(window, document, 'script', tagSrc, 'ym');
 
     window.ym(counterId, 'init', {
-      clickmap: true,
-      trackLinks: true,
-      accurateTrackBounce: true,
+      ssr: true,
       webvisor: true,
+      clickmap: true,
+      ecommerce: 'dataLayer',
+      referrer: document.referrer,
+      url: location.href,
+      accurateTrackBounce: true,
+      trackLinks: true,
     });
   }
 
