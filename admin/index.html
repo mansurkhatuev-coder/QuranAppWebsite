@@ -11,9 +11,9 @@
   <body class="admin-body">
     <div id="login-screen" class="admin-shell">
       <div class="admin-card">
-        <p class="admin-kicker">Waydean Admin</p>
+        <p class="admin-kicker">Коран и Азкары</p>
         <h1>Вход</h1>
-        <p class="admin-muted">Один логин для редактирования дуа и версии приложения.</p>
+        <p class="admin-muted">Редактирование дуа и версии приложения.</p>
         <form id="login-form" class="admin-form">
           <label id="login-email-wrap">
             Email
@@ -24,7 +24,7 @@
             <input id="login-password" type="password" autocomplete="current-password" required />
           </label>
           <p id="login-setup-notice" class="admin-muted" hidden>
-            Supabase не настроен. Заполните <code>admin/supabase-config.js</code> и задеплойте сайт.
+            Сервис не настроен. Обратитесь к разработчику.
           </p>
           <button type="submit" class="admin-button admin-button-primary">Войти</button>
           <p id="login-error" class="admin-error" hidden>Неверные данные для входа</p>
@@ -35,7 +35,7 @@
     <div id="app-screen" class="admin-shell" hidden>
       <header class="admin-topbar">
         <div>
-          <p class="admin-kicker">Waydean Admin</p>
+          <p class="admin-kicker">Коран и Азкары</p>
           <h1>Контент приложения</h1>
         </div>
         <button id="logout-button" type="button" class="admin-button admin-button-ghost">Выйти</button>
@@ -49,7 +49,7 @@
 
       <section class="admin-panel" data-panel="support">
         <div class="admin-toolbar">
-          <p class="admin-muted">Категория <code>support_dua</code></p>
+          <p class="admin-muted">Дуа в разделе «Поддержка»</p>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="support">
             Добавить дуа
           </button>
@@ -59,7 +59,7 @@
 
       <section class="admin-panel" data-panel="general" hidden>
         <div class="admin-toolbar">
-          <p class="admin-muted">Категория <code>general_dua</code></p>
+          <p class="admin-muted">Дуа на случаи жизни</p>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="general">
             Добавить дуа
           </button>
@@ -74,18 +74,17 @@
       <section class="admin-card admin-publish">
         <h2>Публикация</h2>
         <p id="publish-help" class="admin-muted">
-          Сохраняйте дуа в Supabase, затем нажмите «Опубликовать на waydean.ru». JSON-файлы на сайте
-          обновятся автоматически через Edge Function.
+          Сохраните изменения, затем опубликуйте — файлы на сайте обновятся автоматически.
         </p>
         <p id="publish-status" class="admin-muted" hidden></p>
         <div class="admin-toolbar">
           <button type="button" id="publish-site" class="admin-button admin-button-primary">
-            Опубликовать на waydean.ru
+            Опубликовать на сайте
           </button>
-          <button type="button" id="download-support" class="admin-button">support-dua.json</button>
-          <button type="button" id="download-general" class="admin-button">general-dua.json</button>
-          <button type="button" id="download-manifest" class="admin-button">remote-dua.manifest.json</button>
-          <button type="button" id="download-release" class="admin-button">app-release.json</button>
+          <button type="button" id="download-support" class="admin-button">Скачать support-dua</button>
+          <button type="button" id="download-general" class="admin-button">Скачать general-dua</button>
+          <button type="button" id="download-manifest" class="admin-button">Скачать manifest</button>
+          <button type="button" id="download-release" class="admin-button">Скачать release</button>
         </div>
       </section>
     </div>

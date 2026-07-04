@@ -1,4 +1,7 @@
 (function applySiteLinks() {
+  var yearEl = document.getElementById('copyright-year');
+  if (yearEl) yearEl.textContent = String(new Date().getFullYear());
+
   if (typeof LINKS === 'undefined') return;
 
   var rustoreBtn = document.getElementById('btn-rustore');

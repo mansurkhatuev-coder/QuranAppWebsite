@@ -7,9 +7,9 @@
 }
 
 .admin-shell {
-  width: min(1080px, calc(100% - 32px));
+  width: min(1080px, calc(100% - 2rem));
   margin: 0 auto;
-  padding: 32px 0 64px;
+  padding: 2rem 0 4rem;
 }
 
 .admin-card,
@@ -53,7 +53,7 @@
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
-  margin: 24px 0;
+  margin: 1.5rem 0;
 }
 
 .admin-tab {
