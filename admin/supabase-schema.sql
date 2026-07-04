@@ -8,6 +8,8 @@ create table if not exists public.dua_items (
   text text not null,
   translation text,
   transliteration text,
+  translation_chechen text,
+  extra_translations jsonb not null default '[]'::jsonb,
   target_count integer not null default 3,
   audio jsonb not null default '[]'::jsonb,
   "group" text,

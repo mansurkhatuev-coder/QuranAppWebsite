@@ -43,7 +43,6 @@ const FIELD_HINTS = {
   title: 'Полный заголовок в карточке и списке.',
   navTitle: 'Короткий заголовок для навигации и узких экранов.',
   text: 'Арабский текст дуа. Обязательное поле.',
-  translation: 'Русский перевод и пояснение. Можно с новой строки добавить контекст.',
   transliteration: 'Произношение латиницей или на чеченском — как в приложении.',
   targetCount: 'Сколько раз рекомендуется прочитать (счётчик в приложении).',
   group: 'Группа в списке, например «За угнетённых».',
@@ -61,7 +60,6 @@ const EDITOR_FIELDS = [
   { key: 'title', label: 'Заголовок', full: false },
   { key: 'navTitle', label: 'Короткий заголовок', full: false },
   { key: 'text', label: 'Арабский текст', full: true, textarea: true },
-  { key: 'translation', label: 'Перевод', full: true, textarea: true },
   { key: 'transliteration', label: 'Транслитерация', full: true, textarea: true },
   { key: 'targetCount', label: 'Количество', full: false, number: true },
   { key: 'group', label: 'Группа', full: false },
@@ -227,7 +225,158 @@ function generateDuaId(form, category, reservedIds) {
   return `${candidate}-${suffix}`;
 }
 
-function tagsToString(tags) {
+function translationsFromItem(item) {
+  const rows = [];
+  if (item.translation?.trim()) {
+    rows.push({ label: 'Русский перевод', text: item.translation.trim() });
+  }
+  if (item.translationChechen?.trim()) {
+    rows.push({ label: 'Чеченский перевод', text: item.translationChechen.trim() });
+  }
+  if (Array.isArray(item.extraTranslations)) {
+    for (const entry of item.extraTranslations) {
+      const text = entry?.text?.trim();
+      if (!text) continue;
+      rows.push({
+        label: entry.label?.trim() || 'Перевод',
+        text,
+      });
+    }
+  }
+  if (rows.length === 0) {
+    rows.push({ label: 'Русский перевод', text: '' });
+  }
+  return rows;
+}
+
+function translationsToItemFields(rows) {
+  let translation;
+  let translationChechen;
+  const extraTranslations = [];
+
+  const normalized = rows
+    .map((row) => ({
+      label: (row.label || 'Перевод').trim(),
+      text: (row.text || '').trim(),
+    }))
+    .filter((row) => row.text);
+
+  for (const row of normalized) {
+    const lower = row.label.toLowerCase();
+    if (!translation && (lower.includes('рус') || lower === 'перевод')) {
+      translation = row.text;
+      continue;
+    }
+    if (!translationChechen && lower.includes('чечен')) {
+      translationChechen = row.text;
+      continue;
+    }
+    extraTranslations.push({ label: row.label, text: row.text });
+  }
+
+  if (!translation && normalized.length === 1 && !normalized[0].label.toLowerCase().includes('чечен')) {
+    translation = normalized[0].text;
+    return {
+      translation,
+      translationChechen: undefined,
+      extraTranslations: undefined,
+    };
+  }
+
+  return {
+    translation,
+    translationChechen,
+    extraTranslations: extraTranslations.length > 0 ? extraTranslations : undefined,
+  };
+}
+
+function collectTranslationRows() {
+  const container = $('#editor-translations');
+  if (!container) return [];
+  return [...container.querySelectorAll('.admin-translation-row')].map((row) => ({
+    label: row.querySelector('[data-field="label"]')?.value ?? '',
+    text: row.querySelector('[data-field="text"]')?.value ?? '',
+  }));
+}
+
+function createTranslationRow(row, { canRemove }) {
+  const article = document.createElement('article');
+  article.className = 'admin-translation-row admin-full';
+
+  const header = document.createElement('div');
+  header.className = 'admin-translation-row-header';
+
+  const labelField = document.createElement('label');
+  labelField.className = 'admin-translation-label-field';
+  labelField.textContent = 'Язык / подпись';
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.placeholder = 'Например: Чеченский перевод';
+  labelInput.value = row.label ?? '';
+  labelInput.dataset.field = 'label';
+  labelField.append(labelInput);
+
+  if (canRemove) {
+    const removeButton = document.createElement('button');
+    removeButton.type = 'button';
+    removeButton.className = 'admin-button admin-button-ghost admin-translation-remove';
+    removeButton.textContent = 'Удалить';
+    removeButton.addEventListener('click', () => {
+      article.remove();
+    });
+    header.append(labelField, removeButton);
+  } else {
+    header.append(labelField);
+  }
+
+  const textField = document.createElement('label');
+  textField.className = 'admin-translation-text-field admin-full';
+  textField.textContent = 'Текст перевода';
+  const textInput = document.createElement('textarea');
+  textInput.rows = 4;
+  textInput.value = row.text ?? '';
+  textInput.dataset.field = 'text';
+  textField.append(textInput);
+
+  article.append(header, textField);
+  return article;
+}
+
+function renderTranslationFields(item) {
+  const fields = $('#editor-fields');
+  const section = document.createElement('section');
+  section.id = 'editor-translations';
+  section.className = 'admin-translations admin-full';
+
+  const heading = document.createElement('div');
+  heading.className = 'admin-translation-heading';
+  heading.innerHTML = `
+    <div>
+      <p class="admin-field-label-text">Переводы</p>
+      <p class="admin-muted">Подпись видна в приложении над текстом. «Русский» и «Чеченский» — стандартные поля.</p>
+    </div>
+  `;
+
+  const list = document.createElement('div');
+  list.className = 'admin-translation-list';
+
+  const rows = translationsFromItem(item);
+  rows.forEach((row, index) => {
+    list.append(createTranslationRow(row, { canRemove: index > 0 }));
+  });
+
+  const addButton = document.createElement('button');
+  addButton.type = 'button';
+  addButton.className = 'admin-button';
+  addButton.textContent = '+ Добавить перевод';
+  addButton.addEventListener('click', () => {
+    list.append(createTranslationRow({ label: '', text: '' }, { canRemove: true }));
+  });
+
+  section.append(heading, list, addButton);
+  fields.append(section);
+}
+
   return Array.isArray(tags) ? tags.join(', ') : '';
 }
 
@@ -243,7 +392,6 @@ function itemToForm(item) {
     title: item.title ?? '',
     navTitle: item.navTitle ?? '',
     text: item.text ?? '',
-    translation: item.translation ?? '',
     transliteration: item.transliteration ?? '',
     targetCount: item.targetCount ?? 3,
     group: item.group ?? '',
@@ -258,14 +406,17 @@ function itemToForm(item) {
   };
 }
 
-function formToItem(form, category, existingId, reservedIds) {
+function formToItem(form, category, existingId, reservedIds, translationRows) {
   const id = existingId || generateDuaId(form, category, reservedIds);
+  const translationFields = translationsToItemFields(translationRows);
   return {
     id,
     title: form.title.trim() || form.navTitle.trim() || id,
     navTitle: form.navTitle.trim() || form.title.trim() || id,
     text: form.text.trim(),
-    translation: form.translation.trim() || undefined,
+    translation: translationFields.translation,
+    translationChechen: translationFields.translationChechen,
+    extraTranslations: translationFields.extraTranslations,
     transliteration: form.transliteration.trim() || undefined,
     targetCount: Number(form.targetCount) > 0 ? Number(form.targetCount) : 1,
     audio: [],
@@ -465,6 +616,8 @@ function openEditor(packKey, itemId) {
     fields.append(label);
   }
 
+  renderTranslationFields(existing);
+
   $('#editor-dialog').showModal();
 }
 
@@ -482,7 +635,8 @@ function saveEditor(formData) {
     Object.fromEntries(formData.entries()),
     pack.category,
     editing.isNew ? null : editing.itemId,
-    reservedIds
+    reservedIds,
+    collectTranslationRows()
   );
   if (!nextItem.text) {
     window.alert('Арабский текст обязателен.');
