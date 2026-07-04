@@ -1,12 +1,12 @@
 # Deploy publish-content Edge Function to Supabase.
 # Requires env vars:
 #   SUPABASE_ACCESS_TOKEN  -> https://supabase.com/dashboard/account/tokens
-#   GITHUB_PUBLISH_TOKEN   -> GitHub PAT with Contents: Read and write on QuranAppWebsite
+#   WEBSITE_PUBLISH_TOKEN  -> GitHub PAT with Contents: Read and write on QuranAppWebsite
 #
 # Usage:
 #   cd website
 #   $env:SUPABASE_ACCESS_TOKEN = "sbp_..."
-#   $env:GITHUB_PUBLISH_TOKEN = "github_pat_..."
+#   $env:WEBSITE_PUBLISH_TOKEN = "github_pat_..."
 #   .\scripts\deploy-publish-function.ps1
 
 $ErrorActionPreference = 'Stop'
@@ -23,15 +23,15 @@ if (-not $env:SUPABASE_ACCESS_TOKEN) {
   Write-Error 'Set SUPABASE_ACCESS_TOKEN (Supabase Dashboard -> Account -> Access Tokens).'
 }
 
-if (-not $env:GITHUB_PUBLISH_TOKEN) {
-  Write-Error 'Set GITHUB_PUBLISH_TOKEN (GitHub PAT with Contents write on QuranAppWebsite).'
+if (-not $env:WEBSITE_PUBLISH_TOKEN) {
+  Write-Error 'Set WEBSITE_PUBLISH_TOKEN (GitHub PAT with Contents write on QuranAppWebsite).'
 }
 
 Push-Location $root
 try {
   & $cli secrets set `
     --project-ref $projectRef `
-    "GITHUB_TOKEN=$($env:GITHUB_PUBLISH_TOKEN)" `
+    "GITHUB_TOKEN=$($env:WEBSITE_PUBLISH_TOKEN)" `
     'GITHUB_REPO=mansurkhatuev-coder/QuranAppWebsite'
 
   & $cli functions deploy publish-content `
