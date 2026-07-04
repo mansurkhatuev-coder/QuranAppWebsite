@@ -377,6 +377,7 @@ function renderTranslationFields(item) {
   fields.append(section);
 }
 
+function tagsToString(tags) {
   return Array.isArray(tags) ? tags.join(', ') : '';
 }
 
@@ -706,11 +707,14 @@ function bindEvents() {
     try {
       const email = $('#login-email').value.trim();
       const password = $('#login-password').value;
+      const submitButton = $('#login-form button[type="submit"]');
       if (!email) {
         $('#login-error').textContent = 'Введите email пользователя из Supabase → Authentication → Users.';
         $('#login-error').hidden = false;
         return;
       }
+      submitButton.disabled = true;
+      submitButton.textContent = 'Вход...';
       await window.AdminSupabase.signIn(email, password);
 
       showApp();
@@ -719,6 +723,10 @@ function bindEvents() {
       $('#login-error').hidden = false;
       $('#login-error').textContent =
         error instanceof Error ? error.message : 'Неверный email или пароль Supabase';
+    } finally {
+      const submitButton = $('#login-form button[type="submit"]');
+      submitButton.disabled = !isSupabaseReady();
+      submitButton.textContent = 'Войти';
     }
   });
 
