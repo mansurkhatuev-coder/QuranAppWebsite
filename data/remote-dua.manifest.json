@@ -1,14 +1,14 @@
 {
-  "version": 1,
-  "publishedAt": "2026-07-04T07:07:31.653Z",
+  "version": 2,
+  "publishedAt": "2026-07-04T13:10:10.641Z",
   "packs": {
     "support_dua": {
-      "version": 1,
+      "version": 2,
       "url": "/data/support-dua.json",
-      "itemCount": 10
+      "itemCount": 11
     },
     "general_dua": {
-      "version": 1,
+      "version": 2,
       "url": "/data/general-dua.json",
       "itemCount": 4
     }
