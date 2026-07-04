@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Админка — Коран и Азкары</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./admin.css" />
+  </head>
+  <body class="admin-body">
+    <div id="login-screen" class="admin-shell">
+      <div class="admin-card">
+        <p class="admin-kicker">Waydean Admin</p>
+        <h1>Вход</h1>
+        <p class="admin-muted">Один логин для редактирования дуа и версии приложения.</p>
+        <form id="login-form" class="admin-form">
+          <label>
+            Пароль
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+          <button type="submit" class="admin-button admin-button-primary">Войти</button>
+          <p id="login-error" class="admin-error" hidden>Неверный пароль</p>
+        </form>
+      </div>
+    </div>
+
+    <div id="app-screen" class="admin-shell" hidden>
+      <header class="admin-topbar">
+        <div>
+          <p class="admin-kicker">Waydean Admin</p>
+          <h1>Контент приложения</h1>
+        </div>
+        <button id="logout-button" type="button" class="admin-button admin-button-ghost">Выйти</button>
+      </header>
+
+      <nav class="admin-tabs" aria-label="Разделы">
+        <button type="button" class="admin-tab is-active" data-tab="support">Дуа в поддержку</button>
+        <button type="button" class="admin-tab" data-tab="general">Дуа на случаи</button>
+        <button type="button" class="admin-tab" data-tab="release">Версия в Store</button>
+      </nav>
+
+      <section class="admin-panel" data-panel="support">
+        <div class="admin-toolbar">
+          <p class="admin-muted">Категория <code>support_dua</code></p>
+          <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="support">
+            Добавить дуа
+          </button>
+        </div>
+        <div id="support-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel" data-panel="general" hidden>
+        <div class="admin-toolbar">
+          <p class="admin-muted">Категория <code>general_dua</code></p>
+          <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="general">
+            Добавить дуа
+          </button>
+        </div>
+        <div id="general-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel" data-panel="release" hidden>
+        <form id="release-form" class="admin-form admin-form-grid"></form>
+      </section>
+
+      <section class="admin-card admin-publish">
+        <h2>Публикация</h2>
+        <p class="admin-muted">
+          Скачайте обновлённые JSON и загрузите их в репозиторий сайта в папку <code>data/</code>.
+          Затем увеличьте <code>version</code> в manifest и выполните deploy.
+        </p>
+        <div class="admin-toolbar">
+          <button type="button" id="download-support" class="admin-button">support-dua.json</button>
+          <button type="button" id="download-general" class="admin-button">general-dua.json</button>
+          <button type="button" id="download-manifest" class="admin-button">remote-dua.manifest.json</button>
+          <button type="button" id="download-release" class="admin-button">app-release.json</button>
+        </div>
+      </section>
+    </div>
+
+    <dialog id="editor-dialog" class="admin-dialog">
+      <form id="editor-form" method="dialog" class="admin-form">
+        <div class="admin-dialog-header">
+          <h2 id="editor-title">Редактирование дуа</h2>
+          <button type="button" id="editor-close" class="admin-button admin-button-ghost">Закрыть</button>
+        </div>
+        <div class="admin-form-grid" id="editor-fields"></div>
+        <div class="admin-toolbar">
+          <button type="submit" class="admin-button admin-button-primary">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./admin-config.js"></script>
+    <script src="./admin.js"></script>
+  </body>
+</html>

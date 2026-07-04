@@ -15,3 +15,7 @@ const LINKS = {
   /** JavaScript goal identifier for the share button in Metrika. */
   yandexMetrikaGoal: 'share_site',
 };
+
+if (typeof module !== 'undefined' && module.exports) {
+  module.exports = { LINKS };
+}

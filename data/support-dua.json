@@ -1,0 +1,315 @@
+[
+  {
+    "id": "support-palestine-muslims",
+    "title": "За мусульман в Палестине",
+    "navTitle": "За мусульман в Палестине",
+    "text": "اللَّهُمَّ أَصْلِحْ أَحْوَالَ الْمُسْلِمِينَ فِي فِلَسْطِينَ وَفِي كُلِّ مَكَانٍ، اللَّهُمَّ أَلِّفْ بَيْنَ قُلُوبِهِمْ، وَاجْمَعْ كَلِمَتَهُمْ عَلَى الْحَقِّ، وَاحْقُنْ دِمَاءَهُمْ، وَآمِنْهُمْ فِي دِيَارِهِمْ، اللَّهُمَّ انْصُرْ إِخْوَانَنَا الْمُسْلِمِينَ فِي غَزَّةَ وَفِي فِلَسْطِينَ، اللَّهُمَّ ثَبِّتْ أَقْدَامَهُمْ وَانْصُرْهُمْ عَلَى عَدُوِّكَ وَعَدُوِّهِمْ",
+    "translation": "О Аллах, исправь положение мусульман в Палестине и везде, где они находятся. О Аллах, сблизь их сердца, объедини их слово на истине, сохрани их кровь и даруй им безопасность в их землях. О Аллах, помоги нашим братьям-мусульманам в Газе и Палестине, укрепи их стопы и одержи над ними верх над Твоим и их врагом.\n\nРаспространённая мольба за братьев и сестёр в Палестине, Газе и других землях.",
+    "transliteration": "Allahumma aslih ahwalal-muslimina fi Filistina wa fi kulli makan, Allahumma allif bayna qulubihim, wajma‘ kalimatahum ‘alal-haqq, wahqun dima’ahum wa aminhum fi diyarihim, Allahumma-nsur ikhwananal-muslimina fi Ghazza wa fi Filistin, Allahumma thabbit aqdamahum wansurhum ‘ala ‘aduwwika wa ‘aduwwihim.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "За угнетённых",
+    "category": "support_dua",
+    "authenticity": "hasan",
+    "source": {
+      "type": "dua",
+      "book": "Общая мольба уммы",
+      "number": "—",
+      "grade": "hasan",
+      "gradeNote": "Не приписывается пророку ﷺ дословно; дозволенная мольба о мусульманах в беде."
+    },
+    "benefitHadith": {
+      "summary": "Мусульманин вправе просить Аллаха о братьях в любой форме, не противоречащей шариату.",
+      "source": "Общее разрешение дуа; см. также Muslim 2732 о мольбе за брата",
+      "url": "https://sunnah.com/muslim:2732",
+      "grade": "hasan"
+    },
+    "tags": [
+      "support_dua",
+      "palestine",
+      "gaza"
+    ],
+    "importance": "core",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-palestine-oppressed",
+    "title": "За угнетённых мусульман",
+    "navTitle": "За братьев в Палестине",
+    "text": "عَلَى اللَّهِ تَوَكَّلْنَا رَبَّنَا لَا تَجْعَلْنَا فِتْنَةً لِّلْقَوْمِ الظَّالِمِينَ * وَنَجِّنَا بِرَحْمَتِكَ مِنَ الْقَوْمِ الْكَافِرِينَ",
+    "translation": "Мы уповаем на Аллаха. Господь наш! Не сделай нас испытанием для людей несправедливых и избавь нас по Своей милости от неверующих людей.\n\nДуа сподвижников пророка Мусы (мир ему), когда их угнетали. Читайте за мусульман в Палестине, Сирии, Судане и везде, где братья и сёстры терпят несправедливость.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "За угнетённых",
+    "category": "support_dua",
+    "authenticity": "quran",
+    "source": {
+      "type": "quran",
+      "sura": 10,
+      "ayah": 85,
+      "url": "https://quran.com/10:85-86"
+    },
+    "benefitHadith": {
+      "summary": "Дуа людей, которых притесняли, уповающих на Аллаха и просящих избавления от угнетателей.",
+      "source": "Коран, 10:85–86",
+      "url": "https://quran.com/10:85-86"
+    },
+    "tags": [
+      "support_dua",
+      "palestine",
+      "oppressed"
+    ],
+    "importance": "core",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-patience-victory",
+    "title": "Терпение, стойкость и помощь",
+    "navTitle": "Терпение и победа",
+    "text": "رَبَّنَا اغْفِرْ لَنَا ذُنُوبَنَا وَإِسْرَافَنَا فِي أَمْرِنَا وَثَبِّتْ أَقْدَامَنَا وَانصُرْنَا عَلَى الْقَوْمِ الْكَافِرِينَ",
+    "translation": "Господь наш! Прости нам наши грехи и излишества в наших делах, укрепи наши стопы и помоги нам против неверующих людей.\n\nДуа терпеливых, которые сражались на пути Аллаха. Подходит для дуа за защитников и всех мусульман под гнётом.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "За угнетённых",
+    "category": "support_dua",
+    "authenticity": "quran",
+    "source": {
+      "type": "quran",
+      "sura": 3,
+      "ayah": 147,
+      "url": "https://quran.com/3:147"
+    },
+    "benefitHadith": {
+      "summary": "Дуа праведников, просящих прощения, стойкости и победы над врагами истины.",
+      "source": "Коран, 3:147",
+      "url": "https://quran.com/3:147"
+    },
+    "tags": [
+      "support_dua",
+      "oppressed",
+      "victory"
+    ],
+    "importance": "core",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-ummah",
+    "title": "За всю умму пророка",
+    "navTitle": "За умму Мухаммада",
+    "text": "اللَّهُمَّ أَصْلِحْ أُمَّةَ مُحَمَّدٍ، اللَّهُمَّ ارْحَمْ أُمَّةَ مُحَمَّدٍ",
+    "translation": "О Аллах, исправь положение уммы Мухаммада (да благословит его Аллах и приветствует). О Аллах, помилуй умму Мухаммада (да благословит его Аллах и приветствует).\n\nПророк ﷺ часто обращался с этой мольбой, особенно в намазе.",
+    "transliteration": "Allahumma aslih ummata Muhammad, Allahumma-rham ummata Muhammad.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "За братьев и сестёр",
+    "category": "support_dua",
+    "authenticity": "sahih",
+    "source": {
+      "type": "hadith",
+      "book": "Jami` at-Tirmidhi",
+      "number": "2682",
+      "url": "https://sunnah.com/tirmidhi:2682",
+      "grade": "hasan",
+      "gradedBy": "al-Albani"
+    },
+    "benefitHadith": {
+      "summary": "Пророк ﷺ часто говорил эту мольбу в намазе — за всю умму, включая страдающих мусульман.",
+      "source": "Jami` at-Tirmidhi 2682",
+      "url": "https://sunnah.com/tirmidhi:2682",
+      "grade": "hasan"
+    },
+    "tags": [
+      "support_dua",
+      "ummah"
+    ],
+    "importance": "core",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-absent-believer",
+    "title": "Дуа за мусульманина в его отсутствии",
+    "navTitle": "За брата в его отсутствии",
+    "text": "اللَّهُمَّ اغْفِرْ لَهُ وَارْحَمْهُ",
+    "translation": "О Аллах, прости его и помилуй его.\n\nКогда вы слышите о беде мусульманина — в Палестине или где бы то ни было — сделайте за него эту мольбу. Ангел скажет: «Амин, и тебе то же».",
+    "transliteration": "Allahumma-ghfir lahu warhamhu.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "За братьев и сестёр",
+    "category": "support_dua",
+    "authenticity": "sahih",
+    "source": {
+      "type": "hadith",
+      "book": "Sahih Muslim",
+      "number": "2732",
+      "url": "https://sunnah.com/muslim:2732",
+      "grade": "sahih"
+    },
+    "benefitHadith": {
+      "summary": "Кто молится за брата в его отсутствии, тому ангел отвечает «амин» — и за него то же самое.",
+      "source": "Sahih Muslim 2732",
+      "url": "https://sunnah.com/muslim:2732",
+      "grade": "sahih"
+    },
+    "tags": [
+      "support_dua",
+      "absent",
+      "palestine"
+    ],
+    "importance": "recommended",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-ayyub",
+    "title": "Дуа пророка Айюба в беде",
+    "navTitle": "В тяжёлом испытании",
+    "text": "أَنِّي مَسَّنِيَ الضُّرُّ وَأَنتَ أَرْحَمُ الرَّاحِمِينَ",
+    "translation": "Воистину, меня постигло горе, а Ты — милосерднейший из милосердных.\n\nДуа пророка Айюба (мир ему) в болезни и испытании. Читайте за тех, кто страдает от ран, голода и разрушения.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "В время бедствия",
+    "category": "support_dua",
+    "authenticity": "quran",
+    "source": {
+      "type": "quran",
+      "sura": 21,
+      "ayah": 83,
+      "url": "https://quran.com/21:83"
+    },
+    "benefitHadith": {
+      "summary": "Аллах ответил на эту мольбу и снял с Айюба беду — пример для дуа за страдающих.",
+      "source": "Коран, 21:83–84",
+      "url": "https://quran.com/21:83-84"
+    },
+    "tags": [
+      "support_dua",
+      "distress"
+    ],
+    "importance": "recommended",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-yunus",
+    "title": "Дуа пророка Йунуса",
+    "navTitle": "Нет силы, кроме у Аллаха",
+    "text": "لَا إِلَٰهَ إِلَّا أَنتَ سُبْحَانَكَ إِنِّي كُنتُ مِنَ الظَّالِمِينَ",
+    "translation": "Нет бога, кроме Тебя! Пречист Ты! Поистине, я был из числа несправедливых.\n\nДуа пророка Йунуса (мир ему) в отчаянии. Аллах принимает её от каждого верующего в беде.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "В время бедствия",
+    "category": "support_dua",
+    "authenticity": "quran",
+    "source": {
+      "type": "quran",
+      "sura": 21,
+      "ayah": 87,
+      "url": "https://quran.com/21:87"
+    },
+    "benefitHadith": {
+      "summary": "Нет мусульманина, который обратится с этой мольбой, кроме как Аллах ответит ему.",
+      "source": "Jami` at-Tirmidhi 3505; Sahih al-Jami` 3383",
+      "url": "https://sunnah.com/tirmidhi:3505",
+      "grade": "sahih"
+    },
+    "tags": [
+      "support_dua",
+      "distress"
+    ],
+    "importance": "core",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-distress-dhikr",
+    "title": "Зикр в тяжёлом положении",
+    "navTitle": "Зикр при беде",
+    "text": "لَا إِلَٰهَ إِلَّا اللَّهُ الْعَظِيمُ الْحَلِيمُ، لَا إِلَٰهَ إِلَّا اللَّهُ رَبُّ الْعَرْشِ الْعَظِيمِ، لَا إِلَٰهَ إِلَّا اللَّهُ رَبُّ السَّمَاوَاتِ وَرَبُّ الْأَرْضِ وَرَبُّ الْعَرْشِ الْكَرِيمِ",
+    "translation": "Нет бога, кроме Аллаха — Великого, Кроткого. Нет бога, кроме Аллаха — Господа Великого Трона. Нет бога, кроме Аллаха — Господа небес, Господа земли и Господа Благородного Трона.\n\nПовторяйте, когда тревожитесь за братьев и сестёр или сами в беде.",
+    "transliteration": "La ilaha illallahu-l-‘Azimul-Halim, la ilaha illallahu Rabbul-‘Arshil-‘Azim, la ilaha illallahu Rabbus-samawati wa Rabbul-ardi wa Rabbul-‘Arshil-Karim.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "В время бедствия",
+    "category": "support_dua",
+    "authenticity": "sahih",
+    "source": {
+      "type": "hadith",
+      "book": "Sahih al-Bukhari",
+      "number": "6345",
+      "url": "https://sunnah.com/bukhari:6345",
+      "grade": "sahih"
+    },
+    "benefitHadith": {
+      "summary": "Пророк ﷺ советовал говорить это при тяжёлом бедствии.",
+      "source": "Sahih al-Bukhari 6345; Sahih Muslim 2730",
+      "url": "https://sunnah.com/bukhari:6345",
+      "grade": "sahih"
+    },
+    "tags": [
+      "support_dua",
+      "distress"
+    ],
+    "importance": "recommended",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-mercy-hope",
+    "title": "Надежда на милость Аллаха",
+    "navTitle": "Надежда на милость",
+    "text": "اللَّهُمَّ رَحْمَتَكَ أَرْجُو فَلَا تَكِلْنِي إِلَى نَفْسِي طَرْفَةَ عَيْنٍ وَأَصْلِحْ لِي شَأْنِي كُلَّهُ لَا إِلَٰهَ إِلَّا أَنتَ",
+    "translation": "О Аллах, на Твою милость уповаю! Не оставляй меня самого себе ни на миг и исправь мне всё моё дело. Нет бога, кроме Тебя.\n\nМожно читать за себя и за мусульман, переживающих тяжёлые испытания.",
+    "transliteration": "Allahumma rahmataka arju, fala takilni ila nafsi tarfata ‘ayn, wa aslih li sha’ni kullah, la ilaha illa Anta.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "В время бедствия",
+    "category": "support_dua",
+    "authenticity": "hasan",
+    "source": {
+      "type": "hadith",
+      "book": "Sunan Abi Dawud",
+      "number": "5090",
+      "url": "https://sunnah.com/abudawud:5090",
+      "grade": "hasan",
+      "gradedBy": "al-Albani"
+    },
+    "benefitHadith": {
+      "summary": "Дуа, которое пророк ﷺ учил при тревоге и нужде.",
+      "source": "Sunan Abi Dawud 5090",
+      "url": "https://sunnah.com/abudawud:5090",
+      "grade": "hasan"
+    },
+    "tags": [
+      "support_dua",
+      "mercy"
+    ],
+    "importance": "recommended",
+    "placementFit": "support"
+  },
+  {
+    "id": "support-musa-mercy",
+    "title": "Прощение и милость",
+    "navTitle": "Прощение и милость",
+    "text": "رَبِّ اغْفِرْ وَارْحَمْ وَأَنتَ خَيْرُ الرَّاحِمِينَ",
+    "translation": "Господь мой! Прости и помилуй, ведь Ты — лучший из милующих.\n\nДуа пророка Мусы (мир ему). Читайте за погибших, раненых и всех, кто нуждается в милости Аллаха.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "За братьев и сестёр",
+    "category": "support_dua",
+    "authenticity": "quran",
+    "source": {
+      "type": "quran",
+      "sura": 23,
+      "ayah": 118,
+      "url": "https://quran.com/23:118"
+    },
+    "benefitHadith": {
+      "summary": "Кораническая мольба о прощении и милости — уместна в дуа за угнетённых и шехидов.",
+      "source": "Коран, 23:118",
+      "url": "https://quran.com/23:118"
+    },
+    "tags": [
+      "support_dua",
+      "mercy",
+      "martyrs"
+    ],
+    "importance": "recommended",
+    "placementFit": "support"
+  }
+]

@@ -1,0 +1,190 @@
+.admin-body {
+  background:
+    radial-gradient(circle at top, rgba(212, 175, 55, 0.12), transparent 42%),
+    var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+.admin-shell {
+  width: min(1080px, calc(100% - 32px));
+  margin: 0 auto;
+  padding: 32px 0 64px;
+}
+
+.admin-card,
+.admin-dialog form {
+  background: var(--glass-strong);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 24px;
+  backdrop-filter: blur(18px);
+}
+
+.admin-topbar,
+.admin-toolbar,
+.admin-dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.admin-kicker {
+  color: var(--gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  font-size: 12px;
+  margin: 0 0 8px;
+}
+
+.admin-muted {
+  color: var(--text-2);
+  margin: 0;
+}
+
+.admin-error {
+  color: #ff8f8f;
+  margin: 0;
+}
+
+.admin-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 24px 0;
+}
+
+.admin-tab {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+}
+
+.admin-tab.is-active {
+  border-color: var(--gold-soft);
+  background: var(--gold-faint);
+  color: var(--gold);
+}
+
+.admin-button {
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 999px;
+  padding: 10px 16px;
+  cursor: pointer;
+  font: inherit;
+}
+
+.admin-button-primary {
+  border-color: var(--gold-soft);
+  background: var(--gold-faint);
+  color: var(--gold);
+}
+
+.admin-button-ghost,
+.admin-button-danger {
+  background: transparent;
+}
+
+.admin-button-danger {
+  color: #ff9d9d;
+  border-color: rgba(255, 157, 157, 0.35);
+}
+
+.admin-form,
+.admin-form-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.admin-form label {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+}
+
+.admin-form input,
+.admin-form textarea,
+.admin-form select {
+  width: 100%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font: inherit;
+}
+
+.admin-form textarea {
+  min-height: 120px;
+  resize: vertical;
+}
+
+.admin-list {
+  display: grid;
+  gap: 12px;
+}
+
+.admin-item {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: flex-start;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.admin-item h3 {
+  margin: 0 0 6px;
+  font-size: 18px;
+}
+
+.admin-item-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.admin-publish {
+  margin-top: 24px;
+}
+
+.admin-dialog {
+  width: min(920px, calc(100vw - 24px));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--bg-2);
+  color: var(--text);
+  padding: 0;
+}
+
+.admin-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.admin-dialog form {
+  border: 0;
+  border-radius: 0;
+}
+
+.admin-full {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 720px) {
+  .admin-item {
+    flex-direction: column;
+  }
+}
