@@ -113,16 +113,81 @@
   font-size: 14px;
 }
 
+.admin-field-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.admin-field-label-text {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.admin-hint-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.admin-hint-button {
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid var(--gold-soft);
+  background: var(--gold-faint);
+  color: var(--gold);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+}
+
+.admin-hint-button:hover,
+.admin-hint-button:focus-visible {
+  background: rgba(212, 175, 55, 0.22);
+  outline: none;
+}
+
+.admin-hint-popover {
+  display: none;
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 20;
+  width: min(280px, 72vw);
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: #121820;
+  color: var(--text);
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+}
+
+.admin-hint-popover.is-open {
+  display: block;
+}
+
 .admin-form input,
 .admin-form textarea,
 .admin-form select {
   width: 100%;
   border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.03);
+  background: #121820;
   color: var(--text);
   border-radius: 12px;
   padding: 10px 12px;
   font: inherit;
+  color-scheme: dark;
+}
+
+.admin-form select option,
+.admin-form select optgroup {
+  background: #121820;
+  color: #f8f8f8;
 }
 
 .admin-form textarea {

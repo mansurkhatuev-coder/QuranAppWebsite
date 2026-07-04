@@ -23,8 +23,41 @@ const PACKS = {
   },
 };
 
+const AUTHENTICITY_OPTIONS = [
+  { value: 'quran', label: 'Коран (quran)' },
+  { value: 'sahih', label: 'Достоверный (sahih)' },
+  { value: 'hasan', label: 'Хороший (hasan)' },
+  { value: 'disputed', label: 'Есть разногласия (disputed)' },
+  { value: 'weak', label: 'Слабый (weak)' },
+];
+
+const IMPORTANCE_OPTIONS = [
+  { value: 'core', label: 'Основное (core)' },
+  { value: 'recommended', label: 'Рекомендуемое (recommended)' },
+  { value: 'extra', label: 'Дополнительное (extra)' },
+];
+
+const FIELD_HINTS = {
+  id: 'Уникальный ключ. После публикации не меняйте — иначе сбросится прогресс у пользователей. Только латиница, цифры и дефис.',
+  title: 'Полный заголовок в карточке и списке.',
+  navTitle: 'Короткий заголовок для навигации и узких экранов.',
+  text: 'Арабский текст дуа. Обязательное поле.',
+  translation: 'Русский перевод и пояснение. Можно с новой строки добавить контекст.',
+  transliteration: 'Произношение латиницей или на чеченском — как в приложении.',
+  targetCount: 'Сколько раз рекомендуется прочитать (счётчик в приложении).',
+  group: 'Группа в списке, например «За угнетённых».',
+  authenticity: 'Степень достоверности. В режиме «Проверенные» слабые и спорные скрываются.',
+  importance: 'Приоритет в подборках. core — главные дуа раздела.',
+  tags: 'Теги через запятую: palestine, distress, daily. Используются для фильтрации.',
+  sourceSummary: 'Краткий источник: книга, сура, хадис или «Общая мольба».',
+  sourceUrl: 'Ссылка на sunnah.com, quran.com и т.п.',
+  benefitSummary: 'Зачем читать это дуа — польза или контекст.',
+  benefitSource: 'Откуда взято пояснение о пользе.',
+  benefitUrl: 'Ссылка на источник пользы (необязательно).',
+};
+
 const EDITOR_FIELDS = [
-  { key: 'id', label: 'ID (не менять после публикации)', full: false },
+  { key: 'id', label: 'ID', full: false },
   { key: 'title', label: 'Заголовок', full: false },
   { key: 'navTitle', label: 'Короткий заголовок', full: false },
   { key: 'text', label: 'Арабский текст', full: true, textarea: true },
@@ -32,8 +65,8 @@ const EDITOR_FIELDS = [
   { key: 'transliteration', label: 'Транслитерация', full: true, textarea: true },
   { key: 'targetCount', label: 'Количество', full: false, number: true },
   { key: 'group', label: 'Группа', full: false },
-  { key: 'authenticity', label: 'Достоверность', full: false, select: ['quran', 'sahih', 'hasan', 'disputed', 'weak'] },
-  { key: 'importance', label: 'Важность', full: false, select: ['core', 'recommended', 'extra'] },
+  { key: 'authenticity', label: 'Достоверность', full: false, select: AUTHENTICITY_OPTIONS },
+  { key: 'importance', label: 'Важность', full: false, select: IMPORTANCE_OPTIONS },
   { key: 'tags', label: 'Теги через запятую', full: true },
   { key: 'sourceSummary', label: 'Источник (кратко)', full: false },
   { key: 'sourceUrl', label: 'Ссылка на источник', full: true },
@@ -45,6 +78,66 @@ const EDITOR_FIELDS = [
 function $(selector) {
   return document.querySelector(selector);
 }
+
+function closeOpenHints(exceptButton = null) {
+  document.querySelectorAll('.admin-hint-popover.is-open').forEach((popover) => {
+    const button = popover.closest('.admin-field-label')?.querySelector('.admin-hint-button');
+    if (button && button === exceptButton) return;
+    popover.classList.remove('is-open');
+    if (button) button.setAttribute('aria-expanded', 'false');
+  });
+}
+
+function createFieldLabel(field) {
+  const label = document.createElement('label');
+  label.className = `admin-field-label${field.full ? ' admin-full' : ''}`;
+
+  const row = document.createElement('div');
+  row.className = 'admin-field-label-row';
+
+  const title = document.createElement('span');
+  title.className = 'admin-field-label-text';
+  title.textContent = field.label;
+  row.append(title);
+
+  const hintText = FIELD_HINTS[field.key];
+  if (hintText) {
+    const hintWrap = document.createElement('div');
+    hintWrap.className = 'admin-hint-wrap';
+
+    const hintButton = document.createElement('button');
+    hintButton.type = 'button';
+    hintButton.className = 'admin-hint-button';
+    hintButton.setAttribute('aria-label', `Подсказка: ${field.label}`);
+    hintButton.setAttribute('aria-expanded', 'false');
+    hintButton.textContent = '?';
+
+    const popover = document.createElement('div');
+    popover.className = 'admin-hint-popover';
+    popover.setAttribute('role', 'tooltip');
+    popover.textContent = hintText;
+
+    hintButton.addEventListener('click', (event) => {
+      event.preventDefault();
+      event.stopPropagation();
+      const willOpen = !popover.classList.contains('is-open');
+      closeOpenHints(hintButton);
+      popover.classList.toggle('is-open', willOpen);
+      hintButton.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+
+    hintWrap.append(hintButton, popover);
+    row.append(hintWrap);
+  }
+
+  label.append(row);
+  return label;
+}
+
+document.addEventListener('click', () => closeOpenHints());
+document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') closeOpenHints();
+});
 
 function downloadJson(fileName, data) {
   const blob = new Blob([`${JSON.stringify(data, null, 2)}\n`], { type: 'application/json' });
@@ -270,18 +363,17 @@ function openEditor(packKey, itemId) {
   const formValues = itemToForm(existing);
 
   for (const field of EDITOR_FIELDS) {
-    const label = document.createElement('label');
-    label.className = field.full ? 'admin-full' : '';
-    label.textContent = field.label;
+    const label = createFieldLabel(field);
 
     let input;
     if (field.select) {
       input = document.createElement('select');
       for (const optionValue of field.select) {
         const option = document.createElement('option');
-        option.value = optionValue;
-        option.textContent = optionValue;
-        if (formValues[field.key] === optionValue) option.selected = true;
+        const value = typeof optionValue === 'string' ? optionValue : optionValue.value;
+        option.value = value;
+        option.textContent = typeof optionValue === 'string' ? optionValue : optionValue.label;
+        if (formValues[field.key] === value) option.selected = true;
         input.append(option);
       }
     } else if (field.textarea) {
