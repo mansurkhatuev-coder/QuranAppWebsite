@@ -40,7 +40,6 @@ const IMPORTANCE_OPTIONS = [
 ];
 
 const FIELD_HINTS = {
-  id: 'Уникальный ключ. После публикации не меняйте — иначе сбросится прогресс у пользователей. Только латиница, цифры и дефис.',
   title: 'Полный заголовок в карточке и списке.',
   navTitle: 'Короткий заголовок для навигации и узких экранов.',
   text: 'Арабский текст дуа. Обязательное поле.',
@@ -59,7 +58,6 @@ const FIELD_HINTS = {
 };
 
 const EDITOR_FIELDS = [
-  { key: 'id', label: 'ID', full: false },
   { key: 'title', label: 'Заголовок', full: false },
   { key: 'navTitle', label: 'Короткий заголовок', full: false },
   { key: 'text', label: 'Арабский текст', full: true, textarea: true },
@@ -160,6 +158,75 @@ function slugify(value) {
     .slice(0, 48);
 }
 
+const CYRILLIC_TO_LATIN = {
+  а: 'a',
+  б: 'b',
+  в: 'v',
+  г: 'g',
+  д: 'd',
+  е: 'e',
+  ё: 'yo',
+  ж: 'zh',
+  з: 'z',
+  и: 'i',
+  й: 'y',
+  к: 'k',
+  л: 'l',
+  м: 'm',
+  н: 'n',
+  о: 'o',
+  п: 'p',
+  р: 'r',
+  с: 's',
+  т: 't',
+  у: 'u',
+  ф: 'f',
+  х: 'h',
+  ц: 'ts',
+  ч: 'ch',
+  ш: 'sh',
+  щ: 'sch',
+  ъ: '',
+  ы: 'y',
+  ь: '',
+  э: 'e',
+  ю: 'yu',
+  я: 'ya',
+};
+
+function transliterateCyrillic(value) {
+  return value
+    .toLowerCase()
+    .split('')
+    .map((char) => CYRILLIC_TO_LATIN[char] ?? char)
+    .join('');
+}
+
+function categoryIdPrefix(category) {
+  return category === 'support_dua' ? 'support' : 'general';
+}
+
+function idSeedFromForm(form) {
+  for (const source of [form.transliteration, form.title, form.navTitle]) {
+    const slug = slugify(transliterateCyrillic(source));
+    if (slug) return slug;
+  }
+  return 'dua';
+}
+
+function generateDuaId(form, category, reservedIds) {
+  const prefix = categoryIdPrefix(category);
+  const seed = idSeedFromForm(form);
+  let candidate = `${prefix}-${seed}`.slice(0, 64);
+  if (!reservedIds.has(candidate)) return candidate;
+
+  let suffix = 2;
+  while (reservedIds.has(`${candidate}-${suffix}`)) {
+    suffix += 1;
+  }
+  return `${candidate}-${suffix}`;
+}
+
 function tagsToString(tags) {
   return Array.isArray(tags) ? tags.join(', ') : '';
 }
@@ -173,7 +240,6 @@ function tagsFromString(value) {
 
 function itemToForm(item) {
   return {
-    id: item.id ?? '',
     title: item.title ?? '',
     navTitle: item.navTitle ?? '',
     text: item.text ?? '',
@@ -192,8 +258,8 @@ function itemToForm(item) {
   };
 }
 
-function formToItem(form, category) {
-  const id = form.id.trim() || `${category}-${slugify(form.title || 'dua')}`;
+function formToItem(form, category, existingId, reservedIds) {
+  const id = existingId || generateDuaId(form, category, reservedIds);
   return {
     id,
     title: form.title.trim() || form.navTitle.trim() || id,
@@ -274,7 +340,6 @@ function renderList(packKey) {
     card.innerHTML = `
       <div>
         <h3>${item.title || item.id}</h3>
-        <p class="admin-muted">${item.id}</p>
         <p>${(item.translation || item.text || '').slice(0, 140)}</p>
       </div>
     `;
@@ -412,18 +477,19 @@ function saveEditor(formData) {
   const editing = state.editing;
   if (!editing) return;
   const pack = PACKS[editing.packKey];
-  const nextItem = formToItem(Object.fromEntries(formData.entries()), pack.category);
+  const reservedIds = new Set(state[editing.packKey].map((item) => item.id));
+  const nextItem = formToItem(
+    Object.fromEntries(formData.entries()),
+    pack.category,
+    editing.isNew ? null : editing.itemId,
+    reservedIds
+  );
   if (!nextItem.text) {
     window.alert('Арабский текст обязателен.');
     return;
   }
 
   const list = state[editing.packKey].filter((item) => item.id !== editing.itemId);
-  if (list.some((item) => item.id === nextItem.id) && (editing.isNew || editing.itemId !== nextItem.id)) {
-    window.alert('ID уже используется.');
-    return;
-  }
-
   void (async () => {
     try {
         await window.AdminSupabase.upsertDuaItem(nextItem);
