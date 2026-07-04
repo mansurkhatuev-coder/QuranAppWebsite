@@ -1,4 +1,4 @@
--- Supabase schema for future admin publish flow (not required for MVP download workflow).
+-- Supabase schema for Waydean admin (dua + app release + manifest metadata).
 
 create table if not exists public.dua_items (
   id text primary key,
@@ -30,21 +30,31 @@ create table if not exists public.app_release (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.content_manifest (
+  id integer primary key default 1 check (id = 1),
+  remote_dua jsonb not null default '{}'::jsonb,
+  app_release jsonb not null default '{}'::jsonb,
+  published_at timestamptz,
+  published_by text,
+  updated_at timestamptz not null default now()
+);
+
 alter table public.dua_items enable row level security;
 alter table public.app_release enable row level security;
+alter table public.content_manifest enable row level security;
 
--- Public read for published JSON export (optional, via service role in Edge Function).
+drop policy if exists "public read published dua" on public.dua_items;
+drop policy if exists "authenticated manage dua" on public.dua_items;
+drop policy if exists "public read app release" on public.app_release;
+drop policy if exists "authenticated manage release" on public.app_release;
+drop policy if exists "authenticated read manifest" on public.content_manifest;
+drop policy if exists "authenticated manage manifest" on public.content_manifest;
+
 create policy "public read published dua"
   on public.dua_items
   for select
   using (status = 'published');
 
-create policy "public read app release"
-  on public.app_release
-  for select
-  using (true);
-
--- Authenticated admin user can write (single login MVP).
 create policy "authenticated manage dua"
   on public.dua_items
   for all
@@ -52,9 +62,30 @@ create policy "authenticated manage dua"
   using (true)
   with check (true);
 
+create policy "public read app release"
+  on public.app_release
+  for select
+  using (true);
+
 create policy "authenticated manage release"
   on public.app_release
   for all
   to authenticated
   using (true)
   with check (true);
+
+create policy "authenticated read manifest"
+  on public.content_manifest
+  for select
+  to authenticated
+  using (true);
+
+create policy "authenticated manage manifest"
+  on public.content_manifest
+  for all
+  to authenticated
+  using (true)
+  with check (true);
+
+create index if not exists dua_items_category_idx on public.dua_items (category);
+create index if not exists dua_items_status_idx on public.dua_items (status);

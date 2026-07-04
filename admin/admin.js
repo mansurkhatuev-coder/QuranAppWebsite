@@ -1,5 +1,9 @@
 const SESSION_KEY = 'waydean_admin_session_v1';
 
+function useSupabaseAuth() {
+  return Boolean(window.AdminSupabase?.isEnabled?.());
+}
+
 const state = {
   support: [],
   general: [],
@@ -292,8 +296,17 @@ function renderList(packKey) {
     deleteButton.textContent = 'Удалить';
     deleteButton.addEventListener('click', () => {
       if (!window.confirm('Удалить эту запись?')) return;
-      state[packKey] = state[packKey].filter((entry) => entry.id !== item.id);
-      renderList(packKey);
+      void (async () => {
+        try {
+          if (useSupabaseAuth()) {
+            await window.AdminSupabase.deleteDuaItem(item.id);
+          }
+          state[packKey] = state[packKey].filter((entry) => entry.id !== item.id);
+          renderList(packKey);
+        } catch (error) {
+          window.alert(error instanceof Error ? error.message : 'Не удалось удалить запись.');
+        }
+      })();
     });
 
     actions.append(editButton, deleteButton);
@@ -339,6 +352,7 @@ function renderReleaseForm() {
       messageRu: String(data.get('messageRu') || '').trim(),
       messageEn: String(data.get('messageEn') || '').trim(),
     };
+    void persistReleaseState().catch(() => {});
   };
 }
 
@@ -414,11 +428,20 @@ function saveEditor(formData) {
     return;
   }
 
-  list.push(nextItem);
-  list.sort((left, right) => left.title.localeCompare(right.title, 'ru'));
-  state[editing.packKey] = list;
-  renderList(editing.packKey);
-  closeEditor();
+  void (async () => {
+    try {
+      if (useSupabaseAuth()) {
+        await window.AdminSupabase.upsertDuaItem(nextItem);
+      }
+      list.push(nextItem);
+      list.sort((left, right) => left.title.localeCompare(right.title, 'ru'));
+      state[editing.packKey] = list;
+      renderList(editing.packKey);
+      closeEditor();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Не удалось сохранить запись.');
+    }
+  })();
 }
 
 function setActiveTab(tabName) {
@@ -437,11 +460,14 @@ function showApp() {
 
 function showLogin() {
   sessionStorage.removeItem(SESSION_KEY);
+  if (useSupabaseAuth()) {
+    void window.AdminSupabase.signOut().catch(() => {});
+  }
   $('#login-screen').hidden = false;
   $('#app-screen').hidden = true;
 }
 
-async function loadContent() {
+async function loadContentFromJson() {
   const [support, general, manifest, release] = await Promise.all([
     fetchJson('../data/support-dua.json'),
     fetchJson('../data/general-dua.json'),
@@ -453,24 +479,71 @@ async function loadContent() {
   state.general = Array.isArray(general) ? general : [];
   state.manifest = manifest;
   state.release = release;
+}
+
+async function loadContent() {
+  if (useSupabaseAuth()) {
+    const catalog = await window.AdminSupabase.loadCatalog();
+    state.support = catalog.support;
+    state.general = catalog.general;
+    state.manifest = catalog.manifest;
+    state.release = catalog.release;
+  } else {
+    await loadContentFromJson();
+  }
   renderAllLists();
   renderReleaseForm();
+}
+
+async function persistReleaseState() {
+  if (!useSupabaseAuth()) return;
+  await window.AdminSupabase.saveRelease(state.release);
+}
+
+function configureLoginUi() {
+  const supabaseMode = useSupabaseAuth();
+  $('#login-email-wrap').hidden = !supabaseMode;
+  $('#login-email').required = supabaseMode;
+  $('#login-secret-label').textContent = supabaseMode ? 'Пароль Supabase' : 'Пароль';
+  $('#publish-site').hidden = !supabaseMode;
+  $('#publish-help').textContent = supabaseMode
+    ? 'Сохраняйте дуа в Supabase, затем нажмите «Опубликовать на waydean.ru». JSON-файлы на сайте обновятся автоматически через Edge Function.'
+    : 'Скачайте обновлённые JSON и загрузите их в репозиторий сайта в папку data/. Затем увеличьте version в manifest и выполните deploy.';
 }
 
 function bindEvents() {
   $('#login-form').addEventListener('submit', async (event) => {
     event.preventDefault();
-    const password = $('#login-password').value;
-    const configured = window.ADMIN_CONFIG?.password;
-    const allowed = new Set([configured, 'change-me-before-deploy', 'islam0011'].filter(Boolean));
-    if (!allowed.has(password)) {
-      $('#login-error').hidden = false;
-      return;
-    }
     $('#login-error').hidden = true;
-    sessionStorage.setItem(SESSION_KEY, '1');
-    showApp();
-    await loadContent().catch(() => window.alert('Не удалось загрузить data/*.json с сайта.'));
+
+    try {
+      if (useSupabaseAuth()) {
+        const email = $('#login-email').value.trim();
+        const password = $('#login-password').value;
+        if (!email) {
+          $('#login-error').hidden = false;
+          return;
+        }
+        await window.AdminSupabase.signIn(email, password);
+      } else {
+        const password = $('#login-password').value;
+        const configured = window.ADMIN_CONFIG?.password;
+        const allowed = new Set([configured, 'change-me-before-deploy', 'islam0011'].filter(Boolean));
+        if (!allowed.has(password)) {
+          $('#login-error').hidden = false;
+          return;
+        }
+        sessionStorage.setItem(SESSION_KEY, '1');
+      }
+
+      showApp();
+      await loadContent();
+    } catch (error) {
+      $('#login-error').hidden = false;
+      if (error instanceof Error && error.message) {
+        $('#login-error').textContent = error.message;
+      }
+    }
   });
 
   $('#logout-button').addEventListener('click', showLogin);
@@ -493,14 +566,50 @@ function bindEvents() {
   $('#download-general').addEventListener('click', () => downloadJson('general-dua.json', state.general));
   $('#download-manifest').addEventListener('click', () => downloadJson('remote-dua.manifest.json', buildManifest()));
   $('#download-release').addEventListener('click', () => downloadJson('app-release.json', state.release));
+
+  $('#publish-site').addEventListener('click', () => {
+    void (async () => {
+      const status = $('#publish-status');
+      status.hidden = false;
+      status.textContent = 'Публикация...';
+      try {
+        await persistReleaseState();
+        const manifest = buildManifest();
+        const result = await window.AdminSupabase.publishContent({
+          supportDua: state.support,
+          generalDua: state.general,
+          manifest,
+          appRelease: state.release,
+        });
+        state.manifest = manifest;
+        status.textContent = `Опубликовано: ${result.publishedAt ?? 'ok'}. Файлы обновятся на waydean.ru через 1–2 минуты.`;
+      } catch (error) {
+        status.textContent = error instanceof Error ? error.message : 'Ошибка публикации';
+      }
+    })();
+  });
 }
 
-async function init() {
-  bindEvents();
-  if (sessionStorage.getItem(SESSION_KEY) === '1') {
+async function restoreSession() {
+  if (!useSupabaseAuth()) {
+    if (sessionStorage.getItem(SESSION_KEY) === '1') {
+      showApp();
+      await loadContent().catch(() => {});
+    }
+    return;
+  }
+
+  const session = await window.AdminSupabase.getSession().catch(() => null);
+  if (session) {
     showApp();
     await loadContent().catch(() => {});
   }
+}
+
+async function init() {
+  configureLoginUi();
+  bindEvents();
+  await restoreSession();
 }
 
 init();
