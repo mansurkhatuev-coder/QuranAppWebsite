@@ -510,7 +510,14 @@ function renderList(packKey) {
     deleteButton.className = 'admin-button admin-button-danger';
     deleteButton.textContent = 'Удалить';
     deleteButton.addEventListener('click', () => {
-      if (!window.confirm('Удалить эту запись?')) return;
+      const title = item.title || item.id;
+      if (
+        !window.confirm(
+          `Удалить «${title}»?\n\nЗапись исчезнет из Supabase. Чтобы убрать её из приложения, нажмите «Опубликовать на waydean.ru».`
+        )
+      ) {
+        return;
+      }
       void (async () => {
         try {
           await window.AdminSupabase.deleteDuaItem(item.id);
