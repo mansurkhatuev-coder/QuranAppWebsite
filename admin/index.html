@@ -15,14 +15,17 @@
         <h1>Вход</h1>
         <p class="admin-muted">Один логин для редактирования дуа и версии приложения.</p>
         <form id="login-form" class="admin-form">
-          <label id="login-email-wrap" hidden>
+          <label id="login-email-wrap">
             Email
-            <input id="login-email" type="email" autocomplete="username" />
+            <input id="login-email" type="email" autocomplete="username" required />
           </label>
           <label>
             <span id="login-secret-label">Пароль</span>
             <input id="login-password" type="password" autocomplete="current-password" required />
           </label>
+          <p id="login-setup-notice" class="admin-muted" hidden>
+            Supabase не настроен. Заполните <code>admin/supabase-config.js</code> и задеплойте сайт.
+          </p>
           <button type="submit" class="admin-button admin-button-primary">Войти</button>
           <p id="login-error" class="admin-error" hidden>Неверные данные для входа</p>
         </form>
@@ -71,12 +74,12 @@
       <section class="admin-card admin-publish">
         <h2>Публикация</h2>
         <p id="publish-help" class="admin-muted">
-          Скачайте обновлённые JSON и загрузите их в репозиторий сайта в папку <code>data/</code>.
-          Затем увеличьте <code>version</code> в manifest и выполните deploy.
+          Сохраняйте дуа в Supabase, затем нажмите «Опубликовать на waydean.ru». JSON-файлы на сайте
+          обновятся автоматически через Edge Function.
         </p>
         <p id="publish-status" class="admin-muted" hidden></p>
         <div class="admin-toolbar">
-          <button type="button" id="publish-site" class="admin-button admin-button-primary" hidden>
+          <button type="button" id="publish-site" class="admin-button admin-button-primary">
             Опубликовать на waydean.ru
           </button>
           <button type="button" id="download-support" class="admin-button">support-dua.json</button>
@@ -101,9 +104,8 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="./supabase-config.js"></script>
-    <script src="./admin-config.js?v=4"></script>
-    <script src="./admin-supabase.js?v=4"></script>
-    <script src="./admin.js?v=4"></script>
+    <script src="./supabase-config.js?v=5"></script>
+    <script src="./admin-supabase.js?v=5"></script>
+    <script src="./admin.js?v=5"></script>
   </body>
 </html>

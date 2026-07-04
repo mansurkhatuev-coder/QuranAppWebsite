@@ -246,7 +246,7 @@ https://abcdefgh.supabase.co/functions/v1/publish-content
 | **anon key** | `supabase-config.js` на сайте | — |
 | **service_role key** | Только локальный импорт, Edge Function (авто) | Админка, GitHub, чат |
 | **GITHUB_TOKEN** | Supabase secrets | Везде публично |
-| **Пароль admin-config.js** | Можно удалить после Supabase | — |
+| **Пароль admin-config.js** | Удалён — вход только через Supabase Users | — |
 
 RLS (Row Level Security): без входа в Supabase чужой человек **не может** менять дуа. Читать опубликованные дуа публично можно — это нормально (то же самое на waydean.ru).
 
