@@ -3,3 +3,4 @@ Thumbs.db
 downloads/*.apk
 downloads/*.aab
 tools/supabase-cli/
+qf-proxy/node_modules/
