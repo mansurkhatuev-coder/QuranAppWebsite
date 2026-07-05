@@ -222,8 +222,91 @@
   flex-wrap: wrap;
 }
 
+.admin-topbar h1 {
+  margin: 0;
+}
+
+.admin-panel {
+  display: grid;
+  gap: 1.25rem;
+}
+
+.admin-card-title {
+  margin: 0 0 0.35rem;
+  font-size: 1.2rem;
+}
+
+.admin-subheading {
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.admin-form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 0.35rem;
+}
+
+.admin-home-pools {
+  display: grid;
+  gap: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.admin-empty {
+  padding: 0.35rem 0 0.15rem;
+}
+
+.admin-button-lg {
+  padding: 12px 22px;
+  font-weight: 600;
+}
+
+.admin-button-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+}
+
 .admin-publish {
-  margin-top: 24px;
+  margin-top: 2rem;
+  display: grid;
+  gap: 1.1rem;
+}
+
+.admin-publish-lead {
+  line-height: 1.55;
+}
+
+.admin-publish-primary {
+  padding-top: 0.15rem;
+}
+
+.admin-publish-status {
+  margin: 0;
+  padding: 0.75rem 1rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(212, 175, 55, 0.06);
+}
+
+.admin-download-section {
+  display: grid;
+  gap: 0.55rem;
+  padding-top: 1.1rem;
+  border-top: 1px solid var(--line);
+}
+
+.admin-download-hint {
+  font-size: 13px;
+}
+
+.admin-dialog .admin-toolbar {
+  margin-top: 0.35rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--line);
 }
 
 .admin-dialog {

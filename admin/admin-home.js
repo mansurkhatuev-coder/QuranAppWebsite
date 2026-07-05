@@ -95,7 +95,7 @@
     container.innerHTML = '';
 
     if (!items.length) {
-      container.innerHTML = '<p class="admin-muted">Пока нет объявлений.</p>';
+      container.innerHTML = '<p class="admin-muted admin-empty">Пока нет объявлений.</p>';
       return;
     }
 

@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css" />
+    <link rel="stylesheet" href="./admin.css?v=2" />
   </head>
   <body class="admin-body">
     <div id="login-screen" class="admin-shell">
@@ -77,8 +77,8 @@
         </div>
         <div id="announcement-list" class="admin-list"></div>
 
-        <div class="admin-card" style="margin-top: 20px">
-          <h2>Пулы дня</h2>
+        <div class="admin-card admin-home-pools">
+          <h2 class="admin-card-title">Пулы дня</h2>
           <p class="admin-muted">
             Аят дня: массив <code>{ "sura": 1, "ayah": 5 }</code>. Дуа дня: массив id, например
             <code>"quran-dua-1"</code>.
@@ -92,9 +92,11 @@
             Пул дуа дня
             <textarea id="daily-dua-pool" rows="6"></textarea>
           </label>
-          <button type="button" id="save-daily-pools" class="admin-button admin-button-primary">
-            Сохранить пулы в Supabase
-          </button>
+          <div class="admin-form-actions">
+            <button type="button" id="save-daily-pools" class="admin-button admin-button-primary">
+              Сохранить пулы
+            </button>
+          </div>
         </div>
       </section>
 
@@ -103,22 +105,86 @@
       </section>
 
       <section class="admin-card admin-publish">
-        <h2>Публикация</h2>
-        <p id="publish-help" class="admin-muted">
-          Сохраните изменения, затем опубликуйте — файлы на сайте обновятся автоматически.
+        <h2 class="admin-card-title">Публикация</h2>
+        <p id="publish-help" class="admin-muted admin-publish-lead">
+          Сохраните изменения в разделах выше, затем опубликуйте — JSON на
+          <strong>waydean.ru/data/</strong> обновятся автоматически.
         </p>
-        <p id="publish-status" class="admin-muted" hidden></p>
-        <div class="admin-toolbar">
-          <button type="button" id="publish-site" class="admin-button admin-button-primary">
+        <p id="publish-status" class="admin-publish-status admin-muted" hidden></p>
+        <div class="admin-publish-primary">
+          <button type="button" id="publish-site" class="admin-button admin-button-primary admin-button-lg">
             Опубликовать на сайте
           </button>
-          <button type="button" id="download-support" class="admin-button">Скачать support-dua</button>
-          <button type="button" id="download-general" class="admin-button">Скачать general-dua</button>
-          <button type="button" id="download-home-announcements" class="admin-button">home-announcements</button>
-          <button type="button" id="download-daily-ayah-pool" class="admin-button">daily-ayah-pool</button>
-          <button type="button" id="download-daily-dua-pool" class="admin-button">daily-dua-pool</button>
-          <button type="button" id="download-manifest" class="admin-button">Скачать manifest</button>
-          <button type="button" id="download-release" class="admin-button">Скачать release</button>
+        </div>
+        <div class="admin-download-section">
+          <h3 class="admin-subheading">Скачать JSON (как на проде)</h3>
+          <p class="admin-muted admin-download-hint">Те же файлы, что раздаёт waydean.ru/data/</p>
+          <div class="admin-button-row">
+            <button
+              type="button"
+              id="download-support"
+              class="admin-button"
+              title="waydean.ru/data/support-dua.json"
+            >
+              Дуа в поддержку
+            </button>
+            <button
+              type="button"
+              id="download-general"
+              class="admin-button"
+              title="waydean.ru/data/general-dua.json"
+            >
+              Дуа на случаи
+            </button>
+            <button
+              type="button"
+              id="download-home-announcements"
+              class="admin-button"
+              title="waydean.ru/data/home-announcements.json"
+            >
+              Баннеры главной
+            </button>
+            <button
+              type="button"
+              id="download-daily-ayah-pool"
+              class="admin-button"
+              title="waydean.ru/data/daily-ayah-pool.json"
+            >
+              Пул «аят дня»
+            </button>
+            <button
+              type="button"
+              id="download-daily-dua-pool"
+              class="admin-button"
+              title="waydean.ru/data/daily-dua-pool.json"
+            >
+              Пул «дуа дня»
+            </button>
+            <button
+              type="button"
+              id="download-manifest-dua"
+              class="admin-button"
+              title="waydean.ru/data/remote-dua.manifest.json"
+            >
+              Манифест дуа
+            </button>
+            <button
+              type="button"
+              id="download-manifest-home"
+              class="admin-button"
+              title="waydean.ru/data/remote-home.manifest.json"
+            >
+              Манифест главной
+            </button>
+            <button
+              type="button"
+              id="download-release"
+              class="admin-button"
+              title="waydean.ru/data/app-release.json"
+            >
+              Версия в Store
+            </button>
+          </div>
         </div>
       </section>
     </div>
@@ -152,7 +218,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js?v=5"></script>
     <script src="./admin-supabase.js?v=7"></script>
-    <script src="./admin-home.js?v=1"></script>
-    <script src="./admin.js?v=11"></script>
+    <script src="./admin-home.js?v=2"></script>
+    <script src="./admin.js?v=12"></script>
   </body>
 </html>

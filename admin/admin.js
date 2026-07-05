@@ -486,7 +486,7 @@ function renderList(packKey) {
   container.innerHTML = '';
 
   if (!items.length) {
-    container.innerHTML = '<p class="admin-muted">Пока нет записей.</p>';
+    container.innerHTML = '<p class="admin-muted admin-empty">Пока нет записей.</p>';
     return;
   }
 
@@ -763,7 +763,13 @@ function bindEvents() {
 
   $('#download-support').addEventListener('click', () => downloadJson('support-dua.json', state.support));
   $('#download-general').addEventListener('click', () => downloadJson('general-dua.json', state.general));
-  $('#download-manifest').addEventListener('click', () => downloadJson('remote-dua.manifest.json', buildManifest()));
+  $('#download-manifest-dua').addEventListener('click', () =>
+    downloadJson('remote-dua.manifest.json', buildManifest())
+  );
+  $('#download-manifest-home').addEventListener('click', () => {
+    if (!window.AdminHome) return;
+    downloadJson('remote-home.manifest.json', window.AdminHome.buildHomeManifest(state));
+  });
   $('#download-release').addEventListener('click', () => downloadJson('app-release.json', state.release));
 
   $('#publish-site').addEventListener('click', () => {
