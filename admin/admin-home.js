@@ -1,15 +1,51 @@
 (function initAdminHome(global) {
-  const ANNOUNCEMENT_FIELDS = [
-    { key: 'titleRu', label: 'Заголовок RU', full: false, required: true },
-    { key: 'titleEn', label: 'Title EN', full: false },
-    { key: 'bodyRu', label: 'Текст RU', full: true, textarea: true },
-    { key: 'bodyEn', label: 'Text EN', full: true, textarea: true },
-    { key: 'actionUrl', label: 'Ссылка (необязательно)', full: true },
-    { key: 'actionLabelRu', label: 'Кнопка RU', full: false },
-    { key: 'actionLabelEn', label: 'Button EN', full: false },
-    { key: 'startsAt', label: 'Начало (YYYY-MM-DD)', full: false },
-    { key: 'endsAt', label: 'Конец (YYYY-MM-DD)', full: false },
-    { key: 'priority', label: 'Приоритет', full: false, number: true },
+  const ANNOUNCEMENT_CORE_FIELDS = [
+    {
+      key: 'titleRu',
+      label: 'Заголовок',
+      full: true,
+      required: true,
+      hint: 'Жирная строка на баннере. Обязательно.',
+    },
+    {
+      key: 'bodyRu',
+      label: 'Текст',
+      full: true,
+      textarea: true,
+      hint: 'Под заголовком. Можно оставить пустым.',
+    },
+    {
+      key: 'startsAt',
+      label: 'Показывать с',
+      type: 'date',
+      hint: 'Пусто — сразу после публикации.',
+    },
+    {
+      key: 'endsAt',
+      label: 'Показывать до',
+      type: 'date',
+      hint: 'Пусто — без срока, пока не уберёте баннер.',
+    },
+  ];
+
+  const ANNOUNCEMENT_LINK_FIELDS = [
+    {
+      key: 'actionUrl',
+      label: 'Ссылка',
+      full: true,
+      hint: 'RuStore, waydean.ru, Telegram и т.п.',
+    },
+    {
+      key: 'actionLabelRu',
+      label: 'Подпись кнопки',
+      hint: 'Если пусто — в приложении будет «Подробнее».',
+    },
+  ];
+
+  const ANNOUNCEMENT_EN_FIELDS = [
+    { key: 'titleEn', label: 'Title (English)', full: true },
+    { key: 'bodyEn', label: 'Text (English)', full: true, textarea: true },
+    { key: 'actionLabelEn', label: 'Button label (English)' },
   ];
 
   let api = null;
@@ -32,6 +68,51 @@
       suffix += 1;
     }
     return candidate;
+  }
+
+  function formatDateLabel(value) {
+    if (!value?.trim()) return 'без срока';
+    const parts = value.trim().split('-');
+    if (parts.length === 3) return `${parts[2]}.${parts[1]}.${parts[0]}`;
+    return value.trim();
+  }
+
+  function createAnnouncementField(field, item) {
+    const label = document.createElement('label');
+    label.className = `admin-field-label${field.full ? ' admin-full' : ''}`;
+
+    const title = document.createElement('span');
+    title.className = 'admin-field-label-text';
+    title.textContent = field.label;
+    label.append(title);
+
+    if (field.hint) {
+      const hint = document.createElement('p');
+      hint.className = 'admin-field-hint';
+      hint.textContent = field.hint;
+      label.append(hint);
+    }
+
+    let input;
+    if (field.textarea) {
+      input = document.createElement('textarea');
+      input.rows = 4;
+      input.value = item[field.key] ?? '';
+    } else {
+      input = document.createElement('input');
+      input.type = field.type || 'text';
+      input.value = item[field.key] ?? '';
+    }
+    input.name = field.key;
+    if (field.required) input.required = true;
+    label.append(input);
+    return label;
+  }
+
+  function appendAnnouncementFields(container, fields, item) {
+    for (const field of fields) {
+      container.append(createAnnouncementField(field, item));
+    }
   }
 
   function publishedAnnouncements(state) {
@@ -95,7 +176,7 @@
     container.innerHTML = '';
 
     if (!items.length) {
-      container.innerHTML = '<p class="admin-muted admin-empty">Пока нет объявлений.</p>';
+      container.innerHTML = '<p class="admin-muted admin-empty">Пока нет баннеров.</p>';
       return;
     }
 
@@ -106,7 +187,7 @@
         <div>
           <h3>${item.titleRu || item.id}</h3>
           <p>${(item.bodyRu || '').slice(0, 140)}</p>
-          <p class="admin-muted">${item.startsAt || 'без даты'} → ${item.endsAt || 'без даты'} · priority ${item.priority ?? 0}</p>
+          <p class="admin-muted">${formatDateLabel(item.startsAt)} → ${formatDateLabel(item.endsAt)}</p>
         </div>
       `;
 
@@ -126,7 +207,7 @@
       deleteButton.addEventListener('click', () => {
         if (
           !window.confirm(
-            `Удалить объявление «${item.titleRu || item.id}»?\n\nПосле удаления нажмите «Опубликовать на waydean.ru».`
+            `Удалить баннер «${item.titleRu || item.id}»?\n\nПосле удаления нажмите «Опубликовать на сайте».`
           )
         ) {
           return;
@@ -175,29 +256,29 @@
           priority: 0,
         };
 
-    api.$('#announcement-editor-title').textContent = id ? 'Редактирование объявления' : 'Новое объявление';
+    api.$('#announcement-editor-title').textContent = id ? 'Редактирование баннера' : 'Новый баннер';
     const fields = api.$('#announcement-editor-fields');
     fields.innerHTML = '';
 
-    for (const field of ANNOUNCEMENT_FIELDS) {
-      const label = document.createElement('label');
-      label.className = `admin-field-label${field.full ? ' admin-full' : ''}`;
-      label.textContent = field.label;
+    appendAnnouncementFields(fields, ANNOUNCEMENT_CORE_FIELDS, item);
 
-      let input;
-      if (field.textarea) {
-        input = document.createElement('textarea');
-        input.value = item[field.key] ?? '';
-      } else {
-        input = document.createElement('input');
-        input.type = field.number ? 'number' : 'text';
-        input.value = item[field.key] ?? (field.number ? 0 : '');
-      }
-      input.name = field.key;
-      if (field.required) input.required = true;
-      label.append(input);
-      fields.append(label);
-    }
+    const linkDetails = document.createElement('details');
+    linkDetails.className = 'admin-details admin-full';
+    linkDetails.innerHTML = '<summary>Кнопка со ссылкой (необязательно)</summary>';
+    const linkGrid = document.createElement('div');
+    linkGrid.className = 'admin-details-grid';
+    appendAnnouncementFields(linkGrid, ANNOUNCEMENT_LINK_FIELDS, item);
+    linkDetails.append(linkGrid);
+    fields.append(linkDetails);
+
+    const enDetails = document.createElement('details');
+    enDetails.className = 'admin-details admin-full';
+    enDetails.innerHTML = '<summary>English (необязательно)</summary>';
+    const enGrid = document.createElement('div');
+    enGrid.className = 'admin-details-grid';
+    appendAnnouncementFields(enGrid, ANNOUNCEMENT_EN_FIELDS, item);
+    enDetails.append(enGrid);
+    fields.append(enDetails);
 
     api.$('#announcement-editor-dialog').showModal();
   }
@@ -210,7 +291,7 @@
   async function saveAnnouncementEditor(formData) {
     const titleRu = String(formData.get('titleRu') || '').trim();
     if (!titleRu) {
-      window.alert('Заполните заголовок RU.');
+      window.alert('Заполните заголовок.');
       return;
     }
 
@@ -228,7 +309,9 @@
       actionLabelEn: String(formData.get('actionLabelEn') || '').trim() || undefined,
       startsAt: String(formData.get('startsAt') || '').trim() || undefined,
       endsAt: String(formData.get('endsAt') || '').trim() || undefined,
-      priority: Number(formData.get('priority')) || 0,
+      priority: editingAnnouncementId
+        ? api.state.announcements.find((entry) => entry.id === editingAnnouncementId)?.priority ?? 0
+        : 0,
       status: 'published',
     };
 
@@ -271,27 +354,32 @@
     }
   }
 
+  function bindClick(selector, handler) {
+    const element = document.querySelector(selector);
+    if (!element) {
+      console.warn(`AdminHome: element not found: ${selector}`);
+      return;
+    }
+    element.addEventListener('click', handler);
+  }
+
   function bind(homeApi) {
     api = homeApi;
 
-    api.$('#add-announcement').addEventListener('click', () => openAnnouncementEditor(''));
-    api.$('#announcement-editor-close').addEventListener('click', closeAnnouncementEditor);
-    api.$('#announcement-editor-form').addEventListener('submit', (event) => {
-      event.preventDefault();
-      void saveAnnouncementEditor(new FormData(event.currentTarget));
-    });
-    api.$('#save-daily-pools').addEventListener('click', () => {
+    bindClick('#add-announcement', () => openAnnouncementEditor(''));
+    bindClick('#announcement-editor-close', closeAnnouncementEditor);
+
+    const announcementForm = document.querySelector('#announcement-editor-form');
+    if (announcementForm) {
+      announcementForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        void saveAnnouncementEditor(new FormData(event.currentTarget));
+      });
+    }
+
+    bindClick('#save-daily-pools', () => {
       void saveDailyPoolsFromForm();
     });
-    api.$('#download-home-announcements').addEventListener('click', () =>
-      api.downloadJson('home-announcements.json', serializeAnnouncements(api.state))
-    );
-    api.$('#download-daily-ayah-pool').addEventListener('click', () =>
-      api.downloadJson('daily-ayah-pool.json', api.state.dailyAyahPool)
-    );
-    api.$('#download-daily-dua-pool').addEventListener('click', () =>
-      api.downloadJson('daily-dua-pool.json', api.state.dailyDuaPool)
-    );
   }
 
   global.AdminHome = {

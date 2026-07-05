@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=2" />
+    <link rel="stylesheet" href="./admin.css?v=3" />
   </head>
   <body class="admin-body">
     <div id="login-screen" class="admin-shell">
@@ -33,6 +33,7 @@
     </div>
 
     <div id="app-screen" class="admin-shell" hidden>
+      <p id="admin-init-error" class="admin-init-error" hidden></p>
       <header class="admin-topbar">
         <div>
           <p class="admin-kicker">Коран и Азкары</p>
@@ -49,7 +50,7 @@
       </nav>
 
       <section class="admin-panel" data-panel="support">
-        <div class="admin-toolbar">
+        <div class="admin-toolbar admin-panel-toolbar">
           <p class="admin-muted">Дуа в разделе «Поддержка»</p>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="support">
             Добавить дуа
@@ -59,7 +60,7 @@
       </section>
 
       <section class="admin-panel" data-panel="general" hidden>
-        <div class="admin-toolbar">
+        <div class="admin-toolbar admin-panel-toolbar">
           <p class="admin-muted">Дуа на случаи жизни</p>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="general">
             Добавить дуа
@@ -69,19 +70,23 @@
       </section>
 
       <section class="admin-panel" data-panel="home" hidden>
-        <div class="admin-toolbar">
-          <p class="admin-muted">Баннеры на главной и пулы «аят/дуа дня».</p>
+        <div class="admin-callout">
+          <strong>Баннеры на главной</strong> — карточки вверху главного экрана приложения.
+          Это не push-уведомления. После правок нажмите «Опубликовать на сайте» внизу страницы.
+        </div>
+        <div class="admin-toolbar admin-panel-toolbar">
+          <p class="admin-muted">Список активных баннеров</p>
           <button type="button" id="add-announcement" class="admin-button admin-button-primary">
-            Добавить объявление
+            Добавить баннер
           </button>
         </div>
         <div id="announcement-list" class="admin-list"></div>
 
         <div class="admin-card admin-home-pools">
-          <h2 class="admin-card-title">Пулы дня</h2>
+          <h2 class="admin-card-title">Аят и дуа дня</h2>
           <p class="admin-muted">
-            Аят дня: массив <code>{ "sura": 1, "ayah": 5 }</code>. Дуа дня: массив id, например
-            <code>"quran-dua-1"</code>.
+            Случайный аят/дуа на главной берётся из этих списков. Обычно правят редко — достаточно
+            опубликовать один раз.
           </p>
           <p id="home-pools-status" class="admin-muted"></p>
           <label class="admin-field-label admin-full">
@@ -205,9 +210,13 @@
     <dialog id="announcement-editor-dialog" class="admin-dialog">
       <form id="announcement-editor-form" method="dialog" class="admin-form">
         <div class="admin-dialog-header">
-          <h2 id="announcement-editor-title">Объявление</h2>
+          <h2 id="announcement-editor-title">Баннер</h2>
           <button type="button" id="announcement-editor-close" class="admin-button admin-button-ghost">Закрыть</button>
         </div>
+        <p class="admin-muted admin-form-intro">
+          Пользователь увидит карточку на главной. Заполните заголовок и при необходимости текст и сроки
+          показа.
+        </p>
         <div class="admin-form-grid" id="announcement-editor-fields"></div>
         <div class="admin-toolbar">
           <button type="submit" class="admin-button admin-button-primary">Сохранить</button>
@@ -218,7 +227,7 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js?v=5"></script>
     <script src="./admin-supabase.js?v=7"></script>
-    <script src="./admin-home.js?v=2"></script>
-    <script src="./admin.js?v=12"></script>
+    <script src="./admin-home.js?v=3"></script>
+    <script src="./admin.js?v=13"></script>
   </body>
 </html>

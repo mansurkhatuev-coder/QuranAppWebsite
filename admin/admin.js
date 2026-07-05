@@ -81,6 +81,26 @@ function $(selector) {
   return document.querySelector(selector);
 }
 
+function bindClick(selector, handler) {
+  const element = document.querySelector(selector);
+  if (!element) {
+    console.warn(`Admin: element not found: ${selector}`);
+    return false;
+  }
+  element.addEventListener('click', handler);
+  return true;
+}
+
+function showInitError(error) {
+  const banner = $('#admin-init-error');
+  if (!banner) return;
+  banner.hidden = false;
+  banner.textContent =
+    error instanceof Error
+      ? `Ошибка инициализации админки: ${error.message}`
+      : 'Ошибка инициализации админки.';
+}
+
 function closeOpenHints(exceptButton = null) {
   document.querySelectorAll('.admin-hint-popover.is-open').forEach((popover) => {
     const button = popover.closest('.admin-field-label')?.querySelector('.admin-hint-button');
@@ -671,12 +691,53 @@ function saveEditor(formData) {
 }
 
 function setActiveTab(tabName) {
-  document.querySelectorAll('.admin-tab').forEach((tab) => {
+  const root = $('#app-screen');
+  if (!root) return;
+
+  root.querySelectorAll('.admin-tab').forEach((tab) => {
     tab.classList.toggle('is-active', tab.dataset.tab === tabName);
   });
-  document.querySelectorAll('.admin-panel').forEach((panel) => {
+  root.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.hidden = panel.dataset.panel !== tabName;
   });
+}
+
+function bindAppScreenDelegation() {
+  const root = $('#app-screen');
+  if (!root) return;
+
+  root.addEventListener('click', (event) => {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const tab = target.closest('.admin-tab');
+    if (tab && root.contains(tab) && tab.dataset.tab) {
+      setActiveTab(tab.dataset.tab);
+      return;
+    }
+
+    const addItem = target.closest('[data-action="add-item"]');
+    if (addItem && root.contains(addItem) && addItem.dataset.pack) {
+      openEditor(addItem.dataset.pack, '');
+    }
+  });
+}
+
+function bindDownloadButtons() {
+  bindClick('#download-support', () => downloadJson('support-dua.json', state.support));
+  bindClick('#download-general', () => downloadJson('general-dua.json', state.general));
+  bindClick('#download-home-announcements', () => {
+    if (!window.AdminHome) return;
+    downloadJson('home-announcements.json', window.AdminHome.serializeAnnouncements(state));
+  });
+  bindClick('#download-daily-ayah-pool', () => downloadJson('daily-ayah-pool.json', state.dailyAyahPool));
+  bindClick('#download-daily-dua-pool', () => downloadJson('daily-dua-pool.json', state.dailyDuaPool));
+  bindClick('#download-manifest-dua', () => downloadJson('remote-dua.manifest.json', buildManifest()));
+  bindClick('#download-manifest-home', () => {
+    if (!window.AdminHome) return;
+    downloadJson('remote-home.manifest.json', window.AdminHome.buildHomeManifest(state));
+  });
+  bindClick('#download-release', () => downloadJson('app-release.json', state.release));
 }
 
 function showApp() {
@@ -709,7 +770,9 @@ async function persistReleaseState() {
 }
 
 function bindEvents() {
-  $('#login-form').addEventListener('submit', async (event) => {
+  const loginForm = $('#login-form');
+  if (!loginForm) throw new Error('login-form not found');
+  loginForm.addEventListener('submit', async (event) => {
     event.preventDefault();
     $('#login-error').hidden = true;
 
@@ -745,34 +808,21 @@ function bindEvents() {
     }
   });
 
-  $('#logout-button').addEventListener('click', showLogin);
-  $('#editor-close').addEventListener('click', closeEditor);
+  bindClick('#logout-button', showLogin);
+  bindClick('#editor-close', closeEditor);
 
-  $('#editor-form').addEventListener('submit', (event) => {
-    event.preventDefault();
-    saveEditor(new FormData(event.currentTarget));
-  });
+  const editorForm = $('#editor-form');
+  if (editorForm) {
+    editorForm.addEventListener('submit', (event) => {
+      event.preventDefault();
+      saveEditor(new FormData(event.currentTarget));
+    });
+  }
 
-  document.querySelectorAll('.admin-tab').forEach((tab) => {
-    tab.addEventListener('click', () => setActiveTab(tab.dataset.tab));
-  });
+  bindAppScreenDelegation();
+  bindDownloadButtons();
 
-  document.querySelectorAll('[data-action="add-item"]').forEach((button) => {
-    button.addEventListener('click', () => openEditor(button.dataset.pack, ''));
-  });
-
-  $('#download-support').addEventListener('click', () => downloadJson('support-dua.json', state.support));
-  $('#download-general').addEventListener('click', () => downloadJson('general-dua.json', state.general));
-  $('#download-manifest-dua').addEventListener('click', () =>
-    downloadJson('remote-dua.manifest.json', buildManifest())
-  );
-  $('#download-manifest-home').addEventListener('click', () => {
-    if (!window.AdminHome) return;
-    downloadJson('remote-home.manifest.json', window.AdminHome.buildHomeManifest(state));
-  });
-  $('#download-release').addEventListener('click', () => downloadJson('app-release.json', state.release));
-
-  $('#publish-site').addEventListener('click', () => {
+  bindClick('#publish-site', () => {
     void (async () => {
       const status = $('#publish-status');
       status.hidden = false;
@@ -822,9 +872,14 @@ function configureLoginUi() {
 
 async function init() {
   configureLoginUi();
-  bindEvents();
-  if (window.AdminHome) {
-    window.AdminHome.bind({ $, state, downloadJson });
+  try {
+    bindEvents();
+    if (window.AdminHome) {
+      window.AdminHome.bind({ $, state, downloadJson });
+    }
+  } catch (error) {
+    console.error(error);
+    showInitError(error);
   }
   await restoreSession();
 }
