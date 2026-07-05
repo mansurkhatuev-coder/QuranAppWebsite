@@ -71,6 +71,41 @@
     };
   }
 
+  function announcementRowToState(row) {
+    return {
+      id: row.id,
+      titleRu: row.title_ru,
+      titleEn: row.title_en ?? undefined,
+      bodyRu: row.body_ru ?? undefined,
+      bodyEn: row.body_en ?? undefined,
+      actionUrl: row.action_url ?? undefined,
+      actionLabelRu: row.action_label_ru ?? undefined,
+      actionLabelEn: row.action_label_en ?? undefined,
+      startsAt: row.starts_at ?? undefined,
+      endsAt: row.ends_at ?? undefined,
+      priority: row.priority ?? 0,
+      status: row.status ?? 'published',
+    };
+  }
+
+  function announcementStateToRow(item) {
+    return {
+      id: item.id,
+      title_ru: item.titleRu,
+      title_en: item.titleEn ?? null,
+      body_ru: item.bodyRu ?? null,
+      body_en: item.bodyEn ?? null,
+      action_url: item.actionUrl ?? null,
+      action_label_ru: item.actionLabelRu ?? null,
+      action_label_en: item.actionLabelEn ?? null,
+      starts_at: item.startsAt ?? null,
+      ends_at: item.endsAt ?? null,
+      priority: item.priority ?? 0,
+      status: item.status ?? 'published',
+      updated_at: new Date().toISOString(),
+    };
+  }
+
   function releaseRowToState(row) {
     if (!row) {
       return {
@@ -126,22 +161,31 @@
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
 
-    const [duaResult, releaseResult, manifestResult] = await Promise.all([
+    const [duaResult, releaseResult, manifestResult, announcementsResult, poolsResult] = await Promise.all([
       client.from('dua_items').select('*').order('title', { ascending: true }),
       client.from('app_release').select('*').eq('id', 1).maybeSingle(),
       client.from('content_manifest').select('*').eq('id', 1).maybeSingle(),
+      client.from('home_announcements').select('*').order('priority', { ascending: false }),
+      client.from('home_daily_pools').select('*').eq('id', 1).maybeSingle(),
     ]);
 
     if (duaResult.error) throw duaResult.error;
     if (releaseResult.error) throw releaseResult.error;
     if (manifestResult.error) throw manifestResult.error;
+    if (announcementsResult.error) throw announcementsResult.error;
+    if (poolsResult.error) throw poolsResult.error;
 
     const items = (duaResult.data ?? []).map(rowToItem);
+    const poolsRow = poolsResult.data;
     return {
       support: items.filter((item) => item.category === 'support_dua'),
       general: items.filter((item) => item.category === 'general_dua'),
       release: releaseRowToState(releaseResult.data),
       manifest: manifestResult.data?.remote_dua ?? null,
+      homeManifest: manifestResult.data?.remote_home ?? null,
+      announcements: (announcementsResult.data ?? []).map(announcementRowToState),
+      dailyAyahPool: Array.isArray(poolsRow?.ayah_pool) ? poolsRow.ayah_pool : [],
+      dailyDuaPool: Array.isArray(poolsRow?.dua_pool) ? poolsRow.dua_pool : [],
     };
   }
 
@@ -156,6 +200,37 @@
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
     const { error } = await client.from('dua_items').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async function upsertHomeAnnouncement(item) {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const { error } = await client
+      .from('home_announcements')
+      .upsert(announcementStateToRow(item), { onConflict: 'id' });
+    if (error) throw error;
+  }
+
+  async function deleteHomeAnnouncement(id) {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const { error } = await client.from('home_announcements').delete().eq('id', id);
+    if (error) throw error;
+  }
+
+  async function saveHomeDailyPools(ayahPool, duaPool) {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const { error } = await client.from('home_daily_pools').upsert(
+      {
+        id: 1,
+        ayah_pool: ayahPool,
+        dua_pool: duaPool,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'id' }
+    );
     if (error) throw error;
   }
 
@@ -198,6 +273,9 @@
     loadCatalog,
     upsertDuaItem,
     deleteDuaItem,
+    upsertHomeAnnouncement,
+    deleteHomeAnnouncement,
+    saveHomeDailyPools,
     saveRelease,
     publishContent,
   };

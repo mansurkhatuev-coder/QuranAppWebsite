@@ -9,6 +9,10 @@ type PublishBody = {
   supportDua?: unknown[];
   generalDua?: unknown[];
   manifest?: Record<string, unknown>;
+  homeManifest?: Record<string, unknown>;
+  homeAnnouncements?: unknown[];
+  dailyAyahPool?: unknown[];
+  dailyDuaPool?: unknown[];
   appRelease?: Record<string, unknown>;
 };
 
@@ -110,12 +114,20 @@ Deno.serve(async (request) => {
     const supportDua = Array.isArray(body.supportDua) ? body.supportDua : [];
     const generalDua = Array.isArray(body.generalDua) ? body.generalDua : [];
     const manifest = body.manifest ?? {};
+    const homeManifest = body.homeManifest ?? {};
+    const homeAnnouncements = Array.isArray(body.homeAnnouncements) ? body.homeAnnouncements : [];
+    const dailyAyahPool = Array.isArray(body.dailyAyahPool) ? body.dailyAyahPool : [];
+    const dailyDuaPool = Array.isArray(body.dailyDuaPool) ? body.dailyDuaPool : [];
     const appRelease = body.appRelease ?? {};
 
     const files = [
       { path: 'data/support-dua.json', content: `${JSON.stringify(supportDua, null, 2)}\n` },
       { path: 'data/general-dua.json', content: `${JSON.stringify(generalDua, null, 2)}\n` },
       { path: 'data/remote-dua.manifest.json', content: `${JSON.stringify(manifest, null, 2)}\n` },
+      { path: 'data/home-announcements.json', content: `${JSON.stringify(homeAnnouncements, null, 2)}\n` },
+      { path: 'data/daily-ayah-pool.json', content: `${JSON.stringify(dailyAyahPool, null, 2)}\n` },
+      { path: 'data/daily-dua-pool.json', content: `${JSON.stringify(dailyDuaPool, null, 2)}\n` },
+      { path: 'data/remote-home.manifest.json', content: `${JSON.stringify(homeManifest, null, 2)}\n` },
       { path: 'data/app-release.json', content: `${JSON.stringify(appRelease, null, 2)}\n` },
     ];
 
@@ -139,6 +151,7 @@ Deno.serve(async (request) => {
       await serviceClient.from('content_manifest').upsert({
         id: 1,
         remote_dua: manifest,
+        remote_home: homeManifest,
         app_release: appRelease,
         published_at: new Date().toISOString(),
         published_by: userData.user.email,

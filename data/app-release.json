@@ -1,15 +1,15 @@
 {
   "android": {
-    "apkUrl": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.5/koran-i-azkary-1.0.5.apk",
+    "latestVersion": "1.0.6",
+    "versionCode": 7,
     "rustoreUrl": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
-    "versionCode": 6,
-    "latestVersion": "1.0.5"
+    "apkUrl": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.6/koran-i-azkary-1.0.6.apk"
   },
   "ios": {
-    "appStoreUrl": "https://apps.apple.com/app/id6782619598",
-    "buildNumber": 2,
-    "latestVersion": "1.0.5"
+    "latestVersion": "1.0.6",
+    "buildNumber": 3,
+    "appStoreUrl": "https://apps.apple.com/app/id6782619598"
   },
-  "messageRu": "Обновлённая главная, дуа с сайта, улучшения мусхафа, азкаров и прослушивания.",
-  "messageEn": "Updated home screen, remote dua sync, mushaf, azkar, and listening improvements."
+  "messageRu": "Улучшения главной, азкаров, мусхафа QCF и прослушивания. Remote sync дуа и контента с waydean.ru.",
+  "messageEn": "Home screen, azkar, QCF mushaf, and listening improvements. Remote dua and home content sync from waydean.ru."
 }

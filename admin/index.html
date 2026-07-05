@@ -44,6 +44,7 @@
       <nav class="admin-tabs" aria-label="Разделы">
         <button type="button" class="admin-tab is-active" data-tab="support">Дуа в поддержку</button>
         <button type="button" class="admin-tab" data-tab="general">Дуа на случаи</button>
+        <button type="button" class="admin-tab" data-tab="home">Главная</button>
         <button type="button" class="admin-tab" data-tab="release">Версия в Store</button>
       </nav>
 
@@ -67,6 +68,36 @@
         <div id="general-list" class="admin-list"></div>
       </section>
 
+      <section class="admin-panel" data-panel="home" hidden>
+        <div class="admin-toolbar">
+          <p class="admin-muted">Баннеры на главной и пулы «аят/дуа дня».</p>
+          <button type="button" id="add-announcement" class="admin-button admin-button-primary">
+            Добавить объявление
+          </button>
+        </div>
+        <div id="announcement-list" class="admin-list"></div>
+
+        <div class="admin-card" style="margin-top: 20px">
+          <h2>Пулы дня</h2>
+          <p class="admin-muted">
+            Аят дня: массив <code>{ "sura": 1, "ayah": 5 }</code>. Дуа дня: массив id, например
+            <code>"quran-dua-1"</code>.
+          </p>
+          <p id="home-pools-status" class="admin-muted"></p>
+          <label class="admin-field-label admin-full">
+            Пул аятов дня
+            <textarea id="daily-ayah-pool" rows="8"></textarea>
+          </label>
+          <label class="admin-field-label admin-full">
+            Пул дуа дня
+            <textarea id="daily-dua-pool" rows="6"></textarea>
+          </label>
+          <button type="button" id="save-daily-pools" class="admin-button admin-button-primary">
+            Сохранить пулы в Supabase
+          </button>
+        </div>
+      </section>
+
       <section class="admin-panel" data-panel="release" hidden>
         <form id="release-form" class="admin-form admin-form-grid"></form>
       </section>
@@ -83,6 +114,9 @@
           </button>
           <button type="button" id="download-support" class="admin-button">Скачать support-dua</button>
           <button type="button" id="download-general" class="admin-button">Скачать general-dua</button>
+          <button type="button" id="download-home-announcements" class="admin-button">home-announcements</button>
+          <button type="button" id="download-daily-ayah-pool" class="admin-button">daily-ayah-pool</button>
+          <button type="button" id="download-daily-dua-pool" class="admin-button">daily-dua-pool</button>
           <button type="button" id="download-manifest" class="admin-button">Скачать manifest</button>
           <button type="button" id="download-release" class="admin-button">Скачать release</button>
         </div>
@@ -102,9 +136,23 @@
       </form>
     </dialog>
 
+    <dialog id="announcement-editor-dialog" class="admin-dialog">
+      <form id="announcement-editor-form" method="dialog" class="admin-form">
+        <div class="admin-dialog-header">
+          <h2 id="announcement-editor-title">Объявление</h2>
+          <button type="button" id="announcement-editor-close" class="admin-button admin-button-ghost">Закрыть</button>
+        </div>
+        <div class="admin-form-grid" id="announcement-editor-fields"></div>
+        <div class="admin-toolbar">
+          <button type="submit" class="admin-button admin-button-primary">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js?v=5"></script>
-    <script src="./admin-supabase.js?v=6"></script>
-    <script src="./admin.js?v=10"></script>
+    <script src="./admin-supabase.js?v=7"></script>
+    <script src="./admin-home.js?v=1"></script>
+    <script src="./admin.js?v=11"></script>
   </body>
 </html>

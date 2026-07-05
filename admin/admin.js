@@ -5,7 +5,11 @@ function isSupabaseReady() {
 const state = {
   support: [],
   general: [],
+  announcements: [],
+  dailyAyahPool: [],
+  dailyDuaPool: [],
   manifest: null,
+  homeManifest: null,
   release: null,
   editing: null,
 };
@@ -692,6 +696,10 @@ async function loadContent() {
   state.general = catalog.general;
   state.manifest = catalog.manifest;
   state.release = catalog.release;
+  if (window.AdminHome) {
+    window.AdminHome.applyCatalog(state, catalog);
+    window.AdminHome.renderAll();
+  }
   renderAllLists();
   renderReleaseForm();
 }
@@ -765,14 +773,23 @@ function bindEvents() {
       status.textContent = 'Публикация...';
       try {
         await persistReleaseState();
+        if (window.AdminHome) {
+          await window.AdminSupabase.saveHomeDailyPools(state.dailyAyahPool, state.dailyDuaPool);
+        }
         const manifest = buildManifest();
+        const homeManifest = window.AdminHome ? window.AdminHome.buildHomeManifest(state) : null;
         const result = await window.AdminSupabase.publishContent({
           supportDua: state.support,
           generalDua: state.general,
           manifest,
+          homeManifest,
+          homeAnnouncements: window.AdminHome ? window.AdminHome.serializeAnnouncements(state) : [],
+          dailyAyahPool: state.dailyAyahPool,
+          dailyDuaPool: state.dailyDuaPool,
           appRelease: state.release,
         });
         state.manifest = manifest;
+        if (homeManifest) state.homeManifest = homeManifest;
         status.textContent = `Опубликовано: ${result.publishedAt ?? 'ok'}. Файлы обновятся на waydean.ru через 1–2 минуты.`;
       } catch (error) {
         status.textContent = error instanceof Error ? error.message : 'Ошибка публикации';
@@ -800,6 +817,9 @@ function configureLoginUi() {
 async function init() {
   configureLoginUi();
   bindEvents();
+  if (window.AdminHome) {
+    window.AdminHome.bind({ $, state, downloadJson });
+  }
   await restoreSession();
 }
 

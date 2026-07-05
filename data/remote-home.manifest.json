@@ -1,0 +1,21 @@
+{
+  "version": 1,
+  "publishedAt": "2026-07-05T09:11:07.573Z",
+  "packs": {
+    "announcements": {
+      "version": 1,
+      "url": "/data/home-announcements.json",
+      "itemCount": 0
+    },
+    "daily_ayah_pool": {
+      "version": 1,
+      "url": "/data/daily-ayah-pool.json",
+      "itemCount": 12
+    },
+    "daily_dua_pool": {
+      "version": 1,
+      "url": "/data/daily-dua-pool.json",
+      "itemCount": 8
+    }
+  }
+}
