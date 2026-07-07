@@ -5,28 +5,27 @@
     "navTitle": "Дуа о достатке дозволенным",
     "text": "اللَّهُمَّ اكْفِنِي بِحَلَالِكَ عَنْ حَرَامِكَ، وَأَغْنِنِي بِفَضْلِكَ عَمَّنْ سِوَاكَ.",
     "translation": "О Аллах, сделай так, чтобы дозволенное Тобой избавило меня от необходимости обращаться к запрещённому Тобой, и по милости Своей избавь меня от нужды в ком бы то ни было, кроме Тебя.\n\nИсточник: Джамиъ ат-Тирмизи, 3563 (хасан)\nhttps://sunnah.com/tirmidhi:3563",
+    "extraTranslations": [],
+    "transliteration": "АллóхIуммакфини́ би-хьалáлика Iан хьарóмика, ва агIнини́ бифадзлика Iамман сивáка.",
     "targetCount": 3,
     "audio": [],
     "group": "Общие дуа",
-    "translationChechen": "Йа АллахI! Айхьа хьанал динчунца суна тоам бе Ахь Айхьа хьарам динчунах, Хьайн къинхетамца Хьайх цхьаннах суна тоам а бе Ахь, кхечаьрга сан хIумма а, деха ца дезаш",
-    "transliteration": "АллóхIуммакфини́ би-хьалáлика Iан хьарóмика, ва агIнини́ бифадзлика Iамман сивáка.",
-    "originalId": "morning-21",
     "category": "general_dua",
     "authenticity": "hasan",
     "source": {
-      "type": "hadith",
-      "book": "Jami` at-Tirmidhi",
-      "number": "3563",
       "url": "https://sunnah.com/tirmidhi:3563",
+      "book": "Jami` at-Tirmidhi",
+      "type": "hadith",
       "grade": "hasan",
+      "number": "3563",
       "gradedBy": "at-Tirmidhi / Darussalam",
       "gradeNote": "Hasan / Hasan Gharib."
     },
     "benefitHadith": {
-      "summary": "Дуа о достаточности дозволенного вместо запретного и независимости от созданий; передано как средство при долге.",
-      "source": "Jami` at-Tirmidhi 3563",
       "url": "https://sunnah.com/tirmidhi:3563",
-      "grade": "hasan"
+      "grade": "hasan",
+      "source": "Jami` at-Tirmidhi 3563",
+      "summary": "Дуа о достаточности дозволенного вместо запретного и независимости от созданий; передано как средство при долге."
     },
     "tags": [
       "rizq",
@@ -34,81 +33,8 @@
       "general_dua"
     ],
     "importance": "recommended",
-    "placementFit": "general"
-  },
-  {
-    "id": "general-dua-2",
-    "title": "Хвала Аллаху подобающим образом",
-    "navTitle": "Хвала Аллаху подобающим образом",
-    "text": "يَا رَبِّ ، لَكَ الْحَمْدُ كَمَا يَنْبَغِي لِجَلَالِ وَجْهِكَ ، وَلِعَظِيمِ سُلْطَانِكَ.",
-    "translation": "«О, мой Господь! Хвала Тебе в той степени, которая соответствует великолепию Твое лика, и величию Твоей власти».",
-    "targetCount": 3,
-    "audio": [],
-    "group": "Общие дуа",
-    "transliteration": "Йá Робби лакаль хьамду камá йамбагIи́ ли-джалáли ваджхIика ва ли-Iазы́ми султIóника.",
-    "originalId": "morning-24",
-    "category": "general_dua",
-    "authenticity": "weak",
-    "source": {
-      "type": "hadith",
-      "book": "Sunan Ibn Majah / IslamWeb takhrij",
-      "number": "Ibn Majah 3801",
-      "url": "https://www.islamweb.net/ar/fatwa/65961/",
-      "grade": "daif",
-      "gradedBy": "Al-Albani / IslamWeb discussion",
-      "gradeNote": "Хадис о специальной награде не установлен; сама фраза как общий смысл хвалы допустима."
-    },
-    "benefitHadith": {
-      "summary": "Фраза хвалы по смыслу допустима, но хадис о её особой награде слабый.",
-      "source": "Ibn Majah 3801; IslamWeb 65961",
-      "url": "https://www.islamweb.net/ar/fatwa/65961/",
-      "grade": "daif"
-    },
-    "tags": [
-      "praise",
-      "weak",
-      "general_dua"
-    ],
-    "importance": "extra",
-    "placementFit": "weak_general",
-    "notes": "Сохранено в полном режиме как общая фраза хвалы, но не в «Проверенные»."
-  },
-  {
-    "id": "general-dua-3",
-    "title": "Защита от ширка",
-    "navTitle": "Защита от ширка",
-    "text": "اللَّهُمَّ إِنَّا نَعُوذُ بِكَ مِنْ أَنْ نُشْرِكَ بِكَ شَيْئًا نَعْلَمُهُ ، وَنَسْتَغْفِرُكَ لِمَا لَا نَعْلَمُهُ.",
-    "translation": "О Аллах! Поистине, прошу защиты Твоей от того, чтобы сознательно придавать Тебе сотоварища. Молю о прощении от совершенных по неведению грехов.",
-    "targetCount": 3,
-    "audio": [],
-    "group": "Общие дуа",
-    "transliteration": "АллóхIумма иннá наIýз̱у бика мин ан нушрика бика шай-ан наIламухIу, ва настагIфирука лимá лá наIламахIу.",
-    "originalId": "morning-25",
-    "category": "general_dua",
-    "authenticity": "hasan",
-    "source": {
-      "type": "hadith",
-      "book": "Ahmad / al-Tabarani / Sahih al-Targhib",
-      "number": "Sahih al-Targhib 36; al-Adab al-Mufrad route",
-      "url": "https://surahquran.com/Hadith-119116.html",
-      "grade": "hasan_lighayrihi",
-      "gradedBy": "Al-Albani",
-      "gradeNote": "Al-Albani: Hasan li-ghayrihi; route in al-Adab al-Mufrad authenticated for similar singular wording."
-    },
-    "benefitHadith": {
-      "summary": "Дуа о защите от осознанного ширка и просьба о прощении за то, что человек не осознаёт.",
-      "source": "Sahih al-Targhib 36; Ahmad/Tabarani",
-      "url": "https://surahquran.com/Hadith-119116.html",
-      "grade": "hasan_lighayrihi"
-    },
-    "tags": [
-      "ikhlas",
-      "shirk",
-      "protection",
-      "general_dua"
-    ],
-    "importance": "recommended",
-    "placementFit": "general"
+    "placementFit": "general",
+    "status": "published"
   },
   {
     "id": "general-dua-anxiety-debt",
@@ -116,28 +42,27 @@
     "navTitle": "Дуа от тревоги и долгов",
     "text": "اللَّهُمَّ إِنِّي أَعُوذُ بِكَ مِنَ الْهَمِّ وَالْحَزَنِ، وَالْعَجْزِ وَالْكَسَلِ، وَالْجُبْنِ وَالْبُخْلِ، وَضَلَعِ الدَّيْنِ، وَغَلَبَةِ الرِّجَالِ",
     "translation": "О Аллах, поистине, я прибегаю к Тебе от тревоги и печали, от бессилия и лени, от трусости и скупости, от тяжести долга и от того, чтобы люди одолели меня.",
+    "extraTranslations": [],
+    "transliteration": "",
     "targetCount": 1,
     "audio": [],
     "group": "Общие дуа",
-    "translationChechen": "",
-    "transliteration": "",
-    "originalId": null,
     "category": "general_dua",
     "authenticity": "sahih",
     "source": {
-      "type": "hadith",
-      "book": "Sahih al-Bukhari",
-      "number": "6369",
       "url": "https://sunnah.com/bukhari:6369",
+      "book": "Sahih al-Bukhari",
+      "type": "hadith",
       "grade": "sahih",
+      "number": "6369",
       "gradedBy": "al-Bukhari",
       "gradeNote": "Общий достоверный дуа; не внесён в strict morning/evening, потому что утренне-вечерняя привязка по отдельным путям спорна/слабее."
     },
     "benefitHadith": {
-      "summary": "Дуа о защите от тревоги, печали, бессилия, лени, скупости, трусости, тяжести долга и подавления людьми.",
-      "source": "Sahih al-Bukhari 6369",
       "url": "https://sunnah.com/bukhari:6369",
-      "grade": "sahih"
+      "grade": "sahih",
+      "source": "Sahih al-Bukhari 6369",
+      "summary": "Дуа о защите от тревоги, печали, бессилия, лени, скупости, трусости, тяжести долга и подавления людьми."
     },
     "tags": [
       "anxiety",
@@ -148,6 +73,81 @@
     ],
     "importance": "recommended",
     "placementFit": "general_dua",
-    "notes": "Добавлено как общий достоверный дуа, не как strict morning/evening, потому что утренне-вечерняя привязка имеет отдельные обсуждения."
+    "status": "published"
+  },
+  {
+    "id": "general-dua-3",
+    "title": "Защита от ширка",
+    "navTitle": "Защита от ширка",
+    "text": "اللَّهُمَّ إِنَّا نَعُوذُ بِكَ مِنْ أَنْ نُشْرِكَ بِكَ شَيْئًا نَعْلَمُهُ ، وَنَسْتَغْفِرُكَ لِمَا لَا نَعْلَمُهُ.",
+    "translation": "О Аллах! Поистине, прошу защиты Твоей от того, чтобы сознательно придавать Тебе сотоварища. Молю о прощении от совершенных по неведению грехов.",
+    "extraTranslations": [],
+    "transliteration": "АллóхIумма иннá наIýз̱у бика мин ан нушрика бика шай-ан наIламухIу, ва настагIфирука лимá лá наIламахIу.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "Общие дуа",
+    "category": "general_dua",
+    "authenticity": "hasan",
+    "source": {
+      "url": "https://surahquran.com/Hadith-119116.html",
+      "book": "Ahmad / al-Tabarani / Sahih al-Targhib",
+      "type": "hadith",
+      "grade": "hasan_lighayrihi",
+      "number": "Sahih al-Targhib 36; al-Adab al-Mufrad route",
+      "gradedBy": "Al-Albani",
+      "gradeNote": "Al-Albani: Hasan li-ghayrihi; route in al-Adab al-Mufrad authenticated for similar singular wording."
+    },
+    "benefitHadith": {
+      "url": "https://surahquran.com/Hadith-119116.html",
+      "grade": "hasan_lighayrihi",
+      "source": "Sahih al-Targhib 36; Ahmad/Tabarani",
+      "summary": "Дуа о защите от осознанного ширка и просьба о прощении за то, что человек не осознаёт."
+    },
+    "tags": [
+      "ikhlas",
+      "shirk",
+      "protection",
+      "general_dua"
+    ],
+    "importance": "recommended",
+    "placementFit": "general",
+    "status": "published"
+  },
+  {
+    "id": "general-dua-2",
+    "title": "Хвала Аллаху подобающим образом",
+    "navTitle": "Хвала Аллаху подобающим образом",
+    "text": "يَا رَبِّ ، لَكَ الْحَمْدُ كَمَا يَنْبَغِي لِجَلَالِ وَجْهِكَ ، وَلِعَظِيمِ سُلْطَانِكَ.",
+    "translation": "«О, мой Господь! Хвала Тебе в той степени, которая соответствует великолепию Твое лика, и величию Твоей власти».",
+    "extraTranslations": [],
+    "transliteration": "Йá Робби лакаль хьамду камá йамбагIи́ ли-джалáли ваджхIика ва ли-Iазы́ми султIóника.",
+    "targetCount": 3,
+    "audio": [],
+    "group": "Общие дуа",
+    "category": "general_dua",
+    "authenticity": "weak",
+    "source": {
+      "url": "https://www.islamweb.net/ar/fatwa/65961/",
+      "book": "Sunan Ibn Majah / IslamWeb takhrij",
+      "type": "hadith",
+      "grade": "daif",
+      "number": "Ibn Majah 3801",
+      "gradedBy": "Al-Albani / IslamWeb discussion",
+      "gradeNote": "Хадис о специальной награде не установлен; сама фраза как общий смысл хвалы допустима."
+    },
+    "benefitHadith": {
+      "url": "https://www.islamweb.net/ar/fatwa/65961/",
+      "grade": "daif",
+      "source": "Ibn Majah 3801; IslamWeb 65961",
+      "summary": "Фраза хвалы по смыслу допустима, но хадис о её особой награде слабый."
+    },
+    "tags": [
+      "praise",
+      "weak",
+      "general_dua"
+    ],
+    "importance": "extra",
+    "placementFit": "weak_general",
+    "status": "published"
   }
 ]
