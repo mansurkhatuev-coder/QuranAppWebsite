@@ -11,12 +11,29 @@ website/
   index.html           # главная, кнопки скачивания
   privacy.html         # политика конфиденциальности (для RuStore)
   support.html         # контакты
+  data/                # JSON для приложения (дуа + версия Store)
+  admin/               # админка контента (waydean.ru/admin/)
   styles.css
   links.js             # ваши ссылки (редактировать перед заливкой)
   links.example.json   # шаблон полей
   site.js              # подставляет ссылки в кнопки
   assets/icon.png      # иконка приложения
 ```
+
+### Remote JSON для приложения
+
+- `data/support-dua.json` — дуа в поддержку
+- `data/general-dua.json` — дуа на случаи
+- `data/remote-dua.manifest.json` — версии паков для sync
+- `data/app-release.json` — версия в RuStore / App Store для баннера обновления
+
+Пересобрать из bundled assets в QuranApp:
+
+```bash
+npm run sync:website-dua-data
+```
+
+Админка: см. `admin/README.md`.
 
 ## Быстрый старт
 

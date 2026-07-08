@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta
       name="description"
-      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android."
+      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android и iOS."
     />
     <meta name="robots" content="index, follow" />
     <meta name="googlebot" content="index, follow" />
@@ -16,7 +16,7 @@
     <meta property="og:title" content="Коран и Азкары — Коран, Азкары и Намаз в одном приложении" />
     <meta
       property="og:description"
-      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android."
+      content="Коран и Азкары — чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы. Скачайте для Android и iOS."
     />
     <meta property="og:url" content="https://waydean.ru/" />
     <meta property="og:image" content="https://waydean.ru/assets/icon.png" />
@@ -34,12 +34,15 @@
         "@context": "https://schema.org",
         "@type": "MobileApplication",
         "name": "Коран и Азкары",
-        "operatingSystem": "Android",
+        "operatingSystem": ["Android", "iOS"],
         "applicationCategory": "LifestyleApplication",
         "description": "Чтение Корана с переводами, аудио, азкары и время намаза. Без рекламы.",
         "url": "https://waydean.ru/",
         "image": "https://waydean.ru/assets/icon.png",
-        "downloadUrl": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
+        "downloadUrl": [
+          "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
+          "https://apps.apple.com/app/id6782619598"
+        ],
         "offers": {
           "@type": "Offer",
           "price": "0",
@@ -105,11 +108,23 @@
           <a id="btn-rustore" class="btn btn-gold btn-disabled" aria-disabled="true" data-magnetic data-ripple>
             Скачать для Android с RuStore
           </a>
+          <a id="btn-appstore" class="btn btn-gold btn-disabled" aria-disabled="true" data-magnetic data-ripple>
+            Скачать в App Store
+          </a>
           <a id="btn-apk" class="btn btn-ghost btn-disabled" aria-disabled="true" data-magnetic data-ripple>
             Скачать для Android APK
           </a>
+          <button type="button" class="btn btn-ghost btn-share" data-action="share" data-magnetic data-ripple>
+            <svg class="btn-share-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+              <path
+                fill="currentColor"
+                d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"
+              />
+            </svg>
+            Поделиться
+          </button>
         </div>
-        <p class="hero-note" data-stage="5">Бесплатно · Android · iOS — скоро</p>
+        <p class="hero-note" data-stage="5">Бесплатно · Android · iOS</p>
       </div>
       <div class="hero-scroll-hint" aria-hidden="true"></div>
     </header>
@@ -181,7 +196,7 @@
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 12h8"/><path d="M12 8v8"/><path d="M7 4h10a4 4 0 0 1 4 4v12H3V8a4 4 0 0 1 4-4z"/></svg>
               </div>
               <h3>Дуа</h3>
-              <p>Дуа дня на главной, напоминания вечером, дуа при дожде и в последний час пятницы.</p>
+              <p>Дуа на главной, напоминания вечером, дуа при дожде и в последний час пятницы.</p>
             </article>
 
             <article class="feature-card reveal" style="--d: 0.49s" data-tilt>
@@ -198,15 +213,15 @@
       <!-- QURAN EXPERIENCE -->
       <section class="section">
         <div class="container">
-          <div class="quran-copy center reveal" style="max-width: 40rem; margin-inline: auto">
+          <div class="quran-copy center reveal">
             <span class="section-label">Чтение</span>
             <h2 class="section-title">Постраничный мусхаф</h2>
-            <p class="section-sub" style="margin-inline: auto">
+            <p class="section-sub">
               604 страницы, шрифт Kitab и цветовая разметка таджвида — в светлой и тёмной теме.
             </p>
           </div>
 
-          <div class="mushaf-phones" style="margin-top: 2.5rem">
+          <div class="mushaf-phones">
             <div class="reveal" style="--d: 0s">
               <span class="mushaf-phones-label">Светлая тема · Мусхаф</span>
               <div class="phone phone--shot">
@@ -214,7 +229,7 @@
                   <img
                     class="phone-shot"
                     src="assets/mushaf-light.png"
-                    alt="Мусхаф в светлой теме — сура Аль-Фатиха, страница 1"
+                    alt="Мусхаф в светлой теме — страница 2"
                     width="1170"
                     height="2532"
                     loading="lazy"
@@ -231,7 +246,7 @@
                   <img
                     class="phone-shot"
                     src="assets/mushaf-dark.png"
-                    alt="Мусхаф в тёмной теме — сура Аль-Ихлас, страница 603"
+                    alt="Мусхаф в тёмной теме — сура Аль-Фатиха"
                     width="1170"
                     height="2532"
                     loading="lazy"
@@ -242,9 +257,7 @@
             </div>
           </div>
 
-          <ul class="check-list reveal" style="--d: 0.2s; max-width: 36rem; margin: 2.5rem auto 0">
-            <li><strong>Мусхаф</strong> — 604 страницы, шрифт Kitab, таджвид и номер страницы</li>
-            <li><strong>Темы</strong> — светлая (#F5EAD9) и тёмная, переключаются одной кнопкой</li>
+          <ul class="check-list check-list--center reveal" style="--d: 0.2s">
             <li><strong>Переводы</strong> — Кулиев, чеченские Ибрагимов и Магомедов</li>
             <li><strong>Хатм</strong> — прогресс чтения и дневная цель на главной</li>
           </ul>
@@ -420,7 +433,7 @@
       </section>
 
       <!-- STATISTICS -->
-      <section class="section">
+      <section class="section section--compact">
         <div class="container">
           <div class="stats-grid">
             <div class="stat-card reveal" style="--d: 0s">
@@ -475,7 +488,7 @@
               </div>
               <div class="trust-card-body">
                 <h3>Быстрая работа</h3>
-                <p>Офлайн-first: данные на устройстве, сеть — по желанию.</p>
+                <p>Данные на устройстве — интернет нужен только для загрузки нового контента.</p>
               </div>
             </div>
             <div class="trust-card reveal" style="--d: 0.24s">
@@ -497,20 +510,28 @@
           <div class="cta-panel reveal">
             <span class="section-label">Скачать</span>
             <h2 class="section-title">Начните сегодня</h2>
-            <p class="section-sub" style="margin-inline: auto">
-              Бесплатно для Android. Версия для iOS — скоро.
+            <p class="section-sub">
+              Бесплатно для Android и iOS.
             </p>
             <div class="hero-actions">
               <a class="btn btn-gold btn-disabled" data-link="rustore" aria-disabled="true" data-magnetic data-ripple>
                 Скачать для Android
               </a>
+              <a class="btn btn-gold btn-disabled" data-link="appstore" aria-disabled="true" data-magnetic data-ripple>
+                Скачать в App Store
+              </a>
               <a class="btn btn-ghost btn-disabled" data-link="apk" aria-disabled="true" data-magnetic data-ripple>
                 Скачать APK
               </a>
-              <a id="btn-appstore" class="btn btn-ghost btn-disabled" aria-disabled="true" data-magnetic data-ripple>
-                App Store
-                <span class="btn-badge">Скоро</span>
-              </a>
+              <button type="button" class="btn btn-ghost btn-share" data-action="share" data-magnetic data-ripple>
+                <svg class="btn-share-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
+                  <path
+                    fill="currentColor"
+                    d="M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92s2.92-1.31 2.92-2.92-1.31-2.92-2.92-2.92z"
+                  />
+                </svg>
+                Поделиться
+              </button>
             </div>
             <p class="hero-note">
               При установке APK разрешите установку из неизвестных источников в настройках Android.
@@ -525,6 +546,7 @@
         <nav class="footer-links" aria-label="Дополнительные страницы">
           <a href="privacy.html">Политика конфиденциальности</a>
           <a href="support.html">Поддержка</a>
+          <a href="admin/">Админка</a>
         </nav>
         <p>© <span id="copyright-year"></span> Коран и Азкары</p>
       </div>
@@ -532,6 +554,15 @@
 
     <script src="links.js" defer></script>
     <script src="site.js" defer></script>
+    <script src="analytics.js" defer></script>
     <script src="landing.js" defer></script>
+    <noscript
+      ><div>
+        <img
+          src="https://mc.yandex.ru/watch/110287110"
+          style="position: absolute; left: -9999px"
+          alt=""
+        /></div
+    ></noscript>
   </body>
 </html>

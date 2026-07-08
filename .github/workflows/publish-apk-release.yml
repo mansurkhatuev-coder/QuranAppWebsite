@@ -22,11 +22,12 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: apk-source
+          lfs: true
 
       - name: Resolve APK file
         id: apk
         run: |
-          FILE=$(ls downloads/*.apk 2>/dev/null | head -1)
+          FILE=$(ls -1 downloads/*.apk 2>/dev/null | sort -V | tail -1)
           if [ -z "$FILE" ]; then
             echo "No APK in downloads/ on apk-source branch."
             exit 1

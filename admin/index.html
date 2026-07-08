@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Админка — Коран и Азкары</title>
+    <link rel="stylesheet" href="../styles.css" />
+    <link rel="stylesheet" href="./admin.css?v=3" />
+  </head>
+  <body class="admin-body">
+    <div id="login-screen" class="admin-shell">
+      <div class="admin-card">
+        <p class="admin-kicker">Коран и Азкары</p>
+        <h1>Вход</h1>
+        <p class="admin-muted">Редактирование дуа и версии приложения.</p>
+        <form id="login-form" class="admin-form">
+          <label id="login-email-wrap">
+            Email
+            <input id="login-email" type="email" autocomplete="username" required />
+          </label>
+          <label>
+            <span id="login-secret-label">Пароль</span>
+            <input id="login-password" type="password" autocomplete="current-password" required />
+          </label>
+          <p id="login-setup-notice" class="admin-muted" hidden>
+            Сервис не настроен. Обратитесь к разработчику.
+          </p>
+          <button type="submit" class="admin-button admin-button-primary">Войти</button>
+          <p id="login-error" class="admin-error" hidden>Неверные данные для входа</p>
+        </form>
+      </div>
+    </div>
+
+    <div id="app-screen" class="admin-shell" hidden>
+      <p id="admin-init-error" class="admin-init-error" hidden></p>
+      <header class="admin-topbar">
+        <div>
+          <p class="admin-kicker">Коран и Азкары</p>
+          <h1>Контент приложения</h1>
+        </div>
+        <button id="logout-button" type="button" class="admin-button admin-button-ghost">Выйти</button>
+      </header>
+
+      <nav class="admin-tabs" aria-label="Разделы">
+        <button type="button" class="admin-tab is-active" data-tab="support">Дуа в поддержку</button>
+        <button type="button" class="admin-tab" data-tab="general">Дуа на случаи</button>
+        <button type="button" class="admin-tab" data-tab="home">Главная</button>
+        <button type="button" class="admin-tab" data-tab="release">Версия в Store</button>
+      </nav>
+
+      <section class="admin-panel" data-panel="support">
+        <div class="admin-toolbar admin-panel-toolbar">
+          <p class="admin-muted">Дуа в разделе «Поддержка»</p>
+          <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="support">
+            Добавить дуа
+          </button>
+        </div>
+        <div id="support-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel" data-panel="general" hidden>
+        <div class="admin-toolbar admin-panel-toolbar">
+          <p class="admin-muted">Дуа на случаи жизни</p>
+          <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="general">
+            Добавить дуа
+          </button>
+        </div>
+        <div id="general-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel" data-panel="home" hidden>
+        <div class="admin-callout">
+          <strong>Баннеры на главной</strong> — карточки вверху главного экрана приложения.
+          Это не push-уведомления. После правок нажмите «Опубликовать на сайте» внизу страницы.
+        </div>
+        <div class="admin-toolbar admin-panel-toolbar">
+          <p class="admin-muted">Список активных баннеров</p>
+          <button type="button" id="add-announcement" class="admin-button admin-button-primary">
+            Добавить баннер
+          </button>
+        </div>
+        <div id="announcement-list" class="admin-list"></div>
+
+        <div class="admin-card admin-home-pools">
+          <h2 class="admin-card-title">Аят и дуа дня</h2>
+          <p class="admin-muted">
+            Случайный аят/дуа на главной берётся из этих списков. Обычно правят редко — достаточно
+            опубликовать один раз.
+          </p>
+          <p id="home-pools-status" class="admin-muted"></p>
+          <label class="admin-field-label admin-full">
+            Пул аятов дня
+            <textarea id="daily-ayah-pool" rows="8"></textarea>
+          </label>
+          <label class="admin-field-label admin-full">
+            Пул дуа дня
+            <textarea id="daily-dua-pool" rows="6"></textarea>
+          </label>
+          <div class="admin-form-actions">
+            <button type="button" id="save-daily-pools" class="admin-button admin-button-primary">
+              Сохранить пулы
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <section class="admin-panel" data-panel="release" hidden>
+        <form id="release-form" class="admin-form admin-form-grid"></form>
+      </section>
+
+      <section class="admin-card admin-publish">
+        <h2 class="admin-card-title">Публикация</h2>
+        <p id="publish-help" class="admin-muted admin-publish-lead">
+          Сохраните изменения в разделах выше, затем опубликуйте — JSON на
+          <strong>waydean.ru/data/</strong> обновятся автоматически.
+        </p>
+        <p id="publish-status" class="admin-publish-status admin-muted" hidden></p>
+        <div class="admin-publish-primary">
+          <button type="button" id="publish-site" class="admin-button admin-button-primary admin-button-lg">
+            Опубликовать на сайте
+          </button>
+        </div>
+        <div class="admin-download-section">
+          <h3 class="admin-subheading">Скачать JSON (как на проде)</h3>
+          <p class="admin-muted admin-download-hint">Те же файлы, что раздаёт waydean.ru/data/</p>
+          <div class="admin-button-row">
+            <button
+              type="button"
+              id="download-support"
+              class="admin-button"
+              title="waydean.ru/data/support-dua.json"
+            >
+              Дуа в поддержку
+            </button>
+            <button
+              type="button"
+              id="download-general"
+              class="admin-button"
+              title="waydean.ru/data/general-dua.json"
+            >
+              Дуа на случаи
+            </button>
+            <button
+              type="button"
+              id="download-home-announcements"
+              class="admin-button"
+              title="waydean.ru/data/home-announcements.json"
+            >
+              Баннеры главной
+            </button>
+            <button
+              type="button"
+              id="download-daily-ayah-pool"
+              class="admin-button"
+              title="waydean.ru/data/daily-ayah-pool.json"
+            >
+              Пул «аят дня»
+            </button>
+            <button
+              type="button"
+              id="download-daily-dua-pool"
+              class="admin-button"
+              title="waydean.ru/data/daily-dua-pool.json"
+            >
+              Пул «дуа дня»
+            </button>
+            <button
+              type="button"
+              id="download-manifest-dua"
+              class="admin-button"
+              title="waydean.ru/data/remote-dua.manifest.json"
+            >
+              Манифест дуа
+            </button>
+            <button
+              type="button"
+              id="download-manifest-home"
+              class="admin-button"
+              title="waydean.ru/data/remote-home.manifest.json"
+            >
+              Манифест главной
+            </button>
+            <button
+              type="button"
+              id="download-release"
+              class="admin-button"
+              title="waydean.ru/data/app-release.json"
+            >
+              Версия в Store
+            </button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <dialog id="editor-dialog" class="admin-dialog">
+      <form id="editor-form" method="dialog" class="admin-form">
+        <div class="admin-dialog-header">
+          <h2 id="editor-title">Редактирование дуа</h2>
+          <button type="button" id="editor-close" class="admin-button admin-button-ghost">Закрыть</button>
+        </div>
+        <div class="admin-form-grid" id="editor-fields"></div>
+        <div class="admin-toolbar">
+          <button type="submit" class="admin-button admin-button-primary">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="announcement-editor-dialog" class="admin-dialog">
+      <form id="announcement-editor-form" method="dialog" class="admin-form">
+        <div class="admin-dialog-header">
+          <h2 id="announcement-editor-title">Баннер</h2>
+          <button type="button" id="announcement-editor-close" class="admin-button admin-button-ghost">Закрыть</button>
+        </div>
+        <p class="admin-muted admin-form-intro">
+          Пользователь увидит карточку на главной. Заполните заголовок и при необходимости текст и сроки
+          показа.
+        </p>
+        <div class="admin-form-grid" id="announcement-editor-fields"></div>
+        <div class="admin-toolbar">
+          <button type="submit" class="admin-button admin-button-primary">Сохранить</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="./supabase-config.js?v=5"></script>
+    <script src="./admin-supabase.js?v=7"></script>
+    <script src="./admin-home.js?v=3"></script>
+    <script src="./admin.js?v=13"></script>
+  </body>
+</html>

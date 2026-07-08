@@ -13,10 +13,10 @@
 
 .app-screen {
   --app-bg: #071610;
-  --app-surface: #162d22;
-  --app-surface-strong: #1e3a2b;
-  --app-text: #e8f5e9;
-  --app-muted: #a5d6a7;
+  --app-surface: rgba(7, 22, 16, 0.68);
+  --app-surface-strong: rgba(7, 22, 16, 0.84);
+  --app-text: #f5f0e6;
+  --app-muted: rgba(245, 240, 230, 0.72);
   --app-tint: #c9a24d;
   --app-tint-soft: rgba(201, 162, 77, 0.2);
   --app-border: rgba(255, 255, 255, 0.08);
@@ -755,9 +755,10 @@
 .mushaf-phones {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1.5rem;
+  gap: 2rem 1.5rem;
   align-items: start;
   justify-items: center;
+  margin-top: 2.5rem;
 }
 
 .mushaf-phones-label {

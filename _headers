@@ -17,5 +17,11 @@
 /links.js
   Cache-Control: public, max-age=300
 
+/admin/*
+  Cache-Control: no-store
+
+/data/*
+  Cache-Control: public, max-age=300, must-revalidate
+
 /*.html
   Cache-Control: public, max-age=600

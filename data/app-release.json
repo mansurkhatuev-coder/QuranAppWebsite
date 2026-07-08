@@ -1,0 +1,15 @@
+{
+  "android": {
+    "latestVersion": "1.0.7",
+    "versionCode": 8,
+    "rustoreUrl": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
+    "apkUrl": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.7/koran-i-azkary-1.0.7.apk"
+  },
+  "ios": {
+    "latestVersion": "1.0.7",
+    "buildNumber": 12,
+    "appStoreUrl": "https://apps.apple.com/app/id6782619598"
+  },
+  "messageRu": "Исправлено отображение таджвида QCF на Android. Онлайн-мусхаф без паков — как в Expo Go. Улучшения главной и азкаров.",
+  "messageEn": "Fixed QCF tajweed glyphs on Android. Online mushaf without packs matches Expo Go. Home and azkar improvements."
+}
