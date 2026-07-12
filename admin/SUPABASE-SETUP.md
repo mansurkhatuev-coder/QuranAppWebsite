@@ -61,6 +61,18 @@
 
 **Table Editor** → должны появиться таблицы `dua_items`, `app_release`, `content_manifest`.
 
+### 2.3 Отзывы Академии (вкладка «Отзывы Академии» в админке)
+
+Если нужны отзывы из приложения (Академия → Таджвид):
+
+1. **SQL Editor** → **New query**
+2. Выполните по очереди:
+   - `website/admin/supabase-migration-academy-feedback.sql`
+   - `website/admin/supabase-migration-academy-feedback-v2.sql`
+3. **Table Editor** → должна появиться таблица `academy_course_feedback`.
+
+Без этих миграций вкладка «Отзывы Академии» покажет ошибку или пустой список.
+
 ---
 
 ## Часть 3. Создать пользователя админки

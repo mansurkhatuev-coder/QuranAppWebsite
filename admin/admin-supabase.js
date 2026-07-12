@@ -241,6 +241,32 @@
     if (error) throw error;
   }
 
+  async function loadAcademyCourseFeedback() {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+
+    const fullSelect =
+      'id,course_id,lesson_id,rating,comment,display_name,locale,app_version,platform,created_at,updated_at';
+    const legacySelect = 'id,course_id,lesson_id,rating,comment,locale,app_version,platform,created_at';
+
+    let result = await client
+      .from('academy_course_feedback')
+      .select(fullSelect)
+      .order('created_at', { ascending: false })
+      .limit(200);
+
+    if (result.error && /column/i.test(result.error.message)) {
+      result = await client
+        .from('academy_course_feedback')
+        .select(legacySelect)
+        .order('created_at', { ascending: false })
+        .limit(200);
+    }
+
+    if (result.error) throw result.error;
+    return result.data ?? [];
+  }
+
   async function publishContent(payload) {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
@@ -278,5 +304,6 @@
     saveHomeDailyPools,
     saveRelease,
     publishContent,
+    loadAcademyCourseFeedback,
   };
 })(window);

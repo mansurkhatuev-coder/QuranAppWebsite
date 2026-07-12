@@ -14,6 +14,16 @@ const state = {
   editing: null,
 };
 
+const ADMIN_TAB_STORAGE_KEY = 'waydean_admin_active_tab_v1';
+const CONTENT_TABS = new Set(['support', 'general', 'home', 'release']);
+
+const PUBLISH_HELP_BY_TAB = {
+  support: 'Изменения в дуа «Поддержка» сохраняются в Supabase сразу. Нажмите «Опубликовать», чтобы обновить JSON на waydean.ru.',
+  general: 'Изменения в дуа «На случаи жизни» сохраняются в Supabase сразу. Нажмите «Опубликовать», чтобы обновить JSON на waydean.ru.',
+  home: 'Баннеры и пулы «аят/дуа дня» попадут на сайт после публикации. Сначала сохраните пулы, если меняли их.',
+  release: 'Версия Store сохранится в Supabase и на waydean.ru/data/app-release.json после публикации.',
+};
+
 const PACKS = {
   support: {
     listId: 'support-list',
@@ -700,6 +710,38 @@ function setActiveTab(tabName) {
   root.querySelectorAll('[data-panel]').forEach((panel) => {
     panel.hidden = panel.dataset.panel !== tabName;
   });
+
+  const publishBlock = $('#admin-publish-block');
+  if (publishBlock) {
+    publishBlock.hidden = !CONTENT_TABS.has(tabName);
+  }
+
+  const publishHelp = $('#publish-help');
+  if (publishHelp && PUBLISH_HELP_BY_TAB[tabName]) {
+    publishHelp.innerHTML = PUBLISH_HELP_BY_TAB[tabName];
+  }
+
+  try {
+    localStorage.setItem(ADMIN_TAB_STORAGE_KEY, tabName);
+  } catch {
+    // ignore quota / private mode
+  }
+
+  if (tabName === 'academy-feedback' && window.AdminAcademyFeedback) {
+    void window.AdminAcademyFeedback.loadAndRender();
+  }
+}
+
+function getInitialTab() {
+  try {
+    const saved = localStorage.getItem(ADMIN_TAB_STORAGE_KEY);
+    if (saved && document.querySelector(`.admin-tab[data-tab="${saved}"]`)) {
+      return saved;
+    }
+  } catch {
+    // ignore
+  }
+  return 'support';
 }
 
 function bindAppScreenDelegation() {
@@ -743,6 +785,7 @@ function bindDownloadButtons() {
 function showApp() {
   $('#login-screen').hidden = true;
   $('#app-screen').hidden = false;
+  setActiveTab(getInitialTab());
 }
 
 function showLogin() {
@@ -821,6 +864,10 @@ function bindEvents() {
 
   bindAppScreenDelegation();
   bindDownloadButtons();
+
+  if (window.AdminAcademyFeedback) {
+    window.AdminAcademyFeedback.bind({ $ });
+  }
 
   bindClick('#publish-site', () => {
     void (async () => {

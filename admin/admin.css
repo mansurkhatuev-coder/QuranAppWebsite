@@ -50,12 +50,29 @@
 }
 
 .admin-tabs {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
+  display: grid;
+  gap: 1rem;
   margin: 1.5rem 0 1.25rem;
   position: relative;
   z-index: 3;
+}
+
+.admin-tab-group {
+  display: grid;
+  gap: 0.45rem;
+}
+
+.admin-tab-group-label {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-2);
+}
+
+.admin-tab-row {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .admin-tab {
@@ -364,11 +381,55 @@
   background: rgba(212, 175, 55, 0.06);
 }
 
-.admin-download-section {
+.admin-toolbar-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.admin-inline-field {
   display: grid;
-  gap: 0.55rem;
-  padding-top: 1.1rem;
-  border-top: 1px solid var(--line);
+  gap: 0.35rem;
+  font-size: 13px;
+  color: var(--text-2);
+}
+
+.admin-inline-field select {
+  border: 1px solid var(--line);
+  background: #121820;
+  color: var(--text);
+  border-radius: 999px;
+  padding: 8px 12px;
+  font: inherit;
+  color-scheme: dark;
+}
+
+.admin-feedback-item {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.admin-feedback-main {
+  display: grid;
+  gap: 0.35rem;
+  min-width: 0;
+}
+
+.admin-feedback-comment {
+  margin: 0.15rem 0 0;
+  line-height: 1.55;
+  white-space: pre-wrap;
+}
+
+.admin-home-pools-details,
+.admin-download-details {
+  margin-top: 0.15rem;
+}
+
+.admin-download-details .admin-download-section {
+  padding-top: 0.85rem;
+  border-top: 0;
 }
 
 .admin-download-hint {
