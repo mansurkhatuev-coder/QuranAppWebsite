@@ -50,29 +50,12 @@
 }
 
 .admin-tabs {
-  display: grid;
-  gap: 1rem;
-  margin: 1.5rem 0 1.25rem;
-  position: relative;
-  z-index: 3;
-}
-
-.admin-tab-group {
-  display: grid;
-  gap: 0.45rem;
-}
-
-.admin-tab-group-label {
-  font-size: 11px;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  color: var(--text-2);
-}
-
-.admin-tab-row {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  margin: 1.5rem 0 1.25rem;
+  position: relative;
+  z-index: 3;
 }
 
 .admin-tab {
@@ -252,6 +235,11 @@
   gap: 1.25rem;
   position: relative;
   z-index: 1;
+}
+
+.admin-panel[data-panel]:not(.is-active),
+.admin-publish:not(.is-active) {
+  display: none !important;
 }
 
 .admin-panel-toolbar {

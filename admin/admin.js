@@ -702,18 +702,21 @@ function saveEditor(formData) {
 
 function setActiveTab(tabName) {
   const root = $('#app-screen');
-  if (!root) return;
+  if (!root || !tabName) return;
 
-  root.querySelectorAll('.admin-tab').forEach((tab) => {
-    tab.classList.toggle('is-active', tab.dataset.tab === tabName);
+  root.querySelectorAll('.admin-tab[data-tab]').forEach((tab) => {
+    const isActive = tab.dataset.tab === tabName;
+    tab.classList.toggle('is-active', isActive);
+    tab.setAttribute('aria-selected', isActive ? 'true' : 'false');
   });
-  root.querySelectorAll('[data-panel]').forEach((panel) => {
-    panel.hidden = panel.dataset.panel !== tabName;
+
+  root.querySelectorAll('.admin-panel[data-panel]').forEach((panel) => {
+    panel.classList.toggle('is-active', panel.dataset.panel === tabName);
   });
 
   const publishBlock = $('#admin-publish-block');
   if (publishBlock) {
-    publishBlock.hidden = !CONTENT_TABS.has(tabName);
+    publishBlock.classList.toggle('is-active', CONTENT_TABS.has(tabName));
   }
 
   const publishHelp = $('#publish-help');
@@ -748,15 +751,15 @@ function bindAppScreenDelegation() {
   const root = $('#app-screen');
   if (!root) return;
 
+  root.querySelectorAll('.admin-tab[data-tab]').forEach((tab) => {
+    tab.addEventListener('click', () => {
+      setActiveTab(tab.dataset.tab);
+    });
+  });
+
   root.addEventListener('click', (event) => {
     const target = event.target;
     if (!(target instanceof Element)) return;
-
-    const tab = target.closest('.admin-tab');
-    if (tab && root.contains(tab) && tab.dataset.tab) {
-      setActiveTab(tab.dataset.tab);
-      return;
-    }
 
     const addItem = target.closest('[data-action="add-item"]');
     if (addItem && root.contains(addItem) && addItem.dataset.pack) {
@@ -924,6 +927,7 @@ async function init() {
     if (window.AdminHome) {
       window.AdminHome.bind({ $, state, downloadJson });
     }
+    setActiveTab(getInitialTab());
   } catch (error) {
     console.error(error);
     showInitError(error);

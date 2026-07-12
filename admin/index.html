@@ -6,7 +6,7 @@
     <meta name="robots" content="noindex, nofollow" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=4" />
+    <link rel="stylesheet" href="./admin.css?v=5" />
   </head>
   <body class="admin-body">
     <div id="login-screen" class="admin-shell">
@@ -43,24 +43,14 @@
       </header>
 
       <nav class="admin-tabs" aria-label="Разделы">
-        <div class="admin-tab-group">
-          <span class="admin-tab-group-label">Контент</span>
-          <div class="admin-tab-row">
-            <button type="button" class="admin-tab is-active" data-tab="support">Дуа в поддержку</button>
-            <button type="button" class="admin-tab" data-tab="general">Дуа на случаи</button>
-            <button type="button" class="admin-tab" data-tab="home">Главная</button>
-          </div>
-        </div>
-        <div class="admin-tab-group">
-          <span class="admin-tab-group-label">Прочее</span>
-          <div class="admin-tab-row">
-            <button type="button" class="admin-tab" data-tab="academy-feedback">Отзывы Академии</button>
-            <button type="button" class="admin-tab" data-tab="release">Версия в Store</button>
-          </div>
-        </div>
+        <button type="button" class="admin-tab is-active" data-tab="support" aria-selected="true">Дуа · поддержка</button>
+        <button type="button" class="admin-tab" data-tab="general" aria-selected="false">Дуа · случаи</button>
+        <button type="button" class="admin-tab" data-tab="home" aria-selected="false">Главная</button>
+        <button type="button" class="admin-tab" data-tab="academy-feedback" aria-selected="false">Отзывы</button>
+        <button type="button" class="admin-tab" data-tab="release" aria-selected="false">Store</button>
       </nav>
 
-      <section class="admin-panel" data-panel="support">
+      <section class="admin-panel is-active" data-panel="support">
         <div class="admin-toolbar admin-panel-toolbar">
           <p class="admin-muted">Дуа в разделе «Поддержка»</p>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="support">
@@ -70,7 +60,7 @@
         <div id="support-list" class="admin-list"></div>
       </section>
 
-      <section class="admin-panel" data-panel="general" hidden>
+      <section class="admin-panel" data-panel="general">
         <div class="admin-toolbar admin-panel-toolbar">
           <p class="admin-muted">Дуа на случаи жизни</p>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="general">
@@ -80,7 +70,7 @@
         <div id="general-list" class="admin-list"></div>
       </section>
 
-      <section class="admin-panel" data-panel="home" hidden>
+      <section class="admin-panel" data-panel="home">
         <div class="admin-callout">
           <strong>Баннеры на главной</strong> — карточки вверху главного экрана приложения.
           Это не push-уведомления. После правок нажмите «Опубликовать на сайте».
@@ -118,7 +108,7 @@
         </details>
       </section>
 
-      <section class="admin-panel" data-panel="academy-feedback" hidden>
+      <section class="admin-panel" data-panel="academy-feedback">
         <div class="admin-callout">
           <strong>Отзывы из приложения</strong> — оценки и комментарии с экрана курса (Академия → Таджвид).
           Если список пуст или ошибка — выполните в Supabase SQL Editor миграции
@@ -142,11 +132,11 @@
         <div id="academy-feedback-list" class="admin-list"></div>
       </section>
 
-      <section class="admin-panel" data-panel="release" hidden>
+      <section class="admin-panel" data-panel="release">
         <form id="release-form" class="admin-form admin-form-grid"></form>
       </section>
 
-      <section id="admin-publish-block" class="admin-card admin-publish" hidden>
+      <section id="admin-publish-block" class="admin-card admin-publish is-active">
         <h2 class="admin-card-title">Публикация на сайт</h2>
         <p id="publish-help" class="admin-muted admin-publish-lead">
           Сохраните изменения в текущем разделе, затем опубликуйте — JSON на
@@ -268,6 +258,6 @@
     <script src="./admin-supabase.js?v=8"></script>
     <script src="./admin-home.js?v=3"></script>
     <script src="./admin-academy-feedback.js?v=2"></script>
-    <script src="./admin.js?v=14"></script>
+    <script src="./admin.js?v=15"></script>
   </body>
 </html>
