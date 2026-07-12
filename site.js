@@ -64,15 +64,17 @@
         } else {
           el.removeAttribute('download');
         }
-        var badge = el.querySelector('.btn-badge');
-        if (badge) badge.remove();
+        if (!options || !options.keepBadge) {
+          var badge = el.querySelector('.btn-badge');
+          if (badge) badge.remove();
+        }
       }
     });
   }
 
   wireLinkButtons('[data-link="rustore"]', LINKS.rustore);
   wireLinkButtons('[data-link="appstore"]', LINKS.appStore);
-  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true });
+  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true, keepBadge: true });
 
   var versionEl = document.getElementById('app-version');
   if (versionEl && LINKS.appVersion) {
