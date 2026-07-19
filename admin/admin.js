@@ -733,6 +733,9 @@ function setActiveTab(tabName) {
   if (tabName === 'academy-feedback' && window.AdminAcademyFeedback) {
     void window.AdminAcademyFeedback.loadAndRender();
   }
+  if (tabName === 'academy-giveaway' && typeof window.initAcademyGiveawayAdmin === 'function') {
+    void window.initAcademyGiveawayAdmin();
+  }
 }
 
 function getInitialTab() {

@@ -47,6 +47,7 @@
         <button type="button" class="admin-tab" data-tab="general" aria-selected="false">Дуа · случаи</button>
         <button type="button" class="admin-tab" data-tab="home" aria-selected="false">Главная</button>
         <button type="button" class="admin-tab" data-tab="academy-feedback" aria-selected="false">Отзывы</button>
+        <button type="button" class="admin-tab" data-tab="academy-giveaway" aria-selected="false">Розыгрыш</button>
         <button type="button" class="admin-tab" data-tab="release" aria-selected="false">Store</button>
       </nav>
 
@@ -130,6 +131,31 @@
           </div>
         </div>
         <div id="academy-feedback-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel" data-panel="academy-giveaway">
+        <h2>Розыгрыш итогового экзамена</h2>
+        <p class="admin-muted">
+          Миграция: <code>supabase-migration-academy-giveaway.sql</code>. Edge Function:
+          <code>academy-giveaway-enter</code>. Одна заявка на устройство; призы 1–3 вручную.
+        </p>
+        <div class="admin-row" style="gap:12px;flex-wrap:wrap;align-items:center">
+          <label><input type="checkbox" id="giveaway-active" /> Розыгрыш активен</label>
+          <label>Победителей
+            <select id="giveaway-winners">
+              <option value="1">1</option>
+              <option value="2">2</option>
+              <option value="3" selected>3</option>
+            </select>
+          </label>
+          <input id="giveaway-prize" type="text" placeholder="Текст приза (опционально)" style="min-width:220px" />
+          <button type="button" id="giveaway-save" class="admin-button">Сохранить</button>
+          <button type="button" id="giveaway-refresh" class="admin-button">Обновить</button>
+        </div>
+        <div class="admin-row" style="margin-top:12px;gap:8px">
+          <input id="giveaway-search" type="search" placeholder="Поиск: код / телефон / имя" />
+        </div>
+        <div id="giveaway-list" class="admin-list" style="margin-top:12px"></div>
       </section>
 
       <section class="admin-panel" data-panel="release">
@@ -258,6 +284,7 @@
     <script src="./admin-supabase.js?v=8"></script>
     <script src="./admin-home.js?v=3"></script>
     <script src="./admin-academy-feedback.js?v=2"></script>
+    <script src="./admin-academy-giveaway.js?v=1"></script>
     <script src="./admin.js?v=15"></script>
   </body>
 </html>

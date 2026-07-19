@@ -8,3 +8,6 @@ major_version = 15
 
 [functions.publish-content]
 verify_jwt = false
+
+[functions.academy-giveaway-enter]
+verify_jwt = false
