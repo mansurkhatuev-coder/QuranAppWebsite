@@ -10,6 +10,6 @@
     "buildNumber": 12,
     "appStoreUrl": "https://apps.apple.com/app/id6782619598"
   },
-  "messageRu": "Бета 1.0.8: исправлены дубликаты переводов академии, улучшения курса таджвида для начинающих.",
-  "messageEn": "Beta 1.0.8: fixed academy locale duplicates, tajweed beginner course improvements."
+  "messageRu": "Версия 1.0.8: академия таджвида, итоговый экзамен, исправления и улучшения стабильности.",
+  "messageEn": "Version 1.0.8: tajweed academy, final exam, fixes and stability improvements."
 }

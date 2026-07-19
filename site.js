@@ -74,7 +74,7 @@
 
   wireLinkButtons('[data-link="rustore"]', LINKS.rustore);
   wireLinkButtons('[data-link="appstore"]', LINKS.appStore);
-  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true, keepBadge: true });
+  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true });
 
   var versionEl = document.getElementById('app-version');
   if (versionEl && LINKS.appVersion) {
