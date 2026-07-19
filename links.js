@@ -8,7 +8,7 @@ const LINKS = {
   supportEmail: 'ne.kradi@mail.ru',
   supportTelegram: '',
   appVersion: '1.0.8',
-  appVersionCode: 9,
+  appVersionCode: 10,
   appPackage: 'com.sheyhmansur.quranapp',
   /** Yandex Metrika counter ID (numeric). Leave empty until the counter is created. */
   yandexMetrikaId: '110287110',
