@@ -1,15 +1,15 @@
 ﻿{
     "android":  {
-                    "latestVersion":  "1.0.8",
-                    "versionCode":  10,
+                    "latestVersion":  "1.0.9",
+                    "versionCode":  11,
                     "rustoreUrl":  "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
-                    "apkUrl":  "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.8/koran-i-azkary-1.0.8.apk"
+                    "apkUrl":  "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.9/koran-i-azkary-1.0.9.apk"
                 },
     "ios":  {
-                "latestVersion":  "1.0.7",
-                "buildNumber":  12,
+                "latestVersion":  "1.0.9",
+                "buildNumber":  17,
                 "appStoreUrl":  "https://apps.apple.com/app/id6782619598"
             },
-    "messageRu":  "Версия 1.0.8: академия таджвида, итоговый экзамен, исправления и улучшения стабильности.",
-    "messageEn":  "Version 1.0.8: tajweed academy, final exam, fixes and stability improvements."
+    "messageRu":  "Версия 1.0.9: академия таджвида (буквы, Тухфа), итоговый экзамен и розыгрыш, исправления и стабильность.",
+    "messageEn":  "Version 1.0.9: tajweed academy (letters, Tuhfah), final exam and giveaway, fixes and stability."
 }
