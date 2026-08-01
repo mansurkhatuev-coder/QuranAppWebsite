@@ -1082,7 +1082,7 @@
     </button>
     <div class="fab-panel" id="fab-panel">
       <button type="button" id="install-home">На экран Домой</button>
-      <button type="button" id="save-remote" disabled="">Сохранить</button>
+      <button type="button" id="save-remote" hidden>Сохранить</button>
     </div>
   </div>
 
@@ -2393,6 +2393,8 @@
       function updateSaveButton() {
         if (saveRemoteBtn) {
           saveRemoteBtn.hidden = !treeDirty;
+          saveRemoteBtn.disabled = false;
+          saveRemoteBtn.removeAttribute('disabled');
         }
         if (fabDirtyDot) {
           fabDirtyDot.hidden = !treeDirty;
@@ -2511,6 +2513,22 @@
         doc.querySelectorAll('dialog[open]').forEach(function (el) {
           el.removeAttribute('open');
         });
+        // Don't bake transient UI state into the published page.
+        var exportSave = doc.querySelector('#save-remote');
+        if (exportSave) {
+          exportSave.setAttribute('hidden', '');
+          exportSave.removeAttribute('disabled');
+        }
+        var exportDot = doc.querySelector('#fab-dirty-dot');
+        if (exportDot) exportDot.setAttribute('hidden', '');
+        var exportFab = doc.querySelector('#fab-rail');
+        if (exportFab) exportFab.setAttribute('data-open', 'false');
+        var exportToggle = doc.querySelector('#fab-toggle');
+        if (exportToggle) {
+          exportToggle.setAttribute('aria-expanded', 'false');
+        }
+        var exportAnchor = doc.querySelector('#header-anchor');
+        if (exportAnchor) exportAnchor.removeAttribute('style');
         return '<!DOCTYPE html>\n' + doc.outerHTML;
       }
 
@@ -3653,6 +3671,14 @@
 
       if (saveRemoteBtn) {
         saveRemoteBtn.addEventListener('click', function () {
+          if (saveRemoteBtn.disabled) {
+            saveRemoteBtn.disabled = false;
+            saveRemoteBtn.removeAttribute('disabled');
+          }
+          if (!treeDirty) {
+            window.alert('Нет изменений для сохранения');
+            return;
+          }
           if (saveError) {
             saveError.hidden = true;
             saveError.textContent = '';
