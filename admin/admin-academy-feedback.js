@@ -24,13 +24,13 @@
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
     if (/academy_course_feedback/i.test(message) && /does not exist|relation/i.test(message)) {
-      return 'Таблица academy_course_feedback не найдена. Выполните supabase-migration-academy-feedback.sql в Supabase SQL Editor.';
+      return 'Раздел отзывов ещё не подключён на сервере. Обратитесь к разработчику.';
     }
     if (/display_name|updated_at|client_id/i.test(message) && /column/i.test(message)) {
-      return 'Нужна миграция v2: выполните supabase-migration-academy-feedback-v2.sql в Supabase SQL Editor.';
+      return 'Нужно обновить схему отзывов на сервере. Обратитесь к разработчику.';
     }
     if (/permission denied|row-level security|JWT/i.test(message)) {
-      return 'Нет доступа к отзывам. Войдите в админку под пользователем Supabase Authentication.';
+      return 'Нет доступа. Войдите снова под своим аккаунтом.';
     }
     return message;
   }

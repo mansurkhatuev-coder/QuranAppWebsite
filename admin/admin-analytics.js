@@ -15,12 +15,19 @@
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
     if (/analytics_events/i.test(message) && /does not exist|relation/i.test(message)) {
-      return 'Таблица analytics_events не найдена. Выполните supabase-migration-analytics.sql в Supabase SQL Editor.';
+      return 'Раздел аналитики ещё не подключён на сервере. Обратитесь к разработчику.';
     }
     if (/permission denied|row-level security|JWT/i.test(message)) {
-      return 'Нет доступа. Войдите в админку под пользователем Supabase Authentication.';
+      return 'Нет доступа. Войдите снова под своим аккаунтом.';
     }
     return message;
+  }
+
+  function rangeLabel(days) {
+    if (!days) return 'всё время';
+    if (days === 1) return '1 день';
+    if (days === 365) return '1 год';
+    return `${days} дн.`;
   }
 
   function dayKey(iso) {
@@ -32,6 +39,7 @@
   }
 
   function filteredRows() {
+    if (!rangeDays) return allRows.slice();
     const cutoff = Date.now() - rangeDays * 24 * 60 * 60 * 1000;
     return allRows.filter((row) => {
       const t = Date.parse(row.created_at);
@@ -40,6 +48,10 @@
   }
 
   function countActiveInstalls(withinDays) {
+    if (!withinDays) {
+      if (installationsAvailable) return installations.length;
+      return new Set(allRows.map((r) => r.installation_id).filter(Boolean)).size;
+    }
     const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
     if (installationsAvailable && installations.length) {
       return installations.filter((row) => {
@@ -47,7 +59,6 @@
         return Number.isFinite(t) && t >= cutoff;
       }).length;
     }
-    // Fallback: unique devices from events in window.
     const ids = new Set();
     for (const row of allRows) {
       const t = Date.parse(row.created_at);
@@ -73,24 +84,24 @@
     const active1 = countActiveInstalls(1);
     const active7 = countActiveInstalls(7);
     const active30 = countActiveInstalls(30);
-    const totalKnown = installationsAvailable
-      ? installations.length
-      : new Set(allRows.map((r) => r.installation_id).filter(Boolean)).size;
+    const active365 = countActiveInstalls(365);
+    const totalKnown = countActiveInstalls(0);
     const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
     const sourceNote = installationsAvailable
-      ? 'Активные = устройства с last_seen за период (heartbeat при открытии приложения). Opt-out и офлайн не считаются.'
-      : 'Таблица analytics_installations ещё не создана — активные считаются по событиям. Выполните supabase-migration-analytics-installations.sql.';
+      ? 'Активные — устройства, которые открывали приложение за период. Отключённая аналитика и офлайн не учитываются.'
+      : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
 
     container.innerHTML = `
       <div class="admin-analytics-grid">
         <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">Активные · выбранный период</p>
+          <p class="admin-muted">Активные · ${rangeLabel(rangeDays)}</p>
           <p class="admin-analytics-value">${activeSelected}</p>
         </article>
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 24ч</p><p class="admin-analytics-value">${active1}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 7 дн.</p><p class="admin-analytics-value">${active7}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 30 дн.</p><p class="admin-analytics-value">${active30}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Всего известных</p><p class="admin-analytics-value">${totalKnown}</p></article>
+        <article class="admin-analytics-card"><p class="admin-muted">Активные · 1 год</p><p class="admin-analytics-value">${active365}</p></article>
+        <article class="admin-analytics-card"><p class="admin-muted">Всего за всё время</p><p class="admin-analytics-value">${totalKnown}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Событий · период</p><p class="admin-analytics-value">${rows.length}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Азкары</p><p class="admin-analytics-value">${byEvent.azkar_item_completed || 0}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Уроки</p><p class="admin-analytics-value">${byEvent.academy_lesson_completed || 0}</p></article>
@@ -138,7 +149,7 @@
 
     if (stats) {
       const active = countActiveInstalls(rangeDays);
-      stats.textContent = `Активных установок за ${rangeDays} дн.: ${active} · событий: ${rows.length} · загружено событий: ${allRows.length}`;
+      stats.textContent = `Активных · ${rangeLabel(rangeDays)}: ${active} · событий: ${rows.length}`;
     }
     renderMetricCards(metrics, rows);
 
@@ -223,7 +234,7 @@
     const range = $('#analytics-range');
     if (range) {
       range.addEventListener('change', () => {
-        rangeDays = Number(range.value) || 7;
+        rangeDays = Number(range.value) || 0;
         renderAll();
       });
     }
