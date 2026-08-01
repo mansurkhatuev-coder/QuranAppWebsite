@@ -40,6 +40,7 @@
       --sand-dim: #b89555;
       --text: #f7f1e6;
       --panel: color-mix(in srgb, #0a141a 80%, black);
+      --header-bg: color-mix(in srgb, #0a151c 92%, black);
     }
 
     body[data-theme="premium"] {
@@ -91,7 +92,7 @@
       flex: 0 0 auto;
       height: constant(safe-area-inset-top);
       height: env(safe-area-inset-top, 0px);
-      background-color: var(--bg0);
+      background: var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black));
       pointer-events: none;
     }
 
@@ -102,7 +103,7 @@
       gap: 0.65rem;
       padding: 0.55rem 0.9rem 0.55rem;
       border-bottom: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
-      background: color-mix(in srgb, var(--bg0) 96%, black);
+      background: var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black));
       backdrop-filter: blur(8px);
       animation: chrome-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
@@ -526,13 +527,12 @@
       letter-spacing: 0.01em;
     }
 
-    body[data-theme="premium"] .header {
-      background: color-mix(in srgb, #0a151c 92%, black);
-      border-bottom-color: color-mix(in srgb, var(--sand) 22%, transparent);
+    body[data-theme="premium"] {
+      --header-bg: color-mix(in srgb, #0a151c 92%, black);
     }
 
-    body[data-theme="premium"] .safe-top {
-      background-color: #0d1a22;
+    body[data-theme="premium"] .header {
+      border-bottom-color: color-mix(in srgb, var(--sand) 22%, transparent);
     }
 
     body[data-theme="premium"] .footer {
