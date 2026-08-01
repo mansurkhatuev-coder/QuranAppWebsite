@@ -816,15 +816,141 @@
       }
     }
 
+    #toast-host {
+      position: fixed;
+      inset: 0;
+      z-index: 120;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      pointer-events: none;
+    }
+
+    .toast {
+      pointer-events: none;
+      max-width: min(22rem, calc(100vw - 2rem));
+      padding: 0.85rem 1.15rem;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: color-mix(in srgb, var(--bg0) 92%, black);
+      color: var(--text);
+      text-align: center;
+      font-size: 0.95rem;
+      line-height: 1.4;
+      box-shadow: 0 18px 40px color-mix(in srgb, black 45%, transparent);
+      opacity: 0;
+      transform: translateY(0.4rem) scale(0.98);
+      transition: opacity 0.22s ease, transform 0.22s ease;
+    }
+
+    .toast.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    .toast[data-kind='success'] {
+      border-color: color-mix(in srgb, var(--sand) 55%, transparent);
+      color: var(--sand);
+    }
+
+    .toast[data-kind='error'] {
+      border-color: color-mix(in srgb, #c45c5c 55%, transparent);
+      color: #f0c4c4;
+    }
+
+    #center-overlay {
+      position: fixed;
+      inset: 0;
+      z-index: 130;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+      background: color-mix(in srgb, var(--bg0) 72%, transparent);
+      backdrop-filter: blur(2px);
+    }
+
+    #center-overlay[hidden] {
+      display: none !important;
+    }
+
+    .center-banner {
+      width: min(22rem, calc(100vw - 2rem));
+      padding: 1.25rem 1.2rem;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--sand) 40%, transparent);
+      background: color-mix(in srgb, var(--bg0) 94%, var(--bg1));
+      color: var(--text);
+      text-align: center;
+      box-shadow: 0 22px 48px color-mix(in srgb, black 48%, transparent);
+      animation: banner-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    @keyframes banner-pop {
+      from {
+        opacity: 0;
+        transform: translateY(0.5rem) scale(0.96);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    .center-banner-text {
+      margin: 0;
+      font-size: 1rem;
+      line-height: 1.45;
+    }
+
+    .center-banner[data-busy='true'] .center-banner-text::before {
+      content: '';
+      display: block;
+      width: 1.35rem;
+      height: 1.35rem;
+      margin: 0 auto 0.75rem;
+      border: 2px solid color-mix(in srgb, var(--sand) 30%, transparent);
+      border-top-color: var(--sand);
+      border-radius: 50%;
+      animation: save-spin 0.7s linear infinite;
+    }
+
+    .center-banner-actions {
+      display: flex;
+      gap: 0.55rem;
+      justify-content: center;
+      margin-top: 1rem;
+    }
+
+    .center-banner-actions[hidden] {
+      display: none !important;
+    }
+
+    .center-banner-actions button {
+      min-width: 5.5rem;
+      min-height: 2.4rem;
+      padding: 0.45rem 0.9rem;
+      border-radius: 999px;
+      font-weight: 600;
+    }
+
+    .center-banner-actions #center-banner-ok {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sand) 82%, white), var(--sand-dim));
+      color: #1a1510;
+      border-color: color-mix(in srgb, var(--sand) 70%, white);
+    }
+
     #add-dialog,
     #history-dialog,
     #password-dialog,
     #rename-dialog,
     #install-dialog,
     #save-dialog {
+      margin: auto;
       padding: 1.25rem;
       border: 1px solid color-mix(in srgb, var(--sand) 45%, transparent);
-      border-radius: 6px;
+      border-radius: 14px;
       color: var(--text);
       background: color-mix(in srgb, var(--bg0) 92%, var(--bg1));
       max-width: min(22rem, calc(100vw - 2rem));
@@ -1198,7 +1324,6 @@
         Пароль
         <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
       </label>
-      <p id="save-status" class="dialog-status" hidden></p>
       <p id="save-error" class="dialog-error" hidden=""></p>
       <div class="dialog-actions">
         <button type="submit" id="save-submit">Сохранить</button>
@@ -1206,6 +1331,17 @@
       </div>
     </form>
   </dialog>
+
+  <div id="toast-host" aria-live="polite" aria-relevant="additions"></div>
+  <div id="center-overlay" hidden>
+    <div class="center-banner" id="center-banner" role="alertdialog" aria-modal="true" aria-labelledby="center-banner-text">
+      <p class="center-banner-text" id="center-banner-text"></p>
+      <div class="center-banner-actions" id="center-banner-actions" hidden>
+        <button type="button" id="center-banner-ok">Да</button>
+        <button type="button" id="center-banner-cancel">Нет</button>
+      </div>
+    </div>
+  </div>
 
   <script type="application/json" id="tree-data">
 {
@@ -2016,22 +2152,6 @@
     "father": "Мухаммад",
     "sonId": "added-1785596579529-e483pu",
     "fatherId": "added-1785596491258-9c92zv"
-  },
-  {
-    "type": "add",
-    "at": "2026-08-01T17:53:46.855Z",
-    "son": "Саид-Мухаммад",
-    "father": "Аюб",
-    "sonId": "added-1785606826853-d6kfgm",
-    "fatherId": "ayub-khanpasha"
-  },
-  {
-    "type": "add",
-    "at": "2026-08-01T17:55:47.893Z",
-    "son": "Ахьмад",
-    "father": "Рамзан",
-    "sonId": "added-1785606947891-o0istj",
-    "fatherId": "ramzan-khanpasha"
   }
 ]
 </script>
@@ -2212,6 +2332,15 @@
       var saveError = document.getElementById('save-error');
       var saveCancelBtn = document.getElementById('save-cancel');
       var saveSubmitBtn = document.getElementById('save-submit');
+      var toastHost = document.getElementById('toast-host');
+      var centerOverlay = document.getElementById('center-overlay');
+      var centerBanner = document.getElementById('center-banner');
+      var centerBannerText = document.getElementById('center-banner-text');
+      var centerBannerActions = document.getElementById('center-banner-actions');
+      var centerBannerOk = document.getElementById('center-banner-ok');
+      var centerBannerCancel = document.getElementById('center-banner-cancel');
+      var toastTimer = null;
+      var confirmResolver = null;
       var isAppleTouch =
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2967,20 +3096,111 @@
           });
       }
 
-      function setSaveProgress(text, busy) {
-        var statusEl = document.getElementById('save-status');
-        if (!statusEl) return;
-        if (!text) {
-          statusEl.hidden = true;
-          statusEl.textContent = '';
-          statusEl.removeAttribute('data-busy');
+      function showToast(message, kind, ms) {
+        if (!toastHost) {
+          window.alert(message);
           return;
         }
-        statusEl.hidden = false;
-        statusEl.textContent = text;
-        if (busy) statusEl.setAttribute('data-busy', 'true');
-        else statusEl.removeAttribute('data-busy');
+        var text = String(message || '').trim();
+        if (!text) return;
+        if (toastTimer) {
+          window.clearTimeout(toastTimer);
+          toastTimer = null;
+        }
+        toastHost.replaceChildren();
+        var el = document.createElement('div');
+        el.className = 'toast';
+        el.setAttribute('data-kind', kind || 'info');
+        el.textContent = text;
+        toastHost.appendChild(el);
+        requestAnimationFrame(function () {
+          el.classList.add('visible');
+        });
+        toastTimer = window.setTimeout(function () {
+          el.classList.remove('visible');
+          window.setTimeout(function () {
+            if (el.parentNode === toastHost) el.remove();
+          }, 220);
+          toastTimer = null;
+        }, typeof ms === 'number' ? ms : kind === 'error' ? 4200 : 2800);
       }
+
+      function hideCenterBanner() {
+        if (confirmResolver) {
+          var resolve = confirmResolver;
+          confirmResolver = null;
+          resolve(false);
+        }
+        if (centerOverlay) centerOverlay.hidden = true;
+        if (centerBanner) centerBanner.removeAttribute('data-busy');
+        if (centerBannerActions) centerBannerActions.hidden = true;
+        if (centerBannerText) centerBannerText.textContent = '';
+      }
+
+      function showBusyBanner(message) {
+        if (!centerOverlay || !centerBanner || !centerBannerText) return;
+        if (confirmResolver) {
+          var resolve = confirmResolver;
+          confirmResolver = null;
+          resolve(false);
+        }
+        if (centerBannerActions) centerBannerActions.hidden = true;
+        centerBanner.setAttribute('data-busy', 'true');
+        centerBannerText.textContent = String(message || 'Подождите…');
+        centerOverlay.hidden = false;
+      }
+
+      function askConfirm(message) {
+        return new Promise(function (resolve) {
+          if (!centerOverlay || !centerBanner || !centerBannerText || !centerBannerActions) {
+            resolve(window.confirm(message));
+            return;
+          }
+          if (confirmResolver) {
+            confirmResolver(false);
+            confirmResolver = null;
+          }
+          confirmResolver = resolve;
+          centerBanner.removeAttribute('data-busy');
+          centerBannerText.textContent = String(message || '');
+          centerBannerActions.hidden = false;
+          centerOverlay.hidden = false;
+          if (centerBannerCancel) centerBannerCancel.focus();
+        });
+      }
+
+      function finishConfirm(ok) {
+        var resolve = confirmResolver;
+        confirmResolver = null;
+        if (centerOverlay) centerOverlay.hidden = true;
+        if (centerBannerActions) centerBannerActions.hidden = true;
+        if (centerBanner) centerBanner.removeAttribute('data-busy');
+        if (resolve) resolve(!!ok);
+      }
+
+      if (centerBannerOk) {
+        centerBannerOk.addEventListener('click', function () {
+          finishConfirm(true);
+        });
+      }
+      if (centerBannerCancel) {
+        centerBannerCancel.addEventListener('click', function () {
+          finishConfirm(false);
+        });
+      }
+      if (centerOverlay) {
+        centerOverlay.addEventListener('click', function (e) {
+          if (e.target !== centerOverlay) return;
+          if (confirmResolver) finishConfirm(false);
+        });
+      }
+      document.addEventListener('keydown', function (e) {
+        if (e.key !== 'Escape') return;
+        if (confirmResolver) {
+          e.preventDefault();
+          finishConfirm(false);
+        }
+      });
 
       function zoomAt(clientX, clientY, nextScale) {
         var rect = viewport.getBoundingClientRect();
@@ -3404,13 +3624,16 @@
           delBtn.style.minHeight = Math.max(18, 26 * s) + 'px';
           delBtn.addEventListener('click', function (e) {
             e.stopPropagation();
-            if (!window.confirm('Удалить «' + meta.name + '»?')) return;
-            var result = deletePerson(meta.id);
-            if (!result.ok) {
-              window.alert(result.reason || 'Не удалось удалить');
-              return;
-            }
-            render(true);
+            askConfirm('Удалить «' + meta.name + '»?').then(function (ok) {
+              if (!ok) return;
+              var result = deletePerson(meta.id);
+              if (!result.ok) {
+                showToast(result.reason || 'Не удалось удалить', 'error');
+                return;
+              }
+              showToast('Удалено: ' + meta.name, 'success');
+              render(true);
+            });
           });
           el.appendChild(delBtn);
         }
@@ -3561,7 +3784,7 @@
         if (!dropId || dropId === childId) return;
         var result = reparentNode(childId, dropId);
         if (!result.ok) {
-          window.alert(result.reason || 'Не удалось изменить связь');
+          showToast(result.reason || 'Не удалось изменить связь', 'error');
           return;
         }
         if (result.same) return;
@@ -3722,7 +3945,7 @@
           if (renameDialog && renameDialog.open) renameDialog.close();
           var result = renamePerson(id, renameInput.value);
           if (!result.ok) {
-            window.alert(result.reason || 'Не удалось переименовать');
+            showToast(result.reason || 'Не удалось переименовать', 'error');
             return;
           }
           render(false);
@@ -3762,15 +3985,20 @@
       }
       if (reloadPageBtn) {
         reloadPageBtn.addEventListener('click', function () {
-          if (treeDirty) {
-            var ok = window.confirm(
-              'Есть несохранённые изменения. Обновить страницу и потерять их?'
-            );
-            if (!ok) return;
+          var go = function () {
+            setFabOpen(false);
+            var base = location.pathname.replace(/\/?$/, '/');
+            location.replace(base + '?v=' + Date.now());
+          };
+          if (!treeDirty) {
+            go();
+            return;
           }
-          setFabOpen(false);
-          var base = location.pathname.replace(/\/?$/, '/');
-          location.replace(base + '?v=' + Date.now());
+          askConfirm('Есть несохранённые изменения. Обновить страницу и потерять их?').then(
+            function (ok) {
+              if (ok) go();
+            }
+          );
         });
       }
       if (installCloseBtn) {
@@ -3790,15 +4018,18 @@
             saveRemoteBtn.removeAttribute('disabled');
           }
           if (!treeDirty) {
-            window.alert('Нет изменений для сохранения');
+            showToast('Нет изменений для сохранения', 'info');
             return;
           }
           if (saveError) {
             saveError.hidden = true;
             saveError.textContent = '';
           }
-          setSaveProgress('', false);
-          if (savePasswordInput) savePasswordInput.value = '';
+          hideCenterBanner();
+          if (savePasswordInput) {
+            savePasswordInput.disabled = false;
+            savePasswordInput.value = '';
+          }
           if (saveSubmitBtn) saveSubmitBtn.disabled = false;
           if (saveCancelBtn) saveCancelBtn.disabled = false;
           if (saveDialog && saveDialog.showModal) saveDialog.showModal();
@@ -3820,37 +4051,33 @@
             return;
           }
           saveError.hidden = true;
+          if (saveDialog && saveDialog.open) saveDialog.close();
           if (saveRemoteBtn) saveRemoteBtn.disabled = true;
           if (saveSubmitBtn) saveSubmitBtn.disabled = true;
           if (saveCancelBtn) saveCancelBtn.disabled = true;
           if (savePasswordInput) savePasswordInput.disabled = true;
-          setSaveProgress('Готовлю данные…', true);
+          showBusyBanner('Готовлю данные…');
           var progressTimer = window.setTimeout(function () {
-            setSaveProgress('Отправляю на GitHub…', true);
-          }, 400);
+            showBusyBanner('Отправляю на GitHub…');
+          }, 450);
           publishToGitHub(pass)
-            .then(function (data) {
+            .then(function () {
               window.clearTimeout(progressTimer);
               setTreeDirty(false);
-              setSaveProgress('Готово. Подождите немного — сайт обновляется…', true);
-              var bits = [];
-              if (data && data.indexChanged) bits.push('страница');
-              if (data && data.jsonChanged) bits.push('данные');
+              showBusyBanner('Готово. Подождите немного — сайт обновляется…');
               window.setTimeout(function () {
-                if (saveDialog && saveDialog.open) saveDialog.close();
-                // Bust CDN cache so refresh shows new tree.
                 var base = location.pathname.replace(/\/?$/, '/');
                 location.replace(base + '?v=' + Date.now());
-              }, 350);
+              }, 900);
             })
             .catch(function (err) {
               window.clearTimeout(progressTimer);
-              setSaveProgress('', false);
-              saveError.hidden = false;
-              saveError.textContent = err.message || String(err);
+              hideCenterBanner();
+              showToast(err.message || String(err), 'error', 5000);
               if (saveSubmitBtn) saveSubmitBtn.disabled = false;
               if (saveCancelBtn) saveCancelBtn.disabled = false;
               if (savePasswordInput) savePasswordInput.disabled = false;
+              if (saveDialog && saveDialog.showModal) saveDialog.showModal();
             })
             .finally(function () {
               if (saveRemoteBtn) saveRemoteBtn.disabled = false;
