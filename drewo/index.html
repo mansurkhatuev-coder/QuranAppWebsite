@@ -1036,7 +1036,7 @@
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
         <button type="button" id="edit-links" aria-pressed="false">Изменить связи</button>
-        <button type="button" id="history-btn" title="01.08.2026, 18:01 — Мухаммад">История (1)</button>
+        <button type="button" id="history-btn" title="01.08.2026, 18:02 — Гуно">История (2)</button>
       </div>
       <p class="nav-label">Оформление</p>
       <div class="action-cluster" role="group" aria-label="Оформление">
@@ -1069,8 +1069,8 @@
   <main>
     <div id="viewport" aria-label="Древо">
       <div id="map-world">
-        <svg id="links" aria-hidden="true" width="4929.495437066757" height="1705.3016427948025" viewBox="0 0 4284 1482"></svg>
-        <div id="tree-layer" style="width: 4929.495437px; height: 1705.301643px;"></div>
+        <svg id="links" aria-hidden="true" width="4290.792767968362" height="1484.3498791151058" viewBox="0 0 4284 1482"></svg>
+        <div id="tree-layer" style="width: 4290.792768px; height: 1484.349879px;"></div>
       </div>
     </div>
   </main>
@@ -1104,7 +1104,7 @@
     <div class="history-body">
       <strong id="history-dialog-title">История добавлений</strong>
       <p id="history-empty" hidden="">Пока пусто</p>
-      <ul id="history-list"><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Аюб</strong></div></li></ul>
+      <ul id="history-list"><li><span class="hist-when">01.08.2026, 18:02</span><div class="hist-text"><strong>Гуно</strong> → сын <strong>Мухаммад</strong></div></li><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Аюб</strong></div></li></ul>
       <div class="dialog-actions">
         <button type="button" id="history-close">Закрыть</button>
       </div>
@@ -1166,7 +1166,7 @@
         Пароль
         <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
       </label>
-      <p id="save-error" class="dialog-error" hidden="">drewo/index.html does not match 0ce2430a2457659c6255265cbb448e18827b6771</p>
+      <p id="save-error" class="dialog-error" hidden=""></p>
       <div class="dialog-actions">
         <button type="submit">Сохранить</button>
         <button type="button" id="save-cancel">Отмена</button>
@@ -1368,7 +1368,13 @@
                                                     {
                                                       "id": "added-1785596491258-9c92zv",
                                                       "name": "Мухаммад",
-                                                      "sons": []
+                                                      "sons": [
+                                                        {
+                                                          "id": "added-1785596579529-e483pu",
+                                                          "name": "Гуно",
+                                                          "sons": []
+                                                        }
+                                                      ]
                                                     }
                                                   ]
                                                 }
@@ -1965,6 +1971,14 @@
     "father": "Аюб",
     "sonId": "added-1785596491258-9c92zv",
     "fatherId": "ayub-khanpasha"
+  },
+  {
+    "type": "add",
+    "at": "2026-08-01T15:02:59.531Z",
+    "son": "Гуно",
+    "father": "Мухаммад",
+    "sonId": "added-1785596579529-e483pu",
+    "fatherId": "added-1785596491258-9c92zv"
   }
 ]
 </script>
