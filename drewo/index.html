@@ -2598,37 +2598,22 @@
         clearTimeout(searchTimer);
         clearTimeout(goToPerson._timer);
 
-        // Show full filter, but expand only the path to this person (+ parents),
-        // so layout stays local and centering is accurate.
+        // Full tree visible so brothers/other sons stay on screen.
         viewFilter = 'all';
-        expanded = new Set();
-        var path = findPathToId(tree, id);
-        if (path && path.length) {
-          path.forEach(function (pid) {
-            expanded.add(pid);
-          });
-        } else {
-          expanded = new Set(collectAllIds(tree));
-        }
+        expanded = new Set(collectAllIds(tree));
         matchIds = new Set([id]);
         updateViewButtons();
         hideSearchResults();
 
-        // First layout at scale 1 to measure node size.
+        // Measure at scale 1, then zoom to a readable size and center.
         map.scale = 1;
         pendingScrollId = null;
         render(false);
 
         var n = layoutMeta.nodes[id];
-        if (!n) {
-          expanded = new Set(collectAllIds(tree));
-          render(false);
-          n = layoutMeta.nodes[id];
-        }
         if (!n) return false;
 
-        // Readable zoom from name box width.
-        var targetScale = clamp(120 / Math.max(n.w, 48), 0.7, 1.7);
+        var targetScale = clamp(120 / Math.max(n.w, 48), 0.55, 1.55);
         map.scale = targetScale;
         render(false);
         focusNode(id);
