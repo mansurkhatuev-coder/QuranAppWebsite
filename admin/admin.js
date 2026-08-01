@@ -733,6 +733,9 @@ function setActiveTab(tabName) {
   if (tabName === 'academy-feedback' && window.AdminAcademyFeedback) {
     void window.AdminAcademyFeedback.loadAndRender();
   }
+  if (tabName === 'analytics' && window.AdminAnalytics) {
+    void window.AdminAnalytics.loadAndRender();
+  }
   if (tabName === 'academy-giveaway' && typeof window.initAcademyGiveawayAdmin === 'function') {
     void window.initAcademyGiveawayAdmin();
   }
@@ -873,6 +876,9 @@ function bindEvents() {
 
   if (window.AdminAcademyFeedback) {
     window.AdminAcademyFeedback.bind({ $ });
+  }
+  if (window.AdminAnalytics) {
+    window.AdminAnalytics.bind({ $ });
   }
 
   bindClick('#publish-site', () => {

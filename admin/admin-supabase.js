@@ -267,6 +267,30 @@
     return result.data ?? [];
   }
 
+  async function loadAnalyticsEvents() {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const result = await client
+      .from('analytics_events')
+      .select('id,event,props,installation_id,app_version,platform,locale,created_at')
+      .order('created_at', { ascending: false })
+      .limit(5000);
+    if (result.error) throw result.error;
+    return result.data ?? [];
+  }
+
+  async function loadAnalyticsInstallations() {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const result = await client
+      .from('analytics_installations')
+      .select('installation_id,first_seen_at,last_seen_at,platform,app_version,locale')
+      .order('last_seen_at', { ascending: false })
+      .limit(20000);
+    if (result.error) throw result.error;
+    return result.data ?? [];
+  }
+
   async function publishContent(payload) {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
@@ -305,5 +329,7 @@
     saveRelease,
     publishContent,
     loadAcademyCourseFeedback,
+    loadAnalyticsEvents,
+    loadAnalyticsInstallations,
   };
 })(window);

@@ -410,6 +410,81 @@
   white-space: pre-wrap;
 }
 
+.admin-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 0.75rem;
+  margin: 0.75rem 0 0.35rem;
+}
+
+.admin-analytics-card {
+  border: 1px solid rgba(201, 162, 77, 0.22);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-analytics-card--hero {
+  border-color: rgba(201, 162, 77, 0.45);
+  background: rgba(201, 162, 77, 0.08);
+  grid-column: span 2;
+}
+
+@media (max-width: 720px) {
+  .admin-analytics-card--hero {
+    grid-column: span 1;
+  }
+}
+
+.admin-analytics-value {
+  margin: 0.25rem 0 0;
+  font-size: 1.55rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.admin-analytics-note {
+  font-size: 12px;
+  margin: 0.25rem 0 1rem;
+}
+
+.admin-analytics-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.admin-analytics-block h3 {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+}
+
+.admin-analytics-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.35rem;
+}
+
+.admin-analytics-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.45rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+}
+
+.admin-analytics-list li span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .admin-home-pools-details,
 .admin-download-details {
   margin-top: 0.15rem;

@@ -13,7 +13,7 @@
       <div class="admin-card">
         <p class="admin-kicker">Коран и Азкары</p>
         <h1>Вход</h1>
-        <p class="admin-muted">Редактирование дуа, главной, отзывов Академии и версии в Store.</p>
+        <p class="admin-muted">Редактирование дуа, главной, отзывов, аналитики Академии и версии в Store.</p>
         <form id="login-form" class="admin-form">
           <label id="login-email-wrap">
             Email
@@ -47,6 +47,7 @@
         <button type="button" class="admin-tab" data-tab="general" aria-selected="false">Дуа · случаи</button>
         <button type="button" class="admin-tab" data-tab="home" aria-selected="false">Главная</button>
         <button type="button" class="admin-tab" data-tab="academy-feedback" aria-selected="false">Отзывы</button>
+        <button type="button" class="admin-tab" data-tab="analytics" aria-selected="false">Аналитика</button>
         <button type="button" class="admin-tab" data-tab="academy-giveaway" aria-selected="false">Розыгрыш</button>
         <button type="button" class="admin-tab" data-tab="release" aria-selected="false">Store</button>
       </nav>
@@ -131,6 +132,31 @@
           </div>
         </div>
         <div id="academy-feedback-list" class="admin-list"></div>
+      </section>
+
+      <section class="admin-panel" data-panel="analytics">
+        <div class="admin-callout">
+          <strong>Продуктовая аналитика</strong> — обезличенные события и активные установки из приложения.
+          Миграции: <code>supabase-migration-analytics.sql</code> и
+          <code>supabase-migration-analytics-installations.sql</code>.
+          «Активные» = устройства, которые открывали приложение за период (с включённой аналитикой).
+        </div>
+        <div class="admin-toolbar admin-panel-toolbar">
+          <p id="analytics-stats" class="admin-muted">Загрузка…</p>
+          <div class="admin-toolbar-actions">
+            <label class="admin-inline-field">
+              Период
+              <select id="analytics-range">
+                <option value="1">1 день</option>
+                <option value="7" selected>7 дней</option>
+                <option value="30">30 дней</option>
+              </select>
+            </label>
+            <button type="button" id="analytics-refresh" class="admin-button">Обновить</button>
+          </div>
+        </div>
+        <div id="analytics-metrics"></div>
+        <div id="analytics-breakdown" class="admin-analytics-breakdown"></div>
       </section>
 
       <section class="admin-panel" data-panel="academy-giveaway">
@@ -281,10 +307,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js?v=5"></script>
-    <script src="./admin-supabase.js?v=8"></script>
+    <script src="./admin-supabase.js?v=10"></script>
     <script src="./admin-home.js?v=3"></script>
     <script src="./admin-academy-feedback.js?v=2"></script>
+    <script src="./admin-analytics.js?v=2"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=15"></script>
+    <script src="./admin.js?v=16"></script>
   </body>
 </html>
