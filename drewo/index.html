@@ -1319,7 +1319,7 @@
     <form id="save-form" method="dialog">
       <strong id="save-dialog-title">Сохранить на сайт</strong>
       <p class="install-steps">Записать текущее древо на waydean.ru/drewo (с бэкапом). Нужен пароль.</p>
-      <p class="install-steps">После сохранения подождите немного — сайт обновляется не сразу (до 1–2 минут).</p>
+      <p class="install-steps">У вас дерево останется сразу. На других телефонах обновление может занять 1–2 минуты — там нажмите «Обновить».</p>
       <label>
         Пароль
         <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
@@ -4063,12 +4063,17 @@
           publishToGitHub(pass)
             .then(function () {
               window.clearTimeout(progressTimer);
+              // Keep the in-memory tree (already has new sons). Do not reload —
+              // GitHub Pages may still serve a cached copy for up to ~10 minutes.
               setTreeDirty(false);
-              showBusyBanner('Готово. Подождите немного — сайт обновляется…');
-              window.setTimeout(function () {
-                var base = location.pathname.replace(/\/?$/, '/');
-                location.replace(base + '?v=' + Date.now());
-              }, 900);
+              hideCenterBanner();
+              showToast('Сохранено на waydean.ru/drewo', 'success', 3200);
+              if (saveSubmitBtn) saveSubmitBtn.disabled = false;
+              if (saveCancelBtn) saveCancelBtn.disabled = false;
+              if (savePasswordInput) {
+                savePasswordInput.disabled = false;
+                savePasswordInput.value = '';
+              }
             })
             .catch(function (err) {
               window.clearTimeout(progressTimer);
