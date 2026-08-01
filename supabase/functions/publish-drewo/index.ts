@@ -19,6 +19,20 @@ function normalizePassword(value: unknown) {
     .toLocaleLowerCase('ru-RU');
 }
 
+/** Put fresh tree JSON into #tree-data so HTML always matches treeJson. */
+function injectTreeData(html: string, treeJson: string): string {
+  const normalized = treeJson.trim();
+  if (!normalized) return html;
+  const replaced = html.replace(
+    /(<script\b[^>]*\bid\s*=\s*["']tree-data["'][^>]*>)([\s\S]*?)(<\/script>)/i,
+    (_match, open: string, _body: string, close: string) => `${open}\n${normalized}\n${close}`
+  );
+  if (replaced === html) {
+    throw new Error('В HTML нет #tree-data — некуда записать дерево');
+  }
+  return replaced;
+}
+
 async function githubGetFile(
   token: string,
   repo: string,
@@ -74,6 +88,39 @@ async function githubPutFile(options: {
     throw new Error(json.message || `GitHub API error ${response.status} for ${options.path}`);
   }
   return json;
+}
+
+async function githubPutFileRetry(options: {
+  token: string;
+  repo: string;
+  path: string;
+  content: string;
+  message: string;
+}) {
+  const current = await githubGetFile(options.token, options.repo, options.path);
+  if (current?.content === options.content) {
+    return { skipped: true as const, sha: current.sha };
+  }
+  try {
+    const result = await githubPutFile({
+      ...options,
+      sha: current?.sha,
+    });
+    return { skipped: false as const, result };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // Concurrent save: re-read sha and retry once.
+    if (!/sha|conflict|409|422/i.test(message)) throw error;
+    const again = await githubGetFile(options.token, options.repo, options.path);
+    if (again?.content === options.content) {
+      return { skipped: true as const, sha: again.sha };
+    }
+    const result = await githubPutFile({
+      ...options,
+      sha: again?.sha,
+    });
+    return { skipped: false as const, result };
+  }
 }
 
 async function githubDeleteFile(options: {
@@ -153,7 +200,19 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Пустой HTML' }, 400);
     }
 
-    const treeJson = typeof body.treeJson === 'string' ? body.treeJson : '';
+    const treeJson = typeof body.treeJson === 'string' ? body.treeJson.trim() : '';
+    if (!treeJson) {
+      return jsonResponse({ error: 'Пустое дерево (treeJson)' }, 400);
+    }
+
+    let htmlToWrite: string;
+    try {
+      htmlToWrite = injectTreeData(html, treeJson);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Не удалось встроить дерево в HTML';
+      return jsonResponse({ error: message }, 400);
+    }
+
     const stamp = new Date()
       .toISOString()
       .replace(/[:.]/g, '-')
@@ -165,7 +224,9 @@ Deno.serve(async (request) => {
         : `Update family tree (${stamp})`;
 
     const current = await githubGetFile(githubToken, githubRepo, 'drewo/index.html');
-    if (current?.content) {
+    const indexWillChange = !current?.content || current.content !== htmlToWrite;
+
+    if (current?.content && indexWillChange) {
       await githubPutFile({
         token: githubToken,
         repo: githubRepo,
@@ -175,25 +236,37 @@ Deno.serve(async (request) => {
       });
     }
 
-    await githubPutFile({
-      token: githubToken,
-      repo: githubRepo,
-      path: 'drewo/index.html',
-      content: html,
-      message,
-      sha: current?.sha,
-    });
-
-    if (treeJson) {
-      const jsonFile = await githubGetFile(githubToken, githubRepo, 'drewo/family-tree.json');
-      await githubPutFile({
+    let indexChanged = false;
+    if (indexWillChange) {
+      const put = await githubPutFileRetry({
         token: githubToken,
         repo: githubRepo,
-        path: 'drewo/family-tree.json',
-        content: treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`,
-        message: `Update family-tree.json (${stamp})`,
-        sha: jsonFile?.sha,
+        path: 'drewo/index.html',
+        content: htmlToWrite,
+        message,
       });
+      indexChanged = !put.skipped;
+    }
+
+    const jsonBody = treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`;
+    const jsonPut = await githubPutFileRetry({
+      token: githubToken,
+      repo: githubRepo,
+      path: 'drewo/family-tree.json',
+      content: jsonBody,
+      message: `Update family-tree.json (${stamp})`,
+    });
+    const jsonChanged = !jsonPut.skipped;
+
+    if (!indexChanged && !jsonChanged) {
+      return jsonResponse({
+        ok: false,
+        error:
+          'На GitHub уже такая же версия дерева. Если сын пропал после обновления — это кэш сайта (до 10 мин). Откройте waydean.ru/drewo/?v=1 или подождите.',
+        indexChanged: false,
+        jsonChanged: false,
+        publishedAt: new Date().toISOString(),
+      }, 409);
     }
 
     const backups = await listBackupFiles(githubToken, githubRepo);
@@ -211,7 +284,10 @@ Deno.serve(async (request) => {
       ok: true,
       publishedAt: new Date().toISOString(),
       path: 'drewo/index.html',
-      backupCount: Math.min(backups.length + (current?.content ? 1 : 0), 10),
+      indexChanged,
+      jsonChanged,
+      backupCreated: Boolean(current?.content && indexWillChange),
+      backupCount: Math.min(backups.length + (current?.content && indexWillChange ? 1 : 0), 10),
       repo: githubRepo,
     });
   } catch (error) {

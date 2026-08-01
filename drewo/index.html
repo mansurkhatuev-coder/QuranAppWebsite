@@ -1024,7 +1024,7 @@
       </button>
     </div>
   </header>
-  <div class="header-anchor" id="header-anchor" aria-hidden="true"></div>
+  <div class="header-anchor" id="header-anchor" aria-hidden="true" style="height: 61px;"></div>
   <div class="nav-shell">
     <div id="nav-backdrop" class="nav-backdrop" hidden=""></div>
     <nav id="nav-panel" class="nav-panel" hidden="" aria-label="Меню">
@@ -1036,7 +1036,7 @@
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
         <button type="button" id="edit-links" aria-pressed="false">Изменить связи</button>
-        <button type="button" id="history-btn" title="01.08.2026, 20:05 — Проверка">История (3)</button>
+        <button type="button" id="history-btn" title="01.08.2026, 18:02 — Гуно">История (2)</button>
       </div>
       <p class="nav-label">Оформление</p>
       <div class="action-cluster" role="group" aria-label="Оформление">
@@ -1069,8 +1069,8 @@
   <main>
     <div id="viewport" aria-label="Древо">
       <div id="map-world">
-        <svg id="links" aria-hidden="true" width="4200.988161511502" height="1523.9632260194971" viewBox="0 0 4372 1586"></svg>
-        <div id="tree-layer" style="width: 4200.988162px; height: 1523.963226px;"></div>
+        <svg id="links" aria-hidden="true" width="4290.792767968362" height="1484.3498791151058" viewBox="0 0 4284 1482"></svg>
+        <div id="tree-layer" style="width: 4290.792768px; height: 1484.349879px;"></div>
       </div>
     </div>
   </main>
@@ -1078,11 +1078,11 @@
   <div class="fab-rail" id="fab-rail" data-open="false" aria-label="Действия">
     <button type="button" id="fab-toggle" class="fab-toggle" aria-expanded="false" aria-controls="fab-panel" aria-label="Открыть действия">
       <span class="fab-toggle-arrow" aria-hidden="true"></span>
-      <span id="fab-dirty-dot" class="fab-dirty-dot" hidden=""></span>
+      <span id="fab-dirty-dot" class="fab-dirty-dot" hidden></span>
     </button>
     <div class="fab-panel" id="fab-panel">
       <button type="button" id="install-home">На экран Домой</button>
-      <button type="button" id="save-remote" hidden="">Сохранить</button>
+      <button type="button" id="save-remote" hidden>Сохранить</button>
     </div>
   </div>
 
@@ -1104,7 +1104,7 @@
     <div class="history-body">
       <strong id="history-dialog-title">История добавлений</strong>
       <p id="history-empty" hidden="">Пока пусто</p>
-      <ul id="history-list"><li><span class="hist-when">01.08.2026, 20:05</span><div class="hist-text"><strong>Проверка</strong> → сын <strong>Мансур</strong></div></li><li><span class="hist-when">01.08.2026, 18:02</span><div class="hist-text"><strong>Гуно</strong> → сын <strong>Мухаммад</strong></div></li><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Аюб</strong></div></li></ul>
+      <ul id="history-list"><li><span class="hist-when">01.08.2026, 18:02</span><div class="hist-text"><strong>Гуно</strong> → сын <strong>Мухаммад</strong></div></li><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Аюб</strong></div></li></ul>
       <div class="dialog-actions">
         <button type="button" id="history-close">Закрыть</button>
       </div>
@@ -1166,7 +1166,7 @@
         Пароль
         <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
       </label>
-      <p id="save-error" class="dialog-error" hidden="">Load failed</p>
+      <p id="save-error" class="dialog-error" hidden=""></p>
       <div class="dialog-actions">
         <button type="submit">Сохранить</button>
         <button type="button" id="save-cancel">Отмена</button>
@@ -1984,14 +1984,6 @@
     "father": "Мухаммад",
     "sonId": "added-1785596579529-e483pu",
     "fatherId": "added-1785596491258-9c92zv"
-  },
-  {
-    "type": "add",
-    "at": "2026-08-01T17:05:11.424Z",
-    "son": "Проверка",
-    "father": "Мансур",
-    "sonId": "added-1785603911421-2wywk7",
-    "fatherId": "mansur"
   }
 ]
 </script>
@@ -2505,12 +2497,27 @@
         return TreeModel.toJSON(clone);
       }
 
+      function injectScriptJson(html, scriptId, jsonText) {
+        var re = new RegExp(
+          '(<script\\b[^>]*\\bid\\s*=\\s*["\']' + scriptId + '["\'][^>]*>)([\\s\\S]*?)(<\\/script>)',
+          'i'
+        );
+        if (!re.test(html)) {
+          throw new Error('В экспорте нет #' + scriptId);
+        }
+        return html.replace(re, function (_m, open, _body, close) {
+          return open + '\n' + String(jsonText).trim() + '\n' + close;
+        });
+      }
+
       function buildExportHtml() {
         var doc = document.documentElement.cloneNode(true);
         var embedEl = doc.querySelector('#tree-data');
-        if (embedEl) embedEl.textContent = '\n' + treeJsonForEmbed(tree) + '\n';
+        var treeJson = treeJsonForEmbed(tree);
+        if (embedEl) embedEl.textContent = '\n' + treeJson + '\n';
         var logEl = doc.querySelector('#activity-log');
-        if (logEl) logEl.textContent = '\n' + JSON.stringify(loadActivity(), null, 2) + '\n';
+        var activityJson = JSON.stringify(loadActivity(), null, 2);
+        if (logEl) logEl.textContent = '\n' + activityJson + '\n';
         // Чистый старт: иначе при сбое JS остаётся «мёртвое» дерево без обработчиков.
         var exportLayer = doc.querySelector('#tree-layer');
         if (exportLayer) exportLayer.innerHTML = '';
@@ -2542,7 +2549,11 @@
         }
         var exportAnchor = doc.querySelector('#header-anchor');
         if (exportAnchor) exportAnchor.removeAttribute('style');
-        return '<!DOCTYPE html>\n' + doc.outerHTML;
+        // outerHTML sometimes misses script textContent — re-inject JSON via string replace.
+        var html = '<!DOCTYPE html>\n' + doc.outerHTML;
+        html = injectScriptJson(html, 'tree-data', treeJson);
+        html = injectScriptJson(html, 'activity-log', activityJson);
+        return html;
       }
 
       function expandAncestorsOf(nodeId) {
@@ -2876,10 +2887,12 @@
 
       async function publishToGitHub(password) {
         if (!PUBLISH_URL) throw new Error('PUBLISH_URL не задан');
+        persistTree();
+        var treeJson = treeJsonForEmbed(tree);
         var payload = {
           password: password,
           html: buildExportHtml(),
-          treeJson: treeJsonForEmbed(tree),
+          treeJson: treeJson,
           message: 'Update family tree from web editor',
         };
         var res = await fetch(PUBLISH_URL, {
@@ -2892,6 +2905,17 @@
         });
         if (!res.ok) throw new Error(data.error || 'Ошибка сохранения ' + res.status);
         return data;
+      }
+
+      function fetchRemoteTree() {
+        return fetch('family-tree.json?v=' + Date.now(), { cache: 'no-store' })
+          .then(function (res) {
+            if (!res.ok) return null;
+            return res.json();
+          })
+          .catch(function () {
+            return null;
+          });
       }
 
       function zoomAt(clientX, clientY, nextScale) {
@@ -3718,10 +3742,20 @@
           saveError.hidden = true;
           saveRemoteBtn.disabled = true;
           publishToGitHub(pass)
-            .then(function () {
+            .then(function (data) {
               setTreeDirty(false);
               if (saveDialog && saveDialog.open) saveDialog.close();
-              window.alert('Сохранено на waydean.ru/drewo');
+              var bits = [];
+              if (data && data.indexChanged) bits.push('страница');
+              if (data && data.jsonChanged) bits.push('данные');
+              window.alert(
+                'Сохранено на waydean.ru/drewo' +
+                  (bits.length ? ' (' + bits.join(' + ') + ')' : '') +
+                  '.\nСейчас обновлю страницу без кэша.'
+              );
+              // GitHub Pages кэширует HTML ~10 мин — без ?v= сын «пропадает» после F5.
+              var base = location.pathname.replace(/\/?$/, '/');
+              location.replace(base + '?v=' + Date.now());
             })
             .catch(function (err) {
               saveError.hidden = false;
@@ -3732,6 +3766,12 @@
             });
         });
       }
+
+      window.addEventListener('beforeunload', function (e) {
+        if (!treeDirty) return;
+        e.preventDefault();
+        e.returnValue = '';
+      });
 
       searchInput.addEventListener('input', function () {
         clearTimeout(searchTimer);
@@ -3863,16 +3903,6 @@
         });
       }
 
-      setViewFilter('khotu', false);
-      updateViewButtons();
-      refreshActivityUi();
-      try {
-        setTheme(localStorage.getItem('drewo-theme') || document.body.getAttribute('data-theme') || 'premium', false);
-      } catch (err) {
-        setTheme('premium', false);
-      }
-      showGuideBannerIfNeeded();
-      updateSaveButton();
       function syncHeaderAnchor() {
         var headerEl = document.querySelector('.header');
         var anchorEl = document.getElementById('header-anchor');
@@ -3890,7 +3920,35 @@
           new ResizeObserver(syncHeaderAnchor).observe(headerEl);
         }
       }
-      render(true);
+
+      function finishBoot() {
+        setViewFilter('khotu', false);
+        updateViewButtons();
+        refreshActivityUi();
+        try {
+          setTheme(
+            localStorage.getItem('drewo-theme') ||
+              document.body.getAttribute('data-theme') ||
+              'premium',
+            false
+          );
+        } catch (err) {
+          setTheme('premium', false);
+        }
+        showGuideBannerIfNeeded();
+        updateSaveButton();
+        syncHeaderAnchor();
+        render(true);
+      }
+
+      // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
+      fetchRemoteTree().then(function (remote) {
+        if (remote && typeof remote === 'object' && remote.id) {
+          tree = TreeModel.markAllowAdd(remote, NUTSU_ID);
+          if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
+        }
+        finishBoot();
+      });
     })();
   </script>
 
