@@ -140,10 +140,75 @@
       justify-content: flex-end;
     }
 
-    .header-bar .search-input {
+    .header-bar .search-wrap {
+      position: relative;
       flex: 1 1 auto;
       min-width: 0;
+    }
+
+    .header-bar .search-input {
+      width: 100%;
+      min-width: 0;
       max-width: none;
+    }
+
+    .search-results {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: calc(100% + 0.35rem);
+      z-index: 45;
+      max-height: min(50vh, 18rem);
+      overflow: auto;
+      padding: 0.35rem;
+      border: 1px solid color-mix(in srgb, var(--sand) 30%, transparent);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--bg0) 96%, black);
+      box-shadow: 0 16px 36px color-mix(in srgb, black 42%, transparent);
+    }
+
+    .search-results[hidden] {
+      display: none !important;
+    }
+
+    .search-result {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.1rem;
+      width: 100%;
+      margin: 0;
+      padding: 0.55rem 0.65rem;
+      border: 0;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--text);
+      text-align: left;
+      cursor: pointer;
+    }
+
+    .search-result:hover,
+    .search-result:focus-visible {
+      background: color-mix(in srgb, var(--sand) 18%, var(--bg1));
+      outline: none;
+    }
+
+    .search-result-name {
+      font-weight: 600;
+      color: var(--sand);
+      font-size: 0.92rem;
+    }
+
+    .search-result-father {
+      font-size: 0.78rem;
+      color: var(--text-dim);
+    }
+
+    .search-results-empty {
+      margin: 0;
+      padding: 0.55rem 0.65rem;
+      font-size: 0.84rem;
+      color: var(--text-dim);
     }
 
     .menu-toggle {
@@ -898,7 +963,10 @@
       <h1>Хьоти некъ</h1>
     </div>
     <div class="header-bar">
-      <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск">
+      <div class="search-wrap">
+        <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
+        <div id="search-results" class="search-results" role="listbox" hidden></div>
+      </div>
       <button type="button" id="nav-menu-btn" class="menu-toggle" aria-expanded="false" aria-controls="nav-panel" aria-label="Меню">
         <span class="menu-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
@@ -1975,6 +2043,7 @@
       var historyCloseBtn = document.getElementById('history-close');
       var activityEl = document.getElementById('activity-log');
       var searchInput = document.getElementById('search');
+      var searchResults = document.getElementById('search-results');
       var addDialog = document.getElementById('add-dialog');
       var addForm = document.getElementById('add-form');
       var addNameInput = document.getElementById('add-name');
@@ -2335,13 +2404,104 @@
         }
       }
 
+      function collectNameMatches(query) {
+        var q = String(query || '').trim().toLowerCase();
+        var matches = [];
+        if (!q) return matches;
+        function walk(node, parent) {
+          if ((node.name || '').toLowerCase().includes(q)) {
+            matches.push({
+              id: node.id,
+              name: node.name || '',
+              fatherName: parent ? parent.name || '' : '',
+              fatherId: parent ? parent.id : null,
+            });
+          }
+          (node.sons || []).forEach(function (son) {
+            walk(son, node);
+          });
+        }
+        walk(tree, null);
+        return matches;
+      }
+
+      function hideSearchResults() {
+        if (!searchResults) return;
+        searchResults.hidden = true;
+        searchResults.replaceChildren();
+        if (searchInput) searchInput.setAttribute('aria-expanded', 'false');
+      }
+
+      function showSearchResults(matches) {
+        if (!searchResults) return;
+        searchResults.replaceChildren();
+        if (!matches.length) {
+          var empty = document.createElement('p');
+          empty.className = 'search-results-empty';
+          empty.textContent = 'Никого не найдено';
+          searchResults.appendChild(empty);
+          searchResults.hidden = false;
+          if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
+          return;
+        }
+        matches.slice(0, 40).forEach(function (item) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'search-result';
+          btn.setAttribute('role', 'option');
+          btn.dataset.id = item.id;
+          var nameEl = document.createElement('span');
+          nameEl.className = 'search-result-name';
+          nameEl.textContent = item.name;
+          var fatherEl = document.createElement('span');
+          fatherEl.className = 'search-result-father';
+          fatherEl.textContent = item.fatherName
+            ? 'отец: ' + item.fatherName
+            : 'корень древа';
+          btn.appendChild(nameEl);
+          btn.appendChild(fatherEl);
+          btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            selectSearchMatch(item.id);
+          });
+          searchResults.appendChild(btn);
+        });
+        if (matches.length > 40) {
+          var more = document.createElement('p');
+          more.className = 'search-results-empty';
+          more.textContent = 'Показаны первые 40 из ' + matches.length;
+          searchResults.appendChild(more);
+        }
+        searchResults.hidden = false;
+        if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
+      }
+
+      function selectSearchMatch(id) {
+        if (!id) return;
+        if (viewFilter === 'khotu') {
+          setViewFilter('all', false);
+        }
+        matchIds = new Set([id]);
+        expandAncestorsOf(id);
+        hideSearchResults();
+        map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
+        pendingScrollId = id;
+        render(false);
+        if (searchInput) {
+          var node = TreeModel.findById(tree, id);
+          if (node && node.name) searchInput.value = node.name;
+        }
+      }
+
       function runSearch(rawQuery) {
         var q = (rawQuery || '').trim().toLowerCase();
         matchIds = new Set();
         pendingScrollId = null;
 
         if (!q) {
-          render();
+          hideSearchResults();
+          render(false);
           return;
         }
 
@@ -2349,19 +2509,28 @@
           setViewFilter('all', false);
         }
 
-        var firstMatchId = null;
-        TreeModel.walk(tree, function (node) {
-          if ((node.name || '').toLowerCase().includes(q)) {
-            matchIds.add(node.id);
-            if (firstMatchId === null) firstMatchId = node.id;
-          }
+        var matches = collectNameMatches(q);
+        matches.forEach(function (item) {
+          matchIds.add(item.id);
         });
 
-        if (firstMatchId) {
-          expandAncestorsOf(firstMatchId);
-          pendingScrollId = firstMatchId;
+        if (matches.length === 1) {
+          hideSearchResults();
+          expandAncestorsOf(matches[0].id);
+          map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
+          pendingScrollId = matches[0].id;
+          render(false);
+          return;
         }
-        render();
+
+        if (matches.length > 1) {
+          showSearchResults(matches);
+          render(false);
+          return;
+        }
+
+        showSearchResults([]);
+        render(false);
       }
 
       function clamp(value, min, max) {
@@ -2705,8 +2874,14 @@
         if (!n) return;
         var vw = viewport.clientWidth || 360;
         var vh = viewport.clientHeight || 480;
-        map.x = vw / 2 - n.cx * map.scale;
-        map.y = vh / 3 - n.cy * map.scale;
+        var s = map.scale;
+        world.style.width = layoutMeta.width * s + 'px';
+        world.style.height = layoutMeta.height * s + 'px';
+        layer.style.width = layoutMeta.width * s + 'px';
+        layer.style.height = layoutMeta.height * s + 'px';
+        map.x = vw / 2 - n.cx * s;
+        map.y = Math.max(16, vh * 0.3 - n.cy * s);
+        redrawLinks();
         applyMapTransform();
       }
 
@@ -3322,6 +3497,26 @@
         searchTimer = setTimeout(function () {
           runSearch(searchInput.value);
         }, 150);
+      });
+      searchInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') {
+          hideSearchResults();
+          return;
+        }
+        if (e.key === 'Enter' && searchResults && !searchResults.hidden) {
+          var first = searchResults.querySelector('.search-result');
+          if (first && first.dataset.id) {
+            e.preventDefault();
+            selectSearchMatch(first.dataset.id);
+          }
+        }
+      });
+      document.addEventListener('click', function (e) {
+        if (!searchResults || searchResults.hidden) return;
+        if (e.target.closest && (e.target.closest('.search-wrap') || e.target.closest('#search-results'))) {
+          return;
+        }
+        hideSearchResults();
       });
 
       addForm.addEventListener('submit', function (e) {
