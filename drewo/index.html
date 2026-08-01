@@ -2598,29 +2598,46 @@
         clearTimeout(searchTimer);
         clearTimeout(goToPerson._timer);
 
-        // Always open full tree so the person is guaranteed in layout.
+        // Show full filter, but expand only the path to this person (+ parents),
+        // so layout stays local and centering is accurate.
         viewFilter = 'all';
-        expanded = new Set(collectAllIds(tree));
+        expanded = new Set();
+        var path = findPathToId(tree, id);
+        if (path && path.length) {
+          path.forEach(function (pid) {
+            expanded.add(pid);
+          });
+        } else {
+          expanded = new Set(collectAllIds(tree));
+        }
         matchIds = new Set([id]);
         updateViewButtons();
         hideSearchResults();
 
-        map.scale = clamp(1.45, MAP_SCALE_MIN, MAP_SCALE_MAX);
+        // First layout at scale 1 to measure node size.
+        map.scale = 1;
         pendingScrollId = null;
         render(false);
 
-        var ok = focusNode(id);
-        if (!ok) {
-          pendingScrollId = id;
+        var n = layoutMeta.nodes[id];
+        if (!n) {
+          expanded = new Set(collectAllIds(tree));
           render(false);
-          ok = focusNode(id);
+          n = layoutMeta.nodes[id];
         }
+        if (!n) return false;
+
+        // Readable zoom from name box width.
+        var targetScale = clamp(120 / Math.max(n.w, 48), 0.7, 1.7);
+        map.scale = targetScale;
+        render(false);
+        focusNode(id);
 
         if (searchInput) {
           var node = TreeModel.findById(tree, id);
           if (!node) {
-            TreeModel.walk(tree, function (n) {
-              if (!node && String(n.id) === id) node = n;
+            TreeModel.walk(tree, function (n2) {
+              if (!node && String(n2.id) === id) node = n2;
             });
           }
           if (node && node.name) searchInput.value = node.name;
@@ -2629,18 +2646,11 @@
           } catch (err) {}
         }
 
-        function again() {
-          map.scale = clamp(1.45, MAP_SCALE_MIN, MAP_SCALE_MAX);
-          render(false);
+        goToPerson._timer = setTimeout(function () {
           focusNode(id);
-        }
-        requestAnimationFrame(function () {
-          again();
-          requestAnimationFrame(again);
-        });
-        goToPerson._timer = setTimeout(again, 450);
+        }, 300);
 
-        return ok;
+        return true;
       }
 
       function selectSearchMatch(id) {
@@ -3012,7 +3022,6 @@
         id = String(id || '');
         var n = layoutMeta.nodes[id];
         if (!n) {
-          // ids in layout may differ only by coercion; try raw key scan
           Object.keys(layoutMeta.nodes).some(function (key) {
             if (String(key) === id) {
               n = layoutMeta.nodes[key];
@@ -3022,6 +3031,7 @@
           });
         }
         if (!n) return false;
+
         var vw = viewport.clientWidth || 360;
         var vh = viewport.clientHeight || 480;
         var s = map.scale;
@@ -3029,10 +3039,24 @@
         world.style.height = layoutMeta.height * s + 'px';
         layer.style.width = layoutMeta.width * s + 'px';
         layer.style.height = layoutMeta.height * s + 'px';
+
+        // Rough center from layout, then correct by real DOM box.
         map.x = vw / 2 - n.cx * s;
-        map.y = Math.max(16, vh * 0.3 - n.cy * s);
-        redrawLinks();
+        map.y = vh * 0.34 - n.cy * s;
         applyMapTransform();
+
+        var el = layer.querySelector('.person[data-id="' + CSS.escape(id) + '"]');
+        if (el) {
+          var personRect = el.getBoundingClientRect();
+          var viewRect = viewport.getBoundingClientRect();
+          var personCx = personRect.left + personRect.width / 2;
+          var personCy = personRect.top + Math.min(personRect.height, 40 * s) / 2;
+          var targetX = viewRect.left + viewRect.width / 2;
+          var targetY = viewRect.top + viewRect.height * 0.34;
+          map.x += targetX - personCx;
+          map.y += targetY - personCy;
+          applyMapTransform();
+        }
         return true;
       }
 
@@ -3180,7 +3204,7 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'person-btn';
-        if (matchIds.has(meta.id)) btn.classList.add('match');
+        if (matchIds.has(meta.id) || matchIds.has(String(meta.id))) btn.classList.add('match');
         btn.textContent = meta.name;
         btn.title = meta.name;
         if (meta.hasSons) {
