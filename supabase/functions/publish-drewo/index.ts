@@ -19,18 +19,28 @@ function normalizePassword(value: unknown) {
     .toLocaleLowerCase('ru-RU');
 }
 
+function normalizeTreeJson(raw: string): string {
+  return JSON.stringify(JSON.parse(raw));
+}
+
+async function fingerprintText(text: string): Promise<string> {
+  const data = new TextEncoder().encode(text);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map((b) => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
 /** Replace or insert a JSON <script id="..."> block. */
 function injectOrInsertScript(html: string, scriptId: string, jsonText: string): string {
   const normalized = String(jsonText ?? '').trim();
   if (!normalized) return html;
 
   const patterns = [
-    // id="tree-data" or id='tree-data'
     new RegExp(
       `(<script\\b[^>]*\\bid\\s*=\\s*["']${scriptId}["'][^>]*>)([\\s\\S]*?)(<\\/script>)`,
       'i'
     ),
-    // id=tree-data (unquoted, browser outerHTML quirk)
     new RegExp(
       `(<script\\b[^>]*\\bid\\s*=\\s*${scriptId}(?=[\\s>])[^>]*>)([\\s\\S]*?)(<\\/script>)`,
       'i'
@@ -44,12 +54,40 @@ function injectOrInsertScript(html: string, scriptId: string, jsonText: string):
     if (next !== html) return next;
   }
 
-  const tag =
-    `\n<script type="application/json" id="${scriptId}">\n${normalized}\n</script>\n`;
+  const tag = `\n<script type="application/json" id="${scriptId}">\n${normalized}\n</script>\n`;
   if (/<\/body>/i.test(html)) {
     return html.replace(/<\/body>/i, `${tag}</body>`);
   }
   return html + tag;
+}
+
+function extractScriptJson(html: string, scriptId: string): string | null {
+  const patterns = [
+    new RegExp(
+      `<script\\b[^>]*\\bid\\s*=\\s*["']${scriptId}["'][^>]*>([\\s\\S]*?)<\\/script>`,
+      'i'
+    ),
+    new RegExp(
+      `<script\\b[^>]*\\bid\\s*=\\s*${scriptId}(?=[\\s>])[^>]*>([\\s\\S]*?)<\\/script>`,
+      'i'
+    ),
+  ];
+  for (const re of patterns) {
+    const match = html.match(re);
+    if (match && typeof match[1] === 'string') {
+      const trimmed = match[1].trim();
+      if (trimmed) return trimmed;
+    }
+  }
+  return null;
+}
+
+function stampNow() {
+  return new Date()
+    .toISOString()
+    .replace(/[:.]/g, '-')
+    .replace('T', '_')
+    .slice(0, 19);
 }
 
 async function githubGetFile(
@@ -182,13 +220,37 @@ async function listBackupFiles(token: string, repo: string) {
   }
   if (!Array.isArray(json)) return [];
   return json
-    .filter((item) => item && item.type === 'file' && typeof item.name === 'string')
+    .filter(
+      (item) =>
+        item &&
+        item.type === 'file' &&
+        typeof item.name === 'string' &&
+        String(item.name).endsWith('.html')
+    )
     .map((item) => ({
       path: String(item.path),
       sha: String(item.sha),
       name: String(item.name),
     }))
     .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
+}
+
+async function pruneBackups(token: string, repo: string) {
+  const backups = await listBackupFiles(token, repo);
+  for (const old of backups.slice(10)) {
+    await githubDeleteFile({
+      token,
+      repo,
+      path: old.path,
+      sha: old.sha,
+      message: `Prune old family tree backup ${old.name}`,
+    });
+  }
+  return backups;
+}
+
+function isSafeBackupName(name: string) {
+  return /^drewo-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.html$/.test(name);
 }
 
 Deno.serve(async (request) => {
@@ -213,12 +275,101 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Неверный пароль' }, 401);
     }
 
+    const action = typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
+
+    if (action === 'list-backups') {
+      const backups = await listBackupFiles(githubToken, githubRepo);
+      return jsonResponse({
+        ok: true,
+        backups: backups.slice(0, 10).map((b) => ({
+          name: b.name,
+          path: b.path,
+          label: b.name.replace(/^drewo-/, '').replace(/\.html$/, '').replace(/_/g, ' '),
+        })),
+      });
+    }
+
+    if (action === 'restore') {
+      const backupName = typeof body.backup === 'string' ? body.backup.trim() : '';
+      if (!isSafeBackupName(backupName)) {
+        return jsonResponse({ error: 'Некорректное имя бэкапа' }, 400);
+      }
+      const backupFile = await githubGetFile(
+        githubToken,
+        githubRepo,
+        `drewo/backups/${backupName}`
+      );
+      if (!backupFile?.content) {
+        return jsonResponse({ error: 'Бэкап не найден' }, 404);
+      }
+      const treeJson = extractScriptJson(backupFile.content, 'tree-data');
+      if (!treeJson) {
+        return jsonResponse({ error: 'В бэкапе нет дерева (#tree-data)' }, 400);
+      }
+      try {
+        JSON.parse(treeJson);
+      } catch {
+        return jsonResponse({ error: 'Дерево в бэкапе повреждено' }, 400);
+      }
+      const activityJson = extractScriptJson(backupFile.content, 'activity-log') || '[]';
+      const stamp = stampNow();
+      const current = await githubGetFile(githubToken, githubRepo, 'drewo/index.html');
+      if (!current?.content || current.content.length < 100) {
+        return jsonResponse({ error: 'Нет текущей страницы для восстановления' }, 400);
+      }
+
+      await githubPutFile({
+        token: githubToken,
+        repo: githubRepo,
+        path: `drewo/backups/drewo-${stamp}.html`,
+        content: current.content,
+        message: `Backup before restore (${stamp})`,
+      });
+
+      let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', treeJson);
+      htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', activityJson);
+
+      await githubPutFileRetry({
+        token: githubToken,
+        repo: githubRepo,
+        path: 'drewo/index.html',
+        content: htmlToWrite,
+        message: `Restore family tree from ${backupName}`,
+      });
+
+      const jsonBody = treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`;
+      await githubPutFileRetry({
+        token: githubToken,
+        repo: githubRepo,
+        path: 'drewo/family-tree.json',
+        content: jsonBody,
+        message: `Restore family-tree.json from ${backupName}`,
+      });
+
+      await pruneBackups(githubToken, githubRepo);
+      const fingerprint = await fingerprintText(normalizeTreeJson(treeJson));
+
+      return jsonResponse({
+        ok: true,
+        restoredFrom: backupName,
+        treeJson,
+        activityJson,
+        fingerprint,
+        publishedAt: new Date().toISOString(),
+      });
+    }
+
+    if (action !== 'publish') {
+      return jsonResponse({ error: `Неизвестное действие: ${action}` }, 400);
+    }
+
     const treeJson = typeof body.treeJson === 'string' ? body.treeJson.trim() : '';
     if (!treeJson) {
       return jsonResponse({ error: 'Пустое дерево (treeJson)' }, 400);
     }
+    let normalizedTree: string;
     try {
-      JSON.parse(treeJson);
+      normalizedTree = normalizeTreeJson(treeJson);
     } catch {
       return jsonResponse({ error: 'treeJson не является JSON' }, 400);
     }
@@ -227,18 +378,35 @@ Deno.serve(async (request) => {
       typeof body.activityJson === 'string' && body.activityJson.trim()
         ? body.activityJson.trim()
         : '';
+    const force = body.force === true;
+    const baseFingerprint =
+      typeof body.baseFingerprint === 'string' ? body.baseFingerprint.trim() : '';
 
-    const stamp = new Date()
-      .toISOString()
-      .replace(/[:.]/g, '-')
-      .replace('T', '_')
-      .slice(0, 19);
+    const jsonFile = await githubGetFile(githubToken, githubRepo, 'drewo/family-tree.json');
+    const serverFingerprint = jsonFile?.content
+      ? await fingerprintText(normalizeTreeJson(jsonFile.content))
+      : '';
+
+    if (serverFingerprint && baseFingerprint && serverFingerprint !== baseFingerprint && !force) {
+      return jsonResponse(
+        {
+          ok: false,
+          conflict: true,
+          error:
+            'На сайте уже другая версия дерева. Обновите у себя или сохраните принудительно (ваши правки перезапишут сайт).',
+          serverFingerprint,
+          baseFingerprint,
+        },
+        409
+      );
+    }
+
+    const stamp = stampNow();
     const message =
       typeof body.message === 'string' && body.message.trim()
         ? body.message.trim()
         : `Update family tree (${stamp})`;
 
-    // Use the live HTML on GitHub as the shell. Browser outerHTML often breaks #tree-data.
     const current = await githubGetFile(githubToken, githubRepo, 'drewo/index.html');
     let htmlBase =
       current?.content && current.content.length > 100
@@ -293,26 +461,18 @@ Deno.serve(async (request) => {
       return jsonResponse(
         {
           ok: false,
-          error:
-            'На GitHub уже такая же версия дерева. Если сын пропал после обновления — откройте waydean.ru/drewo/?v=1 или подождите до 10 минут (кэш).',
+          error: 'На GitHub уже такая же версия дерева.',
           indexChanged: false,
           jsonChanged: false,
+          fingerprint: await fingerprintText(normalizedTree),
           publishedAt: new Date().toISOString(),
         },
         409
       );
     }
 
-    const backups = await listBackupFiles(githubToken, githubRepo);
-    for (const old of backups.slice(10)) {
-      await githubDeleteFile({
-        token: githubToken,
-        repo: githubRepo,
-        path: old.path,
-        sha: old.sha,
-        message: `Prune old family tree backup ${old.name}`,
-      });
-    }
+    const backups = await pruneBackups(githubToken, githubRepo);
+    const fingerprint = await fingerprintText(normalizedTree);
 
     return jsonResponse({
       ok: true,
@@ -320,9 +480,11 @@ Deno.serve(async (request) => {
       path: 'drewo/index.html',
       indexChanged,
       jsonChanged,
+      fingerprint,
       backupCreated: Boolean(current?.content && indexWillChange),
       backupCount: Math.min(backups.length + (current?.content && indexWillChange ? 1 : 0), 10),
       repo: githubRepo,
+      forced: force,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';

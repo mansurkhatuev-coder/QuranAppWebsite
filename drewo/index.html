@@ -918,6 +918,7 @@
 
     .center-banner-actions {
       display: flex;
+      flex-wrap: wrap;
       gap: 0.55rem;
       justify-content: center;
       margin-top: 1rem;
@@ -935,10 +936,47 @@
       font-weight: 600;
     }
 
+    .center-banner-actions button[data-primary='true'] {
+      background: linear-gradient(180deg, color-mix(in srgb, var(--sand) 82%, white), var(--sand-dim));
+      color: #1a1510;
+      border-color: color-mix(in srgb, var(--sand) 70%, white);
+    }
+
     .center-banner-actions #center-banner-ok {
       background: linear-gradient(180deg, color-mix(in srgb, var(--sand) 82%, white), var(--sand-dim));
       color: #1a1510;
       border-color: color-mix(in srgb, var(--sand) 70%, white);
+    }
+
+    #backup-dialog {
+      max-width: min(26rem, calc(100vw - 2rem));
+      width: 100%;
+    }
+
+    #backup-list {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.45rem;
+      max-height: min(50vh, 18rem);
+      overflow: auto;
+    }
+
+    #backup-list button {
+      width: 100%;
+      text-align: left;
+      min-height: 2.5rem;
+      padding: 0.55rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    #backup-empty {
+      margin: 0;
+      color: var(--text-dim);
+      font-size: 0.92rem;
     }
 
     #add-dialog,
@@ -946,7 +984,8 @@
     #password-dialog,
     #rename-dialog,
     #install-dialog,
-    #save-dialog {
+    #save-dialog,
+    #backup-dialog {
       margin: auto;
       padding: 1.25rem;
       border: 1px solid color-mix(in srgb, var(--sand) 45%, transparent);
@@ -966,7 +1005,8 @@
     #password-dialog::backdrop,
     #rename-dialog::backdrop,
     #install-dialog::backdrop,
-    #save-dialog::backdrop {
+    #save-dialog::backdrop,
+    #backup-dialog::backdrop {
       background: color-mix(in srgb, var(--bg0) 70%, transparent);
     }
 
@@ -975,7 +1015,8 @@
     #rename-dialog form,
     #save-dialog form,
     #install-dialog .history-body,
-    #history-dialog .history-body {
+    #history-dialog .history-body,
+    #backup-dialog .history-body {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -1008,7 +1049,8 @@
     #rename-dialog .dialog-actions,
     #save-dialog .dialog-actions,
     #install-dialog .dialog-actions,
-    #history-dialog .dialog-actions {
+    #history-dialog .dialog-actions,
+    #backup-dialog .dialog-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
@@ -1193,6 +1235,7 @@
       <div class="action-cluster" role="group" aria-label="Правки">
         <button type="button" id="edit-links" aria-pressed="false">Изменить связи</button>
         <button type="button" id="history-btn" title="01.08.2026, 18:02 — Гуно">История (2)</button>
+        <button type="button" id="backup-btn">Бэкапы</button>
       </div>
       <p class="nav-label">Оформление</p>
       <div class="action-cluster" role="group" aria-label="Оформление">
@@ -1330,6 +1373,20 @@
         <button type="button" id="save-cancel">Отмена</button>
       </div>
     </form>
+  </dialog>
+
+  <dialog id="backup-dialog" aria-labelledby="backup-dialog-title">
+    <div class="history-body">
+      <strong id="backup-dialog-title">Восстановить из бэкапа</strong>
+      <p class="install-steps">Выберите копию. Текущее дерево сначала сохранится в новый бэкап.</p>
+      <p id="backup-empty" hidden>Бэкапов пока нет</p>
+      <p id="backup-status" class="dialog-status" hidden></p>
+      <p id="backup-error" class="dialog-error" hidden></p>
+      <ul id="backup-list"></ul>
+      <div class="dialog-actions">
+        <button type="button" id="backup-close">Закрыть</button>
+      </div>
+    </div>
   </dialog>
 
   <div id="toast-host" aria-live="polite" aria-relevant="additions"></div>
@@ -2297,10 +2354,17 @@
       var navPanel = document.getElementById('nav-panel');
       var navBackdrop = document.getElementById('nav-backdrop');
       var historyBtn = document.getElementById('history-btn');
+      var backupBtn = document.getElementById('backup-btn');
       var historyDialog = document.getElementById('history-dialog');
       var historyList = document.getElementById('history-list');
       var historyEmpty = document.getElementById('history-empty');
       var historyCloseBtn = document.getElementById('history-close');
+      var backupDialog = document.getElementById('backup-dialog');
+      var backupList = document.getElementById('backup-list');
+      var backupEmpty = document.getElementById('backup-empty');
+      var backupStatus = document.getElementById('backup-status');
+      var backupError = document.getElementById('backup-error');
+      var backupCloseBtn = document.getElementById('backup-close');
       var activityEl = document.getElementById('activity-log');
       var searchInput = document.getElementById('search');
       var searchResults = document.getElementById('search-results');
@@ -2341,13 +2405,15 @@
       var centerBannerCancel = document.getElementById('center-banner-cancel');
       var toastTimer = null;
       var confirmResolver = null;
+      var choiceResolver = null;
+      var baseFingerprint = '';
+      var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var isAppleTouch =
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       var isAndroid = /Android/i.test(navigator.userAgent);
       var EDIT_PASSWORD = 'гуно';
       var pendingPasswordAction = null;
-      var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var editUnlocked = false;
       var renameTargetId = null;
       var gestureMoved = false;
@@ -3064,24 +3130,26 @@
         if (installDialog && installDialog.showModal) installDialog.showModal();
       }
 
-      async function publishToGitHub(password) {
+      async function publishToGitHub(password, options) {
         if (!PUBLISH_URL) throw new Error('PUBLISH_URL не задан');
-        persistTree();
+        // Sync embed JSON without flipping dirty if already clean mid-save.
+        tree = TreeModel.markAllowAdd(tree, NUTSU_ID);
+        if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
+        var opts = options || {};
+        var treeJson = treeJsonForEmbed(tree);
         var payload = {
+          action: 'publish',
           password: password,
-          treeJson: treeJsonForEmbed(tree),
+          treeJson: treeJson,
           activityJson: JSON.stringify(loadActivity(), null, 2),
+          baseFingerprint: baseFingerprint || '',
+          force: !!opts.force,
           message: 'Update family tree from web editor',
         };
-        var res = await fetch(PUBLISH_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
-        });
-        var data = await res.json().catch(function () {
-          return {};
-        });
-        if (!res.ok) throw new Error(data.error || 'Ошибка сохранения ' + res.status);
+        var data = await callPublishApi(payload);
+        if (data && data.fingerprint) baseFingerprint = data.fingerprint;
+        else baseFingerprint = await fingerprintTreeText(treeJson);
+        setTreeDirty(false);
         return data;
       }
 
@@ -3094,6 +3162,109 @@
           .catch(function () {
             return null;
           });
+      }
+
+      function applyRemoteTreeData(remote, activityJson) {
+        if (!remote || typeof remote !== 'object' || !remote.id) return;
+        tree = TreeModel.markAllowAdd(remote, NUTSU_ID);
+        if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
+        if (typeof activityJson === 'string' && activityEl) {
+          activityEl.textContent = activityJson;
+          refreshActivityUi();
+        }
+        setTreeDirty(false);
+        rememberFingerprintFromTree();
+        render(true);
+      }
+
+      function openBackupDialog() {
+        if (backupError) {
+          backupError.hidden = true;
+          backupError.textContent = '';
+        }
+        if (backupStatus) {
+          backupStatus.hidden = true;
+          backupStatus.textContent = '';
+        }
+        if (backupList) backupList.replaceChildren();
+        if (backupEmpty) backupEmpty.hidden = true;
+        if (backupDialog && backupDialog.showModal) backupDialog.showModal();
+      }
+
+      function requestBackups() {
+        if (editUnlocked) {
+          openBackupDialog();
+          loadBackupList(EDIT_PASSWORD);
+          return;
+        }
+        openPasswordDialog({ type: 'backups' });
+      }
+
+      function loadBackupList(password) {
+        if (backupStatus) {
+          backupStatus.hidden = false;
+          backupStatus.textContent = 'Загружаю список…';
+          backupStatus.setAttribute('data-busy', 'true');
+        }
+        return callPublishApi({ action: 'list-backups', password: password })
+          .then(function (data) {
+            if (backupStatus) {
+              backupStatus.hidden = true;
+              backupStatus.removeAttribute('data-busy');
+            }
+            var items = (data && data.backups) || [];
+            if (!backupList) return;
+            backupList.replaceChildren();
+            if (!items.length) {
+              if (backupEmpty) backupEmpty.hidden = false;
+              return;
+            }
+            if (backupEmpty) backupEmpty.hidden = true;
+            items.forEach(function (item) {
+              var li = document.createElement('li');
+              var btn = document.createElement('button');
+              btn.type = 'button';
+              btn.textContent = item.label || item.name;
+              btn.addEventListener('click', function () {
+                restoreBackup(password, item.name, item.label || item.name);
+              });
+              li.appendChild(btn);
+              backupList.appendChild(li);
+            });
+          })
+          .catch(function (err) {
+            if (backupStatus) {
+              backupStatus.hidden = true;
+              backupStatus.removeAttribute('data-busy');
+            }
+            if (backupError) {
+              backupError.hidden = false;
+              backupError.textContent = err.message || String(err);
+            }
+          });
+      }
+
+      function restoreBackup(password, name, label) {
+        askConfirm('Восстановить дерево из «' + label + '»? Текущая версия уйдёт в новый бэкап.').then(
+          function (ok) {
+            if (!ok) return;
+            if (backupDialog && backupDialog.open) backupDialog.close();
+            showBusyBanner('Восстанавливаю…');
+            callPublishApi({ action: 'restore', password: password, backup: name })
+              .then(function (data) {
+                hideCenterBanner();
+                if (data.treeJson) {
+                  applyRemoteTreeData(JSON.parse(data.treeJson), data.activityJson);
+                }
+                if (data.fingerprint) baseFingerprint = data.fingerprint;
+                showToast('Восстановлено из бэкапа', 'success');
+              })
+              .catch(function (err) {
+                hideCenterBanner();
+                showToast(err.message || String(err), 'error', 5000);
+              });
+          }
+        );
       }
 
       function showToast(message, kind, ms) {
@@ -3131,9 +3302,17 @@
           confirmResolver = null;
           resolve(false);
         }
+        if (choiceResolver) {
+          var resolveChoice = choiceResolver;
+          choiceResolver = null;
+          resolveChoice(null);
+        }
         if (centerOverlay) centerOverlay.hidden = true;
         if (centerBanner) centerBanner.removeAttribute('data-busy');
-        if (centerBannerActions) centerBannerActions.hidden = true;
+        if (centerBannerActions) {
+          centerBannerActions.hidden = true;
+          centerBannerActions.replaceChildren();
+        }
         if (centerBannerText) centerBannerText.textContent = '';
       }
 
@@ -3144,38 +3323,76 @@
           confirmResolver = null;
           resolve(false);
         }
-        if (centerBannerActions) centerBannerActions.hidden = true;
+        if (choiceResolver) {
+          var resolveChoice = choiceResolver;
+          choiceResolver = null;
+          resolveChoice(null);
+        }
+        if (centerBannerActions) {
+          centerBannerActions.hidden = true;
+          centerBannerActions.replaceChildren();
+        }
         centerBanner.setAttribute('data-busy', 'true');
         centerBannerText.textContent = String(message || 'Подождите…');
         centerOverlay.hidden = false;
       }
 
       function askConfirm(message) {
+        return askChoice(message, [
+          { id: 'yes', label: 'Да', primary: true },
+          { id: 'no', label: 'Нет' },
+        ]).then(function (id) {
+          return id === 'yes';
+        });
+      }
+
+      function askChoice(message, choices) {
         return new Promise(function (resolve) {
           if (!centerOverlay || !centerBanner || !centerBannerText || !centerBannerActions) {
-            resolve(window.confirm(message));
+            resolve(null);
             return;
           }
           if (confirmResolver) {
             confirmResolver(false);
             confirmResolver = null;
           }
-          confirmResolver = resolve;
+          if (choiceResolver) {
+            choiceResolver(null);
+            choiceResolver = null;
+          }
+          choiceResolver = resolve;
           centerBanner.removeAttribute('data-busy');
           centerBannerText.textContent = String(message || '');
+          centerBannerActions.replaceChildren();
+          (choices || []).forEach(function (choice) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = choice.label;
+            if (choice.primary) btn.setAttribute('data-primary', 'true');
+            btn.addEventListener('click', function () {
+              finishChoice(choice.id);
+            });
+            centerBannerActions.appendChild(btn);
+          });
           centerBannerActions.hidden = false;
           centerOverlay.hidden = false;
-          if (centerBannerCancel) centerBannerCancel.focus();
         });
       }
 
-      function finishConfirm(ok) {
-        var resolve = confirmResolver;
-        confirmResolver = null;
+      function finishChoice(id) {
+        var resolve = choiceResolver;
+        choiceResolver = null;
         if (centerOverlay) centerOverlay.hidden = true;
-        if (centerBannerActions) centerBannerActions.hidden = true;
+        if (centerBannerActions) {
+          centerBannerActions.hidden = true;
+          centerBannerActions.replaceChildren();
+        }
         if (centerBanner) centerBanner.removeAttribute('data-busy');
-        if (resolve) resolve(!!ok);
+        if (resolve) resolve(id);
+      }
+
+      function finishConfirm(ok) {
+        finishChoice(ok ? 'yes' : 'no');
       }
 
       if (centerBannerOk) {
@@ -3191,16 +3408,58 @@
       if (centerOverlay) {
         centerOverlay.addEventListener('click', function (e) {
           if (e.target !== centerOverlay) return;
-          if (confirmResolver) finishConfirm(false);
+          if (choiceResolver || confirmResolver) finishChoice(null);
         });
       }
       document.addEventListener('keydown', function (e) {
         if (e.key !== 'Escape') return;
-        if (confirmResolver) {
+        if (choiceResolver || confirmResolver) {
           e.preventDefault();
-          finishConfirm(false);
+          finishChoice(null);
         }
       });
+
+      function fingerprintTreeText(text) {
+        var normalized = JSON.stringify(JSON.parse(String(text || '{}')));
+        if (!(window.crypto && crypto.subtle && window.TextEncoder)) {
+          return Promise.resolve('len:' + normalized.length);
+        }
+        return crypto.subtle.digest('SHA-256', new TextEncoder().encode(normalized)).then(function (buf) {
+          return Array.from(new Uint8Array(buf))
+            .map(function (b) {
+              return b.toString(16).padStart(2, '0');
+            })
+            .join('');
+        });
+      }
+
+      function rememberFingerprintFromTree() {
+        return fingerprintTreeText(treeJsonForEmbed(tree)).then(function (fp) {
+          baseFingerprint = fp;
+          return fp;
+        });
+      }
+
+      function callPublishApi(payload) {
+        return fetch(PUBLISH_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        }).then(function (res) {
+          return res.json().catch(function () {
+            return {};
+          }).then(function (data) {
+            if (!res.ok) {
+              var err = new Error(data.error || 'Ошибка ' + res.status);
+              err.status = res.status;
+              err.data = data;
+              err.conflict = !!(data && data.conflict);
+              throw err;
+            }
+            return data;
+          });
+        });
+      }
 
       function zoomAt(clientX, clientY, nextScale) {
         var rect = viewport.getBoundingClientRect();
@@ -3923,11 +4182,15 @@
             return;
           }
           var action = pendingPasswordAction;
+          var pass = passwordInput.value;
           editUnlocked = true;
           pendingPasswordAction = null;
           if (passwordDialog && passwordDialog.open) passwordDialog.close();
           if (action && action.type === 'add') {
             openAddDialog(action.parentId);
+          } else if (action && action.type === 'backups') {
+            openBackupDialog();
+            loadBackupList(pass);
           } else {
             setEditMode(true);
           }
@@ -4060,28 +4323,57 @@
           var progressTimer = window.setTimeout(function () {
             showBusyBanner('Отправляю на GitHub…');
           }, 450);
-          publishToGitHub(pass)
-            .then(function () {
+
+          function unlockSaveForm() {
+            if (saveSubmitBtn) saveSubmitBtn.disabled = false;
+            if (saveCancelBtn) saveCancelBtn.disabled = false;
+            if (savePasswordInput) {
+              savePasswordInput.disabled = false;
+              savePasswordInput.value = '';
+            }
+          }
+
+          function runPublish(force) {
+            return publishToGitHub(pass, { force: !!force }).then(function () {
               window.clearTimeout(progressTimer);
-              // Keep the in-memory tree (already has new sons). Do not reload —
-              // GitHub Pages may still serve a cached copy for up to ~10 minutes.
               setTreeDirty(false);
               hideCenterBanner();
               showToast('Сохранено на waydean.ru/drewo', 'success', 3200);
-              if (saveSubmitBtn) saveSubmitBtn.disabled = false;
-              if (saveCancelBtn) saveCancelBtn.disabled = false;
-              if (savePasswordInput) {
-                savePasswordInput.disabled = false;
-                savePasswordInput.value = '';
-              }
-            })
+              unlockSaveForm();
+            });
+          }
+
+          runPublish(false)
             .catch(function (err) {
               window.clearTimeout(progressTimer);
               hideCenterBanner();
+              if (err && err.conflict) {
+                return askChoice(
+                  'На сайте уже другая версия дерева. Что сделать?',
+                  [
+                    { id: 'reload', label: 'Обновить у себя', primary: true },
+                    { id: 'force', label: 'Всё равно сохранить' },
+                    { id: 'cancel', label: 'Отмена' },
+                  ]
+                ).then(function (choice) {
+                  if (choice === 'reload') {
+                    showBusyBanner('Обновляю с сайта…');
+                    return fetchRemoteTree().then(function (remote) {
+                      hideCenterBanner();
+                      if (remote) applyRemoteTreeData(remote);
+                      else showToast('Не удалось загрузить дерево', 'error');
+                      unlockSaveForm();
+                    });
+                  }
+                  if (choice === 'force') {
+                    showBusyBanner('Сохраняю принудительно…');
+                    return runPublish(true);
+                  }
+                  unlockSaveForm();
+                });
+              }
               showToast(err.message || String(err), 'error', 5000);
-              if (saveSubmitBtn) saveSubmitBtn.disabled = false;
-              if (saveCancelBtn) saveCancelBtn.disabled = false;
-              if (savePasswordInput) savePasswordInput.disabled = false;
+              unlockSaveForm();
               if (saveDialog && saveDialog.showModal) saveDialog.showModal();
             })
             .finally(function () {
@@ -4151,8 +4443,19 @@
           openHistoryDialog();
         });
       }
+      if (backupBtn) {
+        backupBtn.addEventListener('click', function () {
+          setNavMenuOpen(false);
+          requestBackups();
+        });
+      }
       if (historyCloseBtn) {
         historyCloseBtn.addEventListener('click', closeHistoryDialog);
+      }
+      if (backupCloseBtn) {
+        backupCloseBtn.addEventListener('click', function () {
+          if (backupDialog && backupDialog.open) backupDialog.close();
+        });
       }
 
       window.addEventListener('resize', function () {
@@ -4259,7 +4562,11 @@
           tree = TreeModel.markAllowAdd(remote, NUTSU_ID);
           if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
         }
+        return rememberFingerprintFromTree();
+      }).then(function () {
         finishBoot();
+      }).catch(function () {
+        rememberFingerprintFromTree().finally(finishBoot);
       });
     })();
   </script>
