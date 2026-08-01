@@ -642,11 +642,11 @@
 
     .fab-rail {
       position: fixed;
-      right: 0;
-      top: 50%;
+      left: 0;
+      top: 64%;
       z-index: 40;
       display: flex;
-      flex-direction: row-reverse;
+      flex-direction: row;
       align-items: center;
       transform: translateY(-50%);
       pointer-events: none;
@@ -658,11 +658,11 @@
       width: 1.4rem;
       height: 3.4rem;
       padding: 0;
-      border-radius: 12px 0 0 12px;
-      border-right: 0;
+      border-radius: 0 12px 12px 0;
+      border-left: 0;
       background: color-mix(in srgb, var(--header-bg, var(--bg0)) 92%, black);
       border-color: color-mix(in srgb, var(--sand) 40%, transparent);
-      box-shadow: -6px 0 18px color-mix(in srgb, black 28%, transparent);
+      box-shadow: 6px 0 18px color-mix(in srgb, black 28%, transparent);
     }
 
     .fab-toggle-arrow {
@@ -672,18 +672,18 @@
       margin: 0 auto;
       border-right: 2px solid var(--sand);
       border-bottom: 2px solid var(--sand);
-      transform: rotate(135deg);
+      transform: rotate(-45deg);
       transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
     }
 
     .fab-rail[data-open="true"] .fab-toggle-arrow {
-      transform: rotate(-45deg);
+      transform: rotate(135deg);
     }
 
     .fab-dirty-dot {
       position: absolute;
       top: 0.35rem;
-      left: 0.28rem;
+      right: 0.28rem;
       width: 0.45rem;
       height: 0.45rem;
       border-radius: 50%;
@@ -699,12 +699,12 @@
       pointer-events: none;
       display: flex;
       flex-direction: column;
-      align-items: flex-end;
+      align-items: flex-start;
       gap: 0.45rem;
       max-width: 0;
       opacity: 0;
       overflow: hidden;
-      transform: translateX(0.75rem);
+      transform: translateX(-0.75rem);
       transition:
         max-width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
         opacity 0.22s ease,
@@ -716,7 +716,7 @@
       pointer-events: auto;
       max-width: 15rem;
       opacity: 1;
-      padding-right: 0.55rem;
+      padding-left: 0.55rem;
       transform: translateX(0);
     }
 
