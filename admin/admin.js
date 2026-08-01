@@ -855,6 +855,13 @@ function setActiveTab(tabName) {
     publishBlock.classList.toggle('is-active', CONTENT_TABS.has(tabName));
   }
 
+  const publishDock = $('#admin-publish-dock');
+  if (publishDock) {
+    const showDock = CONTENT_TABS.has(tabName);
+    publishDock.hidden = !showDock;
+    publishDock.classList.toggle('is-visible', showDock);
+  }
+
   const publishHelp = $('#publish-help');
   if (publishHelp && PUBLISH_HELP_BY_TAB[tabName]) {
     publishHelp.innerHTML = PUBLISH_HELP_BY_TAB[tabName];
@@ -1034,11 +1041,13 @@ function bindEvents() {
     window.AdminAnalytics.bind({ $ });
   }
 
-  bindClick('#publish-site', () => {
+  const runPublish = () => {
     void (async () => {
       const status = $('#publish-status');
-      status.hidden = false;
-      status.textContent = 'Публикация...';
+      if (status) {
+        status.hidden = false;
+        status.textContent = 'Публикация...';
+      }
       try {
         await persistReleaseState();
         if (window.AdminHome) {
@@ -1058,12 +1067,19 @@ function bindEvents() {
         });
         state.manifest = manifest;
         if (homeManifest) state.homeManifest = homeManifest;
-        status.textContent = `Опубликовано: ${result.publishedAt ?? 'ok'}. Файлы обновятся на waydean.ru через 1–2 минуты.`;
+        if (status) {
+          status.textContent = `Опубликовано: ${result.publishedAt ?? 'ok'}. Файлы обновятся на waydean.ru через 1–2 минуты.`;
+        }
       } catch (error) {
-        status.textContent = error instanceof Error ? error.message : 'Ошибка публикации';
+        if (status) {
+          status.textContent = error instanceof Error ? error.message : 'Ошибка публикации';
+        }
       }
     })();
-  });
+  };
+
+  bindClick('#publish-site', runPublish);
+  bindClick('#publish-site-dock', runPublish);
 }
 
 async function restoreSession() {
