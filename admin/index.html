@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=6" />
+    <link rel="stylesheet" href="./admin.css?v=7" />
   </head>
   <body class="admin-body">
     <div id="admin-pwa-banner" class="admin-pwa-banner" hidden>
@@ -330,13 +330,29 @@
       </section>
     </div>
 
-    <dialog id="editor-dialog" class="admin-dialog">
+    <dialog id="editor-dialog" class="admin-dialog admin-dialog--with-preview">
       <form id="editor-form" method="dialog" class="admin-form">
         <div class="admin-dialog-header">
           <h2 id="editor-title">Редактирование дуа</h2>
           <button type="button" id="editor-close" class="admin-button admin-button-ghost">Закрыть</button>
         </div>
-        <div class="admin-form-grid" id="editor-fields"></div>
+        <div class="admin-editor-layout">
+          <div class="admin-editor-fields-wrap">
+            <div class="admin-form-grid" id="editor-fields"></div>
+          </div>
+          <aside class="admin-editor-preview" aria-label="Превью как в приложении">
+            <div class="admin-editor-preview-head">
+              <p class="admin-muted">Превью · как в приложении</p>
+              <span class="admin-preview-badge">Azkar</span>
+            </div>
+            <div class="admin-phone-frame">
+              <div class="admin-phone-notch" aria-hidden="true"></div>
+              <div id="editor-preview-card" class="admin-phone-screen">
+                <p class="admin-muted">Заполните поля слева</p>
+              </div>
+            </div>
+          </aside>
+        </div>
         <div class="admin-toolbar">
           <button type="submit" class="admin-button admin-button-primary">Сохранить</button>
         </div>
@@ -367,7 +383,7 @@
     <script src="./admin-academy-feedback.js?v=2"></script>
     <script src="./admin-analytics.js?v=2"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=17"></script>
+    <script src="./admin.js?v=18"></script>
     <script src="./admin-pwa.js?v=1"></script>
   </body>
 </html>

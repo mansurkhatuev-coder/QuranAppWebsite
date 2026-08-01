@@ -361,6 +361,7 @@ function createTranslationRow(row, { canRemove }) {
     removeButton.textContent = 'Удалить';
     removeButton.addEventListener('click', () => {
       article.remove();
+      updateEditorPreview();
     });
     header.append(labelField, removeButton);
   } else {
@@ -409,6 +410,7 @@ function renderTranslationFields(item) {
   addButton.textContent = '+ Добавить перевод';
   addButton.addEventListener('click', () => {
     list.append(createTranslationRow({ label: '', text: '' }, { canRemove: true }));
+    updateEditorPreview();
   });
 
   section.append(heading, list, addButton);
@@ -640,6 +642,108 @@ function renderReleaseForm() {
   };
 }
 
+function authenticityPreviewLabel(value) {
+  const option = AUTHENTICITY_OPTIONS.find((entry) => entry.value === value);
+  return option ? option.label : value || '';
+}
+
+function readEditorPreviewState() {
+  const form = $('#editor-form');
+  if (!form) {
+    return {
+      title: '',
+      text: '',
+      transliteration: '',
+      targetCount: 1,
+      authenticity: '',
+      translation: '',
+      benefit: '',
+    };
+  }
+  const data = new FormData(form);
+  const translationFields = translationsToItemFields(collectTranslationRows());
+  const title =
+    String(data.get('title') || '').trim() ||
+    String(data.get('navTitle') || '').trim() ||
+    'Без названия';
+  return {
+    title,
+    text: String(data.get('text') || '').trim(),
+    transliteration: String(data.get('transliteration') || '').trim(),
+    targetCount: Math.max(1, Number(data.get('targetCount')) || 1),
+    authenticity: String(data.get('authenticity') || '').trim(),
+    translation: translationFields.translation || '',
+    benefit: String(data.get('benefitSummary') || '').trim(),
+  };
+}
+
+function updateEditorPreview() {
+  const root = $('#editor-preview-card');
+  if (!root) return;
+  const preview = readEditorPreviewState();
+  root.replaceChildren();
+
+  const title = document.createElement('h3');
+  title.className = 'admin-preview-title';
+  title.textContent = preview.title;
+  root.append(title);
+
+  if (preview.authenticity) {
+    const meta = document.createElement('p');
+    meta.className = 'admin-preview-meta';
+    meta.textContent = authenticityPreviewLabel(preview.authenticity);
+    root.append(meta);
+  }
+
+  const arabic = document.createElement('p');
+  arabic.className = 'admin-preview-arabic';
+  arabic.dir = 'rtl';
+  arabic.lang = 'ar';
+  arabic.textContent = preview.text || 'أدخل النص العربي';
+  if (!preview.text) arabic.classList.add('is-placeholder');
+  root.append(arabic);
+
+  if (preview.transliteration) {
+    const translit = document.createElement('p');
+    translit.className = 'admin-preview-translit';
+    translit.textContent = preview.transliteration;
+    root.append(translit);
+  }
+
+  if (preview.translation) {
+    const translation = document.createElement('p');
+    translation.className = 'admin-preview-translation';
+    translation.textContent = preview.translation;
+    root.append(translation);
+  }
+
+  if (preview.benefit) {
+    const benefit = document.createElement('p');
+    benefit.className = 'admin-preview-benefit';
+    benefit.textContent = preview.benefit;
+    root.append(benefit);
+  }
+
+  const counter = document.createElement('div');
+  counter.className = 'admin-preview-counter';
+  const ring = document.createElement('div');
+  ring.className = 'admin-preview-counter-ring';
+  ring.textContent = `0 / ${preview.targetCount}`;
+  const hint = document.createElement('span');
+  hint.className = 'admin-preview-counter-hint';
+  hint.textContent = 'счётчик';
+  counter.append(ring, hint);
+  root.append(counter);
+}
+
+function bindEditorPreview() {
+  const form = $('#editor-form');
+  if (!form || form.dataset.previewBound === '1') return;
+  form.dataset.previewBound = '1';
+  form.addEventListener('input', () => updateEditorPreview());
+  form.addEventListener('change', () => updateEditorPreview());
+}
+
 function openEditor(packKey, itemId) {
   const pack = PACKS[packKey];
   const existing = state[packKey].find((item) => item.id === itemId) ?? {
@@ -689,6 +793,8 @@ function openEditor(packKey, itemId) {
   }
 
   renderTranslationFields(existing);
+  bindEditorPreview();
+  updateEditorPreview();
 
   $('#editor-dialog').showModal();
 }
