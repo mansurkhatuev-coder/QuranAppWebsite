@@ -97,13 +97,14 @@
 
     .header {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       align-items: center;
-      gap: 0.75rem 1rem;
-      padding: 0.85rem 1.25rem 0.75rem;
+      gap: 0.65rem;
+      padding: 0.55rem 0.9rem 0.55rem;
       border-bottom: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
       background: color-mix(in srgb, var(--bg0) 96%, black);
       backdrop-filter: blur(8px);
+      animation: chrome-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
     .brand {
@@ -111,42 +112,155 @@
       flex-direction: column;
       gap: 0.1rem;
       min-width: 0;
+      flex: 0 1 auto;
     }
 
     .header h1 {
       margin: 0;
       font-family: var(--font-display);
-      font-size: clamp(1.55rem, 4vw, 2rem);
+      font-size: clamp(1.2rem, 3.4vw, 1.55rem);
       font-weight: 700;
       letter-spacing: 0.04em;
       line-height: 1.05;
       color: var(--sand);
       text-shadow: 0 1px 0 color-mix(in srgb, black 35%, transparent);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
 
-    .header-actions {
+    .header-bar {
+      display: flex;
+      align-items: center;
+      gap: 0.45rem;
+      margin-left: auto;
+      min-width: 0;
+      flex: 1 1 auto;
+      max-width: 18rem;
+      justify-content: flex-end;
+    }
+
+    .header-bar .search-input {
+      flex: 1 1 auto;
+      min-width: 0;
+      max-width: none;
+    }
+
+    .menu-toggle {
+      flex: 0 0 auto;
+      width: 2.55rem;
+      height: 2.55rem;
+      padding: 0;
+      display: inline-grid;
+      place-items: center;
+      border-radius: 12px;
+    }
+
+    .menu-toggle[aria-expanded="true"] {
+      border-color: var(--sand);
+      background: color-mix(in srgb, var(--sand) 22%, var(--bg1));
+    }
+
+    .menu-toggle-bars {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 4px;
+      width: 1.05rem;
+    }
+
+    .menu-toggle-bars span {
+      display: block;
+      height: 2px;
+      width: 100%;
+      border-radius: 2px;
+      background: var(--sand);
+      transition: transform 0.22s ease, opacity 0.22s ease;
+      transform-origin: center;
+    }
+
+    .menu-toggle[aria-expanded="true"] .menu-toggle-bars span:nth-child(1) {
+      transform: translateY(6px) rotate(45deg);
+    }
+
+    .menu-toggle[aria-expanded="true"] .menu-toggle-bars span:nth-child(2) {
+      opacity: 0;
+    }
+
+    .menu-toggle[aria-expanded="true"] .menu-toggle-bars span:nth-child(3) {
+      transform: translateY(-6px) rotate(-45deg);
+    }
+
+    .nav-shell {
+      position: relative;
+      z-index: 30;
+    }
+
+    .nav-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      z-index: 28;
+      background: color-mix(in srgb, black 42%, transparent);
+      opacity: 0;
+      transition: opacity 0.22s ease;
+    }
+
+    .nav-backdrop.open {
+      display: block;
+      opacity: 1;
+    }
+
+    .nav-panel {
+      display: none;
+      position: absolute;
+      left: 0.75rem;
+      right: 0.75rem;
+      top: 0.35rem;
+      z-index: 31;
+      padding: 0.75rem;
+      border: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
+      border-radius: 14px;
+      background: color-mix(in srgb, var(--bg0) 94%, black);
+      box-shadow: 0 18px 40px color-mix(in srgb, black 40%, transparent);
+      transform-origin: top center;
+    }
+
+    .nav-panel.open {
+      display: grid;
+      gap: 0.65rem;
+      animation: nav-pop 0.28s cubic-bezier(0.22, 1, 0.36, 1) both;
+    }
+
+    .nav-panel .action-cluster {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
-      gap: 0.55rem;
-      margin-left: auto;
-      animation: chrome-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
-    }
-
-    .action-cluster {
-      display: inline-flex;
-      flex-wrap: wrap;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.22rem;
-      border: 1px solid color-mix(in srgb, var(--sand) 18%, transparent);
-      border-radius: 999px;
-      background: color-mix(in srgb, var(--bg0) 48%, transparent);
-    }
-
-    .action-cluster-tools {
       gap: 0.4rem;
-      padding: 0.22rem 0.35rem;
+      padding: 0.35rem;
+      border: 1px solid color-mix(in srgb, var(--sand) 18%, transparent);
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--bg1) 35%, transparent);
+    }
+
+    .nav-panel .action-cluster > button {
+      flex: 1 1 auto;
+      min-height: 2.4rem;
+    }
+
+    .nav-panel .style-pick {
+      width: 100%;
+      justify-content: space-between;
+      padding: 0.15rem 0.25rem;
+    }
+
+    .nav-label {
+      margin: 0;
+      padding: 0 0.2rem;
+      font-size: 0.72rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-dim);
     }
 
     button,
@@ -682,6 +796,17 @@
       }
     }
 
+    @keyframes nav-pop {
+      from {
+        opacity: 0;
+        transform: translateY(-8px) scale(0.98);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
     @keyframes btn-sheen {
       from {
         left: -40%;
@@ -722,21 +847,18 @@
         letter-spacing: 0.08em;
       }
 
-      .header-actions {
-        gap: 0.4rem;
-        width: 100%;
-        margin-left: 0;
+      .header {
+        gap: 0.45rem;
       }
 
-      .action-cluster {
-        width: 100%;
-        justify-content: stretch;
-      }
-
-      .action-cluster > button {
+      .header-bar {
+        max-width: none;
         flex: 1 1 auto;
-        padding: 0.4rem 0.6rem;
-        font-size: 0.875rem;
+      }
+
+      .nav-panel {
+        left: 0.5rem;
+        right: 0.5rem;
       }
 
       .footer {
@@ -755,8 +877,6 @@
 
       .search-input {
         min-width: 0;
-        flex: 1 1 6.5rem;
-        max-width: 100%;
       }
 
       main {
@@ -777,16 +897,28 @@
     <div class="brand">
       <h1>Хьоти некъ</h1>
     </div>
-    <div class="header-actions">
+    <div class="header-bar">
+      <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск">
+      <button type="button" id="nav-menu-btn" class="menu-toggle" aria-expanded="false" aria-controls="nav-panel" aria-label="Меню">
+        <span class="menu-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
+      </button>
+    </div>
+  </header>
+  <div class="nav-shell">
+    <div id="nav-backdrop" class="nav-backdrop" hidden></div>
+    <nav id="nav-panel" class="nav-panel" hidden aria-label="Меню">
+      <p class="nav-label">Вид</p>
       <div class="action-cluster" role="group" aria-label="Вид">
         <button type="button" id="view-khotu" aria-pressed="true">Линия Хьоту</button>
         <button type="button" id="view-all" aria-pressed="false">Все линии</button>
       </div>
+      <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
         <button type="button" id="edit-links" aria-pressed="false">Изменить связи</button>
         <button type="button" id="history-btn">История</button>
       </div>
-      <div class="action-cluster action-cluster-tools" role="group" aria-label="Инструменты">
+      <p class="nav-label">Оформление</p>
+      <div class="action-cluster" role="group" aria-label="Оформление">
         <label class="style-pick">
           Стиль
           <select id="theme-select" aria-label="Стиль оформления">
@@ -794,10 +926,9 @@
             <option value="premium" selected>Премиум</option>
           </select>
         </label>
-        <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск">
       </div>
-    </div>
-  </header>
+    </nav>
+  </div>
   <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden>
     <strong>Как пользоваться</strong>
     <ol>
@@ -1834,6 +1965,9 @@
       var guideOkBtn = document.getElementById('guide-ok');
       var guideNeverBtn = document.getElementById('guide-never');
       var GUIDE_HIDE_KEY = 'drewo-hide-guide';
+      var navMenuBtn = document.getElementById('nav-menu-btn');
+      var navPanel = document.getElementById('nav-panel');
+      var navBackdrop = document.getElementById('nav-backdrop');
       var historyBtn = document.getElementById('history-btn');
       var historyDialog = document.getElementById('history-dialog');
       var historyList = document.getElementById('history-list');
@@ -3046,12 +3180,29 @@
 
       viewKhotuBtn.addEventListener('click', function () {
         setViewFilter('khotu');
+        setNavMenuOpen(false);
       });
       viewAllBtn.addEventListener('click', function () {
         setViewFilter('all');
+        setNavMenuOpen(false);
       });
       editLinksBtn.addEventListener('click', function () {
+        setNavMenuOpen(false);
         requestEditMode();
+      });
+      if (navMenuBtn) {
+        navMenuBtn.addEventListener('click', function (e) {
+          e.stopPropagation();
+          toggleNavMenu();
+        });
+      }
+      if (navBackdrop) {
+        navBackdrop.addEventListener('click', function () {
+          setNavMenuOpen(false);
+        });
+      }
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') setNavMenuOpen(false);
       });
       if (themeSelect) {
         themeSelect.addEventListener('change', function () {
@@ -3185,7 +3336,10 @@
         addNameInput.value = '';
       });
       if (historyBtn) {
-        historyBtn.addEventListener('click', openHistoryDialog);
+        historyBtn.addEventListener('click', function () {
+          setNavMenuOpen(false);
+          openHistoryDialog();
+        });
       }
       if (historyCloseBtn) {
         historyCloseBtn.addEventListener('click', closeHistoryDialog);
@@ -3198,6 +3352,24 @@
         document.fonts.ready.then(function () {
           render(true);
         });
+      }
+
+      function setNavMenuOpen(open) {
+        var next = !!open;
+        if (navPanel) {
+          navPanel.classList.toggle('open', next);
+          navPanel.hidden = !next;
+        }
+        if (navBackdrop) {
+          navBackdrop.classList.toggle('open', next);
+          navBackdrop.hidden = !next;
+        }
+        if (navMenuBtn) navMenuBtn.setAttribute('aria-expanded', next ? 'true' : 'false');
+      }
+
+      function toggleNavMenu() {
+        var open = navMenuBtn && navMenuBtn.getAttribute('aria-expanded') === 'true';
+        setNavMenuOpen(!open);
       }
 
       function hideGuideBanner(forever) {
