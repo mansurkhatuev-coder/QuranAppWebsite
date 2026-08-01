@@ -1069,3 +1069,75 @@
   font-size: 11px; letter-spacing: 0.04em;
 }
 .admin-hud .admin-button-ghost { border-color: rgba(255, 100, 100, 0.35); color: #ffc4c4; }
+
+.admin-hud-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+.admin-hud-audio-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 100, 100, 0.35);
+  border-radius: 999px;
+  padding: 7px 12px;
+  color: #ffc4c4;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  cursor: pointer;
+  user-select: none;
+}
+.admin-hud-audio-toggle input {
+  accent-color: #ff5a5a;
+}
+
+.admin-analytics-funnel-list {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+}
+.admin-analytics-funnel-row {
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(201, 162, 77, 0.22);
+  background: rgba(255, 255, 255, 0.03);
+}
+.admin-analytics-funnel-title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.85rem;
+  align-items: baseline;
+  margin-bottom: 0.65rem;
+}
+.admin-analytics-funnel-metrics {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.5rem;
+  margin-bottom: 0.65rem;
+}
+.admin-analytics-funnel-metrics div {
+  display: grid;
+  gap: 0.15rem;
+}
+.admin-analytics-funnel-metrics strong {
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+.admin-analytics-funnel-metrics em {
+  font-style: normal;
+  color: rgba(255,255,255,0.45);
+  font-size: 0.8rem;
+}
+.admin-analytics-funnel-bar {
+  display: flex;
+  height: 6px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.08);
+}
+.admin-analytics-funnel-bar span { display: block; min-width: 0; }
+.admin-analytics-funnel-bar .is-finished { background: #3d9b6e; }
+.admin-analytics-funnel-bar .is-abandoned { background: #c45c4a; }
+.admin-analytics-funnel-bar .is-studying { background: #c9a24d; }

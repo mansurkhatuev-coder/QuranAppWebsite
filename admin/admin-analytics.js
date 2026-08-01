@@ -7,6 +7,16 @@
     tasbih_milestone: 'Тасбих · веха',
   };
 
+  /** Expected lesson totals for course completion detection. */
+  const COURSE_LESSON_TOTALS = {
+    names99: 10,
+    madina: 23,
+    tajweed: 44,
+  };
+
+  /** Days without a new lesson completion → count as abandoned. */
+  const ABANDON_IDLE_DAYS = 14;
+
   let allRows = [];
   let installations = [];
   let rangeDays = 7;
@@ -28,14 +38,6 @@
     if (days === 1) return '1 день';
     if (days === 365) return '1 год';
     return `${days} дн.`;
-  }
-
-  function dayKey(iso) {
-    try {
-      return new Date(iso).toISOString().slice(0, 10);
-    } catch {
-      return '—';
-    }
   }
 
   function filteredRows() {
@@ -76,6 +78,13 @@
       map.set(key, (map.get(key) || 0) + 1);
     }
     return [...map.entries()].sort((a, b) => b[1] - a[1]);
+  }
+
+  function courseLabel(courseId) {
+    if (courseId === 'names99') return '99 имён';
+    if (courseId === 'tajweed') return 'Таджвид';
+    if (courseId === 'madina') return 'Медина';
+    return courseId || '—';
   }
 
   function renderMetricCards(container, rows) {
@@ -135,13 +144,6 @@
     container.appendChild(block);
   }
 
-  function courseLabel(courseId) {
-    if (courseId === 'names99') return '99 имён';
-    if (courseId === 'tajweed') return 'Таджвид';
-    if (courseId === 'madina') return 'Медина';
-    return courseId || '—';
-  }
-
   function rowsForDayOffset(dayOffset) {
     const start = new Date();
     start.setHours(0, 0, 0, 0);
@@ -178,6 +180,70 @@
     return byCourse;
   }
 
+  /**
+   * Per-course funnel from lesson completions.
+   * Started = ≥1 unique lesson. Finished = unique lessons ≥ course total.
+   * Abandoned = started, not finished, idle > ABANDON_IDLE_DAYS.
+   * Studying = started, not finished, recent activity.
+   */
+  function buildCourseFunnel(rows) {
+    const lessonRows = rows.filter((r) => r.event === 'academy_lesson_completed' && r.installation_id);
+    const byCourse = new Map();
+
+    for (const row of lessonRows) {
+      const courseId = (row.props && row.props.course_id) || 'unknown';
+      const lessonId = String((row.props && row.props.lesson_id) || '?');
+      const at = Date.parse(row.created_at);
+      if (!Number.isFinite(at)) continue;
+
+      let learners = byCourse.get(courseId);
+      if (!learners) {
+        learners = new Map();
+        byCourse.set(courseId, learners);
+      }
+      let state = learners.get(row.installation_id);
+      if (!state) {
+        state = { lessons: new Set(), lastAt: at };
+        learners.set(row.installation_id, state);
+      }
+      state.lessons.add(lessonId);
+      if (at > state.lastAt) state.lastAt = at;
+    }
+
+    const idleMs = ABANDON_IDLE_DAYS * 24 * 60 * 60 * 1000;
+    const now = Date.now();
+    const out = [];
+
+    for (const [courseId, learners] of byCourse.entries()) {
+      const total = COURSE_LESSON_TOTALS[courseId] || 0;
+      let finished = 0;
+      let abandoned = 0;
+      let studying = 0;
+
+      for (const state of learners.values()) {
+        const unique = state.lessons.size;
+        const done = total > 0 ? unique >= total : false;
+        if (done) {
+          finished += 1;
+          continue;
+        }
+        if (now - state.lastAt > idleMs) abandoned += 1;
+        else studying += 1;
+      }
+
+      out.push({
+        courseId,
+        started: learners.size,
+        finished,
+        abandoned,
+        studying,
+        totalLessons: total,
+      });
+    }
+
+    return out.sort((a, b) => b.started - a.started);
+  }
+
   function renderSocialLearning(container) {
     if (!container) return;
     const todayRows = rowsForDayOffset(0);
@@ -194,7 +260,7 @@
     cards.innerHTML = `
       <div class="admin-analytics-social-head">
         <h3>Сегодня в Академии</h3>
-        <p class="admin-muted">Как в Sajda: сколько людей уже прошли уроки сегодня (уникальные устройства).</p>
+        <p class="admin-muted">Устройства, завершившие хотя бы один урок за сегодня.</p>
       </div>
       <div class="admin-analytics-grid">
         <article class="admin-analytics-card admin-analytics-card--hero">
@@ -213,23 +279,17 @@
     if (!byCourse.size) {
       const empty = document.createElement('p');
       empty.className = 'admin-muted';
-      empty.textContent = 'Пока нет завершённых уроков за сегодня. Данные появятся, когда пользователи с включённой аналитикой пройдут уроки.';
+      empty.textContent = 'За сегодня пока нет завершённых уроков.';
       list.appendChild(empty);
     } else {
       const sorted = [...byCourse.entries()].sort((a, b) => b[1].learners.size - a[1].learners.size);
       for (const [courseId, entry] of sorted) {
         const line = document.createElement('article');
         line.className = 'admin-analytics-social-row';
-        const topLesson = [...entry.lessons.entries()].sort(
-          (a, b) => b[1].learners.size - a[1].learners.size
-        )[0];
-        const topLessonId = topLesson ? topLesson[0].split('/')[1] : '—';
-        const topLearners = topLesson ? topLesson[1].learners.size : 0;
         line.innerHTML = `
           <div>
             <strong>${courseLabel(courseId)}</strong>
-            <p class="admin-muted">Сегодня ${entry.learners.size} чел. завершили уроки · ${entry.completions} завершений</p>
-            <p class="admin-analytics-social-quote">«Сегодня уже ${topLearners} ${pluralPeople(topLearners)} прошли урок ${topLessonId}»</p>
+            <p class="admin-muted">${entry.learners.size} уч. · ${entry.completions} заверш. уроков</p>
           </div>
         `;
         list.appendChild(line);
@@ -239,12 +299,66 @@
     container.replaceChildren(cards, list);
   }
 
-  function pluralPeople(n) {
-    const mod10 = n % 10;
-    const mod100 = n % 100;
-    if (mod10 === 1 && mod100 !== 11) return 'человек';
-    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return 'человека';
-    return 'человек';
+  function renderCourseFunnel(container) {
+    if (!container) return;
+    const rows = filteredRows();
+    const funnel = buildCourseFunnel(rows);
+
+    const block = document.createElement('div');
+    block.className = 'admin-analytics-block admin-analytics-funnel';
+    const head = document.createElement('div');
+    head.className = 'admin-analytics-social-head';
+    head.innerHTML = `
+      <h3>Курсы · прошли и забросили</h3>
+      <p class="admin-muted">
+        По уникальным устройствам за выбранный период.
+        Прошли — набрали все уроки курса.
+        Забросили — начали, но не закончили и молчат больше ${ABANDON_IDLE_DAYS} дн.
+        Учатся — продолжают.
+      </p>
+    `;
+    block.appendChild(head);
+
+    if (!funnel.length) {
+      const empty = document.createElement('p');
+      empty.className = 'admin-muted';
+      empty.textContent = 'Пока нет данных по урокам Академии за период.';
+      block.appendChild(empty);
+      container.appendChild(block);
+      return;
+    }
+
+    const list = document.createElement('div');
+    list.className = 'admin-analytics-funnel-list';
+    for (const item of funnel) {
+      const row = document.createElement('article');
+      row.className = 'admin-analytics-funnel-row';
+      const finishPct = item.started ? Math.round((item.finished / item.started) * 100) : 0;
+      const abandonPct = item.started ? Math.round((item.abandoned / item.started) * 100) : 0;
+      const studyingPct = Math.max(0, 100 - finishPct - abandonPct);
+      const totalHint = item.totalLessons
+        ? `полный курс = ${item.totalLessons} ур.`
+        : 'порог завершения неизвестен';
+      row.innerHTML = `
+        <div class="admin-analytics-funnel-title">
+          <strong>${courseLabel(item.courseId)}</strong>
+          <span class="admin-muted">${totalHint} · начали: ${item.started}</span>
+        </div>
+        <div class="admin-analytics-funnel-metrics">
+          <div><span class="admin-muted">Прошли</span><strong>${item.finished}</strong><em>${finishPct}%</em></div>
+          <div><span class="admin-muted">Забросили</span><strong>${item.abandoned}</strong><em>${abandonPct}%</em></div>
+          <div><span class="admin-muted">Учатся</span><strong>${item.studying}</strong></div>
+        </div>
+        <div class="admin-analytics-funnel-bar" aria-hidden="true">
+          <span class="is-finished" style="width:${finishPct}%"></span>
+          <span class="is-abandoned" style="width:${abandonPct}%"></span>
+          <span class="is-studying" style="width:${studyingPct}%"></span>
+        </div>
+      `;
+      list.appendChild(row);
+    }
+    block.appendChild(list);
+    container.appendChild(block);
   }
 
   function renderPlatformBreakdown(container) {
@@ -269,6 +383,7 @@
 
     if (!breakdown) return;
     breakdown.innerHTML = '';
+    renderCourseFunnel(breakdown);
     renderPlatformBreakdown(breakdown);
     renderBreakdown(
       breakdown,
@@ -292,7 +407,7 @@
         rows.filter((r) => r.event === 'academy_lesson_completed'),
         (r) => (r.props && r.props.course_id) || '—'
       ),
-      (key) => String(key)
+      (key) => courseLabel(key)
     );
     renderBreakdown(
       breakdown,

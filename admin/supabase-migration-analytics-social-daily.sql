@@ -1,4 +1,4 @@
--- Daily social learning aggregates for Academy (Sajda-style counters).
+-- Daily social learning aggregates for Academy (unique learners / completions).
 -- Safe to re-run. Readable by anon (aggregates only, no PII).
 
 create table if not exists public.analytics_social_daily (
