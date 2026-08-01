@@ -16,6 +16,10 @@ const state = {
 
 const ADMIN_TAB_STORAGE_KEY = 'waydean_admin_active_tab_v1';
 const CONTENT_TABS = new Set(['support', 'general', 'home', 'release']);
+const listFilters = {
+  support: '',
+  general: '',
+};
 
 const PUBLISH_HELP_BY_TAB = {
   support: 'Изменения в дуа «Поддержка» сохраняются в Supabase сразу. Нажмите «Опубликовать», чтобы обновить JSON на waydean.ru.',
@@ -512,21 +516,47 @@ function buildManifest() {
 function renderList(packKey) {
   const pack = PACKS[packKey];
   const container = document.getElementById(pack.listId);
-  const items = state[packKey];
+  const query = (listFilters[packKey] || '').trim().toLowerCase();
+  const items = !query
+    ? state[packKey]
+    : state[packKey].filter((item) => {
+        const haystack = [
+          item.id,
+          item.title,
+          item.navTitle,
+          item.translation,
+          item.text,
+          item.transliteration,
+          ...(Array.isArray(item.tags) ? item.tags : []),
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(query);
+      });
   container.innerHTML = '';
 
   if (!items.length) {
-    container.innerHTML = '<p class="admin-muted admin-empty">Пока нет записей.</p>';
+    if (!query) {
+      container.innerHTML = '<p class="admin-muted admin-empty">Пока нет записей.</p>';
+      return;
+    }
+    const empty = document.createElement('p');
+    empty.className = 'admin-muted admin-empty';
+    empty.textContent = `Ничего не найдено по запросу «${query}».`;
+    container.appendChild(empty);
     return;
   }
 
   for (const item of items) {
     const card = document.createElement('article');
     card.className = 'admin-item';
+    const preview = (item.translation || item.text || '').slice(0, 140);
     card.innerHTML = `
-      <div>
+      <div class="admin-item-main">
         <h3>${item.title || item.id}</h3>
-        <p>${(item.translation || item.text || '').slice(0, 140)}</p>
+        <p class="admin-item-meta">${item.id}${item.category ? ` · ${item.category}` : ''}</p>
+        <p class="admin-item-preview">${preview}</p>
       </div>
     `;
 
@@ -760,6 +790,7 @@ function bindAppScreenDelegation() {
   root.querySelectorAll('.admin-tab[data-tab]').forEach((tab) => {
     tab.addEventListener('click', () => {
       setActiveTab(tab.dataset.tab);
+      tab.scrollIntoView({ inline: 'center', block: 'nearest', behavior: 'smooth' });
     });
   });
 
@@ -772,6 +803,21 @@ function bindAppScreenDelegation() {
       openEditor(addItem.dataset.pack, '');
     }
   });
+}
+
+function bindListSearch() {
+  const pairs = [
+    ['#support-search', 'support'],
+    ['#general-search', 'general'],
+  ];
+  for (const [selector, packKey] of pairs) {
+    const input = $(selector);
+    if (!input) continue;
+    input.addEventListener('input', () => {
+      listFilters[packKey] = input.value || '';
+      renderList(packKey);
+    });
+  }
 }
 
 function bindDownloadButtons() {
@@ -872,6 +918,7 @@ function bindEvents() {
   }
 
   bindAppScreenDelegation();
+  bindListSearch();
   bindDownloadButtons();
 
   if (window.AdminAcademyFeedback) {

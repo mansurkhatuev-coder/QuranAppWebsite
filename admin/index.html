@@ -2,13 +2,32 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0B0F13" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Админка" />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="apple-touch-icon" href="./icon-192.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=5" />
+    <link rel="stylesheet" href="./admin.css?v=6" />
   </head>
   <body class="admin-body">
+    <div id="admin-pwa-banner" class="admin-pwa-banner" hidden>
+      <div>
+        <strong>Установить админку</strong>
+        <p class="admin-muted">Как приложение на телефон — быстрее открывать и править с экрана.</p>
+      </div>
+      <div class="admin-pwa-banner-actions">
+        <button type="button" id="admin-pwa-install" class="admin-button admin-button-primary">Установить</button>
+        <button type="button" id="admin-pwa-dismiss" class="admin-button admin-button-ghost">Позже</button>
+      </div>
+    </div>
+
     <div id="login-screen" class="admin-shell">
       <div class="admin-card">
         <p class="admin-kicker">Коран и Азкары</p>
@@ -43,18 +62,43 @@
       </header>
 
       <nav class="admin-tabs" aria-label="Разделы">
-        <button type="button" class="admin-tab is-active" data-tab="support" aria-selected="true">Дуа · поддержка</button>
-        <button type="button" class="admin-tab" data-tab="general" aria-selected="false">Дуа · случаи</button>
-        <button type="button" class="admin-tab" data-tab="home" aria-selected="false">Главная</button>
-        <button type="button" class="admin-tab" data-tab="academy-feedback" aria-selected="false">Отзывы</button>
-        <button type="button" class="admin-tab" data-tab="analytics" aria-selected="false">Аналитика</button>
-        <button type="button" class="admin-tab" data-tab="academy-giveaway" aria-selected="false">Розыгрыш</button>
-        <button type="button" class="admin-tab" data-tab="release" aria-selected="false">Store</button>
+        <button type="button" class="admin-tab is-active" data-tab="support" aria-selected="true">
+          <span class="admin-tab-full">Дуа · поддержка</span><span class="admin-tab-short">Поддержка</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="general" aria-selected="false">
+          <span class="admin-tab-full">Дуа · случаи</span><span class="admin-tab-short">Случаи</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="home" aria-selected="false">
+          <span class="admin-tab-full">Главная</span><span class="admin-tab-short">Главная</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="academy-feedback" aria-selected="false">
+          <span class="admin-tab-full">Отзывы</span><span class="admin-tab-short">Отзывы</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="analytics" aria-selected="false">
+          <span class="admin-tab-full">Аналитика</span><span class="admin-tab-short">Аналитика</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="academy-giveaway" aria-selected="false">
+          <span class="admin-tab-full">Розыгрыш</span><span class="admin-tab-short">Розыгрыш</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="release" aria-selected="false">
+          <span class="admin-tab-full">Store</span><span class="admin-tab-short">Store</span>
+        </button>
       </nav>
 
       <section class="admin-panel is-active" data-panel="support">
         <div class="admin-toolbar admin-panel-toolbar">
-          <p class="admin-muted">Дуа в разделе «Поддержка»</p>
+          <div class="admin-toolbar-copy">
+            <p class="admin-muted">Дуа в разделе «Поддержка»</p>
+            <label class="admin-search-field">
+              <span class="admin-visually-hidden">Поиск</span>
+              <input
+                id="support-search"
+                type="search"
+                placeholder="Поиск по названию или тексту…"
+                autocomplete="off"
+              />
+            </label>
+          </div>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="support">
             Добавить дуа
           </button>
@@ -64,7 +108,18 @@
 
       <section class="admin-panel" data-panel="general">
         <div class="admin-toolbar admin-panel-toolbar">
-          <p class="admin-muted">Дуа на случаи жизни</p>
+          <div class="admin-toolbar-copy">
+            <p class="admin-muted">Дуа на случаи жизни</p>
+            <label class="admin-search-field">
+              <span class="admin-visually-hidden">Поиск</span>
+              <input
+                id="general-search"
+                type="search"
+                placeholder="Поиск по названию или тексту…"
+                autocomplete="off"
+              />
+            </label>
+          </div>
           <button type="button" class="admin-button admin-button-primary" data-action="add-item" data-pack="general">
             Добавить дуа
           </button>
@@ -312,6 +367,7 @@
     <script src="./admin-academy-feedback.js?v=2"></script>
     <script src="./admin-analytics.js?v=2"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=16"></script>
+    <script src="./admin.js?v=17"></script>
+    <script src="./admin-pwa.js?v=1"></script>
   </body>
 </html>
