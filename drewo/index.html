@@ -2024,7 +2024,7 @@
   function canAddSon(root, parentId, nutsuId) {
     const node = findById(root, parentId);
     if (!node) return false;
-    if ((node.sons || []).length > 0) return false;
+    // Any descendant of Нуцу may receive more sons (not only leaves).
     return isUnderNutsu(root, parentId, nutsuId);
   }
 
