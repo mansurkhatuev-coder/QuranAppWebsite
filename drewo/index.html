@@ -10,9 +10,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="color-scheme" content="dark">
-  <meta name="theme-color" content="#12262f">
-  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#12262f">
-  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#12262f">
+  <meta name="theme-color" content="#0d1a22">
+  <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d1a22">
+  <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
@@ -60,7 +60,7 @@
     }
 
     html {
-      background-color: #12262f;
+      background-color: #0d1a22;
       color-scheme: dark;
     }
 
@@ -87,15 +87,22 @@
       padding-right: env(safe-area-inset-right, 0px);
     }
 
+    .safe-top {
+      flex: 0 0 auto;
+      height: constant(safe-area-inset-top);
+      height: env(safe-area-inset-top, 0px);
+      background-color: var(--bg0);
+      pointer-events: none;
+    }
+
     .header {
       display: flex;
       flex-wrap: wrap;
       align-items: center;
       gap: 0.75rem 1rem;
-      padding: calc(0.85rem + env(safe-area-inset-top, 0px)) 1.25rem 0.75rem;
+      padding: 0.85rem 1.25rem 0.75rem;
       border-bottom: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
-      background:
-        linear-gradient(180deg, color-mix(in srgb, var(--bg0) 92%, black), color-mix(in srgb, var(--bg0) 70%, transparent));
+      background: color-mix(in srgb, var(--bg0) 96%, black);
       backdrop-filter: blur(8px);
     }
 
@@ -315,8 +322,12 @@
     }
 
     body[data-theme="premium"] .header {
-      background: linear-gradient(180deg, color-mix(in srgb, #0a151c 88%, black), color-mix(in srgb, #0d1a22 55%, transparent));
+      background: color-mix(in srgb, #0a151c 92%, black);
       border-bottom-color: color-mix(in srgb, var(--sand) 22%, transparent);
+    }
+
+    body[data-theme="premium"] .safe-top {
+      background-color: #0d1a22;
     }
 
     body[data-theme="premium"] .footer {
@@ -3108,9 +3119,9 @@
       updateViewButtons();
       refreshActivityUi();
       try {
-        setTheme(localStorage.getItem('drewo-theme') || document.body.getAttribute('data-theme') || 'classic', false);
+        setTheme(localStorage.getItem('drewo-theme') || document.body.getAttribute('data-theme') || 'premium', false);
       } catch (err) {
-        setTheme('classic', false);
+        setTheme('premium', false);
       }
       showGuideBannerIfNeeded();
       render(true);
