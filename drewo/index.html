@@ -2509,10 +2509,8 @@
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
           if (gestureMoved) return;
-          if (editMode) {
-            openRenameDialog(meta.id);
-            return;
-          }
+          // В режиме правок переименование открывается из onDragEnd (tap без сдвига).
+          if (editMode) return;
           if (!meta.hasSons) return;
           if (expanded.has(meta.id)) expanded.delete(meta.id);
           else expanded.add(meta.id);
@@ -2523,8 +2521,10 @@
           if (!editMode || !editUnlocked) return;
           if (e.pointerType === 'mouse' && e.button !== 0) return;
           e.stopPropagation();
-          e.preventDefault();
-          btn.setPointerCapture(e.pointerId);
+          // Не preventDefault — иначе на части устройств ломается tap.
+          try {
+            btn.setPointerCapture(e.pointerId);
+          } catch (err) {}
           dragState = {
             id: meta.id,
             name: meta.name,
@@ -2538,7 +2538,7 @@
 
         el.appendChild(btn);
 
-        if (editMode && editUnlocked && !(meta.sonIds && meta.sonIds.length) && meta.id !== tree.id) {
+        if (editMode && editUnlocked && !meta.hasSons && meta.id !== tree.id) {
           var delBtn = document.createElement('button');
           delBtn.type = 'button';
           delBtn.className = 'delete-person';
@@ -2692,7 +2692,12 @@
         var dropId = moved ? personFromPoint(e.clientX, e.clientY) : null;
         clearDrag();
         if (!editMode || !editUnlocked) return;
-        if (!moved || !dropId || dropId === childId) return;
+        // Короткий тап без сдвига — переименовать.
+        if (!moved) {
+          openRenameDialog(childId);
+          return;
+        }
+        if (!dropId || dropId === childId) return;
         var result = reparentNode(childId, dropId);
         if (!result.ok) {
           window.alert(result.reason || 'Не удалось изменить связь');
