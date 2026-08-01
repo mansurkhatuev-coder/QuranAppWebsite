@@ -96,26 +96,29 @@
     }
 
     .header {
-      position: relative;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
       z-index: 60;
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
       gap: 0.65rem;
       padding: 0.55rem 0.9rem 0.55rem;
-      padding-top: calc(0.55rem + constant(safe-area-inset-top));
-      padding-top: calc(0.55rem + env(safe-area-inset-top, 0px));
+      padding-top: calc(0.65rem + constant(safe-area-inset-top));
+      padding-top: calc(0.65rem + env(safe-area-inset-top, 0px));
       border-bottom: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
-      background:
-        linear-gradient(
-          180deg,
-          color-mix(in srgb, var(--header-bg, #0a151c) 88%, black) 0%,
-          var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black)) 42%,
-          var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black)) 100%
-        );
-      backdrop-filter: blur(8px);
-      animation: chrome-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+      background: var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black));
+      box-shadow: 0 1px 0 color-mix(in srgb, black 20%, transparent);
       overflow: visible;
+      flex-shrink: 0;
+    }
+
+    .header-anchor {
+      flex: 0 0 auto;
+      width: 100%;
+      pointer-events: none;
     }
 
     .brand {
@@ -1022,6 +1025,7 @@
       </button>
     </div>
   </header>
+  <div class="header-anchor" id="header-anchor" aria-hidden="true"></div>
   <div class="nav-shell">
     <div id="nav-backdrop" class="nav-backdrop" hidden></div>
     <nav id="nav-panel" class="nav-panel" hidden aria-label="Меню">
