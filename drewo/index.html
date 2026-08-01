@@ -645,7 +645,7 @@
     }
   </style>
 </head>
-<body data-theme="classic">
+<body data-theme="premium">
   <header class="header">
     <div class="brand">
       <h1>Хьоти некъ</h1>
@@ -655,7 +655,7 @@
         Стиль
         <select id="theme-select" aria-label="Стиль оформления">
           <option value="classic">Классика</option>
-          <option value="premium">Премиум</option>
+          <option value="premium" selected>Премиум</option>
         </select>
       </label>
       <button type="button" id="view-khotu" aria-pressed="true">Линия Хьоту</button>
@@ -1680,6 +1680,11 @@
       function setTheme(theme, persist) {
         var next = theme === 'premium' ? 'premium' : 'classic';
         document.body.setAttribute('data-theme', next);
+        var bar = next === 'premium' ? '#0d1a22' : '#12262f';
+        document.documentElement.style.backgroundColor = bar;
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
+          el.setAttribute('content', bar);
+        });
         if (themeSelect) themeSelect.value = next;
         if (persist !== false) {
           try {
