@@ -1,0 +1,780 @@
+{
+  "id": "kudi",
+  "name": "Куди",
+  "sons": [
+    {
+      "id": "goymirza",
+      "name": "Г1оймирза",
+      "sons": [
+        {
+          "id": "isma1al",
+          "name": "Исма1ал",
+          "sons": [
+            {
+              "id": "islam",
+              "name": "Ислам",
+              "sons": [
+                {
+                  "id": "ts1ula",
+                  "name": "Ц1ула",
+                  "sons": [
+                    {
+                      "id": "zhoqsum-khazha",
+                      "name": "Жокъсум-Хьаьжа",
+                      "sons": []
+                    },
+                    {
+                      "id": "bag1a-khazha",
+                      "name": "Баг1а-Хьаьжа",
+                      "sons": []
+                    },
+                    {
+                      "id": "kheda",
+                      "name": "Хеда",
+                      "sons": []
+                    },
+                    {
+                      "id": "zhonsu",
+                      "name": "Жонсу",
+                      "sons": []
+                    }
+                  ]
+                },
+                {
+                  "id": "asbi",
+                  "name": "Асби",
+                  "sons": [
+                    {
+                      "id": "khamti-khazha",
+                      "name": "Хамти-Хьаьжа",
+                      "sons": []
+                    },
+                    {
+                      "id": "khasakha",
+                      "name": "Хьасаха",
+                      "sons": [
+                        {
+                          "id": "uydu",
+                          "name": "Уьду",
+                          "sons": []
+                        },
+                        {
+                          "id": "mokhmad",
+                          "name": "Мохьмад",
+                          "sons": [
+                            {
+                              "id": "ag1ti",
+                              "name": "Аг1ти",
+                              "sons": [
+                                {
+                                  "id": "saypudi",
+                                  "name": "Сайпуди",
+                                  "sons": []
+                                },
+                                {
+                                  "id": "sharpudi",
+                                  "name": "Шарпуди",
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "khata",
+                              "name": "Хьата",
+                              "sons": [
+                                {
+                                  "id": "doka",
+                                  "name": "Дока",
+                                  "sons": []
+                                },
+                                {
+                                  "id": "dalkhad",
+                                  "name": "Далхад",
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "yusup",
+                              "name": "Юсуп",
+                              "sons": [
+                                {
+                                  "id": "dzhamalayla",
+                                  "name": "Джамалайла",
+                                  "sons": [
+                                    {
+                                      "id": "vakhita",
+                                      "name": "Вахита",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "khasan",
+                                      "name": "Хьасан",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "misar-pasha",
+                                      "name": "Мисар-Паша",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "anzor",
+                                      "name": "Анзор",
+                                      "sons": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "gida",
+                              "name": "Гида",
+                              "sons": [
+                                {
+                                  "id": "sayd1abdul",
+                                  "name": "Сайд1абдул",
+                                  "sons": [
+                                    {
+                                      "id": "vakha-sayd1abdul",
+                                      "name": "Ваха",
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "sa1id",
+                                  "name": "Са1ид",
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "nutsu",
+                              "name": "Нуцу",
+                              "sons": [
+                                {
+                                  "id": "abdulla-1",
+                                  "name": "1абдулла",
+                                  "sons": []
+                                },
+                                {
+                                  "id": "khotu",
+                                  "name": "Хьоту",
+                                  "sons": [
+                                    {
+                                      "id": "lecha",
+                                      "name": "Леча",
+                                      "sons": [
+                                        {
+                                          "id": "umar-pasha",
+                                          "name": "1умар-Паша",
+                                          "sons": [
+                                            {
+                                              "id": "khanpasha",
+                                              "name": "Ханпаша",
+                                              "sons": [
+                                                {
+                                                  "id": "ramzan-khanpasha",
+                                                  "name": "Рамзан",
+                                                  "sons": [
+                                                    {
+                                                      "id": "adam-ramzan",
+                                                      "name": "Адам",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "ayub-khanpasha",
+                                                  "name": "Аюб",
+                                                  "sons": [
+                                                    {
+                                                      "id": "added-1785596491258-9c92zv",
+                                                      "name": "Мухаммад",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "elampasha",
+                                              "name": "1елампаша",
+                                              "sons": [
+                                                {
+                                                  "id": "ela-elampasha",
+                                                  "name": "1ела",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "adlan-elampasha",
+                                                  "name": "1адлан",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "turpal",
+                                                  "name": "Турпал",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "rizvan",
+                                          "name": "Ризван",
+                                          "sons": [
+                                            {
+                                              "id": "khozh-baudi",
+                                              "name": "Хож-Бауди",
+                                              "sons": []
+                                            },
+                                            {
+                                              "id": "saddam",
+                                              "name": "Саддам",
+                                              "sons": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "ilyas",
+                                          "name": "Ильяс",
+                                          "sons": [
+                                            {
+                                              "id": "adam-ilyas",
+                                              "name": "Адам",
+                                              "sons": [
+                                                {
+                                                  "id": "vakha-ibrahim",
+                                                  "name": "Ваха",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "dukh-vakha-ibrahim",
+                                                  "name": "Дукх-Ваха",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "ibrahim-ilyas",
+                                              "name": "Ибрах1им",
+                                              "sons": [
+                                                {
+                                                  "id": "abu-bakar-ibrahim",
+                                                  "name": "Абу-Бакар",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "dokka-ilyas",
+                                              "name": "Докка",
+                                              "sons": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "idris-lecha",
+                                          "name": "Идрис",
+                                          "sons": []
+                                        },
+                                        {
+                                          "id": "musa",
+                                          "name": "Муса",
+                                          "sons": [
+                                            {
+                                              "id": "g1ayrbek",
+                                              "name": "Г1айрбек",
+                                              "sons": []
+                                            },
+                                            {
+                                              "id": "mayrbek",
+                                              "name": "Майрбек",
+                                              "sons": []
+                                            },
+                                            {
+                                              "id": "umar-musa",
+                                              "name": "1умар",
+                                              "sons": [
+                                                {
+                                                  "id": "mokhmad-salakh-umar",
+                                                  "name": "Мохьмад-Салахь",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "mokhmad-mayrbek",
+                                                  "name": "Мохьмад",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "isa-1",
+                                          "name": "1иса",
+                                          "sons": [
+                                            {
+                                              "id": "umar-bek",
+                                              "name": "1умар-Бек",
+                                              "sons": []
+                                            },
+                                            {
+                                              "id": "movsar",
+                                              "name": "Мовсар",
+                                              "sons": []
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "khizar",
+                                          "name": "Хизар",
+                                          "sons": [
+                                            {
+                                              "id": "yaqub",
+                                              "name": "Якъуб",
+                                              "sons": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "solt-akhmad",
+                                      "name": "Солт-Ахьмад",
+                                      "sons": [
+                                        {
+                                          "id": "kh1aron",
+                                          "name": "Х1арон",
+                                          "sons": [
+                                            {
+                                              "id": "abu-supyan",
+                                              "name": "Абу-Супьян",
+                                              "sons": [
+                                                {
+                                                  "id": "ibrahim-abu-supyan",
+                                                  "name": "Ибрах1им",
+                                                  "sons": [
+                                                    {
+                                                      "id": "dzhabrail",
+                                                      "name": "Джабраил",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "akhmad-abu",
+                                                  "name": "Ахьмад",
+                                                  "sons": [
+                                                    {
+                                                      "id": "dukh-vakha-akhmad",
+                                                      "name": "Дукх-Ваха",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "abu",
+                                              "name": "Абу",
+                                              "sons": [
+                                                {
+                                                  "id": "mokhmad-abu",
+                                                  "name": "Мохьмад",
+                                                  "sons": [
+                                                    {
+                                                      "id": "idris-mokhmad-abu",
+                                                      "name": "Идрис",
+                                                      "sons": []
+                                                    },
+                                                    {
+                                                      "id": "adam-apti-abu",
+                                                      "name": "Адам",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "apti-abu",
+                                                  "name": "Апти",
+                                                  "sons": [
+                                                    {
+                                                      "id": "minkail",
+                                                      "name": "Минкаил",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "khamid",
+                                              "name": "Хьамид",
+                                              "sons": [
+                                                {
+                                                  "id": "mokhmad-salakh-khamid",
+                                                  "name": "Мохьмад-Салахь",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "nokha",
+                                                  "name": "Нохьа",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "a1rbi",
+                                          "name": "1аьрби",
+                                          "sons": [
+                                            {
+                                              "id": "abdul-1",
+                                              "name": "1абдул",
+                                              "sons": [
+                                                {
+                                                  "id": "amal",
+                                                  "name": "Амаль",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "abdul-khamid",
+                                              "name": "1абдул-Хьамид",
+                                              "sons": [
+                                                {
+                                                  "id": "akhmad-abdul-khamid",
+                                                  "name": "Ахьмад",
+                                                  "sons": [
+                                                    {
+                                                      "id": "khamzat-akhmad",
+                                                      "name": "Хьамзат",
+                                                      "sons": []
+                                                    },
+                                                    {
+                                                      "id": "guno",
+                                                      "name": "Гуно",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "mansur",
+                                                  "name": "Мансур",
+                                                  "sons": [
+                                                    {
+                                                      "id": "mukhammad-mansur",
+                                                      "name": "Мухьаммад",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "ruslan",
+                                              "name": "Руслан",
+                                              "sons": [
+                                                {
+                                                  "id": "mokhmad-emi",
+                                                  "name": "Мохьмад-Эми",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "khozh-akhmad",
+                                                  "name": "Хож-Ахьмад",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "sayd-emi",
+                                              "name": "Сайд-Эми",
+                                              "sons": [
+                                                {
+                                                  "id": "sayd-mokhmad",
+                                                  "name": "Сайд-Мохьмад",
+                                                  "sons": [
+                                                    {
+                                                      "id": "added-1785531952902-a05qdt",
+                                                      "name": "Дени",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "sayd-akhmad",
+                                                  "name": "Сайд-Ахьмад",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "dokka-sayd-emi",
+                                                  "name": "Докка",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "a1lvi",
+                                          "name": "1аьлви",
+                                          "sons": [
+                                            {
+                                              "id": "isma1al-a1lvi",
+                                              "name": "Исма1ал",
+                                              "sons": [
+                                                {
+                                                  "id": "bislan",
+                                                  "name": "Бислан",
+                                                  "sons": [
+                                                    {
+                                                      "id": "abu-bakar-bislan",
+                                                      "name": "Абу-Бакар",
+                                                      "sons": []
+                                                    },
+                                                    {
+                                                      "id": "bekkhan",
+                                                      "name": "Бекхан",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "islam-a1lvi",
+                                                  "name": "Ислам",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "ramzan-a1lvi",
+                                              "name": "Рамзан",
+                                              "sons": [
+                                                {
+                                                  "id": "yusup-ramzan",
+                                                  "name": "Юсуп",
+                                                  "sons": [
+                                                    {
+                                                      "id": "rasul",
+                                                      "name": "Расул",
+                                                      "sons": []
+                                                    }
+                                                  ]
+                                                },
+                                                {
+                                                  "id": "ayub-ramzan",
+                                                  "name": "Аюб",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "apti-ramzan",
+                                                  "name": "Апти",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "aslanbek",
+                                              "name": "Асланбек",
+                                              "sons": [
+                                                {
+                                                  "id": "viskhan",
+                                                  "name": "Висхан",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "aslan",
+                                              "name": "Аслан",
+                                              "sons": [
+                                                {
+                                                  "id": "ela-khazhi",
+                                                  "name": "1ела-Хьаьжи",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "viskhavzha",
+                                                  "name": "Висхавжа",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "khasa",
+                                      "name": "Хьаса",
+                                      "sons": [
+                                        {
+                                          "id": "gilani",
+                                          "name": "Гилани",
+                                          "sons": [
+                                            {
+                                              "id": "apti-gilani",
+                                              "name": "Апти",
+                                              "sons": [
+                                                {
+                                                  "id": "adlan-apti",
+                                                  "name": "1адлан",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "mokhmad-ayub",
+                                                  "name": "Мохьмад",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "ibrahim-ayub",
+                                                  "name": "Ибрах1им",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            },
+                                            {
+                                              "id": "ayub-gilani",
+                                              "name": "Аюб",
+                                              "sons": [
+                                                {
+                                                  "id": "abdul-malik",
+                                                  "name": "1абдул-Малик",
+                                                  "sons": []
+                                                }
+                                              ]
+                                            }
+                                          ]
+                                        },
+                                        {
+                                          "id": "khavazhi",
+                                          "name": "Хаважи",
+                                          "sons": [
+                                            {
+                                              "id": "bauddi",
+                                              "name": "Баудди",
+                                              "sons": []
+                                            },
+                                            {
+                                              "id": "khamzat-khavazhi",
+                                              "name": "Хьамзат",
+                                              "sons": []
+                                            }
+                                          ]
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "akhmada",
+                              "name": "Ахьмада",
+                              "sons": []
+                            },
+                            {
+                              "id": "salman",
+                              "name": "Салман",
+                              "sons": []
+                            },
+                            {
+                              "id": "nada",
+                              "name": "Нада",
+                              "sons": [
+                                {
+                                  "id": "lom-1ela",
+                                  "name": "Лом-1ела",
+                                  "sons": [
+                                    {
+                                      "id": "kazbek",
+                                      "name": "Казбек",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "mokhmad-lom-1ela",
+                                      "name": "Мохьмад",
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "movladi",
+                                  "name": "Мовлади",
+                                  "sons": []
+                                },
+                                {
+                                  "id": "lyoma",
+                                  "name": "Лоьма",
+                                  "sons": [
+                                    {
+                                      "id": "shemal",
+                                      "name": "Шемал",
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "nazhmudi",
+                                  "name": "Нажмуди",
+                                  "sons": [
+                                    {
+                                      "id": "mokhmad-nazhmudi",
+                                      "name": "Мохьмад",
+                                      "sons": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "estul",
+                  "name": "Эстул",
+                  "sons": [
+                    {
+                      "id": "salam",
+                      "name": "Салам",
+                      "sons": []
+                    }
+                  ]
+                },
+                {
+                  "id": "esambi",
+                  "name": "Эсамби",
+                  "sons": [
+                    {
+                      "id": "tskhatsurg",
+                      "name": "Цхьацуьрг",
+                      "sons": []
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "uystmal",
+          "name": "Уьстмал",
+          "sons": []
+        }
+      ]
+    },
+    {
+      "id": "gammirza",
+      "name": "Г1аммирза",
+      "sons": []
+    }
+  ]
+}
