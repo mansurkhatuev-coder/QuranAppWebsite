@@ -1638,6 +1638,7 @@
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       var isAndroid = /Android/i.test(navigator.userAgent);
       var EDIT_PASSWORD = 'гуно';
+      var pendingPasswordAction = null;
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var editUnlocked = false;
       var renameTargetId = null;
@@ -2053,7 +2054,8 @@
         render(false);
       }
 
-      function openPasswordDialog() {
+      function openPasswordDialog(action) {
+        pendingPasswordAction = action || { type: 'edit' };
         if (passwordError) passwordError.hidden = true;
         if (passwordInput) passwordInput.value = '';
         if (passwordDialog && passwordDialog.showModal) passwordDialog.showModal();
@@ -2061,6 +2063,7 @@
       }
 
       function closePasswordDialog() {
+        pendingPasswordAction = null;
         if (passwordDialog && passwordDialog.open) passwordDialog.close();
       }
 
@@ -2073,7 +2076,15 @@
           setEditMode(true);
           return;
         }
-        openPasswordDialog();
+        openPasswordDialog({ type: 'edit' });
+      }
+
+      function requestAddSon(parentId) {
+        if (editUnlocked) {
+          openAddDialog(parentId);
+          return;
+        }
+        openPasswordDialog({ type: 'add', parentId: parentId });
       }
 
       function renamePerson(id, nextName) {
@@ -2568,7 +2579,7 @@
           addBtn.addEventListener('click', function (e) {
             e.stopPropagation();
             if (gestureMoved) return;
-            openAddDialog(meta.id);
+            requestAddSon(meta.id);
           });
           el.appendChild(addBtn);
         }
@@ -2621,6 +2632,10 @@
 
       function saveAddSon() {
         if (!addParentId) return;
+        if (!editUnlocked) {
+          closeAddDialog();
+          return;
+        }
         var name = addNameInput.value.trim();
         if (!name) {
           addNameInput.focus();
@@ -2821,9 +2836,15 @@
             passwordError.hidden = false;
             return;
           }
+          var action = pendingPasswordAction;
           editUnlocked = true;
-          closePasswordDialog();
-          setEditMode(true);
+          pendingPasswordAction = null;
+          if (passwordDialog && passwordDialog.open) passwordDialog.close();
+          if (action && action.type === 'add') {
+            openAddDialog(action.parentId);
+          } else {
+            setEditMode(true);
+          }
         });
       }
       if (passwordCancelBtn) {
