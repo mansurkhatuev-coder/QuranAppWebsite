@@ -873,6 +873,11 @@ function setActiveTab(tabName) {
     // ignore quota / private mode
   }
 
+  if (tabName === 'command' && window.AdminCommandCenter) {
+    window.AdminCommandCenter.start();
+  } else if (window.AdminCommandCenter) {
+    window.AdminCommandCenter.stop();
+  }
   if (tabName === 'academy-feedback' && window.AdminAcademyFeedback) {
     void window.AdminAcademyFeedback.loadAndRender();
   }
@@ -893,7 +898,7 @@ function getInitialTab() {
   } catch {
     // ignore
   }
-  return 'support';
+  return 'command';
 }
 
 function bindAppScreenDelegation() {
@@ -957,6 +962,9 @@ function showApp() {
 }
 
 function showLogin() {
+  if (window.AdminCommandCenter) {
+    window.AdminCommandCenter.stop();
+  }
   void window.AdminSupabase.signOut().catch(() => {});
   $('#login-screen').hidden = false;
   $('#app-screen').hidden = true;
@@ -1034,6 +1042,9 @@ function bindEvents() {
   bindListSearch();
   bindDownloadButtons();
 
+  if (window.AdminCommandCenter) {
+    window.AdminCommandCenter.bind();
+  }
   if (window.AdminAcademyFeedback) {
     window.AdminAcademyFeedback.bind({ $ });
   }

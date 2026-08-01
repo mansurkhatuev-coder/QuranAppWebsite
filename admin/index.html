@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=9" />
+    <link rel="stylesheet" href="./admin.css?v=10" />
   </head>
   <body class="admin-body">
     <div id="admin-pwa-banner" class="admin-pwa-banner" hidden>
@@ -56,13 +56,16 @@
       <header class="admin-topbar">
         <div>
           <p class="admin-kicker">Коран и Азкары</p>
-          <h1>Контент приложения</h1>
+          <h1>Центр управления</h1>
         </div>
         <button id="logout-button" type="button" class="admin-button admin-button-ghost">Выйти</button>
       </header>
 
       <nav class="admin-tabs" aria-label="Разделы">
-        <button type="button" class="admin-tab is-active" data-tab="support" aria-selected="true">
+        <button type="button" class="admin-tab is-active" data-tab="command" aria-selected="true">
+          <span class="admin-tab-full">Центр</span><span class="admin-tab-short">Центр</span>
+        </button>
+        <button type="button" class="admin-tab" data-tab="support" aria-selected="false">
           <span class="admin-tab-full">Дуа · поддержка</span><span class="admin-tab-short">Поддержка</span>
         </button>
         <button type="button" class="admin-tab" data-tab="general" aria-selected="false">
@@ -85,7 +88,49 @@
         </button>
       </nav>
 
-      <section class="admin-panel is-active" data-panel="support">
+      <section class="admin-panel is-active" data-panel="command">
+        <div id="admin-command-center" class="admin-hud" aria-live="polite">
+          <div class="admin-hud-frame" aria-hidden="true">
+            <span class="admin-hud-corner admin-hud-corner--tl"></span>
+            <span class="admin-hud-corner admin-hud-corner--tr"></span>
+            <span class="admin-hud-corner admin-hud-corner--bl"></span>
+            <span class="admin-hud-corner admin-hud-corner--br"></span>
+            <div class="admin-hud-scan"></div>
+          </div>
+          <header class="admin-hud-top">
+            <div>
+              <p class="admin-hud-kicker">TACTICAL OVERWATCH // WAYDEAN</p>
+              <h2 class="admin-hud-title">COMMAND CENTER</h2>
+            </div>
+            <div class="admin-hud-clocks">
+              <div><span class="admin-hud-label">LOCAL</span><strong id="hud-clock-local">--:--:--</strong></div>
+              <div><span class="admin-hud-label">UTC</span><strong id="hud-clock-utc">--:--:--</strong></div>
+            </div>
+          </header>
+          <div class="admin-hud-status-row">
+            <div id="hud-system-banner" class="admin-hud-banner is-scanning">SCANNING…</div>
+            <button type="button" id="hud-refresh" class="admin-button admin-button-ghost">Rescan</button>
+          </div>
+          <div id="hud-targets" class="admin-hud-grid"></div>
+          <div class="admin-hud-bottom">
+            <div class="admin-hud-meta">
+              <span class="admin-hud-label">OPERATOR</span>
+              <strong id="hud-operator">—</strong>
+            </div>
+            <div class="admin-hud-meta">
+              <span class="admin-hud-label">LAST SWEEP</span>
+              <strong id="hud-last-sweep">—</strong>
+            </div>
+            <div class="admin-hud-meta">
+              <span class="admin-hud-label">CYCLE</span>
+              <strong id="hud-cycle">0</strong>
+            </div>
+          </div>
+          <p class="admin-hud-footnote">Live ping every 8s while this tab is open. No secrets shown — status only.</p>
+        </div>
+      </section>
+
+      <section class="admin-panel" data-panel="support">
         <div class="admin-toolbar admin-panel-toolbar">
           <div class="admin-toolbar-copy">
             <p class="admin-muted">Дуа в разделе «Поддержка»</p>
@@ -383,11 +428,12 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js?v=5"></script>
     <script src="./admin-supabase.js?v=10"></script>
+    <script src="./admin-command-center.js?v=1"></script>
     <script src="./admin-home.js?v=3"></script>
     <script src="./admin-academy-feedback.js?v=3"></script>
     <script src="./admin-analytics.js?v=4"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=19"></script>
+    <script src="./admin.js?v=20"></script>
     <script src="./admin-pwa.js?v=1"></script>
   </body>
 </html>
