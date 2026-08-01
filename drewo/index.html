@@ -651,9 +651,55 @@
 
     .footer-actions {
       display: grid;
-      grid-template-columns: 1fr 1fr;
+      grid-template-columns: 1fr;
       gap: 0.65rem;
+      width: min(20rem, 100%);
+      transition: width 0.22s ease;
+    }
+
+    .footer-actions.has-save {
+      grid-template-columns: 1fr 1fr;
       width: min(26rem, 100%);
+    }
+
+    #save-remote[hidden] {
+      display: none !important;
+    }
+
+    body.chrome-hidden {
+      --footer-reserve: 0.85rem;
+    }
+
+    body.chrome-hidden .header {
+      max-height: 0;
+      opacity: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      border-bottom-width: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    body.chrome-hidden .guide-banner,
+    body.chrome-hidden .edit-hint,
+    body.chrome-hidden .nav-shell {
+      display: none !important;
+    }
+
+    body.chrome-hidden .footer {
+      transform: translateY(110%);
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .header,
+    .footer {
+      transition:
+        transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.28s ease,
+        max-height 0.28s ease,
+        padding 0.28s ease,
+        border-width 0.28s ease;
     }
 
     .footer button {
@@ -1025,7 +1071,7 @@
   <footer class="footer">
     <div class="footer-actions">
       <button type="button" id="install-home">На экран Домой</button>
-      <button type="button" id="save-remote" class="secondary">Сохранить</button>
+      <button type="button" id="save-remote" class="secondary" hidden>Сохранить</button>
     </div>
   </footer>
 
@@ -2050,6 +2096,12 @@
       var addCancelBtn = document.getElementById('add-cancel');
       var installHomeBtn = document.getElementById('install-home');
       var saveRemoteBtn = document.getElementById('save-remote');
+      var footerActions = document.querySelector('.footer-actions');
+      var treeDirty = false;
+      var chromeVisible = true;
+      var lastEmptyTapAt = 0;
+      var lastEmptyTapX = 0;
+      var lastEmptyTapY = 0;
       var passwordDialog = document.getElementById('password-dialog');
       var passwordForm = document.getElementById('password-form');
       var passwordInput = document.getElementById('password-input');
@@ -2289,9 +2341,33 @@
         refreshActivityUi();
       }
 
+      function updateSaveButton() {
+        if (saveRemoteBtn) {
+          saveRemoteBtn.hidden = !treeDirty;
+        }
+        if (footerActions) {
+          footerActions.classList.toggle('has-save', !!treeDirty);
+        }
+      }
+
+      function setTreeDirty(on) {
+        treeDirty = !!on;
+        updateSaveButton();
+      }
+
+      function setChromeVisible(on) {
+        chromeVisible = !!on;
+        document.body.classList.toggle('chrome-hidden', !chromeVisible);
+        if (!chromeVisible) {
+          if (typeof setNavMenuOpen === 'function') setNavMenuOpen(false);
+          if (typeof hideSearchResults === 'function') hideSearchResults();
+        }
+      }
+
       function persistTree() {
         tree = TreeModel.markAllowAdd(tree, NUTSU_ID);
         dataEl.textContent = treeJsonForEmbed(tree);
+        setTreeDirty(true);
       }
 
       function isStrictDescendant(ancestorId, maybeId) {
@@ -3183,7 +3259,7 @@
         var father = TreeModel.findById(tree, addParentId);
         var result = TreeModel.addSon(tree, addParentId, name, NUTSU_ID);
         tree = result.tree;
-        dataEl.textContent = treeJsonForEmbed(tree);
+        persistTree();
         pushActivity({
           type: 'add',
           at: new Date().toISOString(),
@@ -3308,6 +3384,7 @@
           map.scale = nextScale;
           map.x = midX - wx * nextScale;
           map.y = midY - wy * nextScale;
+          setChromeVisible(false);
           scheduleCrispRender();
           return;
         }
@@ -3333,6 +3410,26 @@
           beginPan(Array.from(activePointers.values())[0]);
         } else if (activePointers.size === 0) {
           panOrigin = null;
+          if (
+            !gestureMoved &&
+            !dragState &&
+            e.target &&
+            e.target.closest &&
+            !e.target.closest('.person, button, a, input, select, label, .search-wrap, .nav-panel, dialog')
+          ) {
+            var now = Date.now();
+            if (
+              now - lastEmptyTapAt < 340 &&
+              Math.hypot(e.clientX - lastEmptyTapX, e.clientY - lastEmptyTapY) < 36
+            ) {
+              setChromeVisible(true);
+              lastEmptyTapAt = 0;
+            } else {
+              lastEmptyTapAt = now;
+              lastEmptyTapX = e.clientX;
+              lastEmptyTapY = e.clientY;
+            }
+          }
         }
       }
 
@@ -3349,6 +3446,7 @@
           e.preventDefault();
           var factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
           zoomAt(e.clientX, e.clientY, map.scale * factor);
+          setChromeVisible(false);
         },
         { passive: false }
       );
@@ -3479,6 +3577,7 @@
           saveRemoteBtn.disabled = true;
           publishToGitHub(pass)
             .then(function () {
+              setTreeDirty(false);
               if (saveDialog && saveDialog.open) saveDialog.close();
               window.alert('Сохранено на waydean.ru/drewo');
             })
@@ -3613,6 +3712,8 @@
         setTheme('premium', false);
       }
       showGuideBannerIfNeeded();
+      updateSaveButton();
+      setChromeVisible(true);
       render(true);
     })();
   </script>
