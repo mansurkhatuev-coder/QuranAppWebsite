@@ -1966,8 +1966,9 @@
 
   function findById(root, id) {
     let found = null;
+    const target = String(id);
     walk(root, (n) => {
-      if (n.id === id) found = n;
+      if (String(n.id) === target) found = n;
     });
     return found;
   }
@@ -2551,70 +2552,99 @@
           empty.className = 'search-results-empty';
           empty.textContent = 'Никого не найдено';
           searchResults.appendChild(empty);
-          searchResults.hidden = false;
-          if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
-          positionSearchResults();
-          return;
-        }
-        matches.slice(0, 40).forEach(function (item) {
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.className = 'search-result';
-          btn.setAttribute('role', 'option');
-          btn.dataset.id = item.id;
-          var nameEl = document.createElement('span');
-          nameEl.className = 'search-result-name';
-          nameEl.textContent = item.name;
-          var fatherEl = document.createElement('span');
-          fatherEl.className = 'search-result-father';
-          fatherEl.textContent = item.fatherName
-            ? 'отец: ' + item.fatherName
-            : 'корень древа';
-          btn.appendChild(nameEl);
-          btn.appendChild(fatherEl);
-          searchResults.appendChild(btn);
-        });
-        if (matches.length > 40) {
-          var more = document.createElement('p');
-          more.className = 'search-results-empty';
-          more.textContent = 'Показаны первые 40 из ' + matches.length;
-          searchResults.appendChild(more);
+        } else {
+          matches.slice(0, 40).forEach(function (item) {
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'search-result';
+            btn.setAttribute('role', 'option');
+            btn.setAttribute('data-id', String(item.id));
+            var nameEl = document.createElement('span');
+            nameEl.className = 'search-result-name';
+            nameEl.textContent = item.name;
+            var fatherEl = document.createElement('span');
+            fatherEl.className = 'search-result-father';
+            fatherEl.textContent = item.fatherName
+              ? 'отец: ' + item.fatherName
+              : 'корень древа';
+            btn.appendChild(nameEl);
+            btn.appendChild(fatherEl);
+            function pick(e) {
+              if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+              }
+              goToPerson(item.id);
+            }
+            btn.onclick = pick;
+            btn.ontouchend = pick;
+            searchResults.appendChild(btn);
+          });
+          if (matches.length > 40) {
+            var more = document.createElement('p');
+            more.className = 'search-results-empty';
+            more.textContent = 'Показаны первые 40 из ' + matches.length;
+            searchResults.appendChild(more);
+          }
         }
         searchResults.hidden = false;
         if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
         positionSearchResults();
       }
 
-      function selectSearchMatch(id) {
-        if (!id) return;
-        id = String(id);
+      function goToPerson(id) {
+        id = String(id || '');
+        if (!id) return false;
         clearTimeout(searchTimer);
-        if (viewFilter === 'khotu') {
-          setViewFilter('all', false);
-        }
+        clearTimeout(goToPerson._timer);
+
+        // Always open full tree so the person is guaranteed in layout.
+        viewFilter = 'all';
+        expanded = new Set(collectAllIds(tree));
         matchIds = new Set([id]);
-        expandAncestorsOf(id);
-        expanded.add(id);
+        updateViewButtons();
         hideSearchResults();
-        map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
-        pendingScrollId = id;
+
+        map.scale = clamp(1.45, MAP_SCALE_MIN, MAP_SCALE_MAX);
+        pendingScrollId = null;
         render(false);
-        focusNode(id);
+
+        var ok = focusNode(id);
+        if (!ok) {
+          pendingScrollId = id;
+          render(false);
+          ok = focusNode(id);
+        }
+
         if (searchInput) {
           var node = TreeModel.findById(tree, id);
+          if (!node) {
+            TreeModel.walk(tree, function (n) {
+              if (!node && String(n.id) === id) node = n;
+            });
+          }
           if (node && node.name) searchInput.value = node.name;
           try {
             searchInput.blur();
           } catch (err) {}
         }
-        // Keyboard close triggers resize; re-apply focus after layout settles.
-        clearTimeout(selectSearchMatch._refocusTimer);
-        selectSearchMatch._refocusTimer = setTimeout(function () {
-          map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
-          pendingScrollId = id;
+
+        function again() {
+          map.scale = clamp(1.45, MAP_SCALE_MIN, MAP_SCALE_MAX);
           render(false);
           focusNode(id);
-        }, 320);
+        }
+        requestAnimationFrame(function () {
+          again();
+          requestAnimationFrame(again);
+        });
+        goToPerson._timer = setTimeout(again, 450);
+
+        return ok;
+      }
+
+      function selectSearchMatch(id) {
+        return goToPerson(id);
       }
 
       function runSearch(rawQuery) {
@@ -2637,18 +2667,8 @@
           matchIds.add(item.id);
         });
 
-        if (matches.length === 1) {
-          selectSearchMatch(matches[0].id);
-          return;
-        }
-
-        if (matches.length > 1) {
-          showSearchResults(matches);
-          render(false);
-          return;
-        }
-
-        showSearchResults([]);
+        // Always show a tappable list (even for 1 match) — no auto-jump while typing.
+        showSearchResults(matches);
         render(false);
       }
 
@@ -3641,50 +3661,39 @@
         clearTimeout(searchTimer);
         searchTimer = setTimeout(function () {
           runSearch(searchInput.value);
-        }, 150);
+        }, 180);
       });
       searchInput.addEventListener('keydown', function (e) {
         if (e.key === 'Escape') {
           hideSearchResults();
           return;
         }
-        if (e.key === 'Enter' && searchResults && !searchResults.hidden) {
-          var first = searchResults.querySelector('.search-result');
-          if (first && first.dataset.id) {
-            e.preventDefault();
-            selectSearchMatch(first.dataset.id);
-          }
-        }
-      });
-      if (searchResults) {
-        searchResults.addEventListener(
-          'pointerdown',
-          function (e) {
-            var btn = e.target.closest && e.target.closest('.search-result');
-            if (!btn || !btn.dataset.id) return;
-            e.preventDefault();
-            e.stopPropagation();
-            selectSearchMatch(btn.dataset.id);
-          },
-          true
-        );
-      }
-      document.addEventListener(
-        'pointerdown',
-        function (e) {
-          if (!searchResults || searchResults.hidden) return;
-          if (
-            e.target.closest &&
-            (e.target.closest('#search-results') ||
-              e.target.closest('.search-wrap') ||
-              e.target.closest('#search'))
-          ) {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          var first =
+            searchResults && !searchResults.hidden
+              ? searchResults.querySelector('.search-result')
+              : null;
+          if (first && first.getAttribute('data-id')) {
+            goToPerson(first.getAttribute('data-id'));
             return;
           }
-          hideSearchResults();
-        },
-        true
-      );
+          var matches = collectNameMatches(searchInput.value);
+          if (matches.length) goToPerson(matches[0].id);
+        }
+      });
+      document.addEventListener('click', function (e) {
+        if (!searchResults || searchResults.hidden) return;
+        if (
+          e.target.closest &&
+          (e.target.closest('#search-results') ||
+            e.target.closest('.search-wrap') ||
+            e.target.closest('#search'))
+        ) {
+          return;
+        }
+        hideSearchResults();
+      });
 
       addForm.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -3788,6 +3797,23 @@
       }
       showGuideBannerIfNeeded();
       updateSaveButton();
+      function syncHeaderAnchor() {
+        var headerEl = document.querySelector('.header');
+        var anchorEl = document.getElementById('header-anchor');
+        if (!headerEl || !anchorEl) return;
+        anchorEl.style.height = headerEl.offsetHeight + 'px';
+      }
+      syncHeaderAnchor();
+      window.addEventListener('resize', syncHeaderAnchor);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', syncHeaderAnchor);
+      }
+      if (window.ResizeObserver) {
+        var headerEl = document.querySelector('.header');
+        if (headerEl) {
+          new ResizeObserver(syncHeaderAnchor).observe(headerEl);
+        }
+      }
       render(true);
     })();
   </script>
