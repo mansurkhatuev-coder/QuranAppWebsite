@@ -1,6 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
-<head>
+<html lang="ru" style="background-color: rgb(13, 26, 34);"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Хьоти некъ</title>
@@ -14,8 +13,8 @@
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet">
   <style>
     :root {
       --bg0: #12262f;
@@ -1018,17 +1017,17 @@
     <div class="header-bar">
       <div class="search-wrap">
         <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
-        <div id="search-results" class="search-results" role="listbox" hidden></div>
+        <div id="search-results" class="search-results" role="listbox" hidden=""></div>
       </div>
       <button type="button" id="nav-menu-btn" class="menu-toggle" aria-expanded="false" aria-controls="nav-panel" aria-label="Меню">
         <span class="menu-toggle-bars" aria-hidden="true"><span></span><span></span><span></span></span>
       </button>
     </div>
   </header>
-  <div class="header-anchor" id="header-anchor" aria-hidden="true"></div>
+  <div class="header-anchor" id="header-anchor" aria-hidden="true" style="height: 61px;"></div>
   <div class="nav-shell">
-    <div id="nav-backdrop" class="nav-backdrop" hidden></div>
-    <nav id="nav-panel" class="nav-panel" hidden aria-label="Меню">
+    <div id="nav-backdrop" class="nav-backdrop" hidden=""></div>
+    <nav id="nav-panel" class="nav-panel" hidden="" aria-label="Меню">
       <p class="nav-label">Вид</p>
       <div class="action-cluster" role="group" aria-label="Вид">
         <button type="button" id="view-khotu" aria-pressed="true">Линия Хьоту</button>
@@ -1037,7 +1036,7 @@
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
         <button type="button" id="edit-links" aria-pressed="false">Изменить связи</button>
-        <button type="button" id="history-btn">История</button>
+        <button type="button" id="history-btn" title="01.08.2026, 18:01 — Мухаммад">История (1)</button>
       </div>
       <p class="nav-label">Оформление</p>
       <div class="action-cluster" role="group" aria-label="Оформление">
@@ -1045,13 +1044,13 @@
           Стиль
           <select id="theme-select" aria-label="Стиль оформления">
             <option value="classic">Классика</option>
-            <option value="premium" selected>Премиум</option>
+            <option value="premium" selected="">Премиум</option>
           </select>
         </label>
       </div>
     </nav>
   </div>
-  <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden>
+  <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden="">
     <strong>Как пользоваться</strong>
     <ol>
       <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки.</li>
@@ -1070,8 +1069,8 @@
   <main>
     <div id="viewport" aria-label="Древо">
       <div id="map-world">
-        <svg id="links" aria-hidden="true"></svg>
-        <div id="tree-layer"></div>
+        <svg id="links" aria-hidden="true" width="4929.495437066757" height="1705.3016427948025" viewBox="0 0 4284 1482"></svg>
+        <div id="tree-layer" style="width: 4929.495437px; height: 1705.301643px;"></div>
       </div>
     </div>
   </main>
@@ -1079,11 +1078,11 @@
   <div class="fab-rail" id="fab-rail" data-open="false" aria-label="Действия">
     <button type="button" id="fab-toggle" class="fab-toggle" aria-expanded="false" aria-controls="fab-panel" aria-label="Открыть действия">
       <span class="fab-toggle-arrow" aria-hidden="true"></span>
-      <span id="fab-dirty-dot" class="fab-dirty-dot" hidden></span>
+      <span id="fab-dirty-dot" class="fab-dirty-dot"></span>
     </button>
     <div class="fab-panel" id="fab-panel">
       <button type="button" id="install-home">На экран Домой</button>
-      <button type="button" id="save-remote" hidden>Сохранить</button>
+      <button type="button" id="save-remote" disabled="">Сохранить</button>
     </div>
   </div>
 
@@ -1092,7 +1091,7 @@
       <strong id="add-dialog-title">Добавить сына</strong>
       <label>
         Имя
-        <input id="add-name" type="text" name="name" autocomplete="off" required>
+        <input id="add-name" type="text" name="name" autocomplete="off" required="">
       </label>
       <div class="dialog-actions">
         <button type="submit" value="save">Сохранить</button>
@@ -1104,8 +1103,8 @@
   <dialog id="history-dialog" aria-labelledby="history-dialog-title">
     <div class="history-body">
       <strong id="history-dialog-title">История добавлений</strong>
-      <p id="history-empty">Пока пусто</p>
-      <ul id="history-list" hidden></ul>
+      <p id="history-empty" hidden="">Пока пусто</p>
+      <ul id="history-list"><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Аюб</strong></div></li></ul>
       <div class="dialog-actions">
         <button type="button" id="history-close">Закрыть</button>
       </div>
@@ -1117,9 +1116,9 @@
       <strong id="password-dialog-title">Пароль для правок</strong>
       <label>
         Пароль
-        <input id="password-input" type="password" name="password" autocomplete="current-password" required>
+        <input id="password-input" type="password" name="password" autocomplete="current-password" required="">
       </label>
-      <p id="password-error" class="dialog-error" hidden>Неверный пароль</p>
+      <p id="password-error" class="dialog-error" hidden="">Неверный пароль</p>
       <div class="dialog-actions">
         <button type="submit">Войти</button>
         <button type="button" id="password-cancel">Отмена</button>
@@ -1132,7 +1131,7 @@
       <strong id="rename-dialog-title">Переименовать</strong>
       <label>
         Имя
-        <input id="rename-input" type="text" name="name" autocomplete="off" required>
+        <input id="rename-input" type="text" name="name" autocomplete="off" required="">
       </label>
       <div class="dialog-actions">
         <button type="submit">Сохранить</button>
@@ -1144,10 +1143,10 @@
   <dialog id="install-dialog" aria-labelledby="install-dialog-title">
     <div class="history-body">
       <strong id="install-dialog-title">На экран «Домой»</strong>
-      <p class="install-steps" id="install-ios" hidden>
+      <p class="install-steps" id="install-ios" hidden="">
         iPhone: в Safari нажмите «Поделиться» → «На экран „Домой“» → «Добавить».
       </p>
-      <p class="install-steps" id="install-android" hidden>
+      <p class="install-steps" id="install-android" hidden="">
         Android: в меню браузера выберите «Установить приложение» или «Добавить на главный экран».
       </p>
       <p class="install-steps" id="install-generic">
@@ -1165,9 +1164,9 @@
       <p class="install-steps">Записать текущее древо на waydean.ru/drewo (с бэкапом). Нужен пароль.</p>
       <label>
         Пароль
-        <input id="save-password" type="password" name="password" autocomplete="current-password" required>
+        <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
       </label>
-      <p id="save-error" class="dialog-error" hidden></p>
+      <p id="save-error" class="dialog-error" hidden=""></p>
       <div class="dialog-actions">
         <button type="submit">Сохранить</button>
         <button type="button" id="save-cancel">Отмена</button>
@@ -1365,7 +1364,13 @@
                                                 {
                                                   "id": "ayub-khanpasha",
                                                   "name": "Аюб",
-                                                  "sons": []
+                                                  "sons": [
+                                                    {
+                                                      "id": "added-1785596491258-9c92zv",
+                                                      "name": "Мухаммад",
+                                                      "sons": []
+                                                    }
+                                                  ]
                                                 }
                                               ]
                                             },
@@ -1950,10 +1955,19 @@
     }
   ]
 }
-    </script>
+</script>
   <script type="application/json" id="activity-log">
-[]
-    </script>
+[
+  {
+    "type": "add",
+    "at": "2026-08-01T15:01:31.260Z",
+    "son": "Мухаммад",
+    "father": "Аюб",
+    "sonId": "added-1785596491258-9c92zv",
+    "fatherId": "ayub-khanpasha"
+  }
+]
+</script>
 
   <script>
 // synced with lib/tree-model.js
@@ -3826,5 +3840,6 @@
       render(true);
     })();
   </script>
-</body>
-</html>
+
+
+</body></html>
