@@ -95,10 +95,7 @@
     }
 
     .header {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
+      position: relative;
       z-index: 60;
       display: flex;
       flex-wrap: nowrap;
@@ -111,13 +108,13 @@
       background: var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black));
       box-shadow: 0 1px 0 color-mix(in srgb, black 20%, transparent);
       overflow: visible;
-      flex-shrink: 0;
-    }
-
-    .header-anchor {
       flex: 0 0 auto;
       width: 100%;
-      pointer-events: none;
+    }
+
+    /* Spacer no longer needed: header is in normal flex flow (not fixed). */
+    .header-anchor {
+      display: none;
     }
 
     .brand {
@@ -786,6 +783,32 @@
       font-size: 0.9rem;
     }
 
+    .dialog-status {
+      margin: 0;
+      color: var(--sand);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .dialog-status[data-busy='true']::before {
+      content: '';
+      display: inline-block;
+      width: 0.7rem;
+      height: 0.7rem;
+      margin-right: 0.45rem;
+      border: 2px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      border-top-color: var(--sand);
+      border-radius: 50%;
+      vertical-align: -0.1rem;
+      animation: save-spin 0.7s linear infinite;
+    }
+
+    @keyframes save-spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+
     #add-dialog,
     #history-dialog,
     #password-dialog,
@@ -1024,7 +1047,7 @@
       </button>
     </div>
   </header>
-  <div class="header-anchor" id="header-anchor" aria-hidden="true" style="height: 61px;"></div>
+  <div class="header-anchor" id="header-anchor" aria-hidden="true"></div>
   <div class="nav-shell">
     <div id="nav-backdrop" class="nav-backdrop" hidden=""></div>
     <nav id="nav-panel" class="nav-panel" hidden="" aria-label="Меню">
@@ -1166,9 +1189,10 @@
         Пароль
         <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
       </label>
+      <p id="save-status" class="dialog-status" hidden></p>
       <p id="save-error" class="dialog-error" hidden=""></p>
       <div class="dialog-actions">
-        <button type="submit">Сохранить</button>
+        <button type="submit" id="save-submit">Сохранить</button>
         <button type="button" id="save-cancel">Отмена</button>
       </div>
     </form>
@@ -2162,6 +2186,7 @@
       var savePasswordInput = document.getElementById('save-password');
       var saveError = document.getElementById('save-error');
       var saveCancelBtn = document.getElementById('save-cancel');
+      var saveSubmitBtn = document.getElementById('save-submit');
       var isAppleTouch =
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -2888,11 +2913,10 @@
       async function publishToGitHub(password) {
         if (!PUBLISH_URL) throw new Error('PUBLISH_URL не задан');
         persistTree();
-        var treeJson = treeJsonForEmbed(tree);
         var payload = {
           password: password,
-          html: buildExportHtml(),
-          treeJson: treeJson,
+          treeJson: treeJsonForEmbed(tree),
+          activityJson: JSON.stringify(loadActivity(), null, 2),
           message: 'Update family tree from web editor',
         };
         var res = await fetch(PUBLISH_URL, {
@@ -2916,6 +2940,21 @@
           .catch(function () {
             return null;
           });
+      }
+
+      function setSaveProgress(text, busy) {
+        var statusEl = document.getElementById('save-status');
+        if (!statusEl) return;
+        if (!text) {
+          statusEl.hidden = true;
+          statusEl.textContent = '';
+          statusEl.removeAttribute('data-busy');
+          return;
+        }
+        statusEl.hidden = false;
+        statusEl.textContent = text;
+        if (busy) statusEl.setAttribute('data-busy', 'true');
+        else statusEl.removeAttribute('data-busy');
       }
 
       function zoomAt(clientX, clientY, nextScale) {
@@ -3720,7 +3759,10 @@
             saveError.hidden = true;
             saveError.textContent = '';
           }
+          setSaveProgress('', false);
           if (savePasswordInput) savePasswordInput.value = '';
+          if (saveSubmitBtn) saveSubmitBtn.disabled = false;
+          if (saveCancelBtn) saveCancelBtn.disabled = false;
           if (saveDialog && saveDialog.showModal) saveDialog.showModal();
           if (savePasswordInput) savePasswordInput.focus();
         });
@@ -3740,29 +3782,40 @@
             return;
           }
           saveError.hidden = true;
-          saveRemoteBtn.disabled = true;
+          if (saveRemoteBtn) saveRemoteBtn.disabled = true;
+          if (saveSubmitBtn) saveSubmitBtn.disabled = true;
+          if (saveCancelBtn) saveCancelBtn.disabled = true;
+          if (savePasswordInput) savePasswordInput.disabled = true;
+          setSaveProgress('Готовлю данные…', true);
+          var progressTimer = window.setTimeout(function () {
+            setSaveProgress('Отправляю на GitHub…', true);
+          }, 400);
           publishToGitHub(pass)
             .then(function (data) {
+              window.clearTimeout(progressTimer);
               setTreeDirty(false);
-              if (saveDialog && saveDialog.open) saveDialog.close();
+              setSaveProgress('Готово. Обновляю страницу…', true);
               var bits = [];
               if (data && data.indexChanged) bits.push('страница');
               if (data && data.jsonChanged) bits.push('данные');
-              window.alert(
-                'Сохранено на waydean.ru/drewo' +
-                  (bits.length ? ' (' + bits.join(' + ') + ')' : '') +
-                  '.\nСейчас обновлю страницу без кэша.'
-              );
-              // GitHub Pages кэширует HTML ~10 мин — без ?v= сын «пропадает» после F5.
-              var base = location.pathname.replace(/\/?$/, '/');
-              location.replace(base + '?v=' + Date.now());
+              window.setTimeout(function () {
+                if (saveDialog && saveDialog.open) saveDialog.close();
+                // Bust CDN cache so refresh shows new tree.
+                var base = location.pathname.replace(/\/?$/, '/');
+                location.replace(base + '?v=' + Date.now());
+              }, 350);
             })
             .catch(function (err) {
+              window.clearTimeout(progressTimer);
+              setSaveProgress('', false);
               saveError.hidden = false;
               saveError.textContent = err.message || String(err);
+              if (saveSubmitBtn) saveSubmitBtn.disabled = false;
+              if (saveCancelBtn) saveCancelBtn.disabled = false;
+              if (savePasswordInput) savePasswordInput.disabled = false;
             })
             .finally(function () {
-              saveRemoteBtn.disabled = false;
+              if (saveRemoteBtn) saveRemoteBtn.disabled = false;
             });
         });
       }
@@ -3904,21 +3957,11 @@
       }
 
       function syncHeaderAnchor() {
-        var headerEl = document.querySelector('.header');
-        var anchorEl = document.getElementById('header-anchor');
-        if (!headerEl || !anchorEl) return;
-        anchorEl.style.height = headerEl.offsetHeight + 'px';
+        // Header is in document flow now; spacer stays hidden.
       }
-      syncHeaderAnchor();
       window.addEventListener('resize', syncHeaderAnchor);
       if (window.visualViewport) {
         window.visualViewport.addEventListener('resize', syncHeaderAnchor);
-      }
-      if (window.ResizeObserver) {
-        var headerEl = document.querySelector('.header');
-        if (headerEl) {
-          new ResizeObserver(syncHeaderAnchor).observe(headerEl);
-        }
       }
 
       function finishBoot() {
@@ -3937,7 +3980,6 @@
         }
         showGuideBannerIfNeeded();
         updateSaveButton();
-        syncHeaderAnchor();
         render(true);
       }
 

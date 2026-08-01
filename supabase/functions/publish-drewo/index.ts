@@ -19,18 +19,37 @@ function normalizePassword(value: unknown) {
     .toLocaleLowerCase('ru-RU');
 }
 
-/** Put fresh tree JSON into #tree-data so HTML always matches treeJson. */
-function injectTreeData(html: string, treeJson: string): string {
-  const normalized = treeJson.trim();
+/** Replace or insert a JSON <script id="..."> block. */
+function injectOrInsertScript(html: string, scriptId: string, jsonText: string): string {
+  const normalized = String(jsonText ?? '').trim();
   if (!normalized) return html;
-  const replaced = html.replace(
-    /(<script\b[^>]*\bid\s*=\s*["']tree-data["'][^>]*>)([\s\S]*?)(<\/script>)/i,
-    (_match, open: string, _body: string, close: string) => `${open}\n${normalized}\n${close}`
-  );
-  if (replaced === html) {
-    throw new Error('В HTML нет #tree-data — некуда записать дерево');
+
+  const patterns = [
+    // id="tree-data" or id='tree-data'
+    new RegExp(
+      `(<script\\b[^>]*\\bid\\s*=\\s*["']${scriptId}["'][^>]*>)([\\s\\S]*?)(<\\/script>)`,
+      'i'
+    ),
+    // id=tree-data (unquoted, browser outerHTML quirk)
+    new RegExp(
+      `(<script\\b[^>]*\\bid\\s*=\\s*${scriptId}(?=[\\s>])[^>]*>)([\\s\\S]*?)(<\\/script>)`,
+      'i'
+    ),
+  ];
+
+  for (const re of patterns) {
+    const next = html.replace(re, (_m, open: string, _body: string, close: string) => {
+      return `${open}\n${normalized}\n${close}`;
+    });
+    if (next !== html) return next;
   }
-  return replaced;
+
+  const tag =
+    `\n<script type="application/json" id="${scriptId}">\n${normalized}\n</script>\n`;
+  if (/<\/body>/i.test(html)) {
+    return html.replace(/<\/body>/i, `${tag}</body>`);
+  }
+  return html + tag;
 }
 
 async function githubGetFile(
@@ -109,7 +128,6 @@ async function githubPutFileRetry(options: {
     return { skipped: false as const, result };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    // Concurrent save: re-read sha and retry once.
     if (!/sha|conflict|409|422/i.test(message)) throw error;
     const again = await githubGetFile(options.token, options.repo, options.path);
     if (again?.content === options.content) {
@@ -195,23 +213,20 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Неверный пароль' }, 401);
     }
 
-    const html = typeof body.html === 'string' ? body.html : '';
-    if (!html || html.length < 100) {
-      return jsonResponse({ error: 'Пустой HTML' }, 400);
-    }
-
     const treeJson = typeof body.treeJson === 'string' ? body.treeJson.trim() : '';
     if (!treeJson) {
       return jsonResponse({ error: 'Пустое дерево (treeJson)' }, 400);
     }
-
-    let htmlToWrite: string;
     try {
-      htmlToWrite = injectTreeData(html, treeJson);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : 'Не удалось встроить дерево в HTML';
-      return jsonResponse({ error: message }, 400);
+      JSON.parse(treeJson);
+    } catch {
+      return jsonResponse({ error: 'treeJson не является JSON' }, 400);
     }
+
+    const activityJson =
+      typeof body.activityJson === 'string' && body.activityJson.trim()
+        ? body.activityJson.trim()
+        : '';
 
     const stamp = new Date()
       .toISOString()
@@ -223,7 +238,23 @@ Deno.serve(async (request) => {
         ? body.message.trim()
         : `Update family tree (${stamp})`;
 
+    // Use the live HTML on GitHub as the shell. Browser outerHTML often breaks #tree-data.
     const current = await githubGetFile(githubToken, githubRepo, 'drewo/index.html');
+    let htmlBase =
+      current?.content && current.content.length > 100
+        ? current.content
+        : typeof body.html === 'string'
+          ? body.html
+          : '';
+    if (!htmlBase || htmlBase.length < 100) {
+      return jsonResponse({ error: 'Нет HTML страницы для обновления' }, 400);
+    }
+
+    let htmlToWrite = injectOrInsertScript(htmlBase, 'tree-data', treeJson);
+    if (activityJson) {
+      htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', activityJson);
+    }
+
     const indexWillChange = !current?.content || current.content !== htmlToWrite;
 
     if (current?.content && indexWillChange) {
@@ -259,14 +290,17 @@ Deno.serve(async (request) => {
     const jsonChanged = !jsonPut.skipped;
 
     if (!indexChanged && !jsonChanged) {
-      return jsonResponse({
-        ok: false,
-        error:
-          'На GitHub уже такая же версия дерева. Если сын пропал после обновления — это кэш сайта (до 10 мин). Откройте waydean.ru/drewo/?v=1 или подождите.',
-        indexChanged: false,
-        jsonChanged: false,
-        publishedAt: new Date().toISOString(),
-      }, 409);
+      return jsonResponse(
+        {
+          ok: false,
+          error:
+            'На GitHub уже такая же версия дерева. Если сын пропал после обновления — откройте waydean.ru/drewo/?v=1 или подождите до 10 минут (кэш).',
+          indexChanged: false,
+          jsonChanged: false,
+          publishedAt: new Date().toISOString(),
+        },
+        409
+      );
     }
 
     const backups = await listBackupFiles(githubToken, githubRepo);
