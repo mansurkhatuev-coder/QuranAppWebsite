@@ -547,6 +547,7 @@
     }
 
     body[data-theme="premium"] .fab-panel #install-home,
+    body[data-theme="premium"] .fab-panel #reload-page,
     body[data-theme="premium"] .fab-toggle {
       background: color-mix(in srgb, #121c1a 80%, #0a151c);
       border-color: color-mix(in srgb, var(--sand) 35%, transparent);
@@ -743,6 +744,12 @@
       background: color-mix(in srgb, var(--bg1) 72%, var(--bg0));
       color: var(--text);
       border-color: color-mix(in srgb, var(--sand) 40%, transparent);
+    }
+
+    .fab-panel #reload-page {
+      background: color-mix(in srgb, var(--bg2) 55%, var(--bg0));
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--sand) 35%, transparent);
     }
 
     .fab-panel #save-remote {
@@ -1105,6 +1112,7 @@
     </button>
     <div class="fab-panel" id="fab-panel">
       <button type="button" id="install-home">На экран Домой</button>
+      <button type="button" id="reload-page">Обновить</button>
       <button type="button" id="save-remote" hidden>Сохранить</button>
     </div>
   </div>
@@ -1998,22 +2006,6 @@
     "father": "Мухаммад",
     "sonId": "added-1785596579529-e483pu",
     "fatherId": "added-1785596491258-9c92zv"
-  },
-  {
-    "type": "delete",
-    "at": "2026-08-01T17:44:52.949Z",
-    "son": "Проверка",
-    "father": "Мансур",
-    "sonId": "added-1785603911421-2wywk7",
-    "fatherId": "mansur"
-  },
-  {
-    "type": "delete",
-    "at": "2026-08-01T17:48:20.177Z",
-    "son": "Гуно",
-    "father": "Мухаммад",
-    "sonId": "added-1785596579529-e483pu",
-    "fatherId": "added-1785596491258-9c92zv"
   }
 ]
 </script>
@@ -2171,6 +2163,7 @@
       var addNameInput = document.getElementById('add-name');
       var addCancelBtn = document.getElementById('add-cancel');
       var installHomeBtn = document.getElementById('install-home');
+      var reloadPageBtn = document.getElementById('reload-page');
       var saveRemoteBtn = document.getElementById('save-remote');
       var fabRail = document.getElementById('fab-rail');
       var fabToggle = document.getElementById('fab-toggle');
@@ -3739,6 +3732,19 @@
             return;
           }
           openInstallDialog();
+        });
+      }
+      if (reloadPageBtn) {
+        reloadPageBtn.addEventListener('click', function () {
+          if (treeDirty) {
+            var ok = window.confirm(
+              'Есть несохранённые изменения. Обновить страницу и потерять их?'
+            );
+            if (!ok) return;
+          }
+          setFabOpen(false);
+          var base = location.pathname.replace(/\/?$/, '/');
+          location.replace(base + '?v=' + Date.now());
         });
       }
       if (installCloseBtn) {
