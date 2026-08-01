@@ -11,8 +11,91 @@
   const AUDIO_MP3QURAN_SAMPLE = 'https://server14.mp3quran.net/mansor/001.mp3';
   const GIVEAWAY_FN =
     'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/academy-giveaway-enter';
+  const APP_STORE_LOOKUP = 'https://itunes.apple.com/lookup?id=6782619598';
+  const RUSTORE_PAGE = 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp';
   const AUDIO_PREF_KEY = 'waydean_admin_hud_audio_v1';
   const OPERATOR_NAME = 'Mansur';
+
+  const TARGET_BRIEFS = {
+    'SB-01': {
+      bound:
+        'База админки: релизы, дуа, отзывы Академии, аналитика, розыгрыш, вход оператора.',
+      fail:
+        'Админка почти не работает: нет данных, публикации, отзывов и аналитики. Приложение при этом может жить на кэше.',
+    },
+    'AN-02': {
+      bound:
+        'Таблица analytics_events — события из приложения (открытия, уроки, азкары, тасбих).',
+      fail:
+        'Вкладка «Аналитика» пустая или с ошибкой. Само приложение и уроки работают как обычно.',
+    },
+    'CDN-03': {
+      bound:
+        'Файл app-release.json на waydean.ru — версии Android/iOS и ссылки RuStore/APK для баннера обновления в приложении.',
+      fail:
+        'В приложении не подтянется проверка новой версии / ссылка на обновление. Уже установленное приложение читает Коран и Академию офлайн.',
+    },
+    'ST-12': {
+      bound:
+        'Живая версия в Apple App Store (iTunes Lookup) + сверка с iOS-полем в app-release.json.',
+      fail:
+        'Не видим актуальную версию в App Store или манифест на сайте устарел относительно стора. Баннер обновления в приложении может показывать неверную версию, пока не опубликуете релиз в админке.',
+    },
+    'ST-13': {
+      bound:
+        'RuStore: версия из вашего манифеста app-release.json (Android). Публичного CORS API у RuStore нет — live-парсинг страницы из браузера недоступен.',
+      fail:
+        'Если манифест не обновили после выкладки в RuStore — пользователи Android не увидят предложение обновиться. Сам стор и скачивание из RuStore не ломаются.',
+    },
+    'CDN-04': {
+      bound:
+        'Манифест удалённых дуа для раздела «Поддержка» на сайте и в админке.',
+      fail:
+        'Не обновятся удалённые дуа с CDN. Локальный контент в приложении и уже опубликованные файлы остаются.',
+    },
+    'PWA-05': {
+      bound:
+        'Манифест PWA админки (иконка, установка на домашний экран).',
+      fail:
+        'Установка/обновление ярлыка админки может сломаться. Сама админка в браузере обычно открывается.',
+    },
+    'PUB-06': {
+      bound:
+        'Edge Function публикации: выгрузка дуа/релизов/контента из админки на GitHub → waydean.ru.',
+      fail:
+        'Кнопка «Опубликовать» не сработает — правки останутся только в Supabase, на сайт не уйдут. Чтение сайта и приложения не ломается.',
+    },
+    'QF-07': {
+      bound:
+        'Прокси Quran Foundation — онлайн-мусхаф / таджвид-страницы, когда нет локального пака.',
+      fail:
+        'Онлайн-загрузка страниц QF и скачивание пака через API не сработают. Офлайн-пак и обычное чтение без QF остаются.',
+    },
+    'GW-08': {
+      bound:
+        'Edge Function розыгрыша итогового экзамена Академии (заявки с устройств).',
+      fail:
+        'Нельзя принять/обработать заявки розыгрыша. Курсы, уроки и остальная Академия работают.',
+    },
+    'AUD-09': {
+      bound:
+        'CDN islamic.network — потоковое аудио аятов (например Alafasy) в слушании/чтении.',
+      fail:
+        'Онлайн-аудио с этого CDN не заиграет. Офлайн-паки чтецов и другие CDN могут ещё работать.',
+    },
+    'AUD-10': {
+      bound:
+        'Tarteel audio CDN — gapless/суры для выбранных чтецов.',
+      fail:
+        'Gapless-режим и эти суры онлайн недоступны. Поаятное аудио с других источников и офлайн-паки — отдельно.',
+    },
+    'AUD-11': {
+      bound:
+        'mp3quran — ещё один источник сур/чтецов в приложении.',
+      fail:
+        'Аудио с mp3quran не загрузится. Другие чтецы/CDN и офлайн-паки не затрагиваются.',
+    },
+  };
 
   let timer = null;
   let clockTimer = null;
@@ -21,6 +104,7 @@
   let audioEnabled = false;
   let audioCtx = null;
   let lastBannerKey = '';
+  let selectedTargetId = null;
 
   function $(id) {
     return document.getElementById(id);
@@ -280,9 +364,124 @@
         const data = await response.clone().json();
         const android = data?.android?.latestVersion || '—';
         const ios = data?.ios?.latestVersion || '—';
-        return `Android ${android} · iOS ${ios}`;
+        return `Манифест · Android ${android} · iOS ${ios}`;
       },
     });
+  }
+
+  async function loadReleaseManifest() {
+    const response = await fetch(`${SITE}/data/app-release.json`, {
+      method: 'GET',
+      cache: 'no-store',
+      mode: 'cors',
+    });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    return response.json();
+  }
+
+  async function pingAppStoreLive() {
+    const started = performance.now();
+    try {
+      const [storeRes, manifest] = await Promise.all([
+        fetch(APP_STORE_LOOKUP, { method: 'GET', cache: 'no-store', mode: 'cors' }),
+        loadReleaseManifest().catch(() => null),
+      ]);
+      const ms = Math.round(performance.now() - started);
+      if (!storeRes.ok) {
+        return { ok: false, soft: false, status: storeRes.status, ms, detail: `HTTP ${storeRes.status}` };
+      }
+      const payload = await storeRes.json();
+      const live = payload?.results?.[0]?.version;
+      if (!live) {
+        return { ok: false, soft: true, status: 200, ms, detail: 'Версия в ответе пуста' };
+      }
+      const declared = manifest?.ios?.latestVersion || null;
+      if (!declared) {
+        return {
+          ok: true,
+          soft: true,
+          status: 200,
+          ms,
+          detail: `App Store ${live} · манифест iOS нет`,
+        };
+      }
+      if (declared === live) {
+        return {
+          ok: true,
+          soft: false,
+          status: 200,
+          ms,
+          detail: `App Store ${live} = манифест`,
+        };
+      }
+      return {
+        ok: true,
+        soft: true,
+        status: 200,
+        ms,
+        detail: `App Store ${live} ≠ манифест ${declared}`,
+      };
+    } catch (error) {
+      const ms = Math.round(performance.now() - started);
+      return {
+        ok: false,
+        soft: false,
+        status: 0,
+        ms,
+        detail: (error instanceof Error ? error.message : 'Ошибка').slice(0, 42),
+      };
+    }
+  }
+
+  async function pingRuStoreDeclared() {
+    const started = performance.now();
+    try {
+      const manifest = await loadReleaseManifest();
+      const ms = Math.round(performance.now() - started);
+      const version = manifest?.android?.latestVersion || null;
+      const code = manifest?.android?.versionCode;
+      if (!version) {
+        return { ok: false, soft: true, status: 200, ms, detail: 'Нет android.latestVersion' };
+      }
+      // Страница RuStore без CORS — только проверка, что каталог открывается (opaque/fail = soft).
+      let pageOk = false;
+      try {
+        const page = await fetch(RUSTORE_PAGE, {
+          method: 'GET',
+          mode: 'no-cors',
+          cache: 'no-store',
+        });
+        pageOk = page.type === 'opaque' || page.ok;
+      } catch {
+        pageOk = false;
+      }
+      const codePart = code != null ? ` · code ${code}` : '';
+      if (pageOk) {
+        return {
+          ok: true,
+          soft: true,
+          status: 200,
+          ms,
+          detail: `Манифест ${version}${codePart} · live API нет`,
+        };
+      }
+      return {
+        ok: true,
+        soft: true,
+        status: 200,
+        ms,
+        detail: `Манифест ${version}${codePart} · каталог ?`,
+      };
+    } catch (error) {
+      const ms = Math.round(performance.now() - started);
+      return {
+        ok: false,
+        soft: false,
+        status: 0,
+        ms,
+        detail: (error instanceof Error ? error.message : 'Ошибка').slice(0, 42),
+      };
+    }
   }
 
   function statusClass(result) {
@@ -297,6 +496,45 @@
     return '■';
   }
 
+  function statusLabel(result) {
+    if (result.ok && !result.soft) return 'В норме';
+    if (result.ok || result.soft) return 'С предупреждением';
+    return 'Не отвечает';
+  }
+
+  function showTargetBrief(item) {
+    const panel = $('hud-target-brief');
+    if (!panel || !item) return;
+    const brief = TARGET_BRIEFS[item.id] || {
+      bound: 'Служебная проверка доступности.',
+      fail: 'Возможен сбой связанного канала. Уточните по ID.',
+    };
+    const title = $('hud-brief-title');
+    const status = $('hud-brief-status');
+    const bound = $('hud-brief-bound');
+    const fail = $('hud-brief-fail');
+    if (title) title.textContent = `${item.id} · ${item.name}`;
+    if (status) {
+      status.textContent = `${statusLabel(item.result)} · ${item.result.detail} · ${item.result.ms} мс`;
+      status.className = `admin-hud-brief-status ${statusClass(item.result)}`;
+    }
+    if (bound) bound.textContent = brief.bound;
+    if (fail) fail.textContent = brief.fail;
+    panel.hidden = false;
+  }
+
+  function hideTargetBrief() {
+    selectedTargetId = null;
+    const panel = $('hud-target-brief');
+    if (panel) panel.hidden = true;
+    const root = $('hud-targets');
+    if (root) {
+      root.querySelectorAll('.admin-hud-target.is-selected').forEach((el) => {
+        el.classList.remove('is-selected');
+      });
+    }
+  }
+
   function renderTargets(results) {
     const root = $('hud-targets');
     if (!root) return;
@@ -304,6 +542,11 @@
     for (const item of results) {
       const card = document.createElement('article');
       card.className = `admin-hud-target ${statusClass(item.result)}`;
+      if (selectedTargetId === item.id) card.classList.add('is-selected');
+      card.setAttribute('role', 'button');
+      card.tabIndex = 0;
+      card.setAttribute('aria-pressed', selectedTargetId === item.id ? 'true' : 'false');
+      card.dataset.targetId = item.id;
       card.innerHTML = `
         <div class="admin-hud-target-top">
           <span class="admin-hud-glyph">${statusGlyph(item.result)}</span>
@@ -316,7 +559,33 @@
           <span>КОД ${item.result.status || '—'}</span>
         </div>
       `;
+      const activate = () => {
+        if (selectedTargetId === item.id) {
+          hideTargetBrief();
+          return;
+        }
+        selectedTargetId = item.id;
+        root.querySelectorAll('.admin-hud-target').forEach((el) => {
+          const on = el.dataset.targetId === item.id;
+          el.classList.toggle('is-selected', on);
+          el.setAttribute('aria-pressed', on ? 'true' : 'false');
+        });
+        showTargetBrief(item);
+      };
+      card.addEventListener('click', activate);
+      card.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' || event.key === ' ') {
+          event.preventDefault();
+          activate();
+        }
+      });
       root.appendChild(card);
+    }
+
+    if (selectedTargetId) {
+      const selected = results.find((item) => item.id === selectedTargetId);
+      if (selected) showTargetBrief(selected);
+      else hideTargetBrief();
     }
   }
 
@@ -366,6 +635,16 @@
       pingAppRelease().then((result) => ({
         id: 'CDN-03',
         name: 'Сайт · релиз приложения',
+        result,
+      })),
+      pingAppStoreLive().then((result) => ({
+        id: 'ST-12',
+        name: 'App Store · live',
+        result,
+      })),
+      pingRuStoreDeclared().then((result) => ({
+        id: 'ST-13',
+        name: 'RuStore · манифест',
         result,
       })),
       pingUrl(`${SITE}/data/remote-dua.manifest.json`).then((result) => ({
@@ -455,6 +734,13 @@
     if (refresh) {
       refresh.addEventListener('click', () => {
         void sweep();
+      });
+    }
+
+    const briefClose = $('hud-brief-close');
+    if (briefClose) {
+      briefClose.addEventListener('click', () => {
+        hideTargetBrief();
       });
     }
 

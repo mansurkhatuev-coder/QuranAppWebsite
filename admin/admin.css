@@ -1141,3 +1141,80 @@
 .admin-analytics-funnel-bar .is-finished { background: #3d9b6e; }
 .admin-analytics-funnel-bar .is-abandoned { background: #c45c4a; }
 .admin-analytics-funnel-bar .is-studying { background: #c9a24d; }
+
+.admin-hud-hint {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.65rem;
+  color: rgba(255, 170, 170, 0.5);
+  font-size: 11px;
+  letter-spacing: 0.04em;
+}
+.admin-hud-brief {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 0.85rem;
+  padding: 14px 16px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 120, 120, 0.4);
+  background: rgba(40, 8, 8, 0.72);
+  display: grid;
+  gap: 0.55rem;
+}
+.admin-hud-brief[hidden] { display: none !important; }
+.admin-hud-brief-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+.admin-hud-brief-top strong {
+  color: #ffe0e0;
+  font-size: 0.95rem;
+  letter-spacing: 0.04em;
+}
+.admin-hud-brief p {
+  margin: 0;
+  color: rgba(255, 210, 210, 0.88);
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+.admin-hud-brief .admin-hud-label {
+  margin-bottom: 0.2rem;
+}
+.admin-hud-brief-status {
+  font-size: 0.8rem !important;
+  letter-spacing: 0.04em;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 100, 100, 0.25);
+  background: rgba(0, 0, 0, 0.25);
+}
+.admin-hud-brief-status.is-online {
+  border-color: rgba(70, 210, 130, 0.35);
+  color: #b8ffd0;
+}
+.admin-hud-brief-status.is-warn {
+  border-color: rgba(255, 190, 70, 0.4);
+  color: #ffe0a0;
+}
+.admin-hud-brief-status.is-offline {
+  border-color: rgba(255, 70, 70, 0.5);
+  color: #ffb0b0;
+}
+.admin-hud-target {
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.15s ease;
+}
+.admin-hud-target:hover {
+  border-color: rgba(255, 150, 150, 0.55);
+}
+.admin-hud-target.is-selected {
+  border-color: rgba(255, 210, 120, 0.75) !important;
+  box-shadow: 0 0 0 1px rgba(255, 200, 100, 0.35), inset 0 0 24px rgba(255, 180, 60, 0.08);
+}
+.admin-hud-target:focus-visible {
+  outline: 2px solid rgba(255, 200, 120, 0.7);
+  outline-offset: 2px;
+}
