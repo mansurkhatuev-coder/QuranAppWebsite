@@ -96,6 +96,8 @@
     }
 
     .header {
+      position: relative;
+      z-index: 60;
       display: flex;
       flex-wrap: nowrap;
       align-items: center;
@@ -113,6 +115,7 @@
         );
       backdrop-filter: blur(8px);
       animation: chrome-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+      overflow: visible;
     }
 
     .brand {
@@ -152,6 +155,8 @@
       position: relative;
       flex: 1 1 auto;
       min-width: 0;
+      z-index: 61;
+      overflow: visible;
     }
 
     .header-bar .search-input {
@@ -161,18 +166,17 @@
     }
 
     .search-results {
-      position: absolute;
-      left: 0;
-      right: 0;
-      top: calc(100% + 0.35rem);
-      z-index: 45;
+      position: fixed;
+      z-index: 80;
       max-height: min(50vh, 18rem);
       overflow: auto;
+      -webkit-overflow-scrolling: touch;
       padding: 0.35rem;
       border: 1px solid color-mix(in srgb, var(--sand) 30%, transparent);
       border-radius: 12px;
       background: color-mix(in srgb, var(--bg0) 96%, black);
       box-shadow: 0 16px 36px color-mix(in srgb, black 42%, transparent);
+      min-width: min(18rem, calc(100vw - 1.5rem));
     }
 
     .search-results[hidden] {
@@ -2507,7 +2511,29 @@
         if (!searchResults) return;
         searchResults.hidden = true;
         searchResults.replaceChildren();
+        searchResults.style.top = '';
+        searchResults.style.left = '';
+        searchResults.style.width = '';
+        searchResults.style.maxHeight = '';
         if (searchInput) searchInput.setAttribute('aria-expanded', 'false');
+      }
+
+      function positionSearchResults() {
+        if (!searchResults || !searchInput || searchResults.hidden) return;
+        if (searchResults.parentNode !== document.body) {
+          document.body.appendChild(searchResults);
+        }
+        var rect = searchInput.getBoundingClientRect();
+        var gap = 6;
+        var width = Math.max(rect.width, Math.min(288, window.innerWidth - 24));
+        var left = Math.min(rect.left, window.innerWidth - width - 12);
+        left = Math.max(12, left);
+        var top = rect.bottom + gap;
+        var maxH = Math.min(window.innerHeight * 0.5, 288, window.innerHeight - top - 12);
+        searchResults.style.top = top + 'px';
+        searchResults.style.left = left + 'px';
+        searchResults.style.width = width + 'px';
+        searchResults.style.maxHeight = Math.max(120, maxH) + 'px';
       }
 
       function showSearchResults(matches) {
@@ -2520,6 +2546,7 @@
           searchResults.appendChild(empty);
           searchResults.hidden = false;
           if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
+          positionSearchResults();
           return;
         }
         matches.slice(0, 40).forEach(function (item) {
@@ -2553,6 +2580,7 @@
         }
         searchResults.hidden = false;
         if (searchInput) searchInput.setAttribute('aria-expanded', 'true');
+        positionSearchResults();
       }
 
       function selectSearchMatch(id) {
