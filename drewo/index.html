@@ -204,6 +204,60 @@
       display: block;
     }
 
+    .guide-banner {
+      display: none;
+      margin: 0;
+      padding: 0.75rem 1.25rem 0.85rem;
+      border-bottom: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
+      background:
+        linear-gradient(180deg, color-mix(in srgb, var(--bg1) 55%, var(--bg0)), color-mix(in srgb, var(--bg0) 88%, transparent));
+      color: var(--text);
+    }
+
+    .guide-banner.visible {
+      display: block;
+    }
+
+    .guide-banner strong {
+      display: block;
+      margin-bottom: 0.35rem;
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--sand);
+      letter-spacing: 0.02em;
+    }
+
+    .guide-banner ol {
+      margin: 0;
+      padding-left: 1.15rem;
+      font-size: 0.84rem;
+      line-height: 1.45;
+      color: color-mix(in srgb, var(--text) 88%, transparent);
+    }
+
+    .guide-banner li + li {
+      margin-top: 0.2rem;
+    }
+
+    .guide-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      margin-top: 0.65rem;
+    }
+
+    .guide-actions button {
+      font-size: 0.82rem;
+      padding: 0.35rem 0.75rem;
+    }
+
+    .guide-actions .guide-dismiss-forever {
+      border-color: color-mix(in srgb, var(--sand) 22%, transparent);
+      background: transparent;
+      color: var(--text-dim);
+    }
+
     #viewport {
       position: relative;
       flex: 1;
@@ -568,6 +622,11 @@
         padding-left: 0.75rem;
         padding-right: 0.75rem;
       }
+
+      .guide-banner {
+        padding-left: 0.75rem;
+        padding-right: 0.75rem;
+      }
     }
   </style>
 </head>
@@ -591,6 +650,20 @@
       <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск">
     </div>
   </header>
+  <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden>
+    <strong>Как пользоваться</strong>
+    <ol>
+      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки.</li>
+      <li><b>+ сын</b> и <b>Изменить связи</b> — сначала пароль.</li>
+      <li>В правках: перенос на нового отца, тап — переименовать, у листьев — удалить.</li>
+      <li>После изменений нажмите <b>Сохранить</b> внизу — иначе на сайте останется старое.</li>
+      <li><b>На экран Домой</b> — установить как приложение.</li>
+    </ol>
+    <div class="guide-actions">
+      <button type="button" id="guide-ok">Понятно</button>
+      <button type="button" id="guide-never" class="guide-dismiss-forever">Не показывать больше</button>
+    </div>
+  </aside>
   <p id="edit-hint" class="edit-hint">Режим правки: перенос на нового отца, тап = переименовать, у листьев — удалить. Затем «Сохранить».</p>
 
   <main>
@@ -1604,6 +1677,10 @@
       }
       var editLinksBtn = document.getElementById('edit-links');
       var editHint = document.getElementById('edit-hint');
+      var guideBanner = document.getElementById('guide-banner');
+      var guideOkBtn = document.getElementById('guide-ok');
+      var guideNeverBtn = document.getElementById('guide-never');
+      var GUIDE_HIDE_KEY = 'drewo-hide-guide';
       var historyBtn = document.getElementById('history-btn');
       var historyDialog = document.getElementById('history-dialog');
       var historyList = document.getElementById('history-list');
@@ -2970,6 +3047,43 @@
         });
       }
 
+      function hideGuideBanner(forever) {
+        if (!guideBanner) return;
+        guideBanner.classList.remove('visible');
+        guideBanner.hidden = true;
+        if (forever) {
+          try {
+            localStorage.setItem(GUIDE_HIDE_KEY, '1');
+          } catch (err) {}
+        }
+      }
+
+      function showGuideBannerIfNeeded() {
+        if (!guideBanner) return;
+        var hide = false;
+        try {
+          hide = localStorage.getItem(GUIDE_HIDE_KEY) === '1';
+        } catch (err) {}
+        if (hide) {
+          guideBanner.classList.remove('visible');
+          guideBanner.hidden = true;
+          return;
+        }
+        guideBanner.hidden = false;
+        guideBanner.classList.add('visible');
+      }
+
+      if (guideOkBtn) {
+        guideOkBtn.addEventListener('click', function () {
+          hideGuideBanner(false);
+        });
+      }
+      if (guideNeverBtn) {
+        guideNeverBtn.addEventListener('click', function () {
+          hideGuideBanner(true);
+        });
+      }
+
       setViewFilter('khotu', false);
       updateViewButtons();
       refreshActivityUi();
@@ -2978,6 +3092,7 @@
       } catch (err) {
         setTheme('classic', false);
       }
+      showGuideBannerIfNeeded();
       render(true);
     })();
   </script>
