@@ -197,6 +197,8 @@
       color: var(--text);
       text-align: left;
       cursor: pointer;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: color-mix(in srgb, var(--sand) 25%, transparent);
     }
 
     .search-result:hover,
@@ -2174,9 +2176,10 @@
 
       function findPathToId(root, targetId) {
         var path = [];
+        var target = String(targetId);
         function find(node) {
           path.push(node.id);
-          if (node.id === targetId) return true;
+          if (String(node.id) === target) return true;
           var sons = node.sons || [];
           for (var i = 0; i < sons.length; i++) {
             if (find(sons[i])) return true;
@@ -2580,24 +2583,34 @@
 
       function selectSearchMatch(id) {
         if (!id) return;
-        if (searchInput) {
-          try {
-            searchInput.blur();
-          } catch (err) {}
-        }
+        id = String(id);
+        clearTimeout(searchTimer);
         if (viewFilter === 'khotu') {
           setViewFilter('all', false);
         }
         matchIds = new Set([id]);
         expandAncestorsOf(id);
+        expanded.add(id);
         hideSearchResults();
         map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
         pendingScrollId = id;
         render(false);
+        focusNode(id);
         if (searchInput) {
           var node = TreeModel.findById(tree, id);
           if (node && node.name) searchInput.value = node.name;
+          try {
+            searchInput.blur();
+          } catch (err) {}
         }
+        // Keyboard close triggers resize; re-apply focus after layout settles.
+        clearTimeout(selectSearchMatch._refocusTimer);
+        selectSearchMatch._refocusTimer = setTimeout(function () {
+          map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
+          pendingScrollId = id;
+          render(false);
+          focusNode(id);
+        }, 320);
       }
 
       function runSearch(rawQuery) {
@@ -2621,11 +2634,7 @@
         });
 
         if (matches.length === 1) {
-          hideSearchResults();
-          expandAncestorsOf(matches[0].id);
-          map.scale = clamp(1.35, MAP_SCALE_MIN, MAP_SCALE_MAX);
-          pendingScrollId = matches[0].id;
-          render(false);
+          selectSearchMatch(matches[0].id);
           return;
         }
 
@@ -2976,8 +2985,19 @@
       }
 
       function focusNode(id) {
+        id = String(id || '');
         var n = layoutMeta.nodes[id];
-        if (!n) return;
+        if (!n) {
+          // ids in layout may differ only by coercion; try raw key scan
+          Object.keys(layoutMeta.nodes).some(function (key) {
+            if (String(key) === id) {
+              n = layoutMeta.nodes[key];
+              return true;
+            }
+            return false;
+          });
+        }
+        if (!n) return false;
         var vw = viewport.clientWidth || 360;
         var vh = viewport.clientHeight || 480;
         var s = map.scale;
@@ -2989,6 +3009,7 @@
         map.y = Math.max(16, vh * 0.3 - n.cy * s);
         redrawLinks();
         applyMapTransform();
+        return true;
       }
 
       function redrawLinks() {
@@ -3631,13 +3652,35 @@
           }
         }
       });
-      document.addEventListener('click', function (e) {
-        if (!searchResults || searchResults.hidden) return;
-        if (e.target.closest && (e.target.closest('.search-wrap') || e.target.closest('#search-results'))) {
-          return;
-        }
-        hideSearchResults();
-      });
+      if (searchResults) {
+        searchResults.addEventListener(
+          'pointerdown',
+          function (e) {
+            var btn = e.target.closest && e.target.closest('.search-result');
+            if (!btn || !btn.dataset.id) return;
+            e.preventDefault();
+            e.stopPropagation();
+            selectSearchMatch(btn.dataset.id);
+          },
+          true
+        );
+      }
+      document.addEventListener(
+        'pointerdown',
+        function (e) {
+          if (!searchResults || searchResults.hidden) return;
+          if (
+            e.target.closest &&
+            (e.target.closest('#search-results') ||
+              e.target.closest('.search-wrap') ||
+              e.target.closest('#search'))
+          ) {
+            return;
+          }
+          hideSearchResults();
+        },
+        true
+      );
 
       addForm.addEventListener('submit', function (e) {
         e.preventDefault();
@@ -3661,9 +3704,15 @@
       }
 
       window.addEventListener('resize', function () {
-        fitView();
+        // Keep current pan/zoom; fitView here would cancel search focus after keyboard close.
+        scheduleCrispRender();
         positionSearchResults();
       });
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function () {
+          positionSearchResults();
+        });
+      }
       if (document.fonts && document.fonts.ready) {
         document.fonts.ready.then(function () {
           render(true);
