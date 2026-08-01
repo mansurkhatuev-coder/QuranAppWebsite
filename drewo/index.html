@@ -26,7 +26,7 @@
       --text: #f3ebe0;
       --text-dim: color-mix(in srgb, var(--text) 62%, transparent);
       --panel: color-mix(in srgb, var(--bg0) 78%, black);
-      --footer-reserve: calc(4.5rem + env(safe-area-inset-bottom, 0px));
+      --footer-reserve: calc(0.35rem + env(safe-area-inset-bottom, 0px));
       --font-display: "Cormorant Garamond", "Times New Roman", serif;
       --font-ui: "Source Sans 3", "Segoe UI", "Noto Sans", sans-serif;
       --header-bg: color-mix(in srgb, var(--bg0) 96%, black);
@@ -64,12 +64,17 @@
     html {
       background-color: #0d1a22;
       color-scheme: dark;
+      height: 100%;
+      overflow: hidden;
     }
 
     html,
     body {
       margin: 0;
-      min-height: 100%;
+      height: 100%;
+      max-height: 100dvh;
+      overflow: hidden;
+      overscroll-behavior: none;
       font-family: var(--font-ui);
       color: var(--text);
       background-color: var(--bg0);
@@ -87,6 +92,7 @@
       min-height: 100dvh;
       padding-left: env(safe-area-inset-left, 0px);
       padding-right: env(safe-area-inset-right, 0px);
+      touch-action: manipulation;
     }
 
     .header {
@@ -389,8 +395,8 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
-      padding: 0 1rem 0.75rem;
-      padding-bottom: var(--footer-reserve);
+      overflow: hidden;
+      padding: 0 0.55rem var(--footer-reserve);
     }
 
     .person-btn.drop-target {
@@ -442,6 +448,9 @@
       background:
         linear-gradient(180deg, color-mix(in srgb, var(--bg1) 55%, var(--bg0)), color-mix(in srgb, var(--bg0) 88%, transparent));
       color: var(--text);
+      max-height: min(42vh, 18rem);
+      overflow: auto;
+      -webkit-overflow-scrolling: touch;
     }
 
     .guide-banner.visible {
@@ -532,7 +541,8 @@
       border-bottom-color: color-mix(in srgb, var(--sand) 22%, transparent);
     }
 
-    body[data-theme="premium"] .fab-dock #install-home {
+    body[data-theme="premium"] .fab-panel #install-home,
+    body[data-theme="premium"] .fab-toggle {
       background: color-mix(in srgb, #121c1a 80%, #0a151c);
       border-color: color-mix(in srgb, var(--sand) 35%, transparent);
     }
@@ -630,26 +640,91 @@
       display: none !important;
     }
 
-    .fab-dock {
+    .fab-rail {
       position: fixed;
-      right: max(0.85rem, env(safe-area-inset-right, 0px));
-      bottom: calc(0.85rem + constant(safe-area-inset-bottom));
-      bottom: calc(0.85rem + env(safe-area-inset-bottom, 0px));
+      right: 0;
+      top: 50%;
       z-index: 40;
       display: flex;
-      flex-direction: column-reverse;
-      align-items: flex-end;
-      gap: 0.55rem;
+      flex-direction: row-reverse;
+      align-items: center;
+      transform: translateY(-50%);
       pointer-events: none;
-      animation: footer-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
     }
 
-    .fab-dock button {
+    .fab-toggle {
       pointer-events: auto;
       position: relative;
+      width: 1.4rem;
+      height: 3.4rem;
+      padding: 0;
+      border-radius: 12px 0 0 12px;
+      border-right: 0;
+      background: color-mix(in srgb, var(--header-bg, var(--bg0)) 92%, black);
+      border-color: color-mix(in srgb, var(--sand) 40%, transparent);
+      box-shadow: -6px 0 18px color-mix(in srgb, black 28%, transparent);
+    }
+
+    .fab-toggle-arrow {
+      display: block;
+      width: 0.45rem;
+      height: 0.45rem;
+      margin: 0 auto;
+      border-right: 2px solid var(--sand);
+      border-bottom: 2px solid var(--sand);
+      transform: rotate(135deg);
+      transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .fab-rail[data-open="true"] .fab-toggle-arrow {
+      transform: rotate(-45deg);
+    }
+
+    .fab-dirty-dot {
+      position: absolute;
+      top: 0.35rem;
+      left: 0.28rem;
+      width: 0.45rem;
+      height: 0.45rem;
+      border-radius: 50%;
+      background: var(--sand);
+      box-shadow: 0 0 0 2px color-mix(in srgb, var(--bg0) 70%, black);
+    }
+
+    .fab-dirty-dot[hidden] {
+      display: none !important;
+    }
+
+    .fab-panel {
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      gap: 0.45rem;
+      max-width: 0;
+      opacity: 0;
       overflow: hidden;
-      min-height: 2.7rem;
-      padding: 0.7rem 1.15rem;
+      transform: translateX(0.75rem);
+      transition:
+        max-width 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+        opacity 0.22s ease,
+        transform 0.3s cubic-bezier(0.22, 1, 0.36, 1),
+        padding 0.3s ease;
+    }
+
+    .fab-rail[data-open="true"] .fab-panel {
+      pointer-events: auto;
+      max-width: 15rem;
+      opacity: 1;
+      padding-right: 0.55rem;
+      transform: translateX(0);
+    }
+
+    .fab-panel button {
+      position: relative;
+      overflow: hidden;
+      min-height: 2.55rem;
+      padding: 0.6rem 1rem;
       border-radius: 999px;
       font-weight: 600;
       letter-spacing: 0.02em;
@@ -659,34 +734,19 @@
         0 1px 0 color-mix(in srgb, var(--sand) 25%, transparent);
     }
 
-    .fab-dock #install-home {
+    .fab-panel #install-home {
       background: color-mix(in srgb, var(--bg1) 72%, var(--bg0));
       color: var(--text);
       border-color: color-mix(in srgb, var(--sand) 40%, transparent);
     }
 
-    .fab-dock #save-remote {
+    .fab-panel #save-remote {
       background: linear-gradient(180deg, color-mix(in srgb, var(--sand) 82%, white), var(--sand-dim));
       color: #1a1510;
       border-color: color-mix(in srgb, var(--sand) 70%, white);
     }
 
-    .fab-dock button::after {
-      content: "";
-      position: absolute;
-      inset: 0 auto 0 -40%;
-      width: 40%;
-      background: linear-gradient(90deg, transparent, color-mix(in srgb, white 35%, transparent), transparent);
-      transform: skewX(-18deg);
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    .fab-dock button:hover::after {
-      animation: btn-sheen 0.7s ease;
-    }
-
-    .fab-dock button:active {
+    .fab-panel button:active {
       transform: scale(0.97);
     }
 
@@ -919,15 +979,10 @@
         right: 0.5rem;
       }
 
-      .fab-dock {
-        right: max(0.65rem, env(safe-area-inset-right, 0px));
-        bottom: calc(0.65rem + env(safe-area-inset-bottom, 0px));
-      }
-
-      .fab-dock button {
-        min-height: 2.55rem;
-        font-size: 0.9rem;
-        padding: 0.6rem 1rem;
+      .fab-panel button {
+        min-height: 2.4rem;
+        font-size: 0.88rem;
+        padding: 0.55rem 0.9rem;
       }
 
       .search-input {
@@ -1011,9 +1066,15 @@
     </div>
   </main>
 
-  <div class="fab-dock" aria-label="Действия">
-    <button type="button" id="install-home">На экран Домой</button>
-    <button type="button" id="save-remote" hidden>Сохранить</button>
+  <div class="fab-rail" id="fab-rail" data-open="false" aria-label="Действия">
+    <button type="button" id="fab-toggle" class="fab-toggle" aria-expanded="false" aria-controls="fab-panel" aria-label="Открыть действия">
+      <span class="fab-toggle-arrow" aria-hidden="true"></span>
+      <span id="fab-dirty-dot" class="fab-dirty-dot" hidden></span>
+    </button>
+    <div class="fab-panel" id="fab-panel">
+      <button type="button" id="install-home">На экран Домой</button>
+      <button type="button" id="save-remote" hidden>Сохранить</button>
+    </div>
   </div>
 
   <dialog id="add-dialog" aria-labelledby="add-dialog-title">
@@ -2037,6 +2098,9 @@
       var addCancelBtn = document.getElementById('add-cancel');
       var installHomeBtn = document.getElementById('install-home');
       var saveRemoteBtn = document.getElementById('save-remote');
+      var fabRail = document.getElementById('fab-rail');
+      var fabToggle = document.getElementById('fab-toggle');
+      var fabDirtyDot = document.getElementById('fab-dirty-dot');
       var treeDirty = false;
       var passwordDialog = document.getElementById('password-dialog');
       var passwordForm = document.getElementById('password-form');
@@ -2277,15 +2341,29 @@
         refreshActivityUi();
       }
 
+      function setFabOpen(open) {
+        var next = !!open;
+        if (fabRail) fabRail.setAttribute('data-open', next ? 'true' : 'false');
+        if (fabToggle) {
+          fabToggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+          fabToggle.setAttribute('aria-label', next ? 'Скрыть действия' : 'Открыть действия');
+        }
+      }
+
       function updateSaveButton() {
         if (saveRemoteBtn) {
           saveRemoteBtn.hidden = !treeDirty;
         }
+        if (fabDirtyDot) {
+          fabDirtyDot.hidden = !treeDirty;
+        }
       }
 
       function setTreeDirty(on) {
+        var was = treeDirty;
         treeDirty = !!on;
         updateSaveButton();
+        if (treeDirty && !was) setFabOpen(true);
       }
 
       function persistTree() {
@@ -3427,6 +3505,19 @@
           if (renameDialog && renameDialog.open) renameDialog.close();
         });
       }
+
+      if (fabToggle) {
+        fabToggle.addEventListener('click', function (e) {
+          e.stopPropagation();
+          var open = fabRail && fabRail.getAttribute('data-open') === 'true';
+          setFabOpen(!open);
+        });
+      }
+      document.addEventListener('click', function (e) {
+        if (!fabRail || fabRail.getAttribute('data-open') !== 'true') return;
+        if (e.target.closest && e.target.closest('.fab-rail')) return;
+        setFabOpen(false);
+      });
 
       if (installHomeBtn) {
         installHomeBtn.addEventListener('click', function () {
