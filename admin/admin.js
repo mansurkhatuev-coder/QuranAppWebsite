@@ -611,8 +611,8 @@ function renderReleaseForm() {
   const release = state.release ?? {};
   form.innerHTML = `
     <div class="admin-full admin-release-toolbar">
-      <button type="button" id="release-pull-rustore" class="admin-button">Подтянуть из RuStore</button>
-      <p id="release-rustore-status" class="admin-muted">Live-версия RuStore для Android-полей.</p>
+      <button type="button" id="release-pull-rustore" class="admin-button">Обновить из сторов сейчас</button>
+      <p id="release-rustore-status" class="admin-muted">Автопроверка сторов каждые несколько секунд — кнопка не обязательна.</p>
     </div>
     <label>Android version<input name="androidLatestVersion" value="${release.android?.latestVersion ?? ''}" /></label>
     <label>Android versionCode<input name="androidVersionCode" type="number" value="${release.android?.versionCode ?? ''}" /></label>
@@ -648,33 +648,124 @@ function renderReleaseForm() {
   const pullBtn = form.querySelector('#release-pull-rustore');
   const statusEl = form.querySelector('#release-rustore-status');
   if (pullBtn) {
-    pullBtn.addEventListener('click', async () => {
-      if (!window.AdminSupabase?.loadRuStoreVersion) return;
-      pullBtn.disabled = true;
-      if (statusEl) statusEl.textContent = 'Запрос в RuStore…';
-      try {
-        const live = await window.AdminSupabase.loadRuStoreVersion();
-        const versionInput = form.querySelector('[name="androidLatestVersion"]');
-        const codeInput = form.querySelector('[name="androidVersionCode"]');
-        const msgRu = form.querySelector('[name="messageRu"]');
-        if (versionInput && live.versionName) versionInput.value = String(live.versionName);
-        if (codeInput && live.versionCode != null) codeInput.value = String(live.versionCode);
-        if (msgRu && live.whatsNew && !String(msgRu.value || '').trim()) {
-          msgRu.value = String(live.whatsNew);
-        }
-        form.dispatchEvent(new Event('input', { bubbles: true }));
-        if (statusEl) {
-          statusEl.textContent = `RuStore live: ${live.versionName} (code ${live.versionCode ?? '—'}) · ${live.versionStatus || 'OK'}`;
-        }
-      } catch (error) {
-        if (statusEl) {
-          statusEl.textContent = error instanceof Error ? error.message : 'Не удалось получить версию RuStore';
-        }
-      } finally {
-        pullBtn.disabled = false;
-      }
+    pullBtn.addEventListener('click', () => {
+      void syncReleaseFormFromStores({ force: true, statusEl, form });
     });
   }
+}
+
+function updateStoreDriftBanner(detail) {
+  const banner = $('#admin-store-drift');
+  if (!banner) return;
+  const parts = [];
+  if (detail?.rustore?.drift) {
+    parts.push(
+      `RuStore ${detail.rustore.live}${detail.rustore.versionCode != null ? ` (${detail.rustore.versionCode})` : ''} ≠ сайт ${detail.rustore.declared || '—'}`
+    );
+  }
+  if (detail?.appStore?.drift) {
+    parts.push(`App Store ${detail.appStore.live} ≠ сайт ${detail.appStore.declared || '—'}`);
+  }
+  if (!parts.length) {
+    banner.hidden = true;
+    banner.textContent = '';
+    return;
+  }
+  banner.hidden = false;
+  banner.innerHTML = `<strong>Новая версия в сторе</strong> — ${parts.join(' · ')}. Поля Store обновляются сами; осталось сохранить и опубликовать.`;
+}
+
+async function syncReleaseFormFromStores({ force = false, statusEl = null, form = null } = {}) {
+  const releaseForm = form || $('#release-form');
+  const status = statusEl || $('#release-rustore-status');
+  if (!window.AdminSupabase?.loadRuStoreVersion) return;
+
+  try {
+    if (status && force) status.textContent = 'Запрос в сторы…';
+    const [rustore, appStoreRes] = await Promise.all([
+      window.AdminSupabase.loadRuStoreVersion().catch((error) => ({ error })),
+      fetch(`https://itunes.apple.com/lookup?id=6782619598&_=${Date.now()}`, {
+        cache: 'no-store',
+        mode: 'cors',
+      })
+        .then((r) => r.json())
+        .then((json) => ({ version: json?.results?.[0]?.version || null }))
+        .catch((error) => ({ error })),
+    ]);
+
+    let changed = false;
+    if (releaseForm && rustore && !rustore.error) {
+      const versionInput = releaseForm.querySelector('[name="androidLatestVersion"]');
+      const codeInput = releaseForm.querySelector('[name="androidVersionCode"]');
+      const msgRu = releaseForm.querySelector('[name="messageRu"]');
+      if (versionInput && rustore.versionName && (force || versionInput.value !== String(rustore.versionName))) {
+        if (force || versionInput.value !== String(rustore.versionName)) {
+          versionInput.value = String(rustore.versionName);
+          changed = true;
+        }
+      }
+      if (codeInput && rustore.versionCode != null) {
+        const next = String(rustore.versionCode);
+        if (force || codeInput.value !== next) {
+          codeInput.value = next;
+          changed = true;
+        }
+      }
+      if (msgRu && rustore.whatsNew && (force || !String(msgRu.value || '').trim())) {
+        if (!String(msgRu.value || '').trim()) {
+          msgRu.value = String(rustore.whatsNew);
+          changed = true;
+        }
+      }
+    }
+
+    if (releaseForm && appStoreRes?.version) {
+      const iosInput = releaseForm.querySelector('[name="iosLatestVersion"]');
+      if (iosInput && (force || iosInput.value !== String(appStoreRes.version))) {
+        if (force || iosInput.value !== String(appStoreRes.version)) {
+          iosInput.value = String(appStoreRes.version);
+          changed = true;
+        }
+      }
+    }
+
+    if (changed && releaseForm) {
+      releaseForm.dispatchEvent(new Event('input', { bubbles: true }));
+    }
+
+    if (status) {
+      const rs = rustore?.error
+        ? `RuStore: ${rustore.error instanceof Error ? rustore.error.message : rustore.error}`
+        : rustore?.versionName
+          ? `RuStore ${rustore.versionName} (code ${rustore.versionCode ?? '—'})`
+          : 'RuStore —';
+      const as = appStoreRes?.error
+        ? 'App Store: ошибка'
+        : appStoreRes?.version
+          ? `App Store ${appStoreRes.version}`
+          : 'App Store —';
+      status.textContent = changed
+        ? `Автообновлено · ${rs} · ${as}`
+        : `Актуально · ${rs} · ${as}`;
+    }
+  } catch (error) {
+    if (status) {
+      status.textContent = error instanceof Error ? error.message : 'Не удалось получить версии сторов';
+    }
+  }
+}
+
+function bindStoreVersionAutoSync() {
+  window.addEventListener('waydean-store-versions', (event) => {
+    const detail = event.detail || {};
+    updateStoreDriftBanner(detail);
+    const form = $('#release-form');
+    if (!form) return;
+    // Автозаполнение полей Store при расхождении — без кнопки.
+    if (detail.rustore?.drift || detail.appStore?.drift || detail.rustore?.live || detail.appStore?.live) {
+      void syncReleaseFormFromStores({ force: false, form, statusEl: $('#release-rustore-status') });
+    }
+  });
 }
 
 function authenticityPreviewLabel(value) {
@@ -910,9 +1001,8 @@ function setActiveTab(tabName) {
 
   if (tabName === 'command' && window.AdminCommandCenter) {
     window.AdminCommandCenter.start();
-  } else if (window.AdminCommandCenter) {
-    window.AdminCommandCenter.stop();
   }
+  // Центр продолжает опрос в фоне — версии сторов подтягиваются без ручного «Обновить».
   if (tabName === 'academy-feedback' && window.AdminAcademyFeedback) {
     void window.AdminAcademyFeedback.loadAndRender();
   }

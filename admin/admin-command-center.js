@@ -381,8 +381,9 @@
   async function pingAppStoreLive() {
     const started = performance.now();
     try {
+      const lookupUrl = `${APP_STORE_LOOKUP}&_=${Date.now()}`;
       const [storeRes, manifest] = await Promise.all([
-        fetch(APP_STORE_LOOKUP, { method: 'GET', cache: 'no-store', mode: 'cors' }),
+        fetch(lookupUrl, { method: 'GET', cache: 'no-store', mode: 'cors' }),
         loadReleaseManifest().catch(() => null),
       ]);
       const ms = Math.round(performance.now() - started);
@@ -395,6 +396,7 @@
         return { ok: false, soft: true, status: 200, ms, detail: 'Версия в ответе пуста' };
       }
       const declared = manifest?.ios?.latestVersion || null;
+      const meta = { store: 'appstore', live, declared, versionCode: null };
       if (!declared) {
         return {
           ok: true,
@@ -402,6 +404,7 @@
           status: 200,
           ms,
           detail: `App Store ${live} · манифест iOS нет`,
+          meta,
         };
       }
       if (declared === live) {
@@ -411,6 +414,7 @@
           status: 200,
           ms,
           detail: `App Store ${live} = манифест`,
+          meta,
         };
       }
       return {
@@ -419,6 +423,7 @@
         status: 200,
         ms,
         detail: `App Store ${live} ≠ манифест ${declared}`,
+        meta: { ...meta, drift: true },
       };
     } catch (error) {
       const ms = Math.round(performance.now() - started);
@@ -443,8 +448,9 @@
       if (!session?.access_token) {
         return { ok: false, soft: true, status: 401, ms: 0, detail: 'Нужен вход' };
       }
+      const bust = `${url}${url.includes('?') ? '&' : '?'}_=${Date.now()}`;
       const [storeRes, manifest] = await Promise.all([
-        fetch(url, {
+        fetch(bust, {
           method: 'GET',
           cache: 'no-store',
           headers: {
@@ -473,6 +479,15 @@
       const declared = manifest?.android?.latestVersion || null;
       const declaredCode = manifest?.android?.versionCode;
       const codePart = code != null ? ` · code ${code}` : '';
+      const meta = {
+        store: 'rustore',
+        live,
+        declared,
+        versionCode: code ?? null,
+        declaredCode: declaredCode ?? null,
+        whatsNew: payload.whatsNew || null,
+        versionStatus: payload.versionStatus || null,
+      };
       if (!declared) {
         return {
           ok: true,
@@ -480,6 +495,7 @@
           status: 200,
           ms,
           detail: `RuStore ${live}${codePart} · манифест нет`,
+          meta: { ...meta, drift: true },
         };
       }
       const versionMatch = declared === live;
@@ -491,6 +507,7 @@
           status: 200,
           ms,
           detail: `RuStore ${live}${codePart} = манифест`,
+          meta,
         };
       }
       return {
@@ -499,6 +516,7 @@
         status: 200,
         ms,
         detail: `RuStore ${live}${codePart} ≠ манифест ${declared}`,
+        meta: { ...meta, drift: true },
       };
     } catch (error) {
       const ms = Math.round(performance.now() - started);
@@ -622,11 +640,21 @@
     if (!banner) return;
     const hardFail = results.filter((item) => !item.result.ok && !item.result.soft).length;
     const soft = results.filter((item) => item.result.soft).length;
+    const storeDrift = results.filter(
+      (item) => (item.id === 'ST-12' || item.id === 'ST-13') && item.result?.meta?.drift
+    );
     banner.classList.remove('is-scanning', 'is-ok', 'is-warn', 'is-critical');
     if (hardFail === 0 && soft === 0) {
       banner.classList.add('is-ok');
       banner.textContent = 'ВСЕ СИСТЕМЫ В НОРМЕ';
       playStatusCue('ok');
+      return;
+    }
+    if (hardFail === 0 && storeDrift.length) {
+      banner.classList.add('is-warn');
+      const bits = storeDrift.map((item) => item.result.detail).join(' · ');
+      banner.textContent = `ВЕРСИИ СТОРОВ · ${bits}`;
+      playStatusCue('warn');
       return;
     }
     if (hardFail === 0) {
@@ -638,6 +666,20 @@
     banner.classList.add('is-critical');
     banner.textContent = `СБОЙ · ${hardFail} цель(ей) недоступны`;
     playStatusCue('critical');
+  }
+
+  function publishStoreSnapshot(checks) {
+    const appStore = checks.find((item) => item.id === 'ST-12')?.result?.meta || null;
+    const rustore = checks.find((item) => item.id === 'ST-13')?.result?.meta || null;
+    try {
+      global.dispatchEvent(
+        new CustomEvent('waydean-store-versions', {
+          detail: { appStore, rustore, at: Date.now() },
+        })
+      );
+    } catch {
+      // ignore
+    }
   }
 
   async function sweep() {
@@ -728,6 +770,7 @@
 
     renderTargets(checks);
     renderBanner(checks);
+    publishStoreSnapshot(checks);
     const sweepEl = $('hud-last-sweep');
     if (sweepEl) {
       sweepEl.textContent = new Date().toLocaleTimeString('ru-RU');

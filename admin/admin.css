@@ -1227,3 +1227,16 @@
   margin-bottom: 0.35rem;
 }
 .admin-release-toolbar .admin-muted { margin: 0; }
+
+.admin-store-drift {
+  margin: 0 0 0.85rem;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(201, 162, 77, 0.45);
+  background: rgba(180, 120, 20, 0.16);
+  color: #ffe0a0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+.admin-store-drift[hidden] { display: none !important; }
+.admin-store-drift strong { color: #ffe9b8; }

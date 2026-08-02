@@ -20,7 +20,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     headers: {
       ...corsHeaders,
       'Content-Type': 'application/json',
-      'Cache-Control': 'private, max-age=60',
+      'Cache-Control': 'no-store',
     },
   });
 }
