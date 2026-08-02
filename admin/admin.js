@@ -1164,6 +1164,7 @@ function bindEvents() {
   }
 
   bindAppScreenDelegation();
+  bindStoreVersionAutoSync();
   bindListSearch();
   bindDownloadButtons();
 
