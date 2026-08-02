@@ -361,7 +361,7 @@
     return pingUrl(`${SITE}/data/app-release.json`, {
       detailOk: async (response) => {
         const data = await response.clone().json();
-        const android = data?.android?.latestVersion || '—';
+        const android = data?.android?.rustore?.latestVersion || data?.android?.latestVersion || '—';
         const ios = data?.ios?.latestVersion || '—';
         return `Манифест · Android ${android} · iOS ${ios}`;
       },
@@ -476,8 +476,8 @@
       if (!live) {
         return { ok: false, soft: true, status: 200, ms, detail: 'Версия в ответе пуста' };
       }
-      const declared = manifest?.android?.latestVersion || null;
-      const declaredCode = manifest?.android?.versionCode;
+      const declared = manifest?.android?.rustore?.latestVersion || manifest?.android?.latestVersion || null;
+      const declaredCode = manifest?.android?.rustore?.versionCode ?? manifest?.android?.versionCode;
       const codePart = code != null ? ` · code ${code}` : '';
       const meta = {
         store: 'rustore',

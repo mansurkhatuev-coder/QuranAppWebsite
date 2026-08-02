@@ -609,15 +609,19 @@ function renderAllLists() {
 function renderReleaseForm() {
   const form = $('#release-form');
   const release = state.release ?? {};
+  const rustore = release.android?.rustore ?? {};
+  const apk = release.android?.apk ?? {};
   form.innerHTML = `
     <div class="admin-full admin-release-toolbar">
       <button type="button" id="release-pull-rustore" class="admin-button">Обновить из сторов сейчас</button>
       <p id="release-rustore-status" class="admin-muted">Автопроверка сторов каждые несколько секунд — кнопка не обязательна.</p>
     </div>
-    <label>Android version<input name="androidLatestVersion" value="${release.android?.latestVersion ?? ''}" /></label>
-    <label>Android versionCode<input name="androidVersionCode" type="number" value="${release.android?.versionCode ?? ''}" /></label>
-    <label>RuStore URL<input name="rustoreUrl" value="${release.android?.rustoreUrl ?? ''}" /></label>
-    <label>APK URL<input name="apkUrl" value="${release.android?.apkUrl ?? ''}" /></label>
+    <label>RuStore version<input name="rustoreLatestVersion" value="${rustore.latestVersion ?? release.android?.latestVersion ?? ''}" /></label>
+    <label>RuStore versionCode<input name="rustoreVersionCode" type="number" value="${rustore.versionCode ?? release.android?.versionCode ?? ''}" /></label>
+    <label>RuStore URL<input name="rustoreUrl" value="${rustore.url ?? release.android?.rustoreUrl ?? ''}" /></label>
+    <label>APK version<input name="apkLatestVersion" value="${apk.latestVersion ?? release.android?.latestVersion ?? ''}" /></label>
+    <label>APK versionCode<input name="apkVersionCode" type="number" value="${apk.versionCode ?? release.android?.versionCode ?? ''}" /></label>
+    <label>APK URL<input name="apkUrl" value="${apk.url ?? release.android?.apkUrl ?? ''}" /></label>
     <label>iOS version<input name="iosLatestVersion" value="${release.ios?.latestVersion ?? ''}" /></label>
     <label>iOS buildNumber<input name="iosBuildNumber" type="number" value="${release.ios?.buildNumber ?? ''}" /></label>
     <label>App Store URL<input name="appStoreUrl" value="${release.ios?.appStoreUrl ?? ''}" /></label>
@@ -629,10 +633,16 @@ function renderReleaseForm() {
     const data = new FormData(form);
     state.release = {
       android: {
-        latestVersion: String(data.get('androidLatestVersion') || '').trim(),
-        versionCode: Number(data.get('androidVersionCode')) || undefined,
-        rustoreUrl: String(data.get('rustoreUrl') || '').trim(),
-        apkUrl: String(data.get('apkUrl') || '').trim(),
+        rustore: {
+          latestVersion: String(data.get('rustoreLatestVersion') || '').trim(),
+          versionCode: Number(data.get('rustoreVersionCode')) || undefined,
+          url: String(data.get('rustoreUrl') || '').trim(),
+        },
+        apk: {
+          latestVersion: String(data.get('apkLatestVersion') || '').trim(),
+          versionCode: Number(data.get('apkVersionCode')) || undefined,
+          url: String(data.get('apkUrl') || '').trim(),
+        },
       },
       ios: {
         latestVersion: String(data.get('iosLatestVersion') || '').trim(),
@@ -649,7 +659,33 @@ function renderReleaseForm() {
   const statusEl = form.querySelector('#release-rustore-status');
   if (pullBtn) {
     pullBtn.addEventListener('click', () => {
-      void syncReleaseFormFromStores({ force: true, statusEl, form });
+      void (async () => {
+        await syncReleaseFormFromStores({ force: true, statusEl, form });
+        if (!window.AdminSupabase?.syncAppRelease) return;
+
+        if (statusEl) statusEl.textContent = 'Синхронизация app-release.json…';
+        const result = await window.AdminSupabase.syncAppRelease();
+        if (result?.release) {
+          state.release = result.release;
+          await persistReleaseState().catch(() => {});
+          renderReleaseForm();
+        }
+
+        const nextStatus = $('#release-rustore-status');
+        if (nextStatus) {
+          const changed = result?.changed ?? {};
+          nextStatus.textContent =
+            changed.ios || changed.rustore
+              ? 'app-release.json обновлён на GitHub.'
+              : 'app-release.json уже актуален.';
+        }
+      })().catch((error) => {
+        const nextStatus = $('#release-rustore-status') || statusEl;
+        if (nextStatus) {
+          nextStatus.textContent =
+            error instanceof Error ? error.message : 'Не удалось синхронизировать app-release.json';
+        }
+      });
     });
   }
 }
@@ -695,8 +731,8 @@ async function syncReleaseFormFromStores({ force = false, statusEl = null, form 
 
     let changed = false;
     if (releaseForm && rustore && !rustore.error) {
-      const versionInput = releaseForm.querySelector('[name="androidLatestVersion"]');
-      const codeInput = releaseForm.querySelector('[name="androidVersionCode"]');
+      const versionInput = releaseForm.querySelector('[name="rustoreLatestVersion"]');
+      const codeInput = releaseForm.querySelector('[name="rustoreVersionCode"]');
       const msgRu = releaseForm.querySelector('[name="messageRu"]');
       if (versionInput && rustore.versionName && (force || versionInput.value !== String(rustore.versionName))) {
         if (force || versionInput.value !== String(rustore.versionName)) {

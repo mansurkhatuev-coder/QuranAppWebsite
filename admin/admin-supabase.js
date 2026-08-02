@@ -313,6 +313,28 @@
     return json;
   }
 
+  async function syncAppRelease() {
+    const session = await getSession();
+    if (!session?.access_token) throw new Error('Нужен вход в Supabase');
+
+    const url = config.syncAppReleaseUrl;
+    if (!url) throw new Error('Не задан syncAppReleaseUrl в supabase-config.js');
+
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: config.anonKey || '',
+      },
+      cache: 'no-store',
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `Sync app release failed (${response.status})`);
+    }
+    return json;
+  }
+
   async function publishContent(payload) {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
@@ -354,5 +376,6 @@
     loadAnalyticsEvents,
     loadAnalyticsInstallations,
     loadRuStoreVersion,
+    syncAppRelease,
   };
 })(window);

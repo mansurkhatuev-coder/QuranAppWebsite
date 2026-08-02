@@ -5,4 +5,5 @@ window.SUPABASE_CONFIG = {
   anonKey: 'sb_publishable_UzGPHOqDo3eFzPUbqwLocw_qXY164pg',
   publishFunctionUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-content',
   rustoreVersionUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/rustore-version',
+  syncAppReleaseUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/sync-app-release',
 };

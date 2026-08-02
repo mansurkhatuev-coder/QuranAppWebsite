@@ -91,17 +91,19 @@
       if (!data) return;
       var android = data.android || {};
       var ios = data.ios || {};
-      var version = android.latestVersion || ios.latestVersion || LINKS.appVersion;
-      var code = android.versionCode || ios.buildNumber || LINKS.appVersionCode;
+      var rustoreUrl = (android.rustore && android.rustore.url) || android.rustoreUrl;
+      var apkUrl = (android.apk && android.apk.url) || android.apkUrl;
+      var version = (android.rustore && android.rustore.latestVersion) || (android.apk && android.apk.latestVersion) || android.latestVersion || ios.latestVersion || LINKS.appVersion;
+      var code = (android.rustore && android.rustore.versionCode) || (android.apk && android.apk.versionCode) || android.versionCode || ios.buildNumber || LINKS.appVersionCode;
       setVersionLabel(version, code);
-      if (android.rustoreUrl && rustoreBtn) {
-        rustoreBtn.href = android.rustoreUrl;
+      if (rustoreUrl && rustoreBtn) {
+        rustoreBtn.href = rustoreUrl;
         rustoreBtn.rel = 'noopener noreferrer';
         rustoreBtn.removeAttribute('aria-disabled');
         rustoreBtn.classList.remove('btn-disabled');
       }
-      if (android.apkUrl && apkBtn) {
-        apkBtn.href = android.apkUrl;
+      if (apkUrl && apkBtn) {
+        apkBtn.href = apkUrl;
         apkBtn.rel = 'noopener noreferrer';
         apkBtn.setAttribute('download', '');
         apkBtn.removeAttribute('aria-disabled');

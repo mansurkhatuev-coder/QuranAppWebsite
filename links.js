@@ -7,8 +7,8 @@ const LINKS = {
   appStore: 'https://apps.apple.com/app/id6782619598',
   supportEmail: 'ne.kradi@mail.ru',
   supportTelegram: '',
-  appVersion: '1.0.9',
-  appVersionCode: 11,
+  appVersion: '1.0.10',
+  appVersionCode: 12,
   appPackage: 'com.sheyhmansur.quranapp',
   /** Yandex Metrika counter ID (numeric). Leave empty until the counter is created. */
   yandexMetrikaId: '110287110',

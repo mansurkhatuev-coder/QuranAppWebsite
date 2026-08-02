@@ -11,4 +11,7 @@ window.SUPABASE_CONFIG = {
 
   /** Edge Functions → rustore-version → live RuStore version for admin HUD / release form */
   rustoreVersionUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/rustore-version',
+
+  /** Edge Functions → sync-app-release → sync store channels into app-release.json */
+  syncAppReleaseUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/sync-app-release',
 };

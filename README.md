@@ -25,7 +25,9 @@ website/
 - `data/support-dua.json` — дуа в поддержку
 - `data/general-dua.json` — дуа на случаи
 - `data/remote-dua.manifest.json` — версии паков для sync
-- `data/app-release.json` — версия в RuStore / App Store для баннера обновления
+- `data/app-release.json` — каналы обновления для баннера в приложении: вложенные `android.rustore`, `android.apk` и `ios` (плоские поля `rustoreUrl` / `apkUrl` по-прежнему читаются лендингом для совместимости)
+
+**Авто-sync сторов:** Edge Function `supabase/functions/sync-app-release` подтягивает live RuStore + App Store в `ios` и `android.rustore`, не трогая `android.apk`. Задеплойте функцию в Supabase, задайте `SYNC_APP_RELEASE_CRON_SECRET`, настройте cron **каждые 30 минут** на URL функции с этим секретом (или вызывайте из админки «Обновить из сторов»).
 
 Пересобрать из bundled assets в QuranApp:
 
