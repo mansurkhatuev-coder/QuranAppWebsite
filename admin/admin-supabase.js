@@ -291,6 +291,28 @@
     return result.data ?? [];
   }
 
+  async function loadRuStoreVersion() {
+    const session = await getSession();
+    if (!session?.access_token) throw new Error('Нужен вход в Supabase');
+
+    const url = config.rustoreVersionUrl;
+    if (!url) throw new Error('Не задан rustoreVersionUrl в supabase-config.js');
+
+    const response = await fetch(url, {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: config.anonKey || '',
+      },
+      cache: 'no-store',
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `RuStore version failed (${response.status})`);
+    }
+    return json;
+  }
+
   async function publishContent(payload) {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
@@ -331,5 +353,6 @@
     loadAcademyCourseFeedback,
     loadAnalyticsEvents,
     loadAnalyticsInstallations,
+    loadRuStoreVersion,
   };
 })(window);

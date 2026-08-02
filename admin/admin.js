@@ -610,6 +610,10 @@ function renderReleaseForm() {
   const form = $('#release-form');
   const release = state.release ?? {};
   form.innerHTML = `
+    <div class="admin-full admin-release-toolbar">
+      <button type="button" id="release-pull-rustore" class="admin-button">Подтянуть из RuStore</button>
+      <p id="release-rustore-status" class="admin-muted">Live-версия RuStore для Android-полей.</p>
+    </div>
     <label>Android version<input name="androidLatestVersion" value="${release.android?.latestVersion ?? ''}" /></label>
     <label>Android versionCode<input name="androidVersionCode" type="number" value="${release.android?.versionCode ?? ''}" /></label>
     <label>RuStore URL<input name="rustoreUrl" value="${release.android?.rustoreUrl ?? ''}" /></label>
@@ -640,6 +644,37 @@ function renderReleaseForm() {
     };
     void persistReleaseState().catch(() => {});
   };
+
+  const pullBtn = form.querySelector('#release-pull-rustore');
+  const statusEl = form.querySelector('#release-rustore-status');
+  if (pullBtn) {
+    pullBtn.addEventListener('click', async () => {
+      if (!window.AdminSupabase?.loadRuStoreVersion) return;
+      pullBtn.disabled = true;
+      if (statusEl) statusEl.textContent = 'Запрос в RuStore…';
+      try {
+        const live = await window.AdminSupabase.loadRuStoreVersion();
+        const versionInput = form.querySelector('[name="androidLatestVersion"]');
+        const codeInput = form.querySelector('[name="androidVersionCode"]');
+        const msgRu = form.querySelector('[name="messageRu"]');
+        if (versionInput && live.versionName) versionInput.value = String(live.versionName);
+        if (codeInput && live.versionCode != null) codeInput.value = String(live.versionCode);
+        if (msgRu && live.whatsNew && !String(msgRu.value || '').trim()) {
+          msgRu.value = String(live.whatsNew);
+        }
+        form.dispatchEvent(new Event('input', { bubbles: true }));
+        if (statusEl) {
+          statusEl.textContent = `RuStore live: ${live.versionName} (code ${live.versionCode ?? '—'}) · ${live.versionStatus || 'OK'}`;
+        }
+      } catch (error) {
+        if (statusEl) {
+          statusEl.textContent = error instanceof Error ? error.message : 'Не удалось получить версию RuStore';
+        }
+      } finally {
+        pullBtn.disabled = false;
+      }
+    });
+  }
 }
 
 function authenticityPreviewLabel(value) {

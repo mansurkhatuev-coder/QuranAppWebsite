@@ -12,7 +12,6 @@
   const GIVEAWAY_FN =
     'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/academy-giveaway-enter';
   const APP_STORE_LOOKUP = 'https://itunes.apple.com/lookup?id=6782619598';
-  const RUSTORE_PAGE = 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp';
   const AUDIO_PREF_KEY = 'waydean_admin_hud_audio_v1';
   const OPERATOR_NAME = 'Mansur';
 
@@ -43,9 +42,9 @@
     },
     'ST-13': {
       bound:
-        'RuStore: версия из вашего манифеста app-release.json (Android). Публичного CORS API у RuStore нет — live-парсинг страницы из браузера недоступен.',
+        'Живая версия в RuStore (через Edge Function + API ключ) и сверка с Android-полем в app-release.json.',
       fail:
-        'Если манифест не обновили после выкладки в RuStore — пользователи Android не увидят предложение обновиться. Сам стор и скачивание из RuStore не ломаются.',
+        'Не видим актуальную версию в RuStore или манифест на сайте устарел. Баннер обновления Android может показывать неверную версию, пока не подтянете и не опубликуете релиз.',
     },
     'CDN-04': {
       bound:
@@ -433,36 +432,65 @@
     }
   }
 
-  async function pingRuStoreDeclared() {
+  async function pingRuStoreLive() {
     const started = performance.now();
+    const url = global.SUPABASE_CONFIG?.rustoreVersionUrl;
+    if (!url) {
+      return { ok: false, soft: true, status: 0, ms: 0, detail: 'URL не задан' };
+    }
     try {
-      const manifest = await loadReleaseManifest();
-      const ms = Math.round(performance.now() - started);
-      const version = manifest?.android?.latestVersion || null;
-      const code = manifest?.android?.versionCode;
-      if (!version) {
-        return { ok: false, soft: true, status: 200, ms, detail: 'Нет android.latestVersion' };
+      const session = await global.AdminSupabase?.getSession?.();
+      if (!session?.access_token) {
+        return { ok: false, soft: true, status: 401, ms: 0, detail: 'Нужен вход' };
       }
-      // Страница RuStore без CORS — только проверка, что каталог открывается (opaque/fail = soft).
-      let pageOk = false;
-      try {
-        const page = await fetch(RUSTORE_PAGE, {
+      const [storeRes, manifest] = await Promise.all([
+        fetch(url, {
           method: 'GET',
-          mode: 'no-cors',
           cache: 'no-store',
-        });
-        pageOk = page.type === 'opaque' || page.ok;
-      } catch {
-        pageOk = false;
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: global.SUPABASE_CONFIG?.anonKey || '',
+          },
+        }),
+        loadReleaseManifest().catch(() => null),
+      ]);
+      const ms = Math.round(performance.now() - started);
+      const payload = await storeRes.json().catch(() => ({}));
+      if (!storeRes.ok) {
+        return {
+          ok: false,
+          soft: storeRes.status === 503 || storeRes.status === 401,
+          status: storeRes.status,
+          ms,
+          detail: (payload.error || `HTTP ${storeRes.status}`).slice(0, 48),
+        };
       }
+      const live = payload.versionName;
+      const code = payload.versionCode;
+      if (!live) {
+        return { ok: false, soft: true, status: 200, ms, detail: 'Версия в ответе пуста' };
+      }
+      const declared = manifest?.android?.latestVersion || null;
+      const declaredCode = manifest?.android?.versionCode;
       const codePart = code != null ? ` · code ${code}` : '';
-      if (pageOk) {
+      if (!declared) {
         return {
           ok: true,
           soft: true,
           status: 200,
           ms,
-          detail: `Манифест ${version}${codePart} · live API нет`,
+          detail: `RuStore ${live}${codePart} · манифест нет`,
+        };
+      }
+      const versionMatch = declared === live;
+      const codeMatch = declaredCode == null || code == null || Number(declaredCode) === Number(code);
+      if (versionMatch && codeMatch) {
+        return {
+          ok: true,
+          soft: false,
+          status: 200,
+          ms,
+          detail: `RuStore ${live}${codePart} = манифест`,
         };
       }
       return {
@@ -470,7 +498,7 @@
         soft: true,
         status: 200,
         ms,
-        detail: `Манифест ${version}${codePart} · каталог ?`,
+        detail: `RuStore ${live}${codePart} ≠ манифест ${declared}`,
       };
     } catch (error) {
       const ms = Math.round(performance.now() - started);
@@ -642,9 +670,9 @@
         name: 'App Store · live',
         result,
       })),
-      pingRuStoreDeclared().then((result) => ({
+      pingRuStoreLive().then((result) => ({
         id: 'ST-13',
-        name: 'RuStore · манифест',
+        name: 'RuStore · live',
         result,
       })),
       pingUrl(`${SITE}/data/remote-dua.manifest.json`).then((result) => ({

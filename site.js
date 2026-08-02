@@ -77,11 +77,44 @@
   wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true });
 
   var versionEl = document.getElementById('app-version');
-  if (versionEl && LINKS.appVersion) {
-    versionEl.textContent = LINKS.appVersionCode
-      ? LINKS.appVersion + ' (' + LINKS.appVersionCode + ')'
-      : LINKS.appVersion;
+  function setVersionLabel(version, code) {
+    if (!versionEl || !version) return;
+    versionEl.textContent = code ? version + ' (' + code + ')' : version;
   }
+  if (versionEl && LINKS.appVersion) {
+    setVersionLabel(LINKS.appVersion, LINKS.appVersionCode);
+  }
+  // Prefer live app-release.json (synced from admin / RuStore after publish).
+  fetch('/data/app-release.json', { cache: 'no-store' })
+    .then(function (res) { return res.ok ? res.json() : null; })
+    .then(function (data) {
+      if (!data) return;
+      var android = data.android || {};
+      var ios = data.ios || {};
+      var version = android.latestVersion || ios.latestVersion || LINKS.appVersion;
+      var code = android.versionCode || ios.buildNumber || LINKS.appVersionCode;
+      setVersionLabel(version, code);
+      if (android.rustoreUrl && rustoreBtn) {
+        rustoreBtn.href = android.rustoreUrl;
+        rustoreBtn.rel = 'noopener noreferrer';
+        rustoreBtn.removeAttribute('aria-disabled');
+        rustoreBtn.classList.remove('btn-disabled');
+      }
+      if (android.apkUrl && apkBtn) {
+        apkBtn.href = android.apkUrl;
+        apkBtn.rel = 'noopener noreferrer';
+        apkBtn.setAttribute('download', '');
+        apkBtn.removeAttribute('aria-disabled');
+        apkBtn.classList.remove('btn-disabled');
+      }
+      if (ios.appStoreUrl && appStoreBtn) {
+        appStoreBtn.href = ios.appStoreUrl;
+        appStoreBtn.rel = 'noopener noreferrer';
+        appStoreBtn.removeAttribute('aria-disabled');
+        appStoreBtn.classList.remove('btn-disabled');
+      }
+    })
+    .catch(function () { /* keep LINKS fallback */ });
 
   var packageEl = document.getElementById('app-package');
   if (packageEl && LINKS.appPackage) {

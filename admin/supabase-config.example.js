@@ -8,4 +8,7 @@ window.SUPABASE_CONFIG = {
 
   /** Edge Functions → publish-content → URL (после деплоя функции) */
   publishFunctionUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/publish-content',
+
+  /** Edge Functions → rustore-version → live RuStore version for admin HUD / release form */
+  rustoreVersionUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/rustore-version',
 };
