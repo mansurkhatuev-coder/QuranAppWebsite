@@ -690,7 +690,11 @@ function renderReleaseForm() {
   }
 }
 
-function updateStoreDriftBanner(detail) {
+let storeSyncInFlight = false;
+let lastStoreSyncKey = '';
+let lastStoreSyncAt = 0;
+
+function updateStoreDriftBanner(detail, syncState = null) {
   const banner = $('#admin-store-drift');
   if (!banner) return;
   const parts = [];
@@ -708,7 +712,76 @@ function updateStoreDriftBanner(detail) {
     return;
   }
   banner.hidden = false;
-  banner.innerHTML = `<strong>Новая версия в сторе</strong> — ${parts.join(' · ')}. Поля Store обновляются сами; осталось сохранить и опубликовать.`;
+  if (syncState === 'syncing') {
+    banner.innerHTML = `<strong>Новая версия в сторе</strong> — ${parts.join(' · ')}. Публикую на сайт автоматически…`;
+    return;
+  }
+  if (syncState === 'done') {
+    banner.innerHTML = `<strong>Версия опубликована</strong> — ${parts.join(' · ')}. Через 1–2 минуты баннер в приложении подтянет новую.`;
+    return;
+  }
+  if (syncState === 'error') {
+    banner.innerHTML = `<strong>Не удалось опубликовать автоматически</strong> — ${parts.join(' · ')}. Нажмите «Обновить из сторов сейчас».`;
+    return;
+  }
+  banner.innerHTML = `<strong>Новая версия в сторе</strong> — ${parts.join(' · ')}. Публикую на сайт автоматически…`;
+}
+
+async function autoPublishStoreVersions(detail) {
+  const hasDrift = Boolean(detail?.rustore?.drift || detail?.appStore?.drift);
+  if (!hasDrift || !window.AdminSupabase?.syncAppRelease) return;
+
+  const syncKey = [
+    detail?.rustore?.live || '',
+    detail?.rustore?.versionCode ?? '',
+    detail?.appStore?.live || '',
+  ].join('|');
+  const now = Date.now();
+  if (storeSyncInFlight) return;
+  if (syncKey && syncKey === lastStoreSyncKey && now - lastStoreSyncAt < 5 * 60 * 1000) return;
+
+  storeSyncInFlight = true;
+  updateStoreDriftBanner(detail, 'syncing');
+  const statusEl = $('#release-rustore-status');
+  if (statusEl) statusEl.textContent = 'Автопубликация app-release.json…';
+
+  try {
+    await syncReleaseFormFromStores({
+      force: true,
+      form: $('#release-form'),
+      statusEl,
+    });
+    const result = await window.AdminSupabase.syncAppRelease();
+    if (result?.release) {
+      state.release = result.release;
+      await persistReleaseState().catch(() => {});
+      renderReleaseForm();
+    }
+    lastStoreSyncKey = syncKey;
+    lastStoreSyncAt = Date.now();
+    updateStoreDriftBanner(detail, 'done');
+    const nextStatus = $('#release-rustore-status');
+    if (nextStatus) {
+      const changed = result?.changed ?? {};
+      nextStatus.textContent =
+        changed.ios || changed.rustore
+          ? 'Авто: app-release.json обновлён на сайте.'
+          : 'Авто: app-release.json уже актуален.';
+    }
+    // Через минуту перепроверим HUD — баннер исчезнет, когда сайт догонит стор.
+    window.setTimeout(() => {
+      if (window.AdminCommandCenter?.sweep) void window.AdminCommandCenter.sweep();
+    }, 90_000);
+  } catch (error) {
+    updateStoreDriftBanner(detail, 'error');
+    const nextStatus = $('#release-rustore-status');
+    if (nextStatus) {
+      nextStatus.textContent =
+        error instanceof Error ? error.message : 'Автопубликация версии не удалась';
+    }
+  } finally {
+    storeSyncInFlight = false;
+  }
 }
 
 async function syncReleaseFormFromStores({ force = false, statusEl = null, form = null } = {}) {
@@ -795,10 +868,13 @@ function bindStoreVersionAutoSync() {
   window.addEventListener('waydean-store-versions', (event) => {
     const detail = event.detail || {};
     updateStoreDriftBanner(detail);
+    if (detail.rustore?.drift || detail.appStore?.drift) {
+      void autoPublishStoreVersions(detail);
+      return;
+    }
     const form = $('#release-form');
     if (!form) return;
-    // Автозаполнение полей Store при расхождении — без кнопки.
-    if (detail.rustore?.drift || detail.appStore?.drift || detail.rustore?.live || detail.appStore?.live) {
+    if (detail.rustore?.live || detail.appStore?.live) {
       void syncReleaseFormFromStores({ force: false, form, statusEl: $('#release-rustore-status') });
     }
   });
