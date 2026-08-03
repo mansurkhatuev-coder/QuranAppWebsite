@@ -1192,6 +1192,57 @@ function bindDownloadButtons() {
   bindClick('#download-release', () => downloadJson('app-release.json', state.release));
 }
 
+function showBootOverlay(message) {
+  const overlay = $('#admin-boot-overlay');
+  const text = $('#admin-boot-text');
+  if (text) text.textContent = message || 'Загрузка…';
+  if (overlay) overlay.hidden = false;
+  document.body.classList.add('is-booting');
+}
+
+function hideBootOverlay() {
+  const overlay = $('#admin-boot-overlay');
+  if (overlay) overlay.hidden = true;
+  document.body.classList.remove('is-booting');
+}
+
+function setLoginBusy(busy, message) {
+  const submitButton = $('#login-submit') || $('#login-form button[type="submit"]');
+  const status = $('#login-status');
+  if (submitButton) {
+    submitButton.disabled = busy || !isSupabaseReady();
+    submitButton.textContent = busy ? 'Подождите…' : 'Войти';
+    submitButton.setAttribute('aria-busy', busy ? 'true' : 'false');
+  }
+  if (status) {
+    if (busy && message) {
+      status.hidden = false;
+      status.textContent = message;
+    } else if (!busy) {
+      status.hidden = true;
+      status.textContent = '';
+    }
+  }
+  if (busy) showBootOverlay(message || 'Вход…');
+  else hideBootOverlay();
+}
+
+async function rememberLoginCredentials(email, password) {
+  if (!email || !password) return;
+  try {
+    if (window.PasswordCredential && navigator.credentials?.store) {
+      const cred = new window.PasswordCredential({
+        id: email,
+        password,
+        name: email,
+      });
+      await navigator.credentials.store(cred);
+    }
+  } catch {
+    // Browser may decline — native form autocomplete still applies.
+  }
+}
+
 function showApp() {
   $('#login-screen').hidden = true;
   $('#app-screen').hidden = false;
@@ -1202,9 +1253,11 @@ function showLogin() {
   if (window.AdminCommandCenter) {
     window.AdminCommandCenter.stop();
   }
+  hideBootOverlay();
   void window.AdminSupabase.signOut().catch(() => {});
   $('#login-screen').hidden = false;
   $('#app-screen').hidden = true;
+  setLoginBusy(false);
 }
 
 async function loadContent() {
@@ -1238,29 +1291,34 @@ function bindEvents() {
       return;
     }
 
-    try {
-      const email = $('#login-email').value.trim();
-      const password = $('#login-password').value;
-      const submitButton = $('#login-form button[type="submit"]');
-      if (!email) {
-        $('#login-error').textContent = 'Введите email пользователя из Supabase → Authentication → Users.';
-        $('#login-error').hidden = false;
-        return;
-      }
-      submitButton.disabled = true;
-      submitButton.textContent = 'Вход...';
-      await window.AdminSupabase.signIn(email, password);
+    const email = $('#login-email').value.trim();
+    const password = $('#login-password').value;
+    if (!email) {
+      $('#login-error').textContent = 'Введите email пользователя из Supabase → Authentication → Users.';
+      $('#login-error').hidden = false;
+      return;
+    }
+    if (!password) {
+      $('#login-error').textContent = 'Введите пароль.';
+      $('#login-error').hidden = false;
+      return;
+    }
 
+    try {
+      setLoginBusy(true, 'Вход…');
+      await window.AdminSupabase.signIn(email, password);
+      await rememberLoginCredentials(email, password);
+      setLoginBusy(true, 'Загрузка данных…');
       showApp();
       await loadContent();
+      hideBootOverlay();
+      setLoginBusy(false);
     } catch (error) {
+      hideBootOverlay();
+      setLoginBusy(false);
       $('#login-error').hidden = false;
       $('#login-error').textContent =
         error instanceof Error ? error.message : 'Неверный email или пароль Supabase';
-    } finally {
-      const submitButton = $('#login-form button[type="submit"]');
-      submitButton.disabled = !isSupabaseReady();
-      submitButton.textContent = 'Войти';
     }
   });
 
@@ -1334,21 +1392,34 @@ function bindEvents() {
 async function restoreSession() {
   if (!isSupabaseReady()) return;
 
-  const session = await window.AdminSupabase.getSession().catch(() => null);
-  if (session) {
+  showBootOverlay('Проверка сессии…');
+  try {
+    const session = await window.AdminSupabase.getSession().catch(() => null);
+    if (!session) {
+      hideBootOverlay();
+      return;
+    }
+    showBootOverlay('Загрузка данных…');
     showApp();
-    await loadContent().catch(() => {});
+    await loadContent();
+  } catch (error) {
+    showInitError(error);
+    showLogin();
+  } finally {
+    hideBootOverlay();
   }
 }
 
 function configureLoginUi() {
   const ready = isSupabaseReady();
   $('#login-setup-notice').hidden = ready;
-  $('#login-form button[type="submit"]').disabled = !ready;
+  const submit = $('#login-submit') || $('#login-form button[type="submit"]');
+  if (submit) submit.disabled = !ready;
 }
 
 async function init() {
   configureLoginUi();
+  showBootOverlay('Запуск админки…');
   try {
     bindEvents();
     if (window.AdminHome) {
@@ -1358,6 +1429,8 @@ async function init() {
   } catch (error) {
     console.error(error);
     showInitError(error);
+    hideBootOverlay();
+    return;
   }
   await restoreSession();
 }

@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=15" />
+    <link rel="stylesheet" href="./admin.css?v=16" />
   </head>
   <body class="admin-body">
     <div id="admin-pwa-banner" class="admin-pwa-banner" hidden>
@@ -33,21 +33,51 @@
         <p class="admin-kicker">Коран и Азкары</p>
         <h1>Вход</h1>
         <p class="admin-muted">Редактирование дуа, главной, отзывов, аналитики Академии и версии в Store.</p>
-        <form id="login-form" class="admin-form">
+        <form
+          id="login-form"
+          class="admin-form"
+          method="post"
+          action="/admin/"
+          autocomplete="on"
+        >
           <label id="login-email-wrap">
             Email
-            <input id="login-email" type="email" autocomplete="username" required />
+            <input
+              id="login-email"
+              name="username"
+              type="email"
+              autocomplete="username"
+              autocapitalize="off"
+              spellcheck="false"
+              required
+            />
           </label>
           <label>
             <span id="login-secret-label">Пароль</span>
-            <input id="login-password" type="password" autocomplete="current-password" required />
+            <input
+              id="login-password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+            />
           </label>
           <p id="login-setup-notice" class="admin-muted" hidden>
             Сервис не настроен. Обратитесь к разработчику.
           </p>
-          <button type="submit" class="admin-button admin-button-primary">Войти</button>
+          <button type="submit" class="admin-button admin-button-primary" id="login-submit">
+            Войти
+          </button>
+          <p id="login-status" class="admin-muted admin-login-status" hidden aria-live="polite"></p>
           <p id="login-error" class="admin-error" hidden>Неверные данные для входа</p>
         </form>
+      </div>
+    </div>
+
+    <div id="admin-boot-overlay" class="admin-boot-overlay" hidden>
+      <div class="admin-boot-card" role="status" aria-live="polite">
+        <div class="admin-boot-spinner" aria-hidden="true"></div>
+        <p id="admin-boot-text">Загрузка…</p>
       </div>
     </div>
 
@@ -450,7 +480,7 @@
     <script src="./admin-academy-feedback.js?v=3"></script>
     <script src="./admin-analytics.js?v=5"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=24"></script>
-    <script src="./admin-pwa.js?v=1"></script>
+    <script src="./admin.js?v=25"></script>
+    <script src="./admin-pwa.js?v=2"></script>
   </body>
 </html>

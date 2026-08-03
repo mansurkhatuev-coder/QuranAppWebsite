@@ -1,5 +1,5 @@
-/* Admin PWA — network-first shell cache for offline reopen. */
-const CACHE = 'waydean-admin-v3';
+﻿/* Admin PWA вЂ” network-first shell cache for offline reopen. */
+const CACHE = 'waydean-admin-v4';
 const PRECACHE = [
   './',
   './index.html',
@@ -49,3 +49,4 @@ self.addEventListener('fetch', (event) => {
       .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
   );
 });
+

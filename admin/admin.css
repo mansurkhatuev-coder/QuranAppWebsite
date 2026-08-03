@@ -1240,3 +1240,48 @@
 }
 .admin-store-drift[hidden] { display: none !important; }
 .admin-store-drift strong { color: #ffe9b8; }
+
+.admin-login-status {
+  margin: 0.35rem 0 0;
+  min-height: 1.2em;
+}
+.admin-boot-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  background: rgba(8, 10, 14, 0.72);
+  backdrop-filter: blur(6px);
+}
+.admin-boot-overlay[hidden] { display: none !important; }
+.admin-boot-card {
+  display: grid;
+  justify-items: center;
+  gap: 0.85rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 16px;
+  border: 1px solid rgba(201, 162, 77, 0.35);
+  background: rgba(18, 22, 28, 0.96);
+  min-width: min(280px, calc(100vw - 2rem));
+  text-align: center;
+}
+.admin-boot-card p {
+  margin: 0;
+  color: rgba(255, 236, 200, 0.88);
+  font-size: 0.95rem;
+}
+.admin-boot-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 3px solid rgba(201, 162, 77, 0.25);
+  border-top-color: #d4af37;
+  animation: admin-boot-spin 0.8s linear infinite;
+}
+@keyframes admin-boot-spin {
+  to { transform: rotate(360deg); }
+}
+body.is-booting {
+  overflow: hidden;
+}
