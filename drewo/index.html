@@ -2813,6 +2813,7 @@
       var whoamiRevealDrawing = false;
       var whoamiRevealTimer = null;
       var whoamiRevealGen = 0;
+      var whoamiFocusAfterReveal = false;
       try {
         myPersonId = localStorage.getItem(MY_PERSON_KEY) || null;
       } catch (err) {
@@ -3062,6 +3063,89 @@
         whoamiRevealDrawing = true;
       }
 
+      /** Fit layout nodes into the viewport (overview for whoami path draw). Does not change goToPerson. */
+      function fitNodesInView(ids, opts) {
+        var options = opts || {};
+        var pad = options.pad != null ? options.pad : 0.16;
+        var maxScale = options.maxScale != null ? options.maxScale : 0.95;
+        var minScale = options.minScale != null ? options.minScale : MAP_SCALE_MIN;
+        var nodes = [];
+        (ids || []).forEach(function (nid) {
+          var key = String(nid);
+          var n = layoutMeta.nodes[key];
+          if (!n) {
+            Object.keys(layoutMeta.nodes).some(function (k) {
+              if (String(k) === key) {
+                n = layoutMeta.nodes[k];
+                return true;
+              }
+              return false;
+            });
+          }
+          if (n) nodes.push(n);
+        });
+        if (!nodes.length) return false;
+
+        var minX = Infinity;
+        var minY = Infinity;
+        var maxX = -Infinity;
+        var maxY = -Infinity;
+        nodes.forEach(function (n) {
+          minX = Math.min(minX, n.x);
+          minY = Math.min(minY, n.y);
+          maxX = Math.max(maxX, n.x + n.w);
+          maxY = Math.max(maxY, n.y + (n.h || 34));
+        });
+        var tw = Math.max(1, maxX - minX);
+        var th = Math.max(1, maxY - minY);
+        var vw = viewport.clientWidth || 360;
+        var vh = viewport.clientHeight || 480;
+        var scale = clamp(
+          Math.min((vw * (1 - pad)) / tw, (vh * (1 - pad)) / th),
+          minScale,
+          maxScale
+        );
+        map.scale = scale;
+        var cx = (minX + maxX) / 2;
+        var cy = (minY + maxY) / 2;
+        map.x = vw / 2 - cx * scale;
+        map.y = vh * 0.4 - cy * scale;
+        applyMapTransform();
+        return true;
+      }
+
+      /**
+       * Expand tree and frame the ancestor path so the gold line reveal is on-screen.
+       * Leaves the tuned goToPerson zoom for after the animation.
+       */
+      function prepareWhoamiPathView(id) {
+        id = String(id || '');
+        if (!id) return false;
+        clearTimeout(searchTimer);
+        clearTimeout(goToPerson._timer);
+
+        viewFilter = 'all';
+        expanded = new Set(collectAllIds(tree));
+        matchIds = new Set([id]);
+        updateViewButtons();
+        hideSearchResults();
+
+        map.scale = 1;
+        pendingScrollId = null;
+        render(false);
+
+        var path = findPathToId(tree, id) || [id];
+        fitNodesInView(path, { pad: 0.18, maxScale: 0.9 });
+        var s = map.scale;
+        world.style.width = layoutMeta.width * s + 'px';
+        world.style.height = layoutMeta.height * s + 'px';
+        layer.style.width = layoutMeta.width * s + 'px';
+        layer.style.height = layoutMeta.height * s + 'px';
+        redrawLinks();
+        applyMapTransform();
+        return true;
+      }
+
       function finishWhoamiReveal() {
         whoamiRevealPending = false;
         whoamiRevealDrawing = false;
@@ -3089,10 +3173,12 @@
         // later render()/zoom does not restart stroke-dash draw.
         whoamiRevealDrawing = false;
         if (!myPersonId || !myBranchIds.size) {
+          whoamiFocusAfterReveal = false;
           finishWhoamiReveal();
           return;
         }
         if (preferReducedWhoamiMotion()) {
+          whoamiFocusAfterReveal = false;
           finishWhoamiReveal();
           redrawLinks();
           return;
@@ -3125,8 +3211,14 @@
 
         whoamiRevealTimer = setTimeout(function () {
           if (gen !== whoamiRevealGen) return;
+          var shouldFocus = whoamiFocusAfterReveal;
+          whoamiFocusAfterReveal = false;
           finishWhoamiReveal();
           redrawLinks();
+          // Existing search/whoami zoom — unchanged; only delayed until path draw finishes.
+          if (shouldFocus && myPersonId) {
+            goToPerson(myPersonId);
+          }
         }, total);
       }
 
@@ -3154,20 +3246,32 @@
         }
         updateWhoamiUi();
         if (options.focus !== false) {
-          expandAncestorsOf(myPersonId);
-          expanded.add(myPersonId);
-          goToPerson(myPersonId);
+          if (preferReducedWhoamiMotion()) {
+            whoamiFocusAfterReveal = false;
+            goToPerson(myPersonId);
+            armWhoamiReveal();
+            redrawLinks();
+            startWhoamiReveal();
+          } else {
+            whoamiFocusAfterReveal = true;
+            prepareWhoamiPathView(myPersonId);
+            armWhoamiReveal();
+            redrawLinks();
+            startWhoamiReveal();
+          }
         } else {
+          whoamiFocusAfterReveal = false;
           render(false);
+          armWhoamiReveal();
+          redrawLinks();
+          startWhoamiReveal();
         }
-        armWhoamiReveal();
-        redrawLinks();
-        startWhoamiReveal();
         showToast('Это вы: ' + (node.name || ''), 'success');
         return true;
       }
 
       function clearMyPerson() {
+        whoamiFocusAfterReveal = false;
         finishWhoamiReveal();
         myPersonId = null;
         myBranchIds = new Set();
@@ -5878,12 +5982,19 @@
         if (myPersonId && TreeModel.findById(tree, myPersonId)) {
           rebuildLineSets();
           updateWhoamiUi();
-          expandAncestorsOf(myPersonId);
-          expanded.add(myPersonId);
-          goToPerson(myPersonId);
-          armWhoamiReveal();
-          redrawLinks();
-          startWhoamiReveal();
+          if (preferReducedWhoamiMotion()) {
+            whoamiFocusAfterReveal = false;
+            goToPerson(myPersonId);
+            armWhoamiReveal();
+            redrawLinks();
+            startWhoamiReveal();
+          } else {
+            whoamiFocusAfterReveal = true;
+            prepareWhoamiPathView(myPersonId);
+            armWhoamiReveal();
+            redrawLinks();
+            startWhoamiReveal();
+          }
         } else {
           render(true);
           maybeAskWhoami();
