@@ -640,6 +640,34 @@
         0 6px 14px color-mix(in srgb, black 28%, transparent);
     }
 
+    .person-years {
+      display: block;
+      margin-top: 0.15rem;
+      text-align: center;
+      font-weight: 600;
+      color: color-mix(in srgb, var(--text-dim) 90%, transparent);
+      line-height: 1.1;
+      pointer-events: none;
+      position: relative;
+      min-height: 1em;
+    }
+    .person-years-layer {
+      display: block;
+      width: 100%;
+      transition: opacity 0.85s ease;
+    }
+    .person-years-layer.is-hijri {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 0;
+      opacity: 0;
+    }
+    body.years-hijri .person-years-layer.is-gregorian { opacity: 0; }
+    body.years-hijri .person-years-layer.is-hijri { opacity: 1; }
+    body:not(.years-hijri) .person-years-layer.is-gregorian { opacity: 1; }
+    body:not(.years-hijri) .person-years-layer.is-hijri { opacity: 0; }
+
     .person-btn.has-sons {
       cursor: pointer;
     }
@@ -650,39 +678,144 @@
     }
 
     .person-btn.my-branch {
-      border-color: color-mix(in srgb, #e8c56a 75%, white);
+      border-color: #f0d78a;
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, #4a3c1c 55%, var(--bg1)),
+          color-mix(in srgb, var(--bg0) 75%, #2a2208)
+        );
       box-shadow:
-        0 0 0 1px color-mix(in srgb, #d4b04a 45%, transparent),
-        0 0 14px color-mix(in srgb, #c9a227 35%, transparent),
+        0 0 0 2px color-mix(in srgb, #e8c56a 70%, transparent),
+        0 0 22px color-mix(in srgb, #d4b04a 55%, transparent),
         0 6px 14px color-mix(in srgb, black 28%, transparent);
+      color: #f7ecc0;
     }
 
     .person-btn.my-self {
-      border-color: #f0d78a;
+      border-color: #fff3c0;
       background:
-        linear-gradient(180deg, color-mix(in srgb, #5a4a22 50%, var(--bg1)), color-mix(in srgb, var(--bg0) 80%, #2a2208));
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, #6a5528 60%, var(--bg1)),
+          color-mix(in srgb, var(--bg0) 70%, #3a2c0c)
+        );
       box-shadow:
-        0 0 0 2px color-mix(in srgb, #e8c56a 55%, transparent),
-        0 0 18px color-mix(in srgb, #d4b04a 45%, transparent);
-      color: #f7ecc0;
+        0 0 0 3px color-mix(in srgb, #ffe9a0 75%, transparent),
+        0 0 28px color-mix(in srgb, #f0d78a 65%, transparent),
+        0 8px 18px color-mix(in srgb, black 30%, transparent);
+      color: #fff8dc;
+      animation: my-self-pulse 2.2s ease-in-out infinite;
+    }
+
+    @keyframes my-self-pulse {
+      0%,
+      100% {
+        box-shadow:
+          0 0 0 3px color-mix(in srgb, #ffe9a0 75%, transparent),
+          0 0 22px color-mix(in srgb, #f0d78a 55%, transparent),
+          0 8px 18px color-mix(in srgb, black 30%, transparent);
+      }
+      50% {
+        box-shadow:
+          0 0 0 4px color-mix(in srgb, #fff3c0 90%, transparent),
+          0 0 36px color-mix(in srgb, #ffe9a0 75%, transparent),
+          0 8px 18px color-mix(in srgb, black 30%, transparent);
+      }
+    }
+
+    .person-btn.my-branch.my-branch--reveal {
+      animation: my-branch-flash 0.55s ease-out both;
+    }
+
+    @keyframes my-branch-flash {
+      0% {
+        filter: brightness(1);
+        transform: scale(1);
+      }
+      35% {
+        filter: brightness(1.35);
+        transform: scale(1.04);
+      }
+      100% {
+        filter: brightness(1);
+        transform: scale(1);
+      }
+    }
+
+    #links path.my-link,
+    #links line.my-link,
+    #links polygon.my-link {
+      stroke: #f0d78a;
+      stroke-width: 3.2;
+      opacity: 1;
+      filter: drop-shadow(0 0 4px color-mix(in srgb, #e8c56a 80%, transparent));
+    }
+
+    #links circle.my-link-tip,
+    #links polygon.my-link {
+      fill: #ffe9a0;
+    }
+
+    #links path.my-link.my-link--draw {
+      stroke-dasharray: 1;
+      stroke-dashoffset: 1;
+      animation: my-link-draw 1.1s ease-out forwards;
+    }
+
+    @keyframes my-link-draw {
+      to {
+        stroke-dashoffset: 0;
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .person-btn.my-self {
+        animation: none;
+      }
+      .person-btn.my-branch.my-branch--reveal {
+        animation: none;
+      }
+      #links path.my-link.my-link--draw {
+        animation: none;
+        stroke-dashoffset: 0;
+      }
     }
 
     .weather-chip {
       flex: 0 0 auto;
-      min-height: 2rem;
-      padding: 0.25rem 0.55rem;
-      border-radius: 999px;
-      border: 1px solid color-mix(in srgb, var(--sand) 30%, transparent);
-      background: color-mix(in srgb, var(--bg0) 70%, black);
-      color: var(--text-dim);
-      font-size: 0.78rem;
-      font-weight: 600;
-      white-space: nowrap;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0.05rem;
+      min-height: 2.35rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 12px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg1) 55%, transparent),
+        color-mix(in srgb, var(--bg0) 80%, black)
+      );
+      color: var(--text);
       cursor: pointer;
+      line-height: 1.15;
+      text-align: left;
     }
-
-    .weather-chip[hidden] {
-      display: none !important;
+    .weather-chip[hidden] { display: none !important; }
+    .weather-temp {
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+    .weather-sub {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      max-width: 7.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
     }
 
     .person-sheet-meta {
@@ -690,6 +823,28 @@
       color: var(--text-dim);
       font-size: 0.9rem;
       line-height: 1.4;
+    }
+
+    .person-sheet-dates {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+    }
+    .date-chip {
+      min-height: 2rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: color-mix(in srgb, var(--bg1) 45%, transparent);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .date-chip.is-empty {
+      border-style: dashed;
+      color: var(--text-dim);
+      font-weight: 500;
     }
 
     .person-sheet-bio {
@@ -1090,7 +1245,8 @@
     #backup-dialog,
     #person-sheet-dialog,
     #whoami-dialog,
-    #bio-edit-dialog {
+    #bio-edit-dialog,
+    #year-edit-dialog {
       margin: auto;
       padding: 1.25rem;
       border: 1px solid color-mix(in srgb, var(--sand) 45%, transparent);
@@ -1114,7 +1270,8 @@
     #backup-dialog::backdrop,
     #person-sheet-dialog::backdrop,
     #whoami-dialog::backdrop,
-    #bio-edit-dialog::backdrop {
+    #bio-edit-dialog::backdrop,
+    #year-edit-dialog::backdrop {
       background: color-mix(in srgb, var(--bg0) 70%, transparent);
     }
 
@@ -1123,6 +1280,7 @@
     #rename-dialog form,
     #save-dialog form,
     #bio-edit-dialog form,
+    #year-edit-dialog form,
     #install-dialog .history-body,
     #history-dialog .history-body,
     #backup-dialog .history-body,
@@ -1139,6 +1297,7 @@
     #rename-dialog label,
     #save-dialog label,
     #bio-edit-dialog label,
+    #year-edit-dialog label,
     #whoami-dialog label {
       display: flex;
       flex-direction: column;
@@ -1150,7 +1309,8 @@
     #password-dialog input[type="password"],
     #rename-dialog input[type="text"],
     #whoami-dialog input[type="search"],
-    #bio-edit-dialog textarea {
+    #bio-edit-dialog textarea,
+    #year-edit-dialog input {
       font: inherit;
       color: var(--text);
       padding: 0.45rem 0.75rem;
@@ -1174,7 +1334,8 @@
     #backup-dialog .dialog-actions,
     #person-sheet-dialog .dialog-actions,
     #whoami-dialog .dialog-actions,
-    #bio-edit-dialog .dialog-actions {
+    #bio-edit-dialog .dialog-actions,
+    #year-edit-dialog .dialog-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
@@ -1337,7 +1498,10 @@
       <h1>Хьоти некъ</h1>
     </div>
     <div class="header-bar">
-      <button type="button" id="weather-chip" class="weather-chip" hidden title="Погода рядом">…</button>
+      <button type="button" id="weather-chip" class="weather-chip" hidden title="Погода рядом" aria-label="Погода рядом">
+        <span class="weather-temp" id="weather-temp">…</span>
+        <span class="weather-sub" id="weather-sub">погода</span>
+      </button>
       <div class="search-wrap">
         <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
         <div id="search-results" class="search-results" role="listbox" hidden=""></div>
@@ -1523,6 +1687,10 @@
     <div class="history-body">
       <strong id="person-sheet-title">Человек</strong>
       <p id="person-sheet-meta" class="person-sheet-meta"></p>
+      <div id="person-sheet-dates" class="person-sheet-dates">
+        <button type="button" id="person-sheet-born" class="date-chip is-empty">+ рождение</button>
+        <button type="button" id="person-sheet-died" class="date-chip is-empty">+ смерть</button>
+      </div>
       <div id="person-sheet-bio" class="person-sheet-bio is-empty">Краткой биографии пока нет.</div>
       <div class="dialog-actions">
         <button type="button" id="person-sheet-edit-bio">Добавить / изменить</button>
@@ -1542,6 +1710,22 @@
       <div class="dialog-actions">
         <button type="submit">Сохранить</button>
         <button type="button" id="bio-edit-cancel">Отмена</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="year-edit-dialog" aria-labelledby="year-edit-title">
+    <form id="year-edit-form" method="dialog">
+      <strong id="year-edit-title">Год</strong>
+      <label>
+        Год
+        <input id="year-edit-input" type="number" inputmode="numeric" min="1000" max="2100" step="1" required>
+      </label>
+      <p id="year-edit-error" class="dialog-error" hidden></p>
+      <div class="dialog-actions">
+        <button type="submit">Сохранить</button>
+        <button type="button" id="year-edit-clear">Очистить</button>
+        <button type="button" id="year-edit-cancel">Отмена</button>
       </div>
     </form>
   </dialog>
@@ -2468,6 +2652,124 @@
     return JSON.parse(text);
   }
 
+  const YEAR_MIN = 1000;
+  const YEAR_MAX = 2100;
+
+  /** Approximate Hijri civil year from Gregorian year (no month/day). */
+  function gregorianYearToHijri(g) {
+    const y = Number(g);
+    if (!Number.isFinite(y)) return NaN;
+    // Standard rough conversion: AH ≈ (CE − 622) × 33/32 (floor at 1 for 622 CE)
+    return Math.max(1, Math.round((y - 622) * 33 / 32));
+  }
+
+  function formatLifeYears(node, calendar) {
+    const mapY = (y) => (calendar === 'h' ? gregorianYearToHijri(y) : y);
+    const suffix = calendar === 'h' ? ' هـ' : '';
+    const bornRaw = node && node.born;
+    const diedRaw = node && node.died;
+    const born = bornRaw != null && bornRaw !== '' && Number.isFinite(Number(bornRaw)) ? Number(bornRaw) : null;
+    const died = diedRaw != null && diedRaw !== '' && Number.isFinite(Number(diedRaw)) ? Number(diedRaw) : null;
+    if (born != null && died != null) return mapY(born) + ' — ' + mapY(died) + suffix;
+    if (born != null) return String(mapY(born)) + suffix;
+    if (died != null) return 'ум. ' + mapY(died) + suffix;
+    return '';
+  }
+
+  function parseYearInput(raw) {
+    const s = String(raw == null ? '' : raw).trim();
+    if (!s) return { ok: false, reason: 'Укажите год' };
+    if (!/^\d{3,4}$/.test(s)) return { ok: false, reason: 'Только год числом' };
+    const year = Number(s);
+    if (year < YEAR_MIN || year > YEAR_MAX) {
+      return { ok: false, reason: 'Год от ' + YEAR_MIN + ' до ' + YEAR_MAX };
+    }
+    return { ok: true, year };
+  }
+
+  function applyLifeYear(node, field, year) {
+    if (!node || (field !== 'born' && field !== 'died')) {
+      return { ok: false, reason: 'Некорректное поле' };
+    }
+    if (year == null) {
+      delete node[field];
+      return { ok: true };
+    }
+    const y = Number(year);
+    if (!Number.isFinite(y) || y < YEAR_MIN || y > YEAR_MAX) {
+      return { ok: false, reason: 'Год от ' + YEAR_MIN + ' до ' + YEAR_MAX };
+    }
+    const nextBorn = field === 'born' ? y : node.born;
+    const nextDied = field === 'died' ? y : node.died;
+    if (Number.isFinite(Number(nextBorn)) && Number.isFinite(Number(nextDied)) && Number(nextDied) < Number(nextBorn)) {
+      return { ok: false, reason: 'Год смерти не раньше рождения' };
+    }
+    node[field] = y;
+    return { ok: true };
+  }
+
+  /** Path ids + all nodes under myPersonId (inclusive). */
+  function collectMyBranchIds(root, myPersonId, pathIds) {
+    const set = new Set();
+    (pathIds || []).forEach((id) => set.add(String(id)));
+    if (myPersonId == null || myPersonId === '') return set;
+    const me = findById(root, myPersonId);
+    if (me) {
+      walk(me, (n) => set.add(String(n.id)));
+    } else {
+      set.add(String(myPersonId));
+    }
+    return set;
+  }
+
+  function isMyBranchEdge(branchIds, parentId, childId) {
+    const b =
+      branchIds instanceof Set
+        ? branchIds
+        : new Set([...(branchIds || [])].map(String));
+    return b.has(String(parentId)) && b.has(String(childId));
+  }
+
+  function myBranchSonCenters(centers, branchIds) {
+    const b =
+      branchIds instanceof Set
+        ? branchIds
+        : new Set([...(branchIds || [])].map(String));
+    return (centers || []).filter((c) => c && b.has(String(c.id)));
+  }
+
+  function whoamiRevealOrder(pathIds, branchIds) {
+    const b =
+      branchIds instanceof Set
+        ? branchIds
+        : new Set([...(branchIds || [])].map(String));
+    const order = [];
+    const seen = new Set();
+    (pathIds || []).forEach((id) => {
+      const s = String(id);
+      if (!seen.has(s) && b.has(s)) {
+        order.push(s);
+        seen.add(s);
+      }
+    });
+    b.forEach((id) => {
+      const s = String(id);
+      if (!seen.has(s)) {
+        order.push(s);
+        seen.add(s);
+      }
+    });
+    return order;
+  }
+
+  function whoamiRevealDelayMs(orderIndex, stepMs = 110) {
+    const i = Number(orderIndex);
+    const step = Number(stepMs);
+    if (!Number.isFinite(i) || i <= 0) return 0;
+    if (!Number.isFinite(step) || step <= 0) return 0;
+    return i * step;
+  }
+
   global.TreeModel = {
     walk,
     findById,
@@ -2478,6 +2780,15 @@
     addSon,
     toJSON,
     fromJSON,
+    gregorianYearToHijri,
+    formatLifeYears,
+    parseYearInput,
+    applyLifeYear,
+    collectMyBranchIds,
+    isMyBranchEdge,
+    myBranchSonCenters,
+    whoamiRevealOrder,
+    whoamiRevealDelayMs,
   };
 })(window);
   </script>
@@ -2498,6 +2809,10 @@
       var underKhotu = new Set();
       var myBranchIds = new Set();
       var myPersonId = null;
+      var whoamiRevealPending = false;
+      var whoamiRevealDrawing = false;
+      var whoamiRevealTimer = null;
+      var whoamiRevealGen = 0;
       try {
         myPersonId = localStorage.getItem(MY_PERSON_KEY) || null;
       } catch (err) {
@@ -2560,6 +2875,8 @@
       var backupCloseBtn = document.getElementById('backup-close');
       var activityEl = document.getElementById('activity-log');
       var weatherChip = document.getElementById('weather-chip');
+      var weatherTemp = document.getElementById('weather-temp');
+      var weatherSub = document.getElementById('weather-sub');
       var whoamiBtn = document.getElementById('whoami-btn');
       var whoamiClearBtn = document.getElementById('whoami-clear-btn');
       var whoamiDialog = document.getElementById('whoami-dialog');
@@ -2570,6 +2887,8 @@
       var personSheetDialog = document.getElementById('person-sheet-dialog');
       var personSheetTitle = document.getElementById('person-sheet-title');
       var personSheetMeta = document.getElementById('person-sheet-meta');
+      var personSheetBorn = document.getElementById('person-sheet-born');
+      var personSheetDied = document.getElementById('person-sheet-died');
       var personSheetBio = document.getElementById('person-sheet-bio');
       var personSheetEditBio = document.getElementById('person-sheet-edit-bio');
       var personSheetSetMe = document.getElementById('person-sheet-set-me');
@@ -2578,8 +2897,17 @@
       var bioEditForm = document.getElementById('bio-edit-form');
       var bioEditInput = document.getElementById('bio-edit-input');
       var bioEditCancel = document.getElementById('bio-edit-cancel');
+      var yearEditDialog = document.getElementById('year-edit-dialog');
+      var yearEditForm = document.getElementById('year-edit-form');
+      var yearEditTitle = document.getElementById('year-edit-title');
+      var yearEditInput = document.getElementById('year-edit-input');
+      var yearEditError = document.getElementById('year-edit-error');
+      var yearEditClear = document.getElementById('year-edit-clear');
+      var yearEditCancel = document.getElementById('year-edit-cancel');
       var personSheetTargetId = null;
       var bioEditTargetId = null;
+      var yearEditTargetId = null;
+      var yearEditField = null; // 'born' | 'died'
       var longPressTimer = null;
       var longPressFired = false;
       var searchInput = document.getElementById('search');
@@ -2712,18 +3040,8 @@
           updateWhoamiUi();
           return;
         }
-        var path = findPathToId(tree, myPersonId);
-        if (path) {
-          path.forEach(function (id) {
-            myBranchIds.add(id);
-          });
-        }
-        var me = TreeModel.findById(tree, myPersonId);
-        if (me) {
-          TreeModel.walk(me, function (n) {
-            myBranchIds.add(n.id);
-          });
-        }
+        var path = findPathToId(tree, myPersonId) || [];
+        myBranchIds = TreeModel.collectMyBranchIds(tree, myPersonId, path);
       }
 
       function updateWhoamiUi() {
@@ -2731,6 +3049,85 @@
         if (whoamiBtn) {
           whoamiBtn.textContent = myPersonId ? 'Сменить «кто я»' : 'Кто я';
         }
+      }
+
+      function armWhoamiReveal() {
+        if (!myPersonId) return;
+        if (preferReducedWhoamiMotion()) {
+          whoamiRevealPending = false;
+          whoamiRevealDrawing = false;
+          return;
+        }
+        whoamiRevealPending = true;
+        whoamiRevealDrawing = true;
+      }
+
+      function finishWhoamiReveal() {
+        whoamiRevealPending = false;
+        whoamiRevealDrawing = false;
+        whoamiRevealGen += 1;
+        if (whoamiRevealTimer) {
+          clearTimeout(whoamiRevealTimer);
+          whoamiRevealTimer = null;
+        }
+        if (linksSvg) {
+          linksSvg.querySelectorAll('.my-link--draw').forEach(function (el) {
+            el.classList.remove('my-link--draw');
+          });
+        }
+        if (layer) {
+          layer.querySelectorAll('.my-branch--reveal').forEach(function (el) {
+            el.classList.remove('my-branch--reveal');
+          });
+        }
+      }
+
+      function startWhoamiReveal() {
+        if (!whoamiRevealDrawing && !whoamiRevealPending) return;
+        whoamiRevealPending = false;
+        // Draw classes already applied by the caller's redrawLinks(); clear so
+        // later render()/zoom does not restart stroke-dash draw.
+        whoamiRevealDrawing = false;
+        if (!myPersonId || !myBranchIds.size) {
+          finishWhoamiReveal();
+          return;
+        }
+        if (preferReducedWhoamiMotion()) {
+          finishWhoamiReveal();
+          redrawLinks();
+          return;
+        }
+
+        if (whoamiRevealTimer) {
+          clearTimeout(whoamiRevealTimer);
+          whoamiRevealTimer = null;
+        }
+        var gen = ++whoamiRevealGen;
+
+        var path = findPathToId(tree, myPersonId) || [];
+        var order = TreeModel.whoamiRevealOrder(path, myBranchIds);
+        var step = 110;
+        var total =
+          TreeModel.whoamiRevealDelayMs(Math.max(order.length - 1, 0), step) + 700;
+
+        order.forEach(function (pid, index) {
+          var wrap = layer.querySelector(
+            '.person[data-id="' + CSS.escape(String(pid)) + '"]'
+          );
+          var btn = wrap && wrap.querySelector('.person-btn');
+          if (!btn) return;
+          var delay = TreeModel.whoamiRevealDelayMs(index, step);
+          setTimeout(function () {
+            if (gen !== whoamiRevealGen) return;
+            btn.classList.add('my-branch--reveal');
+          }, delay);
+        });
+
+        whoamiRevealTimer = setTimeout(function () {
+          if (gen !== whoamiRevealGen) return;
+          finishWhoamiReveal();
+          redrawLinks();
+        }, total);
       }
 
       function setMyPerson(id, opts) {
@@ -2763,11 +3160,15 @@
         } else {
           render(false);
         }
+        armWhoamiReveal();
+        redrawLinks();
+        startWhoamiReveal();
         showToast('Это вы: ' + (node.name || ''), 'success');
         return true;
       }
 
       function clearMyPerson() {
+        finishWhoamiReveal();
         myPersonId = null;
         myBranchIds = new Set();
         try {
@@ -3454,6 +3855,7 @@
         if (father) bits.push('Отец: ' + father);
         bits.push(sons.length ? 'Сыновья: ' + sons.join(', ') : 'Сыновей нет');
         if (personSheetMeta) personSheetMeta.textContent = bits.join(' · ');
+        refreshPersonSheetDates(node);
         var bio = String(node.bio || '').trim();
         if (personSheetBio) {
           if (bio) {
@@ -3478,6 +3880,96 @@
       function closePersonSheet() {
         personSheetTargetId = null;
         if (personSheetDialog && personSheetDialog.open) personSheetDialog.close();
+      }
+
+      function refreshPersonSheetDates(node) {
+        if (!personSheetBorn || !personSheetDied || !node) return;
+        if (Number.isFinite(Number(node.born))) {
+          personSheetBorn.textContent = 'Рождение · ' + node.born;
+          personSheetBorn.classList.remove('is-empty');
+        } else {
+          personSheetBorn.textContent = '+ рождение';
+          personSheetBorn.classList.add('is-empty');
+        }
+        if (Number.isFinite(Number(node.died))) {
+          personSheetDied.textContent = 'Смерть · ' + node.died;
+          personSheetDied.classList.remove('is-empty');
+        } else {
+          personSheetDied.textContent = '+ смерть';
+          personSheetDied.classList.add('is-empty');
+        }
+      }
+
+      function openYearEditor(id, field) {
+        var node = TreeModel.findById(tree, id);
+        if (!node) return;
+        yearEditTargetId = id;
+        yearEditField = field;
+        if (yearEditTitle) {
+          yearEditTitle.textContent = field === 'died' ? 'Год смерти' : 'Год рождения';
+        }
+        if (yearEditInput) {
+          yearEditInput.value = Number.isFinite(Number(node[field])) ? String(node[field]) : '';
+        }
+        if (yearEditError) {
+          yearEditError.hidden = true;
+          yearEditError.textContent = '';
+        }
+        if (yearEditDialog && yearEditDialog.showModal) yearEditDialog.showModal();
+        if (yearEditInput) yearEditInput.focus();
+      }
+
+      function requestYearEdit(id, field) {
+        if (editUnlocked) {
+          openYearEditor(id, field);
+          return;
+        }
+        openPasswordDialog({ type: 'year', personId: id, field: field });
+      }
+
+      function saveYearEdit(clear) {
+        var id = yearEditTargetId;
+        var field = yearEditField;
+        if (!id || !field) return;
+        var node = TreeModel.findById(tree, id);
+        if (!node) return;
+        var result;
+        if (clear) {
+          result = TreeModel.applyLifeYear(node, field, null);
+        } else {
+          var parsed = TreeModel.parseYearInput(yearEditInput ? yearEditInput.value : '');
+          if (!parsed.ok) {
+            if (yearEditError) {
+              yearEditError.textContent = parsed.reason;
+              yearEditError.hidden = false;
+            }
+            return;
+          }
+          result = TreeModel.applyLifeYear(node, field, parsed.year);
+        }
+        if (!result.ok) {
+          if (yearEditError) {
+            yearEditError.textContent = result.reason;
+            yearEditError.hidden = false;
+          }
+          return;
+        }
+        yearEditTargetId = null;
+        yearEditField = null;
+        persistTree();
+        pushActivity({
+          type: 'year',
+          field: field,
+          at: new Date().toISOString(),
+          son: node.name || '',
+          sonId: id,
+        });
+        if (yearEditDialog && yearEditDialog.open) yearEditDialog.close();
+        showToast('Год сохранён', 'success');
+        render(false);
+        if (personSheetTargetId && String(personSheetTargetId) === String(id)) {
+          openPersonSheet(id);
+        }
       }
 
       function openBioEditor(id) {
@@ -3581,81 +4073,127 @@
         }, 700);
       }
 
-      function weatherLabel(code, temp) {
-        var map = {
-          0: 'ясно',
-          1: 'почти ясно',
-          2: 'облачно',
-          3: 'пасмурно',
-          45: 'туман',
-          48: 'туман',
-          51: 'морось',
-          61: 'дождь',
-          63: 'дождь',
-          65: 'ливень',
-          71: 'снег',
-          73: 'снег',
-          75: 'снег',
-          80: 'ливень',
-          95: 'гроза',
-        };
-        var t = Math.round(Number(temp));
-        var w = map[code] || 'погода';
-        return (Number.isFinite(t) ? t + '°' : '—') + ' · ' + w;
-      }
-
-      function setWeatherChip(text, title) {
+      function setWeatherChip(tempText, subText, title) {
         if (!weatherChip) return;
         weatherChip.hidden = false;
-        weatherChip.textContent = text;
-        if (title) weatherChip.title = title;
+        if (weatherTemp) weatherTemp.textContent = tempText;
+        if (weatherSub) weatherSub.textContent = subText;
+        weatherChip.title = title || subText || 'Погода рядом';
+        weatherChip.setAttribute('aria-label', (tempText + ' ' + subText).trim());
       }
 
-      function loadWeather() {
-        if (!weatherChip || !navigator.geolocation) return;
+      function weatherCondition(code) {
+        var map = {
+          0: 'ясно', 1: 'почти ясно', 2: 'облачно', 3: 'пасмурно',
+          45: 'туман', 48: 'туман', 51: 'морось', 61: 'дождь', 63: 'дождь',
+          65: 'ливень', 71: 'снег', 73: 'снег', 75: 'снег', 80: 'ливень', 95: 'гроза',
+        };
+        return map[code] || 'погода';
+      }
+
+      function fetchWithTimeout(url, ms) {
+        var controller = new AbortController();
+        var timer = window.setTimeout(function () { controller.abort(); }, ms || 10000);
+        return fetch(url, { signal: controller.signal }).finally(function () {
+          window.clearTimeout(timer);
+        });
+      }
+
+      function hideOrRestoreWeather() {
+        if (!weatherChip) return;
         try {
           var cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || 'null');
-          if (cached && cached.at && Date.now() - cached.at < 45 * 60 * 1000 && cached.label) {
-            setWeatherChip(cached.label, cached.place || 'Погода рядом');
+          if (cached && cached.tempText) {
+            setWeatherChip(cached.tempText, cached.subText || 'погода', cached.place || 'Погода рядом');
             return;
           }
         } catch (err) {}
+        if (weatherTemp && weatherTemp.textContent && weatherTemp.textContent !== '…') {
+          weatherChip.hidden = false;
+          return;
+        }
+        weatherChip.hidden = true;
+      }
+
+      function reverseGeocodeCity(lat, lon) {
+        var url =
+          'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' +
+          encodeURIComponent(lat) +
+          '&longitude=' +
+          encodeURIComponent(lon) +
+          '&localityLanguage=ru';
+        return fetchWithTimeout(url, 10000)
+          .then(function (res) { return res.json(); })
+          .then(function (data) {
+            return (
+              (data && (data.city || data.locality || data.principalSubdivision)) ||
+              ''
+            );
+          })
+          .catch(function () { return ''; });
+      }
+
+      function loadWeather(force) {
+        if (!weatherChip) return;
+        if (!force) {
+          try {
+            var cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || 'null');
+            if (cached && cached.at && Date.now() - cached.at < 45 * 60 * 1000 && cached.tempText) {
+              setWeatherChip(cached.tempText, cached.subText, cached.place || 'Погода рядом');
+              return;
+            }
+          } catch (err) {}
+        }
+        if (!navigator.geolocation) {
+          hideOrRestoreWeather();
+          return;
+        }
         weatherChip.hidden = false;
-        weatherChip.textContent = '…';
+        if (weatherTemp) weatherTemp.textContent = '…';
+        if (weatherSub) weatherSub.textContent = 'погода';
         navigator.geolocation.getCurrentPosition(
           function (pos) {
             var lat = pos.coords.latitude;
             var lon = pos.coords.longitude;
-            var url =
+            var forecastUrl =
               'https://api.open-meteo.com/v1/forecast?latitude=' +
               encodeURIComponent(lat) +
               '&longitude=' +
               encodeURIComponent(lon) +
               '&current=temperature_2m,weather_code&timezone=auto';
-            fetch(url)
-              .then(function (res) {
-                return res.json();
-              })
-              .then(function (data) {
+            Promise.all([
+              fetchWithTimeout(forecastUrl, 10000).then(function (r) { return r.json(); }),
+              reverseGeocodeCity(lat, lon),
+            ])
+              .then(function (pair) {
+                var data = pair[0];
+                var city = pair[1];
                 var cur = data && data.current;
                 if (!cur) throw new Error('no weather');
-                var label = weatherLabel(cur.weather_code, cur.temperature_2m);
-                setWeatherChip(label, 'Погода рядом (Open-Meteo)');
+                var t = Math.round(Number(cur.temperature_2m));
+                var tempText = Number.isFinite(t) ? t + '°' : '—';
+                var cond = weatherCondition(cur.weather_code);
+                var subText = city ? cond + ' · ' + city : cond;
+                var placeTitle = city || 'Погода рядом';
+                setWeatherChip(tempText, subText, placeTitle + ' (Open-Meteo)');
                 try {
                   localStorage.setItem(
                     WEATHER_CACHE_KEY,
-                    JSON.stringify({ at: Date.now(), label: label, place: 'Погода рядом' })
+                    JSON.stringify({
+                      at: Date.now(),
+                      tempText: tempText,
+                      subText: subText,
+                      place: placeTitle,
+                    })
                   );
                 } catch (err) {}
               })
               .catch(function () {
-                weatherChip.hidden = true;
+                hideOrRestoreWeather();
               });
           },
-          function () {
-            weatherChip.hidden = true;
-          },
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 }
+          function () { hideOrRestoreWeather(); },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: force ? 0 : 30 * 60 * 1000 }
         );
       }
 
@@ -4132,6 +4670,8 @@
             sonIds: visibleSons(node).map(function (s) {
               return s.id;
             }),
+            born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
+            died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
           };
           maxR = Math.max(maxR, left + node._bw);
           maxB = Math.max(maxB, top + node._bh);
@@ -4200,6 +4740,23 @@
         return true;
       }
 
+      function preferReducedWhoamiMotion() {
+        try {
+          return (
+            window.matchMedia &&
+            window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          );
+        } catch (err) {
+          return false;
+        }
+      }
+
+      function decorateMyLink(el, drawing) {
+        if (!el) return;
+        el.classList.add('my-link');
+        if (drawing) el.classList.add('my-link--draw');
+      }
+
       function redrawLinks() {
         var s = map.scale;
         var w = layoutMeta.width;
@@ -4248,9 +4805,23 @@
               tip.setAttribute('fill', 'var(--sand)');
               tip.setAttribute('opacity', '0.9');
               linksSvg.appendChild(tip);
+
+              if (TreeModel.isMyBranchEdge(myBranchIds, id, child.id)) {
+                path.setAttribute('pathLength', '1');
+                decorateMyLink(
+                  path,
+                  whoamiRevealDrawing && !preferReducedWhoamiMotion()
+                );
+                tip.classList.add('my-link-tip');
+              }
             });
             return;
           }
+
+          var branchCenters = TreeModel.myBranchSonCenters(centers, myBranchIds);
+          var drawing = whoamiRevealDrawing && !preferReducedWhoamiMotion();
+          var parentOnBranch =
+            myBranchIds.has(id) || myBranchIds.has(String(id));
 
           var minX = centers[0].cx;
           var maxX = centers[0].cx;
@@ -4297,6 +4868,41 @@
             arrow.setAttribute('fill', 'var(--sand)');
             linksSvg.appendChild(arrow);
           });
+
+          if (parentOnBranch && branchCenters.length) {
+            var bMinX = branchCenters[0].cx;
+            var bMaxX = branchCenters[0].cx;
+            for (var bi = 1; bi < branchCenters.length; bi++) {
+              bMinX = Math.min(bMinX, branchCenters[bi].cx);
+              bMaxX = Math.max(bMaxX, branchCenters[bi].cx);
+            }
+            var gMinX = Math.min(bMinX, parent.cx);
+            var gMaxX = Math.max(bMaxX, parent.cx);
+            var goldTrunk = document.createElementNS(SVG_NS, 'path');
+            goldTrunk.setAttribute(
+              'd',
+              'M ' + parent.cx + ' ' + parent.bottom +
+                ' L ' + parent.cx + ' ' + busY +
+                ' M ' + gMinX + ' ' + busY +
+                ' L ' + gMaxX + ' ' + busY
+            );
+            goldTrunk.setAttribute('fill', 'none');
+            goldTrunk.setAttribute('pathLength', '1');
+            decorateMyLink(goldTrunk, drawing);
+            linksSvg.appendChild(goldTrunk);
+
+            branchCenters.forEach(function (child) {
+              var goldStub = document.createElementNS(SVG_NS, 'path');
+              goldStub.setAttribute(
+                'd',
+                'M ' + child.cx + ' ' + busY + ' L ' + child.cx + ' ' + child.y
+              );
+              goldStub.setAttribute('fill', 'none');
+              goldStub.setAttribute('pathLength', '1');
+              decorateMyLink(goldStub, drawing);
+              linksSvg.appendChild(goldStub);
+            });
+          }
         });
       }
 
@@ -4446,6 +5052,28 @@
         });
 
         el.appendChild(btn);
+
+        var gText = TreeModel.formatLifeYears(
+          { born: meta.born, died: meta.died },
+          'g'
+        );
+        if (gText) {
+          var yearsEl = document.createElement('div');
+          yearsEl.className = 'person-years';
+          yearsEl.style.fontSize = Math.max(7, 9.5 * s) + 'px';
+          var gLayer = document.createElement('span');
+          gLayer.className = 'person-years-layer is-gregorian';
+          gLayer.textContent = gText;
+          var hLayer = document.createElement('span');
+          hLayer.className = 'person-years-layer is-hijri';
+          hLayer.textContent = TreeModel.formatLifeYears(
+            { born: meta.born, died: meta.died },
+            'h'
+          );
+          yearsEl.appendChild(gLayer);
+          yearsEl.appendChild(hLayer);
+          el.appendChild(yearsEl);
+        }
 
         if (editMode && editUnlocked && !meta.hasSons && meta.id !== tree.id) {
           var delBtn = document.createElement('button');
@@ -4774,6 +5402,8 @@
           } else if (action && action.type === 'backups') {
             openBackupDialog();
             loadBackupList(pass);
+          } else if (action && action.type === 'year') {
+            openYearEditor(action.personId, action.field);
           } else if (action && action.type === 'bio') {
             openBioEditor(action.personId);
           } else {
@@ -5085,6 +5715,16 @@
           requestBioEdit(id);
         });
       }
+      if (personSheetBorn) {
+        personSheetBorn.addEventListener('click', function () {
+          if (personSheetTargetId) requestYearEdit(personSheetTargetId, 'born');
+        });
+      }
+      if (personSheetDied) {
+        personSheetDied.addEventListener('click', function () {
+          if (personSheetTargetId) requestYearEdit(personSheetTargetId, 'died');
+        });
+      }
       if (personSheetSetMe) {
         personSheetSetMe.addEventListener('click', function () {
           if (!personSheetTargetId) return;
@@ -5105,12 +5745,27 @@
           if (bioEditDialog && bioEditDialog.open) bioEditDialog.close();
         });
       }
+      if (yearEditForm) {
+        yearEditForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          saveYearEdit(false);
+        });
+      }
+      if (yearEditClear) {
+        yearEditClear.addEventListener('click', function () {
+          saveYearEdit(true);
+        });
+      }
+      if (yearEditCancel) {
+        yearEditCancel.addEventListener('click', function () {
+          yearEditTargetId = null;
+          yearEditField = null;
+          if (yearEditDialog && yearEditDialog.open) yearEditDialog.close();
+        });
+      }
       if (weatherChip) {
         weatherChip.addEventListener('click', function () {
-          try {
-            localStorage.removeItem(WEATHER_CACHE_KEY);
-          } catch (err) {}
-          loadWeather();
+          loadWeather(true);
         });
       }
 
@@ -5193,6 +5848,15 @@
         window.visualViewport.addEventListener('resize', syncHeaderAnchor);
       }
 
+      function startYearsCalendarPulse() {
+        if (startYearsCalendarPulse._started) return;
+        startYearsCalendarPulse._started = true;
+        window.setInterval(function () {
+          document.body.classList.toggle('years-hijri');
+        }, 3000);
+      }
+      startYearsCalendarPulse();
+
       function finishBoot() {
         setViewFilter('khotu', false);
         updateViewButtons();
@@ -5210,9 +5874,20 @@
         }
         showGuideBannerIfNeeded();
         updateSaveButton();
-        render(true);
         loadWeather();
-        maybeAskWhoami();
+        if (myPersonId && TreeModel.findById(tree, myPersonId)) {
+          rebuildLineSets();
+          updateWhoamiUi();
+          expandAncestorsOf(myPersonId);
+          expanded.add(myPersonId);
+          goToPerson(myPersonId);
+          armWhoamiReveal();
+          redrawLinks();
+          startWhoamiReveal();
+        } else {
+          render(true);
+          maybeAskWhoami();
+        }
       }
 
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
