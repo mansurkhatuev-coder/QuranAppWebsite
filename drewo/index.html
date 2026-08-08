@@ -515,6 +515,21 @@
       overflow: hidden;
       touch-action: none;
       cursor: grab;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #viewport *,
+    #viewport *::before,
+    #viewport *::after {
+      user-select: none;
+      -webkit-user-select: none;
+    }
+
+    #viewport input,
+    #viewport textarea {
+      user-select: text;
+      -webkit-user-select: text;
     }
 
     body[data-theme="premium"] #viewport {
@@ -632,6 +647,93 @@
     .person-btn.match {
       background: color-mix(in srgb, var(--sand) 28%, var(--bg1));
       box-shadow: 0 0 0 2px color-mix(in srgb, var(--sand) 55%, transparent);
+    }
+
+    .person-btn.my-branch {
+      border-color: color-mix(in srgb, #e8c56a 75%, white);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, #d4b04a 45%, transparent),
+        0 0 14px color-mix(in srgb, #c9a227 35%, transparent),
+        0 6px 14px color-mix(in srgb, black 28%, transparent);
+    }
+
+    .person-btn.my-self {
+      border-color: #f0d78a;
+      background:
+        linear-gradient(180deg, color-mix(in srgb, #5a4a22 50%, var(--bg1)), color-mix(in srgb, var(--bg0) 80%, #2a2208));
+      box-shadow:
+        0 0 0 2px color-mix(in srgb, #e8c56a 55%, transparent),
+        0 0 18px color-mix(in srgb, #d4b04a 45%, transparent);
+      color: #f7ecc0;
+    }
+
+    .weather-chip {
+      flex: 0 0 auto;
+      min-height: 2rem;
+      padding: 0.25rem 0.55rem;
+      border-radius: 999px;
+      border: 1px solid color-mix(in srgb, var(--sand) 30%, transparent);
+      background: color-mix(in srgb, var(--bg0) 70%, black);
+      color: var(--text-dim);
+      font-size: 0.78rem;
+      font-weight: 600;
+      white-space: nowrap;
+      cursor: pointer;
+    }
+
+    .weather-chip[hidden] {
+      display: none !important;
+    }
+
+    .person-sheet-meta {
+      margin: 0;
+      color: var(--text-dim);
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .person-sheet-bio {
+      margin: 0;
+      min-height: 3rem;
+      padding: 0.65rem 0.75rem;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--sand) 22%, transparent);
+      background: color-mix(in srgb, var(--bg1) 40%, transparent);
+      white-space: pre-wrap;
+      line-height: 1.45;
+      font-size: 0.95rem;
+    }
+
+    .person-sheet-bio.is-empty {
+      color: var(--text-dim);
+      font-style: italic;
+    }
+
+    #whoami-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 0.4rem;
+      max-height: min(40vh, 14rem);
+      overflow: auto;
+    }
+
+    #whoami-results button {
+      width: 100%;
+      text-align: left;
+      min-height: 2.4rem;
+      padding: 0.5rem 0.75rem;
+      border-radius: 10px;
+      font-weight: 600;
+    }
+
+    #whoami-results .whoami-father {
+      display: block;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--text-dim);
     }
 
     .add-son {
@@ -985,7 +1087,10 @@
     #rename-dialog,
     #install-dialog,
     #save-dialog,
-    #backup-dialog {
+    #backup-dialog,
+    #person-sheet-dialog,
+    #whoami-dialog,
+    #bio-edit-dialog {
       margin: auto;
       padding: 1.25rem;
       border: 1px solid color-mix(in srgb, var(--sand) 45%, transparent);
@@ -1006,7 +1111,10 @@
     #rename-dialog::backdrop,
     #install-dialog::backdrop,
     #save-dialog::backdrop,
-    #backup-dialog::backdrop {
+    #backup-dialog::backdrop,
+    #person-sheet-dialog::backdrop,
+    #whoami-dialog::backdrop,
+    #bio-edit-dialog::backdrop {
       background: color-mix(in srgb, var(--bg0) 70%, transparent);
     }
 
@@ -1014,9 +1122,12 @@
     #password-dialog form,
     #rename-dialog form,
     #save-dialog form,
+    #bio-edit-dialog form,
     #install-dialog .history-body,
     #history-dialog .history-body,
-    #backup-dialog .history-body {
+    #backup-dialog .history-body,
+    #person-sheet-dialog .history-body,
+    #whoami-dialog .history-body {
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -1026,7 +1137,9 @@
     #add-dialog label,
     #password-dialog label,
     #rename-dialog label,
-    #save-dialog label {
+    #save-dialog label,
+    #bio-edit-dialog label,
+    #whoami-dialog label {
       display: flex;
       flex-direction: column;
       gap: 0.35rem;
@@ -1035,7 +1148,9 @@
 
     #add-dialog input[type="text"],
     #password-dialog input[type="password"],
-    #rename-dialog input[type="text"] {
+    #rename-dialog input[type="text"],
+    #whoami-dialog input[type="search"],
+    #bio-edit-dialog textarea {
       font: inherit;
       color: var(--text);
       padding: 0.45rem 0.75rem;
@@ -1044,13 +1159,22 @@
       background: color-mix(in srgb, var(--bg0) 60%, black);
     }
 
+    #bio-edit-dialog textarea {
+      min-height: 7rem;
+      resize: vertical;
+      line-height: 1.4;
+    }
+
     #add-dialog .dialog-actions,
     #password-dialog .dialog-actions,
     #rename-dialog .dialog-actions,
     #save-dialog .dialog-actions,
     #install-dialog .dialog-actions,
     #history-dialog .dialog-actions,
-    #backup-dialog .dialog-actions {
+    #backup-dialog .dialog-actions,
+    #person-sheet-dialog .dialog-actions,
+    #whoami-dialog .dialog-actions,
+    #bio-edit-dialog .dialog-actions {
       display: flex;
       flex-wrap: wrap;
       gap: 0.5rem;
@@ -1213,6 +1337,7 @@
       <h1>Хьоти некъ</h1>
     </div>
     <div class="header-bar">
+      <button type="button" id="weather-chip" class="weather-chip" hidden title="Погода рядом">…</button>
       <div class="search-wrap">
         <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
         <div id="search-results" class="search-results" role="listbox" hidden=""></div>
@@ -1230,6 +1355,11 @@
       <div class="action-cluster" role="group" aria-label="Вид">
         <button type="button" id="view-khotu" aria-pressed="true">Линия Хьоту</button>
         <button type="button" id="view-all" aria-pressed="false">Все линии</button>
+      </div>
+      <p class="nav-label">Я в древе</p>
+      <div class="action-cluster" role="group" aria-label="Я в древе">
+        <button type="button" id="whoami-btn">Кто я</button>
+        <button type="button" id="whoami-clear-btn" hidden>Сбросить «это я»</button>
       </div>
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
@@ -1252,11 +1382,11 @@
   <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden="">
     <strong>Как пользоваться</strong>
     <ol>
-      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки.</li>
+      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека.</li>
+      <li>Укажите <b>Кто я</b> в меню — ваша ветка подсветится золотом.</li>
       <li><b>+ сын</b> и <b>Изменить связи</b> — сначала пароль.</li>
       <li>В правках: перенос на нового отца, тап — переименовать, у листьев — удалить.</li>
-      <li>После изменений нажмите <b>Сохранить</b> внизу — иначе на сайте останется старое.</li>
-      <li><b>На экран Домой</b> — установить как приложение.</li>
+      <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
     </ol>
     <div class="guide-actions">
       <button type="button" id="guide-ok">Понятно</button>
@@ -1385,6 +1515,49 @@
       <ul id="backup-list"></ul>
       <div class="dialog-actions">
         <button type="button" id="backup-close">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="person-sheet-dialog" aria-labelledby="person-sheet-title">
+    <div class="history-body">
+      <strong id="person-sheet-title">Человек</strong>
+      <p id="person-sheet-meta" class="person-sheet-meta"></p>
+      <div id="person-sheet-bio" class="person-sheet-bio is-empty">Краткой биографии пока нет.</div>
+      <div class="dialog-actions">
+        <button type="button" id="person-sheet-edit-bio">Добавить / изменить</button>
+        <button type="button" id="person-sheet-set-me">Это я</button>
+        <button type="button" id="person-sheet-close">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="bio-edit-dialog" aria-labelledby="bio-edit-title">
+    <form id="bio-edit-form" method="dialog">
+      <strong id="bio-edit-title">Биография</strong>
+      <label>
+        Кратко о человеке
+        <textarea id="bio-edit-input" maxlength="800" placeholder="Годы, место, чем запомнился…"></textarea>
+      </label>
+      <div class="dialog-actions">
+        <button type="submit">Сохранить</button>
+        <button type="button" id="bio-edit-cancel">Отмена</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="whoami-dialog" aria-labelledby="whoami-dialog-title">
+    <div class="history-body">
+      <strong id="whoami-dialog-title">Кто вы в древе?</strong>
+      <p class="install-steps">Найдите себя — ветка подсветится золотом. Можно сменить в меню.</p>
+      <label>
+        Поиск
+        <input id="whoami-search" type="search" placeholder="Имя…" autocomplete="off">
+      </label>
+      <ul id="whoami-results"></ul>
+      <div class="dialog-actions">
+        <button type="button" id="whoami-skip">Позже</button>
+        <button type="button" id="whoami-close">Закрыть</button>
       </div>
     </div>
   </dialog>
@@ -2219,14 +2392,6 @@
     "father": "Мухаммад",
     "sonId": "added-1785596579529-e483pu",
     "fatherId": "added-1785596491258-9c92zv"
-  },
-  {
-    "type": "add",
-    "at": "2026-08-03T10:32:46.589Z",
-    "son": "Мухьаммад",
-    "father": "Мохьмад",
-    "sonId": "added-1785753166572-shx88n",
-    "fatherId": "mokhmad-abu"
   }
 ]
 </script>
@@ -2320,6 +2485,9 @@
     (function () {
       var NUTSU_ID = 'nutsu';
       var KHOTU_ID = 'khotu';
+      var MY_PERSON_KEY = 'drewo-my-person-id';
+      var WHOAMI_SKIP_KEY = 'drewo-whoami-skip';
+      var WEATHER_CACHE_KEY = 'drewo-weather-cache';
       var MAP_SCALE_MIN = 0.15;
       var MAP_SCALE_MAX = 2.5;
       var dataEl = document.getElementById('tree-data');
@@ -2328,6 +2496,13 @@
       var editMode = false;
       var khotuPath = new Set();
       var underKhotu = new Set();
+      var myBranchIds = new Set();
+      var myPersonId = null;
+      try {
+        myPersonId = localStorage.getItem(MY_PERSON_KEY) || null;
+      } catch (err) {
+        myPersonId = null;
+      }
       var expanded = new Set();
       var map = { scale: 1, x: 0, y: 0 };
       var layoutMeta = { width: 0, height: 0, nodes: {} };
@@ -2384,6 +2559,29 @@
       var backupError = document.getElementById('backup-error');
       var backupCloseBtn = document.getElementById('backup-close');
       var activityEl = document.getElementById('activity-log');
+      var weatherChip = document.getElementById('weather-chip');
+      var whoamiBtn = document.getElementById('whoami-btn');
+      var whoamiClearBtn = document.getElementById('whoami-clear-btn');
+      var whoamiDialog = document.getElementById('whoami-dialog');
+      var whoamiSearch = document.getElementById('whoami-search');
+      var whoamiResults = document.getElementById('whoami-results');
+      var whoamiSkip = document.getElementById('whoami-skip');
+      var whoamiClose = document.getElementById('whoami-close');
+      var personSheetDialog = document.getElementById('person-sheet-dialog');
+      var personSheetTitle = document.getElementById('person-sheet-title');
+      var personSheetMeta = document.getElementById('person-sheet-meta');
+      var personSheetBio = document.getElementById('person-sheet-bio');
+      var personSheetEditBio = document.getElementById('person-sheet-edit-bio');
+      var personSheetSetMe = document.getElementById('person-sheet-set-me');
+      var personSheetClose = document.getElementById('person-sheet-close');
+      var bioEditDialog = document.getElementById('bio-edit-dialog');
+      var bioEditForm = document.getElementById('bio-edit-form');
+      var bioEditInput = document.getElementById('bio-edit-input');
+      var bioEditCancel = document.getElementById('bio-edit-cancel');
+      var personSheetTargetId = null;
+      var bioEditTargetId = null;
+      var longPressTimer = null;
+      var longPressFired = false;
       var searchInput = document.getElementById('search');
       var searchResults = document.getElementById('search-results');
       var addDialog = document.getElementById('add-dialog');
@@ -2500,6 +2698,101 @@
             underKhotu.add(n.id);
           });
         }
+        rebuildMyBranch();
+      }
+
+      function rebuildMyBranch() {
+        myBranchIds = new Set();
+        if (!myPersonId) return;
+        if (!TreeModel.findById(tree, myPersonId)) {
+          myPersonId = null;
+          try {
+            localStorage.removeItem(MY_PERSON_KEY);
+          } catch (err) {}
+          updateWhoamiUi();
+          return;
+        }
+        var path = findPathToId(tree, myPersonId);
+        if (path) {
+          path.forEach(function (id) {
+            myBranchIds.add(id);
+          });
+        }
+        var me = TreeModel.findById(tree, myPersonId);
+        if (me) {
+          TreeModel.walk(me, function (n) {
+            myBranchIds.add(n.id);
+          });
+        }
+      }
+
+      function updateWhoamiUi() {
+        if (whoamiClearBtn) whoamiClearBtn.hidden = !myPersonId;
+        if (whoamiBtn) {
+          whoamiBtn.textContent = myPersonId ? 'Сменить «кто я»' : 'Кто я';
+        }
+      }
+
+      function setMyPerson(id, opts) {
+        var options = opts || {};
+        var node = TreeModel.findById(tree, id);
+        if (!node) {
+          showToast('Человек не найден', 'error');
+          return false;
+        }
+        myPersonId = String(id);
+        try {
+          localStorage.setItem(MY_PERSON_KEY, myPersonId);
+          localStorage.removeItem(WHOAMI_SKIP_KEY);
+        } catch (err) {}
+        rebuildLineSets();
+        if (
+          viewFilter === 'khotu' &&
+          !underKhotu.has(myPersonId) &&
+          !khotuPath.has(myPersonId)
+        ) {
+          setViewFilter('all', false);
+        } else {
+          rebuildMyBranch();
+        }
+        updateWhoamiUi();
+        if (options.focus !== false) {
+          expandAncestorsOf(myPersonId);
+          expanded.add(myPersonId);
+          goToPerson(myPersonId);
+        } else {
+          render(false);
+        }
+        showToast('Это вы: ' + (node.name || ''), 'success');
+        return true;
+      }
+
+      function clearMyPerson() {
+        myPersonId = null;
+        myBranchIds = new Set();
+        try {
+          localStorage.removeItem(MY_PERSON_KEY);
+        } catch (err) {}
+        updateWhoamiUi();
+        render(false);
+        showToast('Подсветка «кто я» сброшена', 'info');
+      }
+
+      function findFatherName(childId) {
+        var info = null;
+        function walk(node) {
+          var sons = node.sons || [];
+          for (var i = 0; i < sons.length; i++) {
+            if (String(sons[i].id) === String(childId)) {
+              info = node;
+              return true;
+            }
+            if (walk(sons[i])) return true;
+          }
+          return false;
+        }
+        walk(tree);
+        return info ? info.name || '' : '';
       }
 
       function expandKhotuLine() {
@@ -3146,6 +3439,224 @@
         if (and) and.hidden = !isAndroid;
         if (gen) gen.hidden = isAppleTouch || isAndroid;
         if (installDialog && installDialog.showModal) installDialog.showModal();
+      }
+
+      function openPersonSheet(id) {
+        var node = TreeModel.findById(tree, id);
+        if (!node || !personSheetDialog) return;
+        personSheetTargetId = id;
+        if (personSheetTitle) personSheetTitle.textContent = node.name || 'Человек';
+        var father = findFatherName(id);
+        var sons = (node.sons || []).map(function (s) {
+          return s.name;
+        });
+        var bits = [];
+        if (father) bits.push('Отец: ' + father);
+        bits.push(sons.length ? 'Сыновья: ' + sons.join(', ') : 'Сыновей нет');
+        if (personSheetMeta) personSheetMeta.textContent = bits.join(' · ');
+        var bio = String(node.bio || '').trim();
+        if (personSheetBio) {
+          if (bio) {
+            personSheetBio.textContent = bio;
+            personSheetBio.classList.remove('is-empty');
+          } else {
+            personSheetBio.textContent = 'Краткой биографии пока нет.';
+            personSheetBio.classList.add('is-empty');
+          }
+        }
+        if (personSheetEditBio) {
+          personSheetEditBio.textContent = bio ? 'Изменить био' : 'Добавить био';
+        }
+        if (personSheetSetMe) {
+          personSheetSetMe.textContent =
+            myPersonId && String(myPersonId) === String(id) ? 'Это уже вы' : 'Это я';
+          personSheetSetMe.disabled = !!(myPersonId && String(myPersonId) === String(id));
+        }
+        if (typeof personSheetDialog.showModal === 'function') personSheetDialog.showModal();
+      }
+
+      function closePersonSheet() {
+        personSheetTargetId = null;
+        if (personSheetDialog && personSheetDialog.open) personSheetDialog.close();
+      }
+
+      function openBioEditor(id) {
+        var node = TreeModel.findById(tree, id);
+        if (!node) return;
+        bioEditTargetId = id;
+        if (bioEditInput) bioEditInput.value = String(node.bio || '');
+        if (bioEditDialog && bioEditDialog.showModal) bioEditDialog.showModal();
+        if (bioEditInput) bioEditInput.focus();
+      }
+
+      function requestBioEdit(id) {
+        if (editUnlocked) {
+          openBioEditor(id);
+          return;
+        }
+        openPasswordDialog({ type: 'bio', personId: id });
+      }
+
+      function saveBioEdit() {
+        var id = bioEditTargetId;
+        bioEditTargetId = null;
+        if (!id) return;
+        var node = TreeModel.findById(tree, id);
+        if (!node) return;
+        var text = bioEditInput ? String(bioEditInput.value || '').trim() : '';
+        if (text) node.bio = text;
+        else delete node.bio;
+        persistTree();
+        pushActivity({
+          type: 'bio',
+          at: new Date().toISOString(),
+          son: node.name || '',
+          sonId: id,
+        });
+        if (bioEditDialog && bioEditDialog.open) bioEditDialog.close();
+        showToast('Биография сохранена', 'success');
+        if (personSheetTargetId && String(personSheetTargetId) === String(id)) {
+          openPersonSheet(id);
+        }
+      }
+
+      function renderWhoamiResults(query) {
+        if (!whoamiResults) return;
+        whoamiResults.replaceChildren();
+        var matches = collectNameMatches(query).slice(0, 40);
+        if (!String(query || '').trim()) {
+          var empty = document.createElement('li');
+          empty.className = 'search-results-empty';
+          empty.textContent = 'Начните вводить имя';
+          empty.style.listStyle = 'none';
+          empty.style.padding = '0.35rem 0.2rem';
+          empty.style.color = 'var(--text-dim)';
+          whoamiResults.appendChild(empty);
+          return;
+        }
+        if (!matches.length) {
+          var none = document.createElement('li');
+          none.style.listStyle = 'none';
+          none.style.padding = '0.35rem 0.2rem';
+          none.style.color = 'var(--text-dim)';
+          none.textContent = 'Никого не найдено';
+          whoamiResults.appendChild(none);
+          return;
+        }
+        matches.forEach(function (m) {
+          var li = document.createElement('li');
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = m.name;
+          if (m.fatherName) {
+            var sub = document.createElement('span');
+            sub.className = 'whoami-father';
+            sub.textContent = 'отец: ' + m.fatherName;
+            btn.appendChild(document.createElement('br'));
+            btn.appendChild(sub);
+          }
+          btn.addEventListener('click', function () {
+            if (whoamiDialog && whoamiDialog.open) whoamiDialog.close();
+            setMyPerson(m.id);
+          });
+          li.appendChild(btn);
+          whoamiResults.appendChild(li);
+        });
+      }
+
+      function openWhoamiDialog() {
+        if (whoamiSearch) whoamiSearch.value = '';
+        renderWhoamiResults('');
+        if (whoamiDialog && whoamiDialog.showModal) whoamiDialog.showModal();
+        if (whoamiSearch) whoamiSearch.focus();
+      }
+
+      function maybeAskWhoami() {
+        if (myPersonId) return;
+        try {
+          if (localStorage.getItem(WHOAMI_SKIP_KEY) === '1') return;
+        } catch (err) {}
+        window.setTimeout(function () {
+          if (!myPersonId) openWhoamiDialog();
+        }, 700);
+      }
+
+      function weatherLabel(code, temp) {
+        var map = {
+          0: 'ясно',
+          1: 'почти ясно',
+          2: 'облачно',
+          3: 'пасмурно',
+          45: 'туман',
+          48: 'туман',
+          51: 'морось',
+          61: 'дождь',
+          63: 'дождь',
+          65: 'ливень',
+          71: 'снег',
+          73: 'снег',
+          75: 'снег',
+          80: 'ливень',
+          95: 'гроза',
+        };
+        var t = Math.round(Number(temp));
+        var w = map[code] || 'погода';
+        return (Number.isFinite(t) ? t + '°' : '—') + ' · ' + w;
+      }
+
+      function setWeatherChip(text, title) {
+        if (!weatherChip) return;
+        weatherChip.hidden = false;
+        weatherChip.textContent = text;
+        if (title) weatherChip.title = title;
+      }
+
+      function loadWeather() {
+        if (!weatherChip || !navigator.geolocation) return;
+        try {
+          var cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || 'null');
+          if (cached && cached.at && Date.now() - cached.at < 45 * 60 * 1000 && cached.label) {
+            setWeatherChip(cached.label, cached.place || 'Погода рядом');
+            return;
+          }
+        } catch (err) {}
+        weatherChip.hidden = false;
+        weatherChip.textContent = '…';
+        navigator.geolocation.getCurrentPosition(
+          function (pos) {
+            var lat = pos.coords.latitude;
+            var lon = pos.coords.longitude;
+            var url =
+              'https://api.open-meteo.com/v1/forecast?latitude=' +
+              encodeURIComponent(lat) +
+              '&longitude=' +
+              encodeURIComponent(lon) +
+              '&current=temperature_2m,weather_code&timezone=auto';
+            fetch(url)
+              .then(function (res) {
+                return res.json();
+              })
+              .then(function (data) {
+                var cur = data && data.current;
+                if (!cur) throw new Error('no weather');
+                var label = weatherLabel(cur.weather_code, cur.temperature_2m);
+                setWeatherChip(label, 'Погода рядом (Open-Meteo)');
+                try {
+                  localStorage.setItem(
+                    WEATHER_CACHE_KEY,
+                    JSON.stringify({ at: Date.now(), label: label, place: 'Погода рядом' })
+                  );
+                } catch (err) {}
+              })
+              .catch(function () {
+                weatherChip.hidden = true;
+              });
+          },
+          function () {
+            weatherChip.hidden = true;
+          },
+          { enableHighAccuracy: false, timeout: 8000, maximumAge: 30 * 60 * 1000 }
+        );
       }
 
       async function publishToGitHub(password, options) {
@@ -3834,6 +4345,8 @@
         btn.type = 'button';
         btn.className = 'person-btn';
         if (matchIds.has(meta.id) || matchIds.has(String(meta.id))) btn.classList.add('match');
+        if (myBranchIds.has(meta.id) || myBranchIds.has(String(meta.id))) btn.classList.add('my-branch');
+        if (myPersonId && String(meta.id) === String(myPersonId)) btn.classList.add('my-self');
         btn.textContent = meta.name;
         btn.title = meta.name;
         if (meta.hasSons) {
@@ -3860,9 +4373,17 @@
           Math.max(2, 5 * s) + 'px ' + Math.max(4, 8 * s) + 'px';
         btn.style.borderRadius = Math.max(4, 8 * s) + 'px';
         btn.style.borderWidth = Math.max(1, 1.5 * s) + 'px';
+
+        function clearLongPress() {
+          if (longPressTimer) {
+            window.clearTimeout(longPressTimer);
+            longPressTimer = null;
+          }
+        }
+
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
-          if (gestureMoved) return;
+          if (gestureMoved || longPressFired) return;
           // В режиме правок переименование открывается из onDragEnd (tap без сдвига).
           if (editMode) return;
           if (!meta.hasSons) return;
@@ -3871,9 +4392,43 @@
           render();
         });
 
+        btn.addEventListener('contextmenu', function (e) {
+          e.preventDefault();
+          e.stopPropagation();
+          openPersonSheet(meta.id);
+        });
+
         btn.addEventListener('pointerdown', function (e) {
-          if (!editMode || !editUnlocked) return;
           if (e.pointerType === 'mouse' && e.button !== 0) return;
+          longPressFired = false;
+          clearLongPress();
+          var startX = e.clientX;
+          var startY = e.clientY;
+          longPressTimer = window.setTimeout(function () {
+            longPressTimer = null;
+            longPressFired = true;
+            try {
+              if (navigator.vibrate) navigator.vibrate(12);
+            } catch (err) {}
+            openPersonSheet(meta.id);
+          }, 520);
+
+          function onMove(ev) {
+            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 10) {
+              clearLongPress();
+            }
+          }
+          function onUp() {
+            clearLongPress();
+            btn.removeEventListener('pointermove', onMove);
+            btn.removeEventListener('pointerup', onUp);
+            btn.removeEventListener('pointercancel', onUp);
+          }
+          btn.addEventListener('pointermove', onMove);
+          btn.addEventListener('pointerup', onUp);
+          btn.addEventListener('pointercancel', onUp);
+
+          if (!editMode || !editUnlocked) return;
           e.stopPropagation();
           // Не preventDefault — иначе на части устройств ломается tap.
           try {
@@ -4005,6 +4560,10 @@
       }
 
       function beginPan(pointer) {
+        try {
+          var sel = window.getSelection && window.getSelection();
+          if (sel && sel.removeAllRanges) sel.removeAllRanges();
+        } catch (err) {}
         panOrigin = {
           x: pointer.x,
           y: pointer.y,
@@ -4053,8 +4612,9 @@
         var dropId = moved ? personFromPoint(e.clientX, e.clientY) : null;
         clearDrag();
         if (!editMode || !editUnlocked) return;
-        // Короткий тап без сдвига — переименовать.
+        // Короткий тап без сдвига — переименовать (не после long-press карточки).
         if (!moved) {
+          if (longPressFired) return;
           openRenameDialog(childId);
           return;
         }
@@ -4081,6 +4641,11 @@
         if (e.pointerType === 'mouse' && e.button !== 0) return;
         // В просмотре разрешаем pan даже с имени — иначе свайп случайно сворачивает ветку.
         if (editMode && e.target.closest('button')) return;
+        try {
+          e.preventDefault();
+          var sel = window.getSelection && window.getSelection();
+          if (sel && sel.removeAllRanges) sel.removeAllRanges();
+        } catch (err) {}
         gestureMoved = false;
         viewport.setPointerCapture(e.pointerId);
         activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
@@ -4209,6 +4774,8 @@
           } else if (action && action.type === 'backups') {
             openBackupDialog();
             loadBackupList(pass);
+          } else if (action && action.type === 'bio') {
+            openBioEditor(action.personId);
           } else {
             setEditMode(true);
           }
@@ -4475,6 +5042,77 @@
           if (backupDialog && backupDialog.open) backupDialog.close();
         });
       }
+      if (whoamiBtn) {
+        whoamiBtn.addEventListener('click', function () {
+          setNavMenuOpen(false);
+          openWhoamiDialog();
+        });
+      }
+      if (whoamiClearBtn) {
+        whoamiClearBtn.addEventListener('click', function () {
+          setNavMenuOpen(false);
+          askConfirm('Сбросить подсветку «это я»?').then(function (ok) {
+            if (ok) clearMyPerson();
+          });
+        });
+      }
+      if (whoamiClose) {
+        whoamiClose.addEventListener('click', function () {
+          if (whoamiDialog && whoamiDialog.open) whoamiDialog.close();
+        });
+      }
+      if (whoamiSkip) {
+        whoamiSkip.addEventListener('click', function () {
+          try {
+            localStorage.setItem(WHOAMI_SKIP_KEY, '1');
+          } catch (err) {}
+          if (whoamiDialog && whoamiDialog.open) whoamiDialog.close();
+        });
+      }
+      if (whoamiSearch) {
+        whoamiSearch.addEventListener('input', function () {
+          renderWhoamiResults(whoamiSearch.value);
+        });
+      }
+      if (personSheetClose) {
+        personSheetClose.addEventListener('click', closePersonSheet);
+      }
+      if (personSheetEditBio) {
+        personSheetEditBio.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          var id = personSheetTargetId;
+          closePersonSheet();
+          requestBioEdit(id);
+        });
+      }
+      if (personSheetSetMe) {
+        personSheetSetMe.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          var id = personSheetTargetId;
+          closePersonSheet();
+          setMyPerson(id);
+        });
+      }
+      if (bioEditForm) {
+        bioEditForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          saveBioEdit();
+        });
+      }
+      if (bioEditCancel) {
+        bioEditCancel.addEventListener('click', function () {
+          bioEditTargetId = null;
+          if (bioEditDialog && bioEditDialog.open) bioEditDialog.close();
+        });
+      }
+      if (weatherChip) {
+        weatherChip.addEventListener('click', function () {
+          try {
+            localStorage.removeItem(WEATHER_CACHE_KEY);
+          } catch (err) {}
+          loadWeather();
+        });
+      }
 
       window.addEventListener('resize', function () {
         // Keep current pan/zoom; fitView here would cancel search focus after keyboard close.
@@ -4559,6 +5197,7 @@
         setViewFilter('khotu', false);
         updateViewButtons();
         refreshActivityUi();
+        updateWhoamiUi();
         try {
           setTheme(
             localStorage.getItem('drewo-theme') ||
@@ -4572,6 +5211,8 @@
         showGuideBannerIfNeeded();
         updateSaveButton();
         render(true);
+        loadWeather();
+        maybeAskWhoami();
       }
 
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
