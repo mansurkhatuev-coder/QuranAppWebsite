@@ -3117,6 +3117,9 @@
       /**
        * Expand tree and frame the ancestor path so the gold line reveal is on-screen.
        * Leaves the tuned goToPerson zoom for after the animation.
+       *
+       * IMPORTANT: map.scale is baked into node pixel positions by render() —
+       * applyMapTransform only translates. Always render after changing scale.
        */
       function prepareWhoamiPathView(id) {
         id = String(id || '');
@@ -3135,13 +3138,11 @@
         render(false);
 
         var path = findPathToId(tree, id) || [id];
-        fitNodesInView(path, { pad: 0.18, maxScale: 0.9 });
-        var s = map.scale;
-        world.style.width = layoutMeta.width * s + 'px';
-        world.style.height = layoutMeta.height * s + 'px';
-        layer.style.width = layoutMeta.width * s + 'px';
-        layer.style.height = layoutMeta.height * s + 'px';
-        redrawLinks();
+        if (!fitNodesInView(path, { pad: 0.18, maxScale: 0.9 })) {
+          return false;
+        }
+        // Re-bake positions at the overview scale (same pattern as goToPerson).
+        render(false);
         applyMapTransform();
         return true;
       }
