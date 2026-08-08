@@ -4219,6 +4219,18 @@
         weatherChip.hidden = true;
       }
 
+      function pickPlaceName(data) {
+        if (!data) return '';
+        var locality = String(data.locality || '').trim();
+        var city = String(data.city || '').trim();
+        var subdiv = String(data.principalSubdivision || '').trim();
+        // BigDataCloud часто кладёт «… район» в city, а село — в locality.
+        if (locality) return locality;
+        if (city && !/район$/i.test(city)) return city;
+        if (city) return city;
+        return subdiv;
+      }
+
       function reverseGeocodeCity(lat, lon) {
         var url =
           'https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=' +
@@ -4229,10 +4241,7 @@
         return fetchWithTimeout(url, 10000)
           .then(function (res) { return res.json(); })
           .then(function (data) {
-            return (
-              (data && (data.city || data.locality || data.principalSubdivision)) ||
-              ''
-            );
+            return pickPlaceName(data);
           })
           .catch(function () { return ''; });
       }
