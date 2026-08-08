@@ -4220,14 +4220,46 @@
         weatherChip.hidden = true;
       }
 
+      function isDistrictPlaceName(name) {
+        return /район$/i.test(String(name || '').trim());
+      }
+
       function pickPlaceName(data) {
         if (!data) return '';
+        var adm = data.localityInfo && data.localityInfo.administrative;
+        if (Array.isArray(adm) && adm.length) {
+          var settlement = null;
+          var best = null;
+          for (var i = 0; i < adm.length; i++) {
+            var a = adm[i];
+            if (!a) continue;
+            var name = String(a.name || '').trim();
+            if (!name || isDistrictPlaceName(name)) continue;
+            if (/^Город\s+/i.test(name)) name = name.replace(/^Город\s+/i, '');
+            var desc = String(a.description || '').toLowerCase();
+            var level = Number(a.adminLevel) || 0;
+            if (/село|посёл|посел|деревн|станиц|аул|пос\./.test(desc)) {
+              if (!settlement || level >= (Number(settlement.adminLevel) || 0)) {
+                settlement = { name: name, adminLevel: level };
+              }
+              continue;
+            }
+            if (level < 6) continue;
+            if (!best || level > (Number(best.adminLevel) || 0)) {
+              best = { name: name, adminLevel: level };
+            } else if (level === (Number(best.adminLevel) || 0) && name.length < best.name.length) {
+              best = { name: name, adminLevel: level };
+            }
+          }
+          if (settlement && settlement.name) return settlement.name;
+          if (best && best.name) return best.name;
+        }
         var locality = String(data.locality || '').trim();
         var city = String(data.city || '').trim();
         var subdiv = String(data.principalSubdivision || '').trim();
-        // BigDataCloud часто кладёт «… район» в city, а село — в locality.
+        if (locality && !isDistrictPlaceName(locality)) return locality;
+        if (city && !isDistrictPlaceName(city)) return city;
         if (locality) return locality;
-        if (city && !/район$/i.test(city)) return city;
         if (city) return city;
         return subdiv;
       }
@@ -4239,10 +4271,18 @@
           '&longitude=' +
           encodeURIComponent(lon) +
           '&localityLanguage=ru';
-        return fetchWithTimeout(url, 10000)
-          .then(function (res) { return res.json(); })
-          .then(function (data) {
-            return pickPlaceName(data);
+        function once() {
+          return fetchWithTimeout(url, 10000)
+            .then(function (res) { return res.json(); })
+            .then(function (data) {
+              return pickPlaceName(data);
+            });
+        }
+        return once()
+          .catch(function () {
+            return new Promise(function (resolve) {
+              window.setTimeout(resolve, 400);
+            }).then(once);
           })
           .catch(function () { return ''; });
       }
@@ -4252,7 +4292,18 @@
         if (!force) {
           try {
             var cached = JSON.parse(localStorage.getItem(WEATHER_CACHE_KEY) || 'null');
-            if (cached && cached.at && Date.now() - cached.at < 45 * 60 * 1000 && cached.tempText) {
+            var cachedPlace = cached && (cached.place || '');
+            var cachedSub = cached && (cached.subText || '');
+            var cacheLooksDistrict =
+              isDistrictPlaceName(cachedPlace) ||
+              /·\s*[^·]*район\s*$/i.test(String(cachedSub));
+            if (
+              cached &&
+              cached.at &&
+              Date.now() - cached.at < 45 * 60 * 1000 &&
+              cached.tempText &&
+              !cacheLooksDistrict
+            ) {
               setWeatherChip(cached.tempText, cached.subText, cached.place || 'Погода рядом');
               return;
             }
@@ -4307,7 +4358,7 @@
               });
           },
           function () { hideOrRestoreWeather(); },
-          { enableHighAccuracy: false, timeout: 8000, maximumAge: force ? 0 : 30 * 60 * 1000 }
+          { enableHighAccuracy: true, timeout: 12000, maximumAge: force ? 0 : 5 * 60 * 1000 }
         );
       }
 
