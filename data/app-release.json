@@ -1,7 +1,7 @@
 {
   "ios": {
     "latestVersion": "1.0.10",
-    "buildNumber": 17,
+    "buildNumber": 18,
     "appStoreUrl": "https://apps.apple.com/app/id6782619598"
   },
   "android": {
@@ -11,11 +11,11 @@
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {
-      "latestVersion": "1.0.10",
-      "versionCode": 12,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.10/koran-i-azkary-1.0.10.apk"
+      "latestVersion": "1.0.11",
+      "versionCode": 13,
+      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.11/koran-i-azkary-1.0.11.apk"
     }
   },
-  "messageRu": "Версия 1.0.10: баннер обновлений по каналу установки (RuStore / APK / App Store), улучшения Академии Мадина, исправления и стабильность.",
-  "messageEn": "Version 1.0.10: install-channel update banner (RuStore / APK / App Store), Madina Academy improvements, fixes and stability."
+  "messageRu": "Версия 1.0.11 (APK): Академия, азкары, прослушивание и мусхаф, уведомления намаза. RuStore и App Store — после модерации.",
+  "messageEn": "Version 1.0.11 (APK): Academy, azkar, listening and mushaf, prayer notifications. RuStore and App Store after review."
 }
