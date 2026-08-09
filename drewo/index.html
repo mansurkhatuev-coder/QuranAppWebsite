@@ -5226,8 +5226,10 @@
         btn.style.whiteSpace = 'nowrap';
         btn.style.boxSizing = 'border-box';
         btn.style.fontSize = Math.max(8, 12.8 * s) + 'px';
-        btn.style.minHeight = Math.max(20, (hasYears ? NODE_H_YEARS : NODE_H) * s) + 'px';
-        btn.style.height = Math.max(20, meta.h * s) + 'px';
+        // Keep enough room for name + year even when the map is zoomed out.
+        btn.style.minHeight =
+          Math.max(hasYears ? 30 : 20, (hasYears ? NODE_H_YEARS : NODE_H) * s) + 'px';
+        btn.style.height = 'auto';
         btn.style.padding =
           Math.max(2, (hasYears ? 4 : 5) * s) + 'px ' + Math.max(4, 8 * s) + 'px';
         btn.style.borderRadius = Math.max(4, 8 * s) + 'px';
