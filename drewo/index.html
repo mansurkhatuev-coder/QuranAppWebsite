@@ -621,6 +621,11 @@
 
     .person-btn {
       box-sizing: border-box;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 0.12rem;
       min-height: 34px;
       min-width: 3.2rem;
       max-width: none;
@@ -640,16 +645,35 @@
         0 6px 14px color-mix(in srgb, black 28%, transparent);
     }
 
+    .person-btn.has-years {
+      min-height: 48px;
+      padding-top: 0.28rem;
+      padding-bottom: 0.28rem;
+    }
+
+    .person-name {
+      display: block;
+      line-height: 1.15;
+    }
+
     .person-years {
       display: block;
-      margin-top: 0.15rem;
+      margin: 0;
       text-align: center;
-      font-weight: 600;
-      color: color-mix(in srgb, var(--text-dim) 90%, transparent);
-      line-height: 1.1;
+      font-weight: 500;
+      font-variant-numeric: tabular-nums;
+      letter-spacing: 0.02em;
+      color: color-mix(in srgb, var(--text-dim) 92%, var(--sand));
+      line-height: 1;
       pointer-events: none;
       position: relative;
-      min-height: 1em;
+      opacity: 0.88;
+    }
+
+    .person-btn.my-branch .person-years,
+    .person-btn.my-self .person-years {
+      color: color-mix(in srgb, #f7ecc0 72%, transparent);
+      opacity: 0.92;
     }
     .person-years-layer {
       display: block;
@@ -2830,6 +2854,7 @@
       var map = { scale: 1, x: 0, y: 0 };
       var layoutMeta = { width: 0, height: 0, nodes: {} };
       var NODE_H = 34;
+      var NODE_H_YEARS = 48;
       var H_GAP = 12;
       var V_GAP = 70;
       var PAD = 48;
@@ -4783,9 +4808,16 @@
       }
 
       function computeLayout(root) {
+        function nodeHasYears(node) {
+          return (
+            Number.isFinite(Number(node && node.born)) ||
+            Number.isFinite(Number(node && node.died))
+          );
+        }
+
         function measure(node) {
           node._bw = estimateBoxWidth(node.name);
-          node._bh = NODE_H;
+          node._bh = nodeHasYears(node) ? NODE_H_YEARS : NODE_H;
           var sons = visibleSons(node);
           if (!sons.length) {
             node._tw = node._bw;
@@ -4800,24 +4832,45 @@
           node._tw = Math.max(node._bw, kids);
         }
 
-        function place(node, left, depth) {
+        function place(node, left, depth, yAtDepth) {
           var sons = visibleSons(node);
           node._depth = depth;
-          node._y = PAD + depth * (NODE_H + V_GAP);
+          node._y = yAtDepth[depth] != null ? yAtDepth[depth] : PAD;
           if (!sons.length) {
             node._cx = left + node._tw / 2;
             return;
           }
           var x = left;
           for (var i = 0; i < sons.length; i++) {
-            place(sons[i], x, depth + 1);
+            place(sons[i], x, depth + 1, yAtDepth);
             x += sons[i]._tw + H_GAP;
           }
           node._cx = (sons[0]._cx + sons[sons.length - 1]._cx) / 2;
         }
 
         measure(root);
-        place(root, PAD, 0);
+
+        var maxBhByDepth = {};
+        (function scanHeights(node, depth) {
+          maxBhByDepth[depth] = Math.max(maxBhByDepth[depth] || 0, node._bh || NODE_H);
+          visibleSons(node).forEach(function (son) {
+            scanHeights(son, depth + 1);
+          });
+        })(root, 0);
+
+        var yAtDepth = {};
+        var rowY = PAD;
+        Object.keys(maxBhByDepth)
+          .map(Number)
+          .sort(function (a, b) {
+            return a - b;
+          })
+          .forEach(function (depth) {
+            yAtDepth[depth] = rowY;
+            rowY += maxBhByDepth[depth] + V_GAP;
+          });
+
+        place(root, PAD, 0, yAtDepth);
         resolveOverlaps(root);
 
         var maxR = 0;
@@ -4827,16 +4880,17 @@
         function collect(node) {
           var left = node._cx - node._bw / 2;
           var top = node._y;
+          var rowH = maxBhByDepth[node._depth] || node._bh;
           positions[node.id] = {
             id: node.id,
             name: node.name,
             x: left,
             y: top,
             w: node._bw,
-            h: node._bh,
+            h: rowH,
             cx: node._cx,
-            cy: top + node._bh / 2,
-            bottom: top + node._bh,
+            cy: top + rowH / 2,
+            bottom: top + rowH,
             hasSons: (node.sons || []).length > 0,
             open: expanded.has(node.id),
             sonIds: visibleSons(node).map(function (s) {
@@ -4846,7 +4900,7 @@
             died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
           };
           maxR = Math.max(maxR, left + node._bw);
-          maxB = Math.max(maxB, top + node._bh);
+          maxB = Math.max(maxB, top + rowH);
           visibleSons(node).forEach(collect);
         }
 
@@ -5119,24 +5173,51 @@
         el.style.top = meta.y * s + 'px';
         el.style.width = meta.w * s + 'px';
 
+        var gText = TreeModel.formatLifeYears(
+          { born: meta.born, died: meta.died },
+          'g'
+        );
+        var hasYears = !!gText;
+
         var btn = document.createElement('button');
         btn.type = 'button';
-        btn.className = 'person-btn';
+        btn.className = 'person-btn' + (hasYears ? ' has-years' : '');
         if (matchIds.has(meta.id) || matchIds.has(String(meta.id))) btn.classList.add('match');
         if (myBranchIds.has(meta.id) || myBranchIds.has(String(meta.id))) btn.classList.add('my-branch');
         if (myPersonId && String(meta.id) === String(myPersonId)) btn.classList.add('my-self');
-        btn.textContent = meta.name;
-        btn.title = meta.name;
+        var nameEl = document.createElement('span');
+        nameEl.className = 'person-name';
+        nameEl.textContent = meta.name;
+        btn.appendChild(nameEl);
+        if (hasYears) {
+          var yearsEl = document.createElement('span');
+          yearsEl.className = 'person-years';
+          yearsEl.style.fontSize = Math.max(7, 9.2 * s) + 'px';
+          var gLayer = document.createElement('span');
+          gLayer.className = 'person-years-layer is-gregorian';
+          gLayer.textContent = gText;
+          var hLayer = document.createElement('span');
+          hLayer.className = 'person-years-layer is-hijri';
+          hLayer.textContent = TreeModel.formatLifeYears(
+            { born: meta.born, died: meta.died },
+            'h'
+          );
+          yearsEl.appendChild(gLayer);
+          yearsEl.appendChild(hLayer);
+          btn.appendChild(yearsEl);
+        }
+        var baseTitle = hasYears ? meta.name + ' · ' + gText : meta.name;
+        btn.title = baseTitle;
         if (meta.hasSons) {
           btn.classList.add('has-sons');
           btn.setAttribute('aria-expanded', meta.open ? 'true' : 'false');
           btn.title = editMode
-            ? meta.name + ' — перетащите на нового отца'
+            ? baseTitle + ' — перетащите на нового отца'
             : meta.open
-              ? meta.name + ' — свернуть ветвь'
-              : meta.name + ' — раскрыть ветвь';
+              ? baseTitle + ' — свернуть ветвь'
+              : baseTitle + ' — раскрыть ветвь';
         } else if (editMode) {
-          btn.title = meta.name + ' — перетащите на нового отца';
+          btn.title = baseTitle + ' — перетащите на нового отца';
         }
         btn.style.width = '100%';
         btn.style.maxWidth = 'none';
@@ -5145,12 +5226,15 @@
         btn.style.whiteSpace = 'nowrap';
         btn.style.boxSizing = 'border-box';
         btn.style.fontSize = Math.max(8, 12.8 * s) + 'px';
-        btn.style.minHeight = Math.max(20, 34 * s) + 'px';
+        // Keep enough room for name + year even when the map is zoomed out.
+        btn.style.minHeight =
+          Math.max(hasYears ? 30 : 20, (hasYears ? NODE_H_YEARS : NODE_H) * s) + 'px';
         btn.style.height = 'auto';
         btn.style.padding =
-          Math.max(2, 5 * s) + 'px ' + Math.max(4, 8 * s) + 'px';
+          Math.max(2, (hasYears ? 4 : 5) * s) + 'px ' + Math.max(4, 8 * s) + 'px';
         btn.style.borderRadius = Math.max(4, 8 * s) + 'px';
         btn.style.borderWidth = Math.max(1, 1.5 * s) + 'px';
+        btn.style.gap = Math.max(1, 2 * s) + 'px';
 
         function clearLongPress() {
           if (longPressTimer) {
@@ -5224,28 +5308,6 @@
         });
 
         el.appendChild(btn);
-
-        var gText = TreeModel.formatLifeYears(
-          { born: meta.born, died: meta.died },
-          'g'
-        );
-        if (gText) {
-          var yearsEl = document.createElement('div');
-          yearsEl.className = 'person-years';
-          yearsEl.style.fontSize = Math.max(7, 9.5 * s) + 'px';
-          var gLayer = document.createElement('span');
-          gLayer.className = 'person-years-layer is-gregorian';
-          gLayer.textContent = gText;
-          var hLayer = document.createElement('span');
-          hLayer.className = 'person-years-layer is-hijri';
-          hLayer.textContent = TreeModel.formatLifeYears(
-            { born: meta.born, died: meta.died },
-            'h'
-          );
-          yearsEl.appendChild(gLayer);
-          yearsEl.appendChild(hLayer);
-          el.appendChild(yearsEl);
-        }
 
         if (editMode && editUnlocked && !meta.hasSons && meta.id !== tree.id) {
           var delBtn = document.createElement('button');
