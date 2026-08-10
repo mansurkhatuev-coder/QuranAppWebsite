@@ -1183,6 +1183,7 @@
       margin: 0;
       font-size: 1rem;
       line-height: 1.45;
+      white-space: pre-line;
     }
 
     .center-banner[data-busy='true'] .center-banner-text::before {
@@ -1680,7 +1681,7 @@
     <form id="save-form" method="dialog">
       <strong id="save-dialog-title">Сохранить на сайт</strong>
       <p class="install-steps">Записать текущее древо на waydean.ru/drewo (с бэкапом). Нужен пароль.</p>
-      <p class="install-steps">У вас дерево останется сразу. На других телефонах обновление может занять 1–2 минуты — там нажмите «Обновить».</p>
+      <p class="install-steps">У вас в этом браузере дерево останется сразу. На сайте и на других устройствах обновление появится не сразу — обычно через 1–2 минуты; там нажмите «Обновить».</p>
       <label>
         Пароль
         <input id="save-password" type="password" name="password" autocomplete="current-password" required="">
@@ -5794,9 +5795,11 @@
             return publishToGitHub(pass, { force: !!force }).then(function () {
               window.clearTimeout(progressTimer);
               setTreeDirty(false);
-              hideCenterBanner();
-              showToast('Сохранено на waydean.ru/drewo', 'success', 3200);
               unlockSaveForm();
+              return askChoice(
+                'Отправлено на GitHub.\n\nНа сайте обновление появится не сразу — обычно через 1–2 минуты. На других устройствах нажмите «Обновить».',
+                [{ id: 'ok', label: 'Понятно', primary: true }]
+              );
             });
           }
 
