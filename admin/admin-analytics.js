@@ -49,18 +49,15 @@
     });
   }
 
-  function countActiveInstalls(withinDays) {
+  function hasInstallationRegistry() {
+    return installationsAvailable && installations.length > 0;
+  }
+
+  function countUniqueInstallationsFromEvents(withinDays) {
     if (!withinDays) {
-      if (installationsAvailable) return installations.length;
       return new Set(allRows.map((r) => r.installation_id).filter(Boolean)).size;
     }
     const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
-    if (installationsAvailable && installations.length) {
-      return installations.filter((row) => {
-        const t = Date.parse(row.last_seen_at);
-        return Number.isFinite(t) && t >= cutoff;
-      }).length;
-    }
     const ids = new Set();
     for (const row of allRows) {
       const t = Date.parse(row.created_at);
@@ -68,6 +65,25 @@
       if (row.installation_id) ids.add(row.installation_id);
     }
     return ids.size;
+  }
+
+  function countActiveInstalls(withinDays) {
+    // Prefer the installations registry when it has rows. If the table exists but
+    // is empty (migration without backfill / app not upserting yet), fall back to
+    // unique installation_id from events — otherwise "all time" incorrectly shows 0
+    // while period cards still show event-based counts.
+    if (!withinDays) {
+      if (hasInstallationRegistry()) return installations.length;
+      return countUniqueInstallationsFromEvents(0);
+    }
+    if (hasInstallationRegistry()) {
+      const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
+      return installations.filter((row) => {
+        const t = Date.parse(row.last_seen_at);
+        return Number.isFinite(t) && t >= cutoff;
+      }).length;
+    }
+    return countUniqueInstallationsFromEvents(withinDays);
   }
 
   function countBy(rows, keyFn) {
@@ -96,9 +112,11 @@
     const active365 = countActiveInstalls(365);
     const totalKnown = countActiveInstalls(0);
     const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
-    const sourceNote = installationsAvailable
-      ? 'Активные — устройства, которые открывали приложение за период. Отключённая аналитика и офлайн не учитываются.'
-      : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
+    const sourceNote = hasInstallationRegistry()
+      ? 'Активные — уникальные установки (installation_id), которые присылали события. Платформа = ОС (android/ios), не магазин (RuStore / APK / App Store). Без аналитики или офлайн устройство не видно.'
+      : installationsAvailable
+        ? 'Реестр установок пуст — считаем по событиям. «Всё время» = уникальные installation_id из загруженных событий.'
+        : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
 
     container.innerHTML = `
       <div class="admin-analytics-grid">
@@ -361,10 +379,42 @@
     container.appendChild(block);
   }
 
+  function countUniqueInstallsBy(rows, keyFn) {
+    const map = new Map();
+    for (const row of rows) {
+      if (!row.installation_id) continue;
+      const key = keyFn(row);
+      if (!key) continue;
+      let set = map.get(key);
+      if (!set) {
+        set = new Set();
+        map.set(key, set);
+      }
+      set.add(row.installation_id);
+    }
+    return [...map.entries()]
+      .map(([key, set]) => [key, set.size])
+      .sort((a, b) => b[1] - a[1]);
+  }
+
   function renderPlatformBreakdown(container) {
-    const source = installationsAvailable ? installations : allRows;
-    const pairs = countBy(source, (r) => r.platform || '—');
-    renderBreakdown(container, 'Платформы', pairs, (key) => String(key));
+    if (hasInstallationRegistry()) {
+      const pairs = countBy(installations, (r) => r.platform || '—');
+      renderBreakdown(container, 'Платформы (ОС)', pairs, (key) => String(key));
+      return;
+    }
+    const pairs = countUniqueInstallsBy(allRows, (r) => r.platform || '—');
+    renderBreakdown(container, 'Платформы (ОС)', pairs, (key) => String(key));
+  }
+
+  function renderVersionBreakdown(container) {
+    if (hasInstallationRegistry()) {
+      const pairs = countBy(installations, (r) => r.app_version || '—');
+      renderBreakdown(container, 'Версии приложения', pairs, (key) => (key === '—' ? '—' : `v${key}`));
+      return;
+    }
+    const pairs = countUniqueInstallsBy(allRows, (r) => r.app_version || '—');
+    renderBreakdown(container, 'Версии приложения', pairs, (key) => (key === '—' ? '—' : `v${key}`));
   }
 
   function renderAll() {
@@ -385,6 +435,7 @@
     breakdown.innerHTML = '';
     renderCourseFunnel(breakdown);
     renderPlatformBreakdown(breakdown);
+    renderVersionBreakdown(breakdown);
     renderBreakdown(
       breakdown,
       'По типу события',
