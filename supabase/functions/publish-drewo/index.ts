@@ -278,23 +278,26 @@ Deno.serve(async (request) => {
   try {
     const githubToken = Deno.env.get('GITHUB_TOKEN');
     const githubRepo = Deno.env.get('GITHUB_REPO') ?? 'mansurkhatuev-coder/QuranAppWebsite';
-    const expectedPassword = normalizePassword(Deno.env.get('DREWO_PASSWORD') ?? 'гуно');
-
     if (!githubToken) {
       return jsonResponse({ error: 'GITHUB_TOKEN secret is missing' }, 500);
     }
 
     const body = await request.json();
-    if (normalizePassword(body.password) !== expectedPassword) {
-      return jsonResponse({ error: 'Неверный пароль' }, 401);
-    }
-
     const treeDir = resolveTreeDir(body.treeDir);
     if (!treeDir) {
       return jsonResponse(
         { error: `Неизвестный treeDir. Допустимо: ${ALLOWED_TREE_DIRS.join(', ')}` },
         400
       );
+    }
+
+    const expectedPassword = normalizePassword(
+      treeDir === 'drewo-dada-yurt'
+        ? Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'дада'
+        : Deno.env.get('DREWO_PASSWORD') ?? 'гуно'
+    );
+    if (normalizePassword(body.password) !== expectedPassword) {
+      return jsonResponse({ error: 'Неверный пароль' }, 401);
     }
     const indexPath = `${treeDir}/index.html`;
     const jsonPath = `${treeDir}/family-tree.json`;
