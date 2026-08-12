@@ -293,7 +293,7 @@ Deno.serve(async (request) => {
 
     const expectedPassword = normalizePassword(
       treeDir === 'drewo-dada-yurt'
-        ? Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'дада'
+        ? Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ'
         : Deno.env.get('DREWO_PASSWORD') ?? 'гуно'
     );
     if (normalizePassword(body.password) !== expectedPassword) {
