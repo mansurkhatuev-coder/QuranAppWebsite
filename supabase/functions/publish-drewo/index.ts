@@ -205,8 +205,26 @@ async function githubDeleteFile(options: {
   }
 }
 
-async function listBackupFiles(token: string, repo: string) {
-  const response = await fetch(`https://api.github.com/repos/${repo}/contents/drewo/backups`, {
+const ALLOWED_TREE_DIRS = ['drewo', 'drewo-dada-yurt'] as const;
+type TreeDir = (typeof ALLOWED_TREE_DIRS)[number];
+
+function resolveTreeDir(raw: unknown): TreeDir | null {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return 'drewo';
+  return (ALLOWED_TREE_DIRS as readonly string[]).includes(value) ? (value as TreeDir) : null;
+}
+
+function backupNamePrefix(treeDir: TreeDir) {
+  return treeDir;
+}
+
+function isSafeBackupName(name: string, treeDir: TreeDir) {
+  const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return new RegExp(`^${prefix}-\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.html$`).test(name);
+}
+
+async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
+  const response = await fetch(`https://api.github.com/repos/${repo}/contents/${treeDir}/backups`, {
     headers: {
       Authorization: `Bearer ${token}`,
       Accept: 'application/vnd.github+json',
@@ -235,8 +253,8 @@ async function listBackupFiles(token: string, repo: string) {
     .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
 }
 
-async function pruneBackups(token: string, repo: string) {
-  const backups = await listBackupFiles(token, repo);
+async function pruneBackups(token: string, repo: string, treeDir: TreeDir) {
+  const backups = await listBackupFiles(token, repo, treeDir);
   for (const old of backups.slice(10)) {
     await githubDeleteFile({
       token,
@@ -247,10 +265,6 @@ async function pruneBackups(token: string, repo: string) {
     });
   }
   return backups;
-}
-
-function isSafeBackupName(name: string) {
-  return /^drewo-\d{4}-\d{2}-\d{2}_\d{2}-\d{2}-\d{2}\.html$/.test(name);
 }
 
 Deno.serve(async (request) => {
@@ -275,29 +289,43 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Неверный пароль' }, 401);
     }
 
+    const treeDir = resolveTreeDir(body.treeDir);
+    if (!treeDir) {
+      return jsonResponse(
+        { error: `Неизвестный treeDir. Допустимо: ${ALLOWED_TREE_DIRS.join(', ')}` },
+        400
+      );
+    }
+    const indexPath = `${treeDir}/index.html`;
+    const jsonPath = `${treeDir}/family-tree.json`;
+    const backupsDir = `${treeDir}/backups`;
+    const backupPrefix = backupNamePrefix(treeDir);
+    const labelPrefixRe = new RegExp(`^${backupPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-`);
+
     const action = typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
 
     if (action === 'list-backups') {
-      const backups = await listBackupFiles(githubToken, githubRepo);
+      const backups = await listBackupFiles(githubToken, githubRepo, treeDir);
       return jsonResponse({
         ok: true,
+        treeDir,
         backups: backups.slice(0, 10).map((b) => ({
           name: b.name,
           path: b.path,
-          label: b.name.replace(/^drewo-/, '').replace(/\.html$/, '').replace(/_/g, ' '),
+          label: b.name.replace(labelPrefixRe, '').replace(/\.html$/, '').replace(/_/g, ' '),
         })),
       });
     }
 
     if (action === 'restore') {
       const backupName = typeof body.backup === 'string' ? body.backup.trim() : '';
-      if (!isSafeBackupName(backupName)) {
+      if (!isSafeBackupName(backupName, treeDir)) {
         return jsonResponse({ error: 'Некорректное имя бэкапа' }, 400);
       }
       const backupFile = await githubGetFile(
         githubToken,
         githubRepo,
-        `drewo/backups/${backupName}`
+        `${backupsDir}/${backupName}`
       );
       if (!backupFile?.content) {
         return jsonResponse({ error: 'Бэкап не найден' }, 404);
@@ -313,7 +341,7 @@ Deno.serve(async (request) => {
       }
       const activityJson = extractScriptJson(backupFile.content, 'activity-log') || '[]';
       const stamp = stampNow();
-      const current = await githubGetFile(githubToken, githubRepo, 'drewo/index.html');
+      const current = await githubGetFile(githubToken, githubRepo, indexPath);
       if (!current?.content || current.content.length < 100) {
         return jsonResponse({ error: 'Нет текущей страницы для восстановления' }, 400);
       }
@@ -321,9 +349,9 @@ Deno.serve(async (request) => {
       await githubPutFile({
         token: githubToken,
         repo: githubRepo,
-        path: `drewo/backups/drewo-${stamp}.html`,
+        path: `${backupsDir}/${backupPrefix}-${stamp}.html`,
         content: current.content,
-        message: `Backup before restore (${stamp})`,
+        message: `Backup before restore (${treeDir} ${stamp})`,
       });
 
       let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', treeJson);
@@ -332,25 +360,26 @@ Deno.serve(async (request) => {
       await githubPutFileRetry({
         token: githubToken,
         repo: githubRepo,
-        path: 'drewo/index.html',
+        path: indexPath,
         content: htmlToWrite,
-        message: `Restore family tree from ${backupName}`,
+        message: `Restore ${treeDir} family tree from ${backupName}`,
       });
 
       const jsonBody = treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`;
       await githubPutFileRetry({
         token: githubToken,
         repo: githubRepo,
-        path: 'drewo/family-tree.json',
+        path: jsonPath,
         content: jsonBody,
-        message: `Restore family-tree.json from ${backupName}`,
+        message: `Restore ${jsonPath} from ${backupName}`,
       });
 
-      await pruneBackups(githubToken, githubRepo);
+      await pruneBackups(githubToken, githubRepo, treeDir);
       const fingerprint = await fingerprintText(normalizeTreeJson(treeJson));
 
       return jsonResponse({
         ok: true,
+        treeDir,
         restoredFrom: backupName,
         treeJson,
         activityJson,
@@ -382,7 +411,7 @@ Deno.serve(async (request) => {
     const baseFingerprint =
       typeof body.baseFingerprint === 'string' ? body.baseFingerprint.trim() : '';
 
-    const jsonFile = await githubGetFile(githubToken, githubRepo, 'drewo/family-tree.json');
+    const jsonFile = await githubGetFile(githubToken, githubRepo, jsonPath);
     const serverFingerprint = jsonFile?.content
       ? await fingerprintText(normalizeTreeJson(jsonFile.content))
       : '';
@@ -405,9 +434,9 @@ Deno.serve(async (request) => {
     const message =
       typeof body.message === 'string' && body.message.trim()
         ? body.message.trim()
-        : `Update family tree (${stamp})`;
+        : `Update ${treeDir} family tree (${stamp})`;
 
-    const current = await githubGetFile(githubToken, githubRepo, 'drewo/index.html');
+    const current = await githubGetFile(githubToken, githubRepo, indexPath);
     let htmlBase =
       current?.content && current.content.length > 100
         ? current.content
@@ -429,9 +458,9 @@ Deno.serve(async (request) => {
       await githubPutFile({
         token: githubToken,
         repo: githubRepo,
-        path: `drewo/backups/drewo-${stamp}.html`,
+        path: `${backupsDir}/${backupPrefix}-${stamp}.html`,
         content: current.content,
-        message: `Backup family tree before update (${stamp})`,
+        message: `Backup ${treeDir} family tree before update (${stamp})`,
       });
     }
 
@@ -440,7 +469,7 @@ Deno.serve(async (request) => {
       const put = await githubPutFileRetry({
         token: githubToken,
         repo: githubRepo,
-        path: 'drewo/index.html',
+        path: indexPath,
         content: htmlToWrite,
         message,
       });
@@ -451,9 +480,9 @@ Deno.serve(async (request) => {
     const jsonPut = await githubPutFileRetry({
       token: githubToken,
       repo: githubRepo,
-      path: 'drewo/family-tree.json',
+      path: jsonPath,
       content: jsonBody,
-      message: `Update family-tree.json (${stamp})`,
+      message: `Update ${jsonPath} (${stamp})`,
     });
     const jsonChanged = !jsonPut.skipped;
 
@@ -471,13 +500,14 @@ Deno.serve(async (request) => {
       );
     }
 
-    const backups = await pruneBackups(githubToken, githubRepo);
+    const backups = await pruneBackups(githubToken, githubRepo, treeDir);
     const fingerprint = await fingerprintText(normalizedTree);
 
     return jsonResponse({
       ok: true,
       publishedAt: new Date().toISOString(),
-      path: 'drewo/index.html',
+      treeDir,
+      path: indexPath,
       indexChanged,
       jsonChanged,
       fingerprint,
