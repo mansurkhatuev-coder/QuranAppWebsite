@@ -29,7 +29,6 @@
       --font-display: "Cormorant Garamond", "Times New Roman", serif;
       --font-ui: "Source Sans 3", "Segoe UI", "Noto Sans", sans-serif;
       --header-bg: color-mix(in srgb, var(--bg0) 96%, black);
-      --premium-bg-image: url("bg.jpg");
     }
 
     body[data-theme="premium"] {
@@ -45,13 +44,61 @@
 
     body[data-theme="premium"] {
       background-color: #0d1a22;
-      background-image:
-        linear-gradient(180deg, color-mix(in srgb, #071018 78%, transparent) 0%, color-mix(in srgb, #12261f 55%, transparent) 45%, color-mix(in srgb, #0d1a22 88%, transparent) 100%),
-        var(--premium-bg-image);
-      background-position: center;
+      background-image: none;
+    }
+
+    body[data-theme="premium"][data-sky="night"] {
+      background-color: #030910;
+    }
+
+    .premium-sky {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.6s ease;
+    }
+
+    body[data-theme="premium"] .premium-sky {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .premium-sky .sky-layer {
+      position: absolute;
+      inset: 0;
+      background-color: #0d1a22;
+      background-position: center top;
       background-size: cover;
       background-repeat: no-repeat;
-      background-attachment: fixed;
+      opacity: 0;
+      transition: opacity 1.8s ease;
+    }
+
+    .premium-sky .sky-layer.is-on {
+      opacity: 1;
+    }
+
+    .premium-sky .sky-veil {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, #071018 72%, transparent) 0%,
+        color-mix(in srgb, #12261f 48%, transparent) 45%,
+        color-mix(in srgb, #0d1a22 82%, transparent) 100%
+      );
+    }
+
+    body[data-sky="night"] .premium-sky .sky-veil {
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, #02060d 78%, transparent) 0%,
+        color-mix(in srgb, #071220 58%, transparent) 42%,
+        color-mix(in srgb, #030910 88%, transparent) 100%
+      );
     }
 
     *,
@@ -396,6 +443,8 @@
     }
 
     main {
+      position: relative;
+      z-index: 1;
       flex: 1;
       display: flex;
       flex-direction: column;
@@ -535,12 +584,111 @@
     body[data-theme="premium"] #viewport {
       border-color: color-mix(in srgb, var(--sand) 35%, transparent);
       border-radius: 14px;
-      background:
-        linear-gradient(180deg, color-mix(in srgb, #08141c 72%, transparent), color-mix(in srgb, #102820 58%, transparent)),
-        var(--premium-bg-image) center top / cover no-repeat;
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, #08141c 58%, transparent),
+        color-mix(in srgb, #102820 42%, transparent)
+      );
       box-shadow:
         inset 0 1px 0 color-mix(in srgb, var(--sand) 18%, transparent),
         0 18px 40px color-mix(in srgb, black 35%, transparent);
+    }
+
+    body[data-theme="premium"][data-sky="night"] #viewport {
+      border-color: color-mix(in srgb, #c9a45a 28%, transparent);
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, #030810 64%, transparent),
+        color-mix(in srgb, #0a1520 46%, transparent)
+      );
+    }
+
+    #sky-glow {
+      position: absolute;
+      inset: 0;
+      z-index: 0;
+      pointer-events: none;
+      overflow: hidden;
+      opacity: 0;
+      transition: opacity 0.7s ease;
+    }
+
+    body[data-theme="premium"][data-sky="night"] #sky-glow {
+      opacity: 1;
+    }
+
+    .sky-glow-spot {
+      position: absolute;
+      width: 150px;
+      height: 150px;
+      margin: -75px 0 0 -75px;
+      border-radius: 50%;
+      background: radial-gradient(
+        circle,
+        rgba(255, 210, 130, 0.34) 0%,
+        rgba(255, 170, 80, 0.14) 32%,
+        rgba(255, 140, 60, 0.05) 55%,
+        transparent 72%
+      );
+      mix-blend-mode: screen;
+      animation: sky-glow-breathe 3.4s ease-in-out infinite;
+    }
+
+    .sky-glow-spot:nth-child(3n) { animation-duration: 2.8s; }
+    .sky-glow-spot:nth-child(3n + 1) { animation-duration: 4.1s; animation-delay: -1.2s; }
+    .sky-glow-spot:nth-child(3n + 2) { animation-duration: 3.6s; animation-delay: -0.6s; }
+
+    @keyframes sky-glow-breathe {
+      0%, 100% { opacity: 0.55; transform: scale(0.92); }
+      50% { opacity: 1; transform: scale(1.08); }
+    }
+
+    body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf {
+      position: relative;
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, #ffe2a0 35%, transparent),
+        0 0 16px color-mix(in srgb, #ffc56a 35%, transparent),
+        0 8px 18px color-mix(in srgb, black 30%, transparent);
+    }
+
+    body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
+      content: "";
+      position: absolute;
+      top: 18%;
+      right: 10%;
+      width: 0.42em;
+      height: 0.42em;
+      min-width: 5px;
+      min-height: 5px;
+      border-radius: 50%;
+      background: radial-gradient(circle, #fff6d0 0%, #ffd27a 45%, #ffb040 100%);
+      box-shadow:
+        0 0 6px 2px rgba(255, 214, 130, 0.95),
+        0 0 14px 6px rgba(255, 180, 80, 0.45),
+        0 0 28px 10px rgba(255, 150, 60, 0.18);
+      animation: firefly-twinkle 2.6s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    body[data-theme="premium"][data-sky="night"] .person:nth-child(odd) .person-btn.is-leaf::after {
+      animation-delay: -0.9s;
+      top: 22%;
+      right: auto;
+      left: 12%;
+    }
+
+    @keyframes firefly-twinkle {
+      0%, 100% { opacity: 0.45; transform: scale(0.85); }
+      40% { opacity: 1; transform: scale(1.15); }
+      70% { opacity: 0.7; transform: scale(1); }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      .premium-sky .sky-layer { transition: none; }
+      .sky-glow-spot,
+      body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
+        animation: none;
+      }
     }
 
     body[data-theme="premium"] .person-btn {
@@ -592,6 +740,7 @@
 
     #map-world {
       position: relative;
+      z-index: 1;
       transform-origin: 0 0;
       will-change: transform;
     }
@@ -620,6 +769,7 @@
     }
 
     .person-btn {
+      position: relative;
       box-sizing: border-box;
       display: inline-flex;
       flex-direction: column;
@@ -1516,7 +1666,12 @@
     }
   </style>
 </head>
-<body data-theme="premium">
+<body data-theme="premium" data-sky="day">
+  <div id="premium-sky" class="premium-sky" aria-hidden="true">
+    <div class="sky-layer is-on" id="sky-a"></div>
+    <div class="sky-layer" id="sky-b"></div>
+    <div class="sky-veil"></div>
+  </div>
   <header class="header">
     <div class="brand">
       <h1>Хьоти некъ</h1>
@@ -1564,6 +1719,14 @@
             <option value="premium" selected="">Премиум</option>
           </select>
         </label>
+        <label class="style-pick">
+          Небо
+          <select id="sky-mode-select" aria-label="День или ночь">
+            <option value="auto" selected="">Авто</option>
+            <option value="day">День</option>
+            <option value="night">Ночь</option>
+          </select>
+        </label>
       </div>
     </nav>
   </div>
@@ -1585,6 +1748,7 @@
 
   <main>
     <div id="viewport" aria-label="Древо">
+      <div id="sky-glow" aria-hidden="true"></div>
       <div id="map-world">
         <svg id="links" aria-hidden="true" width="4290.792767968362" height="1484.3498791151058" viewBox="0 0 4284 1482"></svg>
         <div id="tree-layer" style="width: 4290.792768px; height: 1484.349879px;"></div>
@@ -2872,13 +3036,185 @@
       var layer = document.getElementById('tree-layer');
       var linksSvg = document.getElementById('links');
       var themeSelect = document.getElementById('theme-select');
+      var skyModeSelect = document.getElementById('sky-mode-select');
+      var skyLayerA = document.getElementById('sky-a');
+      var skyLayerB = document.getElementById('sky-b');
+      var skyGlow = document.getElementById('sky-glow');
       var viewKhotuBtn = document.getElementById('view-khotu');
       var viewAllBtn = document.getElementById('view-all');
+      var SKY_DAY_IMAGES = ['bg.jpg', 'bg-day-2.jpg', 'bg-day-3.jpg'];
+      var SKY_NIGHT_IMAGE = 'bg-night.jpg';
+      var SKY_ROTATE_MS = 8 * 60 * 1000;
+      var SKY_MODE_KEY = 'drewo-sky-mode';
+      var skyFrontIsA = true;
+      var skyDayIndex = Math.floor(Math.random() * SKY_DAY_IMAGES.length);
+      var skyRotateTimer = null;
+      var skyWatchTimer = null;
+      var skyGlowRaf = 0;
+      var sunTimes = null;
+
+      function preferReducedSkyMotion() {
+        return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      }
+
+      function readSkyMode() {
+        try {
+          var saved = localStorage.getItem(SKY_MODE_KEY);
+          if (saved === 'day' || saved === 'night' || saved === 'auto') return saved;
+        } catch (err) {}
+        return 'auto';
+      }
+
+      function isNightByClock() {
+        if (sunTimes && Number.isFinite(sunTimes.riseMs) && Number.isFinite(sunTimes.setMs)) {
+          var now = Date.now();
+          return now < sunTimes.riseMs || now >= sunTimes.setMs;
+        }
+        var h = new Date().getHours();
+        return h < 6 || h >= 20;
+      }
+
+      function resolvedSkyPeriod() {
+        var mode = skyModeSelect ? skyModeSelect.value : readSkyMode();
+        if (mode === 'day') return 'day';
+        if (mode === 'night') return 'night';
+        return isNightByClock() ? 'night' : 'day';
+      }
+
+      function setSkyLayerImage(el, url) {
+        if (!el) return;
+        el.style.backgroundImage = 'url("' + url + '")';
+      }
+
+      function showSkyImage(url, immediate) {
+        if (!skyLayerA || !skyLayerB) return;
+        var front = skyFrontIsA ? skyLayerA : skyLayerB;
+        var back = skyFrontIsA ? skyLayerB : skyLayerA;
+        setSkyLayerImage(back, url);
+        if (immediate || preferReducedSkyMotion()) {
+          back.classList.add('is-on');
+          front.classList.remove('is-on');
+        } else {
+          back.classList.remove('is-on');
+          void back.offsetWidth;
+          back.classList.add('is-on');
+          front.classList.remove('is-on');
+        }
+        skyFrontIsA = !skyFrontIsA;
+      }
+
+      function stopSkyRotate() {
+        if (skyRotateTimer) {
+          window.clearInterval(skyRotateTimer);
+          skyRotateTimer = null;
+        }
+      }
+
+      function startSkyRotate() {
+        stopSkyRotate();
+        if (preferReducedSkyMotion() || SKY_DAY_IMAGES.length < 2) return;
+        skyRotateTimer = window.setInterval(function () {
+          if (document.body.getAttribute('data-theme') !== 'premium') return;
+          if (resolvedSkyPeriod() !== 'day') return;
+          skyDayIndex = (skyDayIndex + 1) % SKY_DAY_IMAGES.length;
+          showSkyImage(SKY_DAY_IMAGES[skyDayIndex], false);
+        }, SKY_ROTATE_MS);
+      }
+
+      function clearSkyGlow() {
+        if (skyGlow) skyGlow.replaceChildren();
+      }
+
+      function scheduleSkyGlow() {
+        if (skyGlowRaf) return;
+        skyGlowRaf = window.requestAnimationFrame(function () {
+          skyGlowRaf = 0;
+          updateSkyGlow();
+        });
+      }
+
+      function updateSkyGlow() {
+        if (!skyGlow || !viewport) return;
+        if (
+          document.body.getAttribute('data-theme') !== 'premium' ||
+          document.body.getAttribute('data-sky') !== 'night'
+        ) {
+          clearSkyGlow();
+          return;
+        }
+        var vrect = viewport.getBoundingClientRect();
+        var nodes = layer ? layer.querySelectorAll('.person-btn.is-leaf') : [];
+        var frag = document.createDocumentFragment();
+        var count = 0;
+        var max = 56;
+        for (var i = 0; i < nodes.length; i++) {
+          if (count >= max) break;
+          var btn = nodes[i];
+          var r = btn.getBoundingClientRect();
+          if (r.bottom < vrect.top || r.top > vrect.bottom || r.right < vrect.left || r.left > vrect.right) {
+            continue;
+          }
+          var spot = document.createElement('span');
+          spot.className = 'sky-glow-spot';
+          spot.style.left = ((r.left + r.right) / 2 - vrect.left) + 'px';
+          spot.style.top = ((r.top + r.bottom) / 2 - vrect.top) + 'px';
+          frag.appendChild(spot);
+          count++;
+        }
+        skyGlow.replaceChildren(frag);
+      }
+
+      function applySky(immediate) {
+        var period = resolvedSkyPeriod();
+        document.body.setAttribute('data-sky', period);
+        if (document.body.getAttribute('data-theme') !== 'premium') {
+          stopSkyRotate();
+          clearSkyGlow();
+          return;
+        }
+        if (period === 'night') {
+          stopSkyRotate();
+          showSkyImage(SKY_NIGHT_IMAGE, immediate !== false);
+          scheduleSkyGlow();
+        } else {
+          showSkyImage(SKY_DAY_IMAGES[skyDayIndex % SKY_DAY_IMAGES.length], immediate !== false);
+          startSkyRotate();
+          clearSkyGlow();
+        }
+        var bar = period === 'night' ? '#030910' : '#0d1a22';
+        document.documentElement.style.backgroundColor = bar;
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
+          el.setAttribute('content', bar);
+        });
+      }
+
+      function setSkyMode(mode, persist) {
+        var next = mode === 'day' || mode === 'night' ? mode : 'auto';
+        if (skyModeSelect) skyModeSelect.value = next;
+        if (persist !== false) {
+          try {
+            localStorage.setItem(SKY_MODE_KEY, next);
+          } catch (err) {}
+        }
+        applySky(true);
+      }
+
+      function startSkyWatch() {
+        if (skyWatchTimer) return;
+        skyWatchTimer = window.setInterval(function () {
+          if (skyModeSelect && skyModeSelect.value !== 'auto') return;
+          var period = resolvedSkyPeriod();
+          if (period !== document.body.getAttribute('data-sky')) {
+            applySky(false);
+          }
+        }, 60 * 1000);
+      }
 
       function setTheme(theme, persist) {
         var next = theme === 'premium' ? 'premium' : 'classic';
         document.body.setAttribute('data-theme', next);
-        var bar = next === 'premium' ? '#0d1a22' : '#12262f';
+        var period = resolvedSkyPeriod();
+        var bar = next === 'premium' ? (period === 'night' ? '#030910' : '#0d1a22') : '#12262f';
         document.documentElement.style.backgroundColor = bar;
         document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
           el.setAttribute('content', bar);
@@ -2889,6 +3225,7 @@
             localStorage.setItem('drewo-theme', next);
           } catch (err) {}
         }
+        applySky(true);
         if (layoutMeta && layoutMeta.nodes && Object.keys(layoutMeta.nodes).length) {
           redrawLinks();
         }
@@ -3854,6 +4191,7 @@
         // Только сдвиг. Масштаб рисуем заново (иначе CSS scale мылит текст).
         world.style.transform = 'translate(' + map.x + 'px, ' + map.y + 'px)';
         world.style.transformOrigin = '0 0';
+        scheduleSkyGlow();
       }
 
       var crispPending = false;
@@ -4366,7 +4704,7 @@
               encodeURIComponent(lat) +
               '&longitude=' +
               encodeURIComponent(lon) +
-              '&current=temperature_2m,weather_code&timezone=auto';
+              '&current=temperature_2m,weather_code&daily=sunrise,sunset&timezone=auto';
             Promise.all([
               fetchWithTimeout(forecastUrl, 10000).then(function (r) { return r.json(); }),
               reverseGeocodeCity(lat, lon),
@@ -4376,6 +4714,19 @@
                 var city = pair[1];
                 var cur = data && data.current;
                 if (!cur) throw new Error('no weather');
+                try {
+                  var daily = data && data.daily;
+                  if (daily && daily.sunrise && daily.sunset) {
+                    var rise = Date.parse(daily.sunrise[0]);
+                    var set = Date.parse(daily.sunset[0]);
+                    if (Number.isFinite(rise) && Number.isFinite(set)) {
+                      sunTimes = { riseMs: rise, setMs: set };
+                      if (!skyModeSelect || skyModeSelect.value === 'auto') {
+                        applySky(false);
+                      }
+                    }
+                  }
+                } catch (sunErr) {}
                 var t = Math.round(Number(cur.temperature_2m));
                 var tempText = Number.isFinite(t) ? t + '°' : '—';
                 var cond = weatherCondition(cur.weather_code);
@@ -5218,6 +5569,7 @@
         }
         var baseTitle = hasYears ? meta.name + ' · ' + gText : meta.name;
         btn.title = baseTitle;
+        if (!meta.hasSons) btn.classList.add('is-leaf');
         if (meta.hasSons) {
           btn.classList.add('has-sons');
           btn.setAttribute('aria-expanded', meta.open ? 'true' : 'false');
@@ -5380,6 +5732,7 @@
         }
         redrawLinks();
         applyMapTransform();
+        scheduleSkyGlow();
 
         if (pendingScrollId) {
           var id = pendingScrollId;
@@ -5626,6 +5979,11 @@
       if (themeSelect) {
         themeSelect.addEventListener('change', function () {
           setTheme(themeSelect.value);
+        });
+      }
+      if (skyModeSelect) {
+        skyModeSelect.addEventListener('change', function () {
+          setSkyMode(skyModeSelect.value);
         });
       }
 
@@ -6107,6 +6465,7 @@
         refreshActivityUi();
         updateWhoamiUi();
         try {
+          setSkyMode(readSkyMode(), false);
           setTheme(
             localStorage.getItem('drewo-theme') ||
               document.body.getAttribute('data-theme') ||
@@ -6114,8 +6473,10 @@
             false
           );
         } catch (err) {
+          setSkyMode('auto', false);
           setTheme('premium', false);
         }
+        startSkyWatch();
         showGuideBannerIfNeeded();
         updateSaveButton();
         loadWeather();
