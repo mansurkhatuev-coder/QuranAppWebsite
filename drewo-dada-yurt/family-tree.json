@@ -396,7 +396,13 @@
                             {
                               "id": "mokhmad-sultanbek",
                               "name": "Мохьмад",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1786645392592-f7p7ko",
+                                  "name": "Мухаммад-Эми",
+                                  "sons": []
+                                }
+                              ]
                             }
                           ]
                         },
