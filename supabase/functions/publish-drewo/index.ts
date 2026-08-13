@@ -90,22 +90,44 @@ function stampNow() {
     .slice(0, 19);
 }
 
+function githubHeaders(token: string, json = false): HeadersInit {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  };
+  if (json) headers['Content-Type'] = 'application/json';
+  return headers;
+}
+
+async function githubJson(
+  token: string,
+  url: string,
+  init?: RequestInit
+): Promise<{ ok: boolean; status: number; json: Record<string, unknown> }> {
+  const response = await fetch(url, {
+    ...init,
+    headers: {
+      ...githubHeaders(token, Boolean(init?.body)),
+      ...(init?.headers || {}),
+    },
+  });
+  const json = (await response.json().catch(() => ({}))) as Record<string, unknown>;
+  return { ok: response.ok, status: response.status, json };
+}
+
 async function githubGetFile(
   token: string,
   repo: string,
   path: string
 ): Promise<{ sha?: string; content?: string } | null> {
-  const response = await fetch(`https://api.github.com/repos/${repo}/contents/${path}`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
-  if (response.status === 404) return null;
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || `GitHub read failed ${response.status}`);
+  const { ok, status, json } = await githubJson(
+    token,
+    `https://api.github.com/repos/${repo}/contents/${path}`
+  );
+  if (status === 404) return null;
+  if (!ok) {
+    throw new Error(String(json.message || `GitHub read failed ${status}`));
   }
   const content =
     typeof json.content === 'string'
@@ -117,92 +139,134 @@ async function githubGetFile(
   };
 }
 
-async function githubPutFile(options: {
-  token: string;
-  repo: string;
-  path: string;
-  content: string;
-  message: string;
-  sha?: string;
-}) {
-  const encoded = btoa(unescape(encodeURIComponent(options.content)));
-  const response = await fetch(`https://api.github.com/repos/${options.repo}/contents/${options.path}`, {
-    method: 'PUT',
-    headers: {
-      Authorization: `Bearer ${options.token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: options.message,
-      content: encoded,
-      sha: options.sha,
-    }),
-  });
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || `GitHub API error ${response.status} for ${options.path}`);
-  }
-  return json;
-}
+type TreeChange =
+  | { path: string; content: string }
+  | { path: string; delete: true };
 
-async function githubPutFileRetry(options: {
+/** One atomic commit for multiple file writes/deletes (much faster than Contents API). */
+async function githubCommitChanges(options: {
   token: string;
   repo: string;
-  path: string;
-  content: string;
   message: string;
+  branch?: string;
+  changes: TreeChange[];
 }) {
-  const current = await githubGetFile(options.token, options.repo, options.path);
-  if (current?.content === options.content) {
-    return { skipped: true as const, sha: current.sha };
+  const branch = options.branch || 'main';
+  const changes = options.changes.filter((c) => {
+    if ('delete' in c && c.delete) return true;
+    return 'content' in c && typeof c.content === 'string';
+  });
+  if (!changes.length) {
+    return { skipped: true as const, commitSha: null as string | null };
   }
-  try {
-    const result = await githubPutFile({
-      ...options,
-      sha: current?.sha,
-    });
-    return { skipped: false as const, result };
-  } catch (error) {
-    const message = error instanceof Error ? error.message : String(error);
-    if (!/sha|conflict|409|422/i.test(message)) throw error;
-    const again = await githubGetFile(options.token, options.repo, options.path);
-    if (again?.content === options.content) {
-      return { skipped: true as const, sha: again.sha };
+
+  const refRes = await githubJson(
+    options.token,
+    `https://api.github.com/repos/${options.repo}/git/ref/heads/${branch}`
+  );
+  if (!refRes.ok) {
+    throw new Error(String(refRes.json.message || `Cannot read ref ${branch}`));
+  }
+  const headSha = String((refRes.json.object as { sha?: string } | undefined)?.sha || '');
+  if (!headSha) throw new Error('Empty branch SHA');
+
+  const commitRes = await githubJson(
+    options.token,
+    `https://api.github.com/repos/${options.repo}/git/commits/${headSha}`
+  );
+  if (!commitRes.ok) {
+    throw new Error(String(commitRes.json.message || 'Cannot read head commit'));
+  }
+  const baseTreeSha = String((commitRes.json.tree as { sha?: string } | undefined)?.sha || '');
+  if (!baseTreeSha) throw new Error('Empty base tree');
+
+  const writes = changes.filter((c): c is { path: string; content: string } => 'content' in c);
+  const deletes = changes.filter((c): c is { path: string; delete: true } => 'delete' in c && c.delete);
+
+  const blobShas = await Promise.all(
+    writes.map(async (file) => {
+      const blobRes = await githubJson(
+        options.token,
+        `https://api.github.com/repos/${options.repo}/git/blobs`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            content: btoa(unescape(encodeURIComponent(file.content))),
+            encoding: 'base64',
+          }),
+        }
+      );
+      if (!blobRes.ok) {
+        throw new Error(String(blobRes.json.message || `Blob create failed for ${file.path}`));
+      }
+      return { path: file.path, sha: String(blobRes.json.sha) };
+    })
+  );
+
+  const treeItems: Array<Record<string, string>> = [
+    ...blobShas.map((b) => ({
+      path: b.path,
+      mode: '100644',
+      type: 'blob',
+      sha: b.sha,
+    })),
+    ...deletes.map((d) => ({
+      path: d.path,
+      mode: '100644',
+      type: 'blob',
+      sha: '',
+    })),
+  ];
+
+  const treeRes = await githubJson(
+    options.token,
+    `https://api.github.com/repos/${options.repo}/git/trees`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        base_tree: baseTreeSha,
+        tree: treeItems.map((item) =>
+          item.sha === ''
+            ? { path: item.path, mode: item.mode, type: item.type, sha: null }
+            : item
+        ),
+      }),
     }
-    const result = await githubPutFile({
-      ...options,
-      sha: again?.sha,
-    });
-    return { skipped: false as const, result };
+  );
+  if (!treeRes.ok) {
+    throw new Error(String(treeRes.json.message || 'Tree create failed'));
   }
-}
 
-async function githubDeleteFile(options: {
-  token: string;
-  repo: string;
-  path: string;
-  sha: string;
-  message: string;
-}) {
-  const response = await fetch(`https://api.github.com/repos/${options.repo}/contents/${options.path}`, {
-    method: 'DELETE',
-    headers: {
-      Authorization: `Bearer ${options.token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      message: options.message,
-      sha: options.sha,
-    }),
-  });
-  if (!response.ok) {
-    const json = await response.json().catch(() => ({}));
-    throw new Error(json.message || `GitHub delete failed ${response.status}`);
+  const newCommitRes = await githubJson(
+    options.token,
+    `https://api.github.com/repos/${options.repo}/git/commits`,
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        message: options.message,
+        tree: treeRes.json.sha,
+        parents: [headSha],
+      }),
+    }
+  );
+  if (!newCommitRes.ok) {
+    throw new Error(String(newCommitRes.json.message || 'Commit create failed'));
   }
+  const newCommitSha = String(newCommitRes.json.sha || '');
+
+  const updateRes = await githubJson(
+    options.token,
+    `https://api.github.com/repos/${options.repo}/git/refs/heads/${branch}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ sha: newCommitSha }),
+    }
+  );
+  if (!updateRes.ok) {
+    throw new Error(String(updateRes.json.message || 'Branch update failed'));
+  }
+
+  return { skipped: false as const, commitSha: newCommitSha };
 }
 
 const ALLOWED_TREE_DIRS = ['drewo', 'drewo-dada-yurt'] as const;
@@ -220,30 +284,28 @@ function backupNamePrefix(treeDir: TreeDir) {
 
 function isSafeBackupName(name: string, treeDir: TreeDir) {
   const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^${prefix}-\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.html$`).test(name);
+  return new RegExp(`^${prefix}-\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.(html|json)$`).test(
+    name
+  );
 }
 
 async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
-  const response = await fetch(`https://api.github.com/repos/${repo}/contents/${treeDir}/backups`, {
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: 'application/vnd.github+json',
-      'X-GitHub-Api-Version': '2022-11-28',
-    },
-  });
-  if (response.status === 404) return [] as Array<{ path: string; sha: string; name: string }>;
-  const json = await response.json();
-  if (!response.ok) {
-    throw new Error(json.message || `GitHub list backups failed ${response.status}`);
+  const { ok, status, json } = await githubJson(
+    token,
+    `https://api.github.com/repos/${repo}/contents/${treeDir}/backups`
+  );
+  if (status === 404) return [] as Array<{ path: string; sha: string; name: string }>;
+  if (!ok) {
+    throw new Error(String(json.message || `GitHub list backups failed ${status}`));
   }
   if (!Array.isArray(json)) return [];
-  return json
+  return (json as Array<Record<string, unknown>>)
     .filter(
       (item) =>
         item &&
         item.type === 'file' &&
         typeof item.name === 'string' &&
-        String(item.name).endsWith('.html')
+        (String(item.name).endsWith('.html') || String(item.name).endsWith('.json'))
     )
     .map((item) => ({
       path: String(item.path),
@@ -253,18 +315,39 @@ async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
     .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
 }
 
-async function pruneBackups(token: string, repo: string, treeDir: TreeDir) {
-  const backups = await listBackupFiles(token, repo, treeDir);
-  for (const old of backups.slice(10)) {
-    await githubDeleteFile({
-      token,
-      repo,
-      path: old.path,
-      sha: old.sha,
-      message: `Prune old family tree backup ${old.name}`,
-    });
+function parseBackupPayload(raw: string): { treeJson: string; activityJson: string } | null {
+  const trimmed = String(raw || '').trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = JSON.parse(trimmed);
+    if (parsed && typeof parsed === 'object' && typeof parsed.treeJson === 'string') {
+      JSON.parse(parsed.treeJson);
+      return {
+        treeJson: parsed.treeJson.trim(),
+        activityJson:
+          typeof parsed.activityJson === 'string' && parsed.activityJson.trim()
+            ? parsed.activityJson.trim()
+            : '[]',
+      };
+    }
+    // Plain tree JSON backup.
+    if (parsed && typeof parsed === 'object' && parsed.id) {
+      return { treeJson: JSON.stringify(parsed, null, 2), activityJson: '[]' };
+    }
+  } catch {
+    // fall through to HTML extract
   }
-  return backups;
+  const treeJson = extractScriptJson(trimmed, 'tree-data');
+  if (!treeJson) return null;
+  try {
+    JSON.parse(treeJson);
+  } catch {
+    return null;
+  }
+  return {
+    treeJson,
+    activityJson: extractScriptJson(trimmed, 'activity-log') || '[]',
+  };
 }
 
 Deno.serve(async (request) => {
@@ -315,7 +398,10 @@ Deno.serve(async (request) => {
         backups: backups.slice(0, 10).map((b) => ({
           name: b.name,
           path: b.path,
-          label: b.name.replace(labelPrefixRe, '').replace(/\.html$/, '').replace(/_/g, ' '),
+          label: b.name
+            .replace(labelPrefixRe, '')
+            .replace(/\.(html|json)$/, '')
+            .replace(/_/g, ' '),
         })),
       });
     }
@@ -333,59 +419,62 @@ Deno.serve(async (request) => {
       if (!backupFile?.content) {
         return jsonResponse({ error: 'Бэкап не найден' }, 404);
       }
-      const treeJson = extractScriptJson(backupFile.content, 'tree-data');
-      if (!treeJson) {
-        return jsonResponse({ error: 'В бэкапе нет дерева (#tree-data)' }, 400);
+      const parsed = parseBackupPayload(backupFile.content);
+      if (!parsed) {
+        return jsonResponse({ error: 'В бэкапе нет дерева' }, 400);
       }
-      try {
-        JSON.parse(treeJson);
-      } catch {
-        return jsonResponse({ error: 'Дерево в бэкапе повреждено' }, 400);
-      }
-      const activityJson = extractScriptJson(backupFile.content, 'activity-log') || '[]';
       const stamp = stampNow();
-      const current = await githubGetFile(githubToken, githubRepo, indexPath);
+      const [current, existingBackups] = await Promise.all([
+        githubGetFile(githubToken, githubRepo, indexPath),
+        listBackupFiles(githubToken, githubRepo, treeDir),
+      ]);
       if (!current?.content || current.content.length < 100) {
         return jsonResponse({ error: 'Нет текущей страницы для восстановления' }, 400);
       }
 
-      await githubPutFile({
+      let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', parsed.treeJson);
+      htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', parsed.activityJson);
+      const jsonBody = parsed.treeJson.endsWith('\n') ? parsed.treeJson : `${parsed.treeJson}\n`;
+      const snapshot = JSON.stringify(
+        {
+          treeJson: parsed.treeJson,
+          activityJson: parsed.activityJson,
+          restoredFrom: backupName,
+          savedAt: new Date().toISOString(),
+        },
+        null,
+        2
+      );
+
+      const keepNames = new Set(
+        existingBackups
+          .map((b) => b.name)
+          .filter((n) => n !== backupName)
+          .slice(0, 9)
+      );
+      const changes: TreeChange[] = [
+        { path: indexPath, content: htmlToWrite },
+        { path: jsonPath, content: jsonBody },
+        { path: `${backupsDir}/${backupPrefix}-${stamp}.json`, content: snapshot + '\n' },
+        ...existingBackups
+          .filter((b) => !keepNames.has(b.name) && b.name !== `${backupPrefix}-${stamp}.json`)
+          .map((b) => ({ path: b.path, delete: true as const })),
+      ];
+
+      await githubCommitChanges({
         token: githubToken,
         repo: githubRepo,
-        path: `${backupsDir}/${backupPrefix}-${stamp}.html`,
-        content: current.content,
-        message: `Backup before restore (${treeDir} ${stamp})`,
-      });
-
-      let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', treeJson);
-      htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', activityJson);
-
-      await githubPutFileRetry({
-        token: githubToken,
-        repo: githubRepo,
-        path: indexPath,
-        content: htmlToWrite,
         message: `Restore ${treeDir} family tree from ${backupName}`,
+        changes,
       });
 
-      const jsonBody = treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`;
-      await githubPutFileRetry({
-        token: githubToken,
-        repo: githubRepo,
-        path: jsonPath,
-        content: jsonBody,
-        message: `Restore ${jsonPath} from ${backupName}`,
-      });
-
-      await pruneBackups(githubToken, githubRepo, treeDir);
-      const fingerprint = await fingerprintText(normalizeTreeJson(treeJson));
-
+      const fingerprint = await fingerprintText(normalizeTreeJson(parsed.treeJson));
       return jsonResponse({
         ok: true,
         treeDir,
         restoredFrom: backupName,
-        treeJson,
-        activityJson,
+        treeJson: parsed.treeJson,
+        activityJson: parsed.activityJson,
         fingerprint,
         publishedAt: new Date().toISOString(),
       });
@@ -409,12 +498,17 @@ Deno.serve(async (request) => {
     const activityJson =
       typeof body.activityJson === 'string' && body.activityJson.trim()
         ? body.activityJson.trim()
-        : '';
+        : '[]';
     const force = body.force === true;
     const baseFingerprint =
       typeof body.baseFingerprint === 'string' ? body.baseFingerprint.trim() : '';
 
-    const jsonFile = await githubGetFile(githubToken, githubRepo, jsonPath);
+    const [jsonFile, current, existingBackups] = await Promise.all([
+      githubGetFile(githubToken, githubRepo, jsonPath),
+      githubGetFile(githubToken, githubRepo, indexPath),
+      listBackupFiles(githubToken, githubRepo, treeDir),
+    ]);
+
     const serverFingerprint = jsonFile?.content
       ? await fingerprintText(normalizeTreeJson(jsonFile.content))
       : '';
@@ -439,7 +533,6 @@ Deno.serve(async (request) => {
         ? body.message.trim()
         : `Update ${treeDir} family tree (${stamp})`;
 
-    const current = await githubGetFile(githubToken, githubRepo, indexPath);
     let htmlBase =
       current?.content && current.content.length > 100
         ? current.content
@@ -455,41 +548,11 @@ Deno.serve(async (request) => {
       htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', activityJson);
     }
 
-    const indexWillChange = !current?.content || current.content !== htmlToWrite;
-
-    if (current?.content && indexWillChange) {
-      await githubPutFile({
-        token: githubToken,
-        repo: githubRepo,
-        path: `${backupsDir}/${backupPrefix}-${stamp}.html`,
-        content: current.content,
-        message: `Backup ${treeDir} family tree before update (${stamp})`,
-      });
-    }
-
-    let indexChanged = false;
-    if (indexWillChange) {
-      const put = await githubPutFileRetry({
-        token: githubToken,
-        repo: githubRepo,
-        path: indexPath,
-        content: htmlToWrite,
-        message,
-      });
-      indexChanged = !put.skipped;
-    }
-
     const jsonBody = treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`;
-    const jsonPut = await githubPutFileRetry({
-      token: githubToken,
-      repo: githubRepo,
-      path: jsonPath,
-      content: jsonBody,
-      message: `Update ${jsonPath} (${stamp})`,
-    });
-    const jsonChanged = !jsonPut.skipped;
+    const indexWillChange = !current?.content || current.content !== htmlToWrite;
+    const jsonWillChange = !jsonFile?.content || normalizeTreeJson(jsonFile.content) !== normalizedTree;
 
-    if (!indexChanged && !jsonChanged) {
+    if (!indexWillChange && !jsonWillChange) {
       return jsonResponse(
         {
           ok: false,
@@ -503,19 +566,50 @@ Deno.serve(async (request) => {
       );
     }
 
-    const backups = await pruneBackups(githubToken, githubRepo, treeDir);
-    const fingerprint = await fingerprintText(normalizedTree);
+    const snapshot = JSON.stringify(
+      {
+        treeJson,
+        activityJson,
+        savedAt: new Date().toISOString(),
+      },
+      null,
+      2
+    );
+    const backupPath = `${backupsDir}/${backupPrefix}-${stamp}.json`;
 
+    // Keep newest 9 existing + this new backup (=10). Delete the rest in the same commit.
+    const keepExisting = existingBackups.slice(0, 9).map((b) => b.path);
+    const keepSet = new Set([...keepExisting, backupPath]);
+    const pruneDeletes = existingBackups
+      .filter((b) => !keepSet.has(b.path))
+      .map((b) => ({ path: b.path, delete: true as const }));
+
+    const changes: TreeChange[] = [
+      ...(indexWillChange ? [{ path: indexPath, content: htmlToWrite }] : []),
+      ...(jsonWillChange ? [{ path: jsonPath, content: jsonBody }] : []),
+      { path: backupPath, content: snapshot + '\n' },
+      ...pruneDeletes,
+    ];
+
+    const commit = await githubCommitChanges({
+      token: githubToken,
+      repo: githubRepo,
+      message,
+      changes,
+    });
+
+    const fingerprint = await fingerprintText(normalizedTree);
     return jsonResponse({
       ok: true,
       publishedAt: new Date().toISOString(),
       treeDir,
       path: indexPath,
-      indexChanged,
-      jsonChanged,
+      indexChanged: indexWillChange,
+      jsonChanged: jsonWillChange,
       fingerprint,
-      backupCreated: Boolean(current?.content && indexWillChange),
-      backupCount: Math.min(backups.length + (current?.content && indexWillChange ? 1 : 0), 10),
+      backupCreated: true,
+      backupCount: Math.min(existingBackups.length + 1, 10),
+      commitSha: commit.commitSha,
       repo: githubRepo,
       forced: force,
     });
