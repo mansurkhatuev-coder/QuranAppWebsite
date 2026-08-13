@@ -761,6 +761,34 @@
       }
     }
 
+    /* Phones: night mode used to freeze the UI — hundreds of blur + glow animations. */
+    @media (hover: none), (pointer: coarse), (max-width: 900px) {
+      body[data-theme="premium"] .person-btn {
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
+
+      .leaf-glow {
+        animation: none !important;
+        will-change: auto;
+        opacity: 0.72;
+        transform: none;
+      }
+
+      body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
+        animation: none !important;
+        opacity: 0.9;
+        transform: none;
+        box-shadow:
+          0 0 5px 1px rgba(255, 214, 130, 0.75),
+          0 0 10px 4px rgba(255, 180, 80, 0.28);
+      }
+
+      .premium-sky .sky-layer {
+        transition: opacity 0.45s ease;
+      }
+    }
+
     body[data-theme="premium"] .person-btn {
       border-radius: 999px;
       border-width: 1px;
@@ -3252,7 +3280,7 @@
       function showSkyImage(url, immediate) {
         if (!skyLayerA || !skyLayerB || !url) return;
         var gen = ++skyLoadGen;
-        preloadSkyImage(url).then(function (loadedUrl) {
+        function paint(loadedUrl) {
           if (gen !== skyLoadGen) return;
           var front = skyFrontIsA ? skyLayerA : skyLayerB;
           var back = skyFrontIsA ? skyLayerB : skyLayerA;
@@ -3267,7 +3295,10 @@
             front.classList.remove('is-on');
           }
           skyFrontIsA = !skyFrontIsA;
-        });
+        }
+        // Paint immediately with URL; warm cache in background so next switch is instant.
+        paint(url);
+        preloadSkyImage(url);
       }
 
       function stopSkyRotate() {
