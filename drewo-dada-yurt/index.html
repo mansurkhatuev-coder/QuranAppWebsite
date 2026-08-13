@@ -16,6 +16,8 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet">
+  <link rel="preload" as="image" href="bg.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="bg-night.jpg">
   <style>
     :root {
       --bg0: #12262f;
@@ -1756,10 +1758,25 @@
 </head>
 <body data-theme="premium" data-sky="day">
   <div id="premium-sky" class="premium-sky" aria-hidden="true">
-    <div class="sky-layer is-on" id="sky-a"></div>
+    <div class="sky-layer is-on" id="sky-a" style="background-image:url('bg.jpg')"></div>
     <div class="sky-layer" id="sky-b"></div>
     <div class="sky-veil"></div>
   </div>
+  <script>
+    (function () {
+      try {
+        var mode = localStorage.getItem('drewo-dada-yurt-sky-mode');
+        var h = new Date().getHours();
+        var night = mode === 'night' || (mode !== 'day' && (h < 6 || h >= 20));
+        if (night) {
+          document.body.setAttribute('data-sky', 'night');
+          document.documentElement.style.backgroundColor = '#030910';
+          var skyA = document.getElementById('sky-a');
+          if (skyA) skyA.style.backgroundImage = "url('bg-night.jpg')";
+        }
+      } catch (err) {}
+    })();
+  </script>
   <header class="header">
     <div class="brand">
       <h1>Дада-юрт</h1>
@@ -1832,6 +1849,19 @@
       <button type="button" id="guide-never" class="guide-dismiss-forever">Не показывать больше</button>
     </div>
   </aside>
+  <script>
+    (function () {
+      try {
+        if (localStorage.getItem('drewo-dada-yurt-hide-guide') !== '1') {
+          var el = document.getElementById('guide-banner');
+          if (el) {
+            el.hidden = false;
+            el.classList.add('visible');
+          }
+        }
+      } catch (err) {}
+    })();
+  </script>
   <p id="edit-hint" class="edit-hint">Режим правки: перенос на нового отца, тап = переименовать, у листьев — удалить. Затем «Сохранить».</p>
 
   <main>
@@ -2948,6 +2978,8 @@
       var skyRotateTimer = null;
       var skyWatchTimer = null;
       var sunTimes = null;
+      var skyImageCache = Object.create(null);
+      var skySwapToken = 0;
 
       function preferReducedSkyMotion() {
         return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2977,16 +3009,31 @@
         return isNightByClock() ? 'night' : 'day';
       }
 
-      function setSkyLayerImage(el, url) {
-        if (!el) return;
-        el.style.backgroundImage = 'url("' + url + '")';
+      function preloadSkyImage(url) {
+        if (!url) return Promise.resolve('');
+        if (skyImageCache[url]) return skyImageCache[url];
+        skyImageCache[url] = new Promise(function (resolve) {
+          var img = new Image();
+          img.decoding = 'async';
+          img.onload = function () { resolve(url); };
+          img.onerror = function () { resolve(url); };
+          img.src = url;
+        });
+        return skyImageCache[url];
       }
 
-      function showSkyImage(url, immediate) {
-        if (!skyLayerA || !skyLayerB) return;
-        var front = skyFrontIsA ? skyLayerA : skyLayerB;
-        var back = skyFrontIsA ? skyLayerB : skyLayerA;
-        setSkyLayerImage(back, url);
+      function prefetchAllSkyImages() {
+        var urls = SKY_DAY_IMAGES.slice();
+        urls.push(SKY_NIGHT_IMAGE);
+        urls.forEach(function (url) { preloadSkyImage(url); });
+      }
+
+      function setSkyLayerImage(el, url) {
+        if (!el) return;
+        el.style.backgroundImage = url ? 'url("' + url + '")' : 'none';
+      }
+
+      function swapSkyLayers(back, front, immediate) {
         if (immediate || preferReducedSkyMotion()) {
           back.classList.add('is-on');
           front.classList.remove('is-on');
@@ -2997,6 +3044,18 @@
           front.classList.remove('is-on');
         }
         skyFrontIsA = !skyFrontIsA;
+      }
+
+      function showSkyImage(url, immediate) {
+        if (!skyLayerA || !skyLayerB || !url) return;
+        var token = ++skySwapToken;
+        preloadSkyImage(url).then(function (readyUrl) {
+          if (token !== skySwapToken) return;
+          var front = skyFrontIsA ? skyLayerA : skyLayerB;
+          var back = skyFrontIsA ? skyLayerB : skyLayerA;
+          setSkyLayerImage(back, readyUrl);
+          swapSkyLayers(back, front, immediate);
+        });
       }
 
       function stopSkyRotate() {
@@ -3059,6 +3118,12 @@
           }
         }, 60 * 1000);
       }
+
+      try {
+        if (skyModeSelect) skyModeSelect.value = readSkyMode();
+        applySky(true);
+        prefetchAllSkyImages();
+      } catch (skyBootErr) {}
 
       function setTheme(theme, persist) {
         var next = theme === 'premium' ? 'premium' : 'classic';
