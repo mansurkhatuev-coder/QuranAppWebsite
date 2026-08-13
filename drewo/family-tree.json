@@ -679,12 +679,34 @@
                                             {
                                               "id": "bauddi",
                                               "name": "Баудди",
-                                              "sons": []
+                                              "sons": [
+                                                {
+                                                  "id": "added-1786651331834-288dzj",
+                                                  "name": "Мухьаммад",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "added-1786651343793-3x8syb",
+                                                  "name": "Рамадан",
+                                                  "sons": []
+                                                },
+                                                {
+                                                  "id": "added-1786651362851-j7z6tu",
+                                                  "name": "Билал",
+                                                  "sons": []
+                                                }
+                                              ]
                                             },
                                             {
                                               "id": "khamzat-khavazhi",
                                               "name": "Хьамзат",
-                                              "sons": []
+                                              "sons": [
+                                                {
+                                                  "id": "added-1786651311064-s6bo3m",
+                                                  "name": "Халид",
+                                                  "sons": []
+                                                }
+                                              ]
                                             }
                                           ]
                                         }
