@@ -430,7 +430,13 @@
                             {
                               "id": "aslan-aslambek",
                               "name": "Аслан",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1786645513036-eorgzb",
+                                  "name": "Дени",
+                                  "sons": []
+                                }
+                              ]
                             },
                             {
                               "id": "1adlan-aslambek",
