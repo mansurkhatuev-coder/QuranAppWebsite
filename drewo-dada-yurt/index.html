@@ -13,6 +13,8 @@
   <meta name="theme-color" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
+  <link rel="preload" as="image" href="bg.jpg" fetchpriority="high">
+  <link rel="preload" as="image" href="bg-night.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet">
@@ -514,9 +516,10 @@
       background:
         linear-gradient(180deg, color-mix(in srgb, var(--bg1) 55%, var(--bg0)), color-mix(in srgb, var(--bg0) 88%, transparent));
       color: var(--text);
-      max-height: min(42vh, 18rem);
+      max-height: min(42dvh, 18rem);
       overflow: auto;
       -webkit-overflow-scrolling: touch;
+      contain: layout style;
     }
 
     .guide-banner.visible {
@@ -2948,6 +2951,8 @@
       var skyRotateTimer = null;
       var skyWatchTimer = null;
       var sunTimes = null;
+      var skyImageCache = Object.create(null);
+      var skyLoadGen = 0;
 
       function preferReducedSkyMotion() {
         return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -2982,21 +2987,45 @@
         el.style.backgroundImage = 'url("' + url + '")';
       }
 
+      function preloadSkyImage(url) {
+        if (!url) return Promise.resolve(url);
+        if (skyImageCache[url]) return skyImageCache[url];
+        skyImageCache[url] = new Promise(function (resolve) {
+          var img = new Image();
+          function done() {
+            resolve(url);
+          }
+          img.onload = done;
+          img.onerror = done;
+          img.decoding = 'async';
+          img.src = url;
+        });
+        return skyImageCache[url];
+      }
+
+      function warmSkyCache() {
+        SKY_DAY_IMAGES.concat([SKY_NIGHT_IMAGE]).forEach(preloadSkyImage);
+      }
+
       function showSkyImage(url, immediate) {
-        if (!skyLayerA || !skyLayerB) return;
-        var front = skyFrontIsA ? skyLayerA : skyLayerB;
-        var back = skyFrontIsA ? skyLayerB : skyLayerA;
-        setSkyLayerImage(back, url);
-        if (immediate || preferReducedSkyMotion()) {
-          back.classList.add('is-on');
-          front.classList.remove('is-on');
-        } else {
-          back.classList.remove('is-on');
-          void back.offsetWidth;
-          back.classList.add('is-on');
-          front.classList.remove('is-on');
-        }
-        skyFrontIsA = !skyFrontIsA;
+        if (!skyLayerA || !skyLayerB || !url) return;
+        var gen = ++skyLoadGen;
+        preloadSkyImage(url).then(function (loadedUrl) {
+          if (gen !== skyLoadGen) return;
+          var front = skyFrontIsA ? skyLayerA : skyLayerB;
+          var back = skyFrontIsA ? skyLayerB : skyLayerA;
+          setSkyLayerImage(back, loadedUrl);
+          if (immediate || preferReducedSkyMotion()) {
+            back.classList.add('is-on');
+            front.classList.remove('is-on');
+          } else {
+            back.classList.remove('is-on');
+            void back.offsetWidth;
+            back.classList.add('is-on');
+            front.classList.remove('is-on');
+          }
+          skyFrontIsA = !skyFrontIsA;
+        });
       }
 
       function stopSkyRotate() {
@@ -6320,11 +6349,8 @@
       }
       startYearsCalendarPulse();
 
-      function finishBoot() {
-        setViewFilter('all', false);
-        updateViewButtons();
-        refreshActivityUi();
-        updateWhoamiUi();
+      function initChrome() {
+        showGuideBannerIfNeeded();
         try {
           setSkyMode(readSkyMode(), false);
           setTheme(
@@ -6338,7 +6364,14 @@
           setTheme('premium', false);
         }
         startSkyWatch();
-        showGuideBannerIfNeeded();
+        warmSkyCache();
+      }
+
+      function finishBoot() {
+        setViewFilter('all', false);
+        updateViewButtons();
+        refreshActivityUi();
+        updateWhoamiUi();
         updateSaveButton();
         loadWeather();
         if (myPersonId && TreeModel.findById(tree, myPersonId)) {
@@ -6362,6 +6395,8 @@
           maybeAskWhoami();
         }
       }
+
+      initChrome();
 
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
       fetchRemoteTree().then(function (remote) {
