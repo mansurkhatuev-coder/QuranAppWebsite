@@ -414,7 +414,13 @@
                             {
                               "id": "khozh-baudi",
                               "name": "Хож-Бауди",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1786645446060-6unmdr",
+                                  "name": "Шамиль",
+                                  "sons": []
+                                }
+                              ]
                             },
                             {
                               "id": "aslan-aslambek",
