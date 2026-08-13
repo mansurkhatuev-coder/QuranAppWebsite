@@ -112,6 +112,8 @@
       color-scheme: dark;
       height: 100%;
       overflow: hidden;
+      overflow-x: clip;
+      max-width: 100%;
     }
 
     html,
@@ -120,7 +122,10 @@
       height: 100%;
       max-height: 100dvh;
       overflow: hidden;
+      overflow-x: clip;
+      max-width: 100%;
       overscroll-behavior: none;
+      overscroll-behavior-x: none;
       font-family: var(--font-ui);
       color: var(--text);
       background-color: var(--bg0);
@@ -136,6 +141,8 @@
       flex-direction: column;
       min-height: 100vh;
       min-height: 100dvh;
+      min-width: 0;
+      width: 100%;
       padding-left: env(safe-area-inset-left, 0px);
       padding-right: env(safe-area-inset-right, 0px);
       touch-action: manipulation;
@@ -154,9 +161,11 @@
       border-bottom: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
       background: var(--header-bg, color-mix(in srgb, var(--bg0) 96%, black));
       box-shadow: 0 1px 0 color-mix(in srgb, black 20%, transparent);
-      overflow: visible;
+      overflow-x: clip;
       flex: 0 0 auto;
+      min-width: 0;
       width: 100%;
+      max-width: 100%;
     }
 
     /* Spacer no longer needed: header is in normal flex flow (not fixed). */
@@ -431,7 +440,7 @@
     }
 
     .search-input {
-      min-width: 9rem;
+      min-width: 0;
       padding: 0.42rem 0.85rem;
       border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
       border-radius: 999px;
@@ -449,6 +458,8 @@
       display: flex;
       flex-direction: column;
       min-height: 0;
+      min-width: 0;
+      max-width: 100%;
       overflow: hidden;
       padding: 0 0.55rem var(--footer-reserve);
     }
@@ -555,6 +566,8 @@
       position: relative;
       flex: 1;
       min-height: 12rem;
+      min-width: 0;
+      max-width: 100%;
       margin-top: 0.75rem;
       border: 1px solid color-mix(in srgb, var(--sand) 25%, transparent);
       border-radius: 6px;
@@ -1133,7 +1146,7 @@
 
     .fab-rail {
       position: fixed;
-      left: 0;
+      left: env(safe-area-inset-left, 0px);
       top: 64%;
       z-index: 40;
       display: flex;
@@ -1669,6 +1682,26 @@
 
       #map-world {
         transition: none !important;
+      }
+    }
+
+    @media (min-width: 480px) {
+      .search-input {
+        min-width: 9rem;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .header-bar {
+        max-width: none;
+      }
+
+      .weather-chip {
+        max-width: 5.5rem;
+      }
+
+      .weather-sub {
+        max-width: 100%;
       }
     }
 
