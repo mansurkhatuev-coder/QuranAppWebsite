@@ -548,23 +548,7 @@
                         {
                           "id": "sirazhdi",
                           "name": "Сиражди",
-                          "sons": [
-                            {
-                              "id": "aslan-sirazhdi",
-                              "name": "Аслан",
-                              "sons": []
-                            },
-                            {
-                              "id": "khamzat",
-                              "name": "Хьамзат",
-                              "sons": []
-                            },
-                            {
-                              "id": "1umar",
-                              "name": "1умар",
-                              "sons": []
-                            }
-                          ]
+                          "sons": []
                         },
                         {
                           "id": "added-1786645907981-x713p0",
