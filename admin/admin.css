@@ -1142,6 +1142,54 @@
 .admin-analytics-funnel-bar .is-abandoned { background: #c45c4a; }
 .admin-analytics-funnel-bar .is-studying { background: #c9a24d; }
 
+.admin-analytics-chart {
+  border: 1px solid rgba(201, 162, 77, 0.22);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.admin-analytics-chart-bars {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(28px, 1fr));
+  gap: 0.35rem;
+  align-items: end;
+  min-height: 120px;
+  margin-top: 0.75rem;
+}
+
+.admin-analytics-chart-bar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  min-width: 0;
+}
+
+.admin-analytics-chart-bar-fill {
+  width: 100%;
+  max-width: 36px;
+  min-height: 4px;
+  border-radius: 6px 6px 2px 2px;
+  background: linear-gradient(180deg, rgba(201, 162, 77, 0.95), rgba(201, 162, 77, 0.45));
+}
+
+.admin-analytics-chart-bar-value {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.admin-analytics-chart-bar-label {
+  font-size: 0.62rem;
+  color: rgba(255, 255, 255, 0.48);
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+  max-height: 42px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .admin-hud-hint {
   position: relative;
   z-index: 1;

@@ -281,7 +281,7 @@
       <section class="admin-panel" data-panel="analytics">
         <div class="admin-callout">
           <strong>Продуктовая аналитика</strong> — обезличенные события из приложения.
-          «Активные» — уникальные установки, которые присылали события за период (если аналитика не отключена).
+          «Активные» — кто присылал события за период. «Новые установки» — первый визит (first_seen) за период, не скачивания из RuStore/App Store.
           Платформа — ОС (android / ios), без разделения RuStore / прямой APK / App Store.
         </div>
         <div class="admin-toolbar admin-panel-toolbar">
@@ -301,6 +301,7 @@
           </div>
         </div>
         <div id="analytics-metrics"></div>
+        <div id="analytics-installs-chart" class="admin-analytics-social"></div>
         <div id="analytics-social" class="admin-analytics-social"></div>
         <div id="analytics-breakdown" class="admin-analytics-breakdown"></div>
       </section>
