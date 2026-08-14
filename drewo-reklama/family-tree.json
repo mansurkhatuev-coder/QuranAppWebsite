@@ -1,0 +1,559 @@
+{
+  "id": "alkhan",
+  "name": "Алхан",
+  "note": "Демо-род для рекламы",
+  "sons": [
+    {
+      "id": "bersa",
+      "name": "Берса",
+      "born": 1780,
+      "died": 1855,
+      "sons": [
+        {
+          "id": "magomed",
+          "name": "Мохьмад",
+          "born": 1810,
+          "died": 1888,
+          "sons": [
+            {
+              "id": "ali",
+              "name": "1али",
+              "born": 1842,
+              "died": 1910,
+              "sons": [
+                {
+                  "id": "usman",
+                  "name": "1усман",
+                  "born": 1870,
+                  "died": 1945,
+                  "sons": [
+                    {
+                      "id": "ibrahim",
+                      "name": "Ибрах1им",
+                      "born": 1902,
+                      "died": 1978,
+                      "sons": [
+                        {
+                          "id": "sulim",
+                          "name": "Сулим",
+                          "born": 1935,
+                          "died": 2001,
+                          "sons": [
+                            {
+                              "id": "adam-s",
+                              "name": "Адам",
+                              "born": 1962,
+                              "sons": [
+                                {
+                                  "id": "islam-a",
+                                  "name": "Ислам",
+                                  "born": 1988,
+                                  "sons": [
+                                    {
+                                      "id": "umair",
+                                      "name": "Умар",
+                                      "born": 2014,
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "yusuf",
+                                      "name": "Юсуп",
+                                      "born": 2018,
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "khamzat-a",
+                                  "name": "Хьамзат",
+                                  "born": 1992,
+                                  "sons": [
+                                    {
+                                      "id": "amir",
+                                      "name": "Амир",
+                                      "born": 2020,
+                                      "sons": []
+                                    }
+                                  ]
+                                }
+                              ]
+                            },
+                            {
+                              "id": "rasul-s",
+                              "name": "Расул",
+                              "born": 1968,
+                              "sons": [
+                                {
+                                  "id": "zelim",
+                                  "name": "Зелим",
+                                  "born": 1995,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "bekhan",
+                                  "name": "Бекхан",
+                                  "born": 1999,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "vakha",
+                          "name": "Ваха",
+                          "born": 1940,
+                          "died": 2012,
+                          "sons": [
+                            {
+                              "id": "aptu",
+                              "name": "Апту",
+                              "born": 1970,
+                              "sons": [
+                                {
+                                  "id": "maga",
+                                  "name": "Магомед",
+                                  "born": 1996,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "said",
+                                  "name": "Саид",
+                                  "born": 2001,
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "lecha",
+                              "name": "Леча",
+                              "born": 1975,
+                              "sons": [
+                                {
+                                  "id": "timur",
+                                  "name": "Тимур",
+                                  "born": 2004,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "shamil-i",
+                          "name": "Шамиль",
+                          "born": 1948,
+                          "sons": [
+                            {
+                              "id": "ramzan",
+                              "name": "Рамзан",
+                              "born": 1978,
+                              "sons": [
+                                {
+                                  "id": "akhmat",
+                                  "name": "Ахмат",
+                                  "born": 2006,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "deni",
+                                  "name": "Дени",
+                                  "born": 2010,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    },
+                    {
+                      "id": "khasan",
+                      "name": "Хьасан",
+                      "born": 1908,
+                      "died": 1985,
+                      "sons": [
+                        {
+                          "id": "isal",
+                          "name": "Иса",
+                          "born": 1944,
+                          "died": 2019,
+                          "sons": [
+                            {
+                              "id": "mursal",
+                              "name": "Мурсал",
+                              "born": 1972,
+                              "sons": [
+                                {
+                                  "id": "bilal",
+                                  "name": "Билал",
+                                  "born": 1998,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "anis",
+                                  "name": "Анис",
+                                  "born": 2003,
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "idris-m",
+                              "name": "Идрис",
+                              "born": 1979,
+                              "sons": [
+                                {
+                                  "id": "nuri",
+                                  "name": "Нури",
+                                  "born": 2008,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "yunus",
+                          "name": "Юнус",
+                          "born": 1951,
+                          "sons": [
+                            {
+                              "id": "salakh",
+                              "name": "Салах1",
+                              "born": 1983,
+                              "sons": [
+                                {
+                                  "id": "imran",
+                                  "name": "Имран",
+                                  "born": 2012,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "rayan",
+                                  "name": "Райан",
+                                  "born": 2016,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "id": "musa",
+                  "name": "Муса",
+                  "born": 1878,
+                  "died": 1952,
+                  "sons": [
+                    {
+                      "id": "abdul",
+                      "name": "1абдул",
+                      "born": 1915,
+                      "died": 1990,
+                      "sons": [
+                        {
+                          "id": "khusein",
+                          "name": "Х1усейн",
+                          "born": 1946,
+                          "sons": [
+                            {
+                              "id": "eldar",
+                              "name": "Эльдар",
+                              "born": 1974,
+                              "sons": [
+                                {
+                                  "id": "karim",
+                                  "name": "Карим",
+                                  "born": 2002,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "nazir",
+                                  "name": "Назир",
+                                  "born": 2007,
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "rustam",
+                              "name": "Рустам",
+                              "born": 1980,
+                              "sons": [
+                                {
+                                  "id": "davud",
+                                  "name": "Давуд",
+                                  "born": 2009,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        },
+                        {
+                          "id": "omar-a",
+                          "name": "1омар",
+                          "born": 1955,
+                          "sons": [
+                            {
+                              "id": "tamerlan",
+                              "name": "Тамерлан",
+                              "born": 1986,
+                              "sons": [
+                                {
+                                  "id": "elyas",
+                                  "name": "Эльяс",
+                                  "born": 2015,
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "ibragim-o",
+                              "name": "Ибрагим",
+                              "born": 1991,
+                              "sons": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "bekmirza",
+              "name": "Бекмирза",
+              "born": 1848,
+              "died": 1922,
+              "sons": [
+                {
+                  "id": "suleyman",
+                  "name": "Сулейман",
+                  "born": 1885,
+                  "died": 1963,
+                  "sons": [
+                    {
+                      "id": "gairbek",
+                      "name": "Гаирбек",
+                      "born": 1920,
+                      "died": 1995,
+                      "sons": [
+                        {
+                          "id": "valid",
+                          "name": "Валид",
+                          "born": 1958,
+                          "sons": [
+                            {
+                              "id": "arsen",
+                              "name": "Арсен",
+                              "born": 1987,
+                              "sons": [
+                                {
+                                  "id": "mail",
+                                  "name": "Маил",
+                                  "born": 2013,
+                                  "sons": []
+                                },
+                                {
+                                  "id": "sarmat",
+                                  "name": "Сармат",
+                                  "born": 2017,
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "ayub",
+                              "name": "Аюб",
+                              "born": 1993,
+                              "sons": []
+                            }
+                          ]
+                        },
+                        {
+                          "id": "movsar",
+                          "name": "Мовсар",
+                          "born": 1964,
+                          "sons": [
+                            {
+                              "id": "khamid",
+                              "name": "Хамид",
+                              "born": 1990,
+                              "sons": [
+                                {
+                                  "id": "osman",
+                                  "name": "Осман",
+                                  "born": 2019,
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "tashtev",
+          "name": "Таштев",
+          "born": 1818,
+          "died": 1895,
+          "sons": [
+            {
+              "id": "elbyar",
+              "name": "Эльбяр",
+              "born": 1855,
+              "died": 1928,
+              "sons": [
+                {
+                  "id": "batuka",
+                  "name": "Батука",
+                  "born": 1890,
+                  "died": 1968,
+                  "sons": [
+                    {
+                      "id": "mayrbek",
+                      "name": "Майрбек",
+                      "born": 1925,
+                      "died": 2003,
+                      "sons": [
+                        {
+                          "id": "alsultan",
+                          "name": "Алсултан",
+                          "born": 1960,
+                          "sons": [
+                            {
+                              "id": "zayndi",
+                              "name": "Зайнди",
+                              "born": 1989,
+                              "sons": [
+                                {
+                                  "id": "hasbi",
+                                  "name": "Хасби",
+                                  "born": 2016,
+                                  "sons": []
+                                }
+                              ]
+                            },
+                            {
+                              "id": "islambek",
+                              "name": "Исламбек",
+                              "born": 1994,
+                              "sons": []
+                            }
+                          ]
+                        },
+                        {
+                          "id": "dokka",
+                          "name": "Докка",
+                          "born": 1966,
+                          "sons": [
+                            {
+                              "id": "loma",
+                              "name": "Лома",
+                              "born": 1997,
+                              "sons": []
+                            },
+                            {
+                              "id": "baysangur",
+                              "name": "Байсангур",
+                              "born": 2002,
+                              "sons": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "chermo",
+      "name": "Чермо",
+      "born": 1788,
+      "died": 1860,
+      "note": "Вторая линия (демо)",
+      "sons": [
+        {
+          "id": "goiti",
+          "name": "Гойти",
+          "born": 1825,
+          "died": 1901,
+          "sons": [
+            {
+              "id": "duda",
+              "name": "Дуда",
+              "born": 1860,
+              "died": 1935,
+              "sons": [
+                {
+                  "id": "salamu",
+                  "name": "Саламу",
+                  "born": 1900,
+                  "died": 1972,
+                  "sons": [
+                    {
+                      "id": "khadzhi",
+                      "name": "Хьажи",
+                      "born": 1938,
+                      "sons": [
+                        {
+                          "id": "muslim",
+                          "name": "Муслим",
+                          "born": 1971,
+                          "sons": [
+                            {
+                              "id": "abubakar",
+                              "name": "Абубакар",
+                              "born": 1998,
+                              "sons": []
+                            },
+                            {
+                              "id": "ismail",
+                              "name": "Исмаил",
+                              "born": 2005,
+                              "sons": []
+                            }
+                          ]
+                        },
+                        {
+                          "id": "amrani",
+                          "name": "Амрани",
+                          "born": 1976,
+                          "sons": [
+                            {
+                              "id": "sultan",
+                              "name": "Султан",
+                              "born": 2007,
+                              "sons": []
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -4422,7 +4422,10 @@
       }
 
       function legacyEditorPasswordMatch(password) {
-        var expected = TREE_DIR === 'drewo-dada-yurt' ? 'баташ' : 'гуно';
+        var expected =
+          TREE_DIR === 'drewo-dada-yurt' ? 'баташ' :
+          TREE_DIR === 'drewo-reklama' ? 'демо' :
+          'гуно';
         return normalizePassword(password) === normalizePassword(expected);
       }
 

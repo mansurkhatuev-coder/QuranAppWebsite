@@ -24,8 +24,10 @@ jobs:
           WEBSITE_PUBLISH_TOKEN: ${{ secrets.WEBSITE_PUBLISH_TOKEN }}
           DREWO_PASSWORD: ${{ secrets.DREWO_PASSWORD }}
           DREWO_DADA_YURT_PASSWORD: ${{ secrets.DREWO_DADA_YURT_PASSWORD }}
+          DREWO_REKLAMA_PASSWORD: ${{ secrets.DREWO_REKLAMA_PASSWORD }}
           DREWO_SUPER_PASSWORD: ${{ secrets.DREWO_SUPER_PASSWORD }}
           DREWO_DADA_YURT_SUPER_PASSWORD: ${{ secrets.DREWO_DADA_YURT_SUPER_PASSWORD }}
+          DREWO_REKLAMA_SUPER_PASSWORD: ${{ secrets.DREWO_REKLAMA_SUPER_PASSWORD }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
             echo "Missing SUPABASE_ACCESS_TOKEN repository secret"
@@ -37,11 +39,13 @@ jobs:
           fi
           PASSWORD_VALUE="${DREWO_PASSWORD:-гуно}"
           DADA_PASSWORD_VALUE="${DREWO_DADA_YURT_PASSWORD:-баташ}"
+          REKLAMA_PASSWORD_VALUE="${DREWO_REKLAMA_PASSWORD:-демо}"
           SECRET_ARGS=(
             GITHUB_TOKEN="$WEBSITE_PUBLISH_TOKEN"
             GITHUB_REPO=mansurkhatuev-coder/QuranAppWebsite
             DREWO_PASSWORD="$PASSWORD_VALUE"
             DREWO_DADA_YURT_PASSWORD="$DADA_PASSWORD_VALUE"
+            DREWO_REKLAMA_PASSWORD="$REKLAMA_PASSWORD_VALUE"
           )
           if [ -n "$DREWO_SUPER_PASSWORD" ]; then
             SECRET_ARGS+=(DREWO_SUPER_PASSWORD="$DREWO_SUPER_PASSWORD")
@@ -52,6 +56,11 @@ jobs:
             SECRET_ARGS+=(DREWO_DADA_YURT_SUPER_PASSWORD="$DREWO_DADA_YURT_SUPER_PASSWORD")
           else
             echo "Warning: DREWO_DADA_YURT_SUPER_PASSWORD is empty; Дади-Юрт super-admin stays unavailable."
+          fi
+          if [ -n "$DREWO_REKLAMA_SUPER_PASSWORD" ]; then
+            SECRET_ARGS+=(DREWO_REKLAMA_SUPER_PASSWORD="$DREWO_REKLAMA_SUPER_PASSWORD")
+          else
+            echo "Warning: DREWO_REKLAMA_SUPER_PASSWORD is empty; демо-древо super-admin stays unavailable."
           fi
           supabase secrets set \
             --project-ref rivjkiksknnesahrvamf \

@@ -269,7 +269,7 @@ async function githubCommitChanges(options: {
   return { skipped: false as const, commitSha: newCommitSha };
 }
 
-const ALLOWED_TREE_DIRS = ['drewo', 'drewo-dada-yurt'] as const;
+const ALLOWED_TREE_DIRS = ['drewo', 'drewo-dada-yurt', 'drewo-reklama'] as const;
 type TreeDir = (typeof ALLOWED_TREE_DIRS)[number];
 type AuthRole = 'editor' | 'super';
 
@@ -297,17 +297,19 @@ function resolveTreeDir(raw: unknown): TreeDir | null {
 }
 
 function fallbackEditorPassword(treeDir: TreeDir) {
-  return normalizePassword(
-    treeDir === 'drewo-dada-yurt'
-      ? Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ'
-      : Deno.env.get('DREWO_PASSWORD') ?? 'гуно'
-  );
+  if (treeDir === 'drewo-dada-yurt') {
+    return normalizePassword(Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ');
+  }
+  if (treeDir === 'drewo-reklama') {
+    return normalizePassword(Deno.env.get('DREWO_REKLAMA_PASSWORD') ?? 'демо');
+  }
+  return normalizePassword(Deno.env.get('DREWO_PASSWORD') ?? 'гуно');
 }
 
 function superPasswordSecretName(treeDir: TreeDir) {
-  return treeDir === 'drewo-dada-yurt'
-    ? 'DREWO_DADA_YURT_SUPER_PASSWORD'
-    : 'DREWO_SUPER_PASSWORD';
+  if (treeDir === 'drewo-dada-yurt') return 'DREWO_DADA_YURT_SUPER_PASSWORD';
+  if (treeDir === 'drewo-reklama') return 'DREWO_REKLAMA_SUPER_PASSWORD';
+  return 'DREWO_SUPER_PASSWORD';
 }
 
 function superPasswordValue(treeDir: TreeDir) {
