@@ -10,6 +10,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex, nofollow">
   <meta name="theme-color" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
@@ -1765,9 +1766,246 @@
         padding-right: 0.75rem;
       }
     }
+  
+    /* --- view gate + photos --- */
+    body.view-locked .header,
+    body.view-locked .header-anchor,
+    body.view-locked .nav-shell,
+    body.view-locked .guide-banner,
+    body.view-locked #edit-hint,
+    body.view-locked #lock-banner,
+    body.view-locked main,
+    body.view-locked #fab-rail,
+    body.view-locked .footer-note {
+      visibility: hidden !important;
+      pointer-events: none !important;
+    }
+
+    .view-gate {
+      position: fixed;
+      inset: 0;
+      z-index: 10000;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1.25rem;
+      padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+      background:
+        radial-gradient(ellipse at 50% 20%, color-mix(in srgb, #1e3d36 55%, transparent), transparent 55%),
+        linear-gradient(180deg, #071018 0%, #0d1a22 55%, #12261f 100%);
+    }
+    body:not(.view-locked) .view-gate {
+      display: none !important;
+    }
+    .view-gate-card {
+      width: min(100%, 26rem);
+      max-height: min(92vh, 40rem);
+      overflow: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      padding: 1.15rem 1.1rem 1.25rem;
+      border-radius: 14px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: color-mix(in srgb, #0a151c 88%, black);
+      box-shadow: 0 18px 40px color-mix(in srgb, black 45%, transparent);
+      color: var(--text);
+    }
+    .view-gate-card > strong {
+      font-family: var(--font-display);
+      font-size: 1.55rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+    .view-gate-card .install-steps {
+      margin: 0;
+    }
+    #gate-results {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      max-height: 11rem;
+      overflow: auto;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--sand) 22%, transparent);
+      background: color-mix(in srgb, var(--bg0) 55%, transparent);
+    }
+    #gate-results:empty {
+      display: none;
+    }
+    #gate-results button {
+      width: 100%;
+      text-align: left;
+      padding: 0.55rem 0.7rem;
+      border: 0;
+      border-bottom: 1px solid color-mix(in srgb, var(--sand) 12%, transparent);
+      background: transparent;
+      color: var(--text);
+      font: inherit;
+      cursor: pointer;
+    }
+    #gate-results button:hover,
+    #gate-results button.is-selected {
+      background: color-mix(in srgb, var(--sand) 18%, transparent);
+    }
+    #gate-results .whoami-father {
+      display: block;
+      margin-top: 0.15rem;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-weight: 500;
+    }
+    #gate-selected {
+      margin: 0;
+      padding: 0.45rem 0.65rem;
+      border-radius: 8px;
+      border: 1px dashed color-mix(in srgb, var(--sand) 40%, transparent);
+      color: color-mix(in srgb, #f7ecc0 90%, white);
+      font-weight: 600;
+      font-size: 0.92rem;
+    }
+    .view-gate-card label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      font-size: 0.85rem;
+      color: var(--text-dim);
+    }
+    .view-gate-card input[type="search"],
+    .view-gate-card input[type="password"] {
+      min-height: 2.5rem;
+      padding: 0.45rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: color-mix(in srgb, var(--bg1) 40%, black);
+      color: var(--text);
+      font: inherit;
+    }
+    #gate-submit {
+      min-height: 2.6rem;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--sand) 55%, white);
+      background: linear-gradient(180deg, color-mix(in srgb, #4a3c1c 50%, var(--bg1)), color-mix(in srgb, var(--bg0) 70%, #2a2208));
+      color: #f7ecc0;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    #gate-submit:disabled {
+      opacity: 0.55;
+      cursor: wait;
+    }
+
+    .person-btn.has-photo {
+      flex-direction: row;
+      align-items: center;
+      justify-content: flex-start;
+      gap: 0.35rem;
+      text-align: left;
+      padding-left: 0.28rem;
+      padding-right: 0.5rem;
+    }
+    .person-avatar {
+      flex: 0 0 auto;
+      width: 1.7em;
+      height: 1.7em;
+      min-width: 18px;
+      min-height: 18px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1.5px solid color-mix(in srgb, var(--sand) 70%, white);
+      box-shadow: 0 0 0 1px color-mix(in srgb, black 35%, transparent);
+      background: color-mix(in srgb, var(--bg1) 60%, black);
+    }
+    .person-btn.my-self .person-avatar,
+    .person-btn.my-branch .person-avatar {
+      border-color: #ffe9a0;
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, #f0d78a 55%, transparent),
+        0 0 10px color-mix(in srgb, #d4b04a 40%, transparent);
+    }
+    .person-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0.08rem;
+      min-width: 0;
+    }
+    .person-btn.has-photo .person-name,
+    .person-btn.has-photo .person-years {
+      text-align: left;
+    }
+
+    .person-sheet-photo-wrap {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.55rem;
+      margin: 0.15rem 0 0.35rem;
+    }
+    .person-sheet-photo {
+      width: 7.5rem;
+      height: 7.5rem;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid color-mix(in srgb, var(--sand) 55%, white);
+      background:
+        radial-gradient(circle at 35% 30%, color-mix(in srgb, var(--sand) 22%, transparent), transparent 55%),
+        color-mix(in srgb, var(--bg1) 50%, black);
+      box-shadow: 0 8px 20px color-mix(in srgb, black 35%, transparent);
+    }
+    .person-sheet-photo.is-empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 2.4rem;
+      font-weight: 700;
+      color: color-mix(in srgb, var(--sand) 75%, white);
+    }
+    .person-sheet-photo-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      justify-content: center;
+    }
+
+    .person-sheet-photo-actions button {
+      min-height: 2rem;
+      padding: 0.35rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: color-mix(in srgb, var(--bg1) 45%, transparent);
+      color: var(--text);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
   </style>
 </head>
-<body data-theme="premium" data-sky="day">
+<body class="view-locked" data-theme="premium" data-sky="day">
+
+  <div id="view-gate" class="view-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
+    <form id="gate-form" class="view-gate-card">
+      <strong id="gate-title">Дади-Юрт</strong>
+      <p class="install-steps">Выберите себя в списке и введите пароль семьи. Тёзок пока отличаем по отцу и годам.</p>
+      <label>
+        Кто вы
+        <input id="gate-search" type="search" placeholder="Начните вводить имя…" autocomplete="off" required>
+      </label>
+      <ul id="gate-results"></ul>
+      <p id="gate-selected" hidden></p>
+      <input type="hidden" id="gate-person-id" value="">
+      <label>
+        Пароль
+        <input id="gate-password" type="password" name="password" autocomplete="current-password" required>
+      </label>
+      <p id="gate-error" class="dialog-error" hidden></p>
+      <button type="submit" id="gate-submit">Войти</button>
+    </form>
+  </div>
+
   <div id="premium-sky" class="premium-sky" aria-hidden="true">
     <div class="sky-layer is-on" id="sky-a"></div>
     <div class="sky-layer" id="sky-b"></div>
@@ -1805,6 +2043,7 @@
       <div class="action-cluster" role="group" aria-label="Я в древе">
         <button type="button" id="whoami-btn">Кто я</button>
         <button type="button" id="whoami-clear-btn" hidden>Сбросить «это я»</button>
+        <button type="button" id="logout-btn">Выйти</button>
       </div>
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
@@ -1837,7 +2076,7 @@
     <strong>Как пользоваться</strong>
     <ol>
       <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека (имя, годы, био).</li>
-      <li>Укажите <b>Кто я</b> в меню — ваша ветка подсветится золотом.</li>
+      <li>Вход: своё имя из списка + пароль семьи. <b>Кто я</b> ставится при входе; фото — в карточке (долгое нажатие), кружок на древе после «Сохранить».</li>
       <li><b>+ сын</b> и <b>Редактировать</b> — сначала обычный пароль.</li>
       <li>В «Редактировать»: перенос на нового отца, у листьев — удалить. Имя меняется из карточки.</li>
       <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
@@ -2006,6 +2245,15 @@
   <dialog id="person-sheet-dialog" aria-labelledby="person-sheet-title">
     <div class="history-body">
       <strong id="person-sheet-title">Человек</strong>
+
+      <div class="person-sheet-photo-wrap">
+        <div id="person-sheet-photo" class="person-sheet-photo is-empty" aria-hidden="true">?</div>
+        <div class="person-sheet-photo-actions">
+          <button type="button" id="person-sheet-photo-add">Добавить фото</button>
+          <button type="button" id="person-sheet-photo-remove" hidden>Убрать фото</button>
+        </div>
+        <input id="person-photo-file" type="file" accept="image/*" capture="environment" hidden>
+      </div>
       <p id="person-sheet-meta" class="person-sheet-meta"></p>
       <div id="person-sheet-dates" class="person-sheet-dates">
         <button type="button" id="person-sheet-born" class="date-chip is-empty">+ рождение</button>
@@ -3641,6 +3889,20 @@
       var whoamiResults = document.getElementById('whoami-results');
       var whoamiSkip = document.getElementById('whoami-skip');
       var whoamiClose = document.getElementById('whoami-close');
+      var logoutBtn = document.getElementById('logout-btn');
+      var gateForm = document.getElementById('gate-form');
+      var gateSearch = document.getElementById('gate-search');
+      var gateResults = document.getElementById('gate-results');
+      var gateSelected = document.getElementById('gate-selected');
+      var gatePersonId = document.getElementById('gate-person-id');
+      var gatePassword = document.getElementById('gate-password');
+      var gateError = document.getElementById('gate-error');
+      var gateSubmit = document.getElementById('gate-submit');
+      var personSheetPhoto = document.getElementById('person-sheet-photo');
+      var personSheetPhotoAdd = document.getElementById('person-sheet-photo-add');
+      var personSheetPhotoRemove = document.getElementById('person-sheet-photo-remove');
+      var personPhotoFile = document.getElementById('person-photo-file');
+
       var personSheetDialog = document.getElementById('person-sheet-dialog');
       var personSheetTitle = document.getElementById('person-sheet-title');
       var personSheetMeta = document.getElementById('person-sheet-meta');
@@ -3712,6 +3974,13 @@
       var baseFingerprint = '';
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo-dada-yurt';
+      var VIEW_SESSION_KEY = 'drewo-dada-yurt-view-session';
+      var PHOTO_PUBLIC_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
+      var NODE_H_PHOTO = 40;
+      var gateSelectedId = null;
+      var gateSelectedLabel = '';
+      var viewUnlocked = false;
+
       var isAppleTouch =
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
@@ -4457,6 +4726,9 @@
               name: node.name || '',
               fatherName: parent ? parent.name || '' : '',
               fatherId: parent ? parent.id : null,
+              born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
+              died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
+              years: TreeModel.formatLifeYears(node, 'g') || '',
             });
           }
           (node.sons || []).forEach(function (son) {
@@ -4816,6 +5088,7 @@
         bits.push(sons.length ? 'Сыновья: ' + sons.join(', ') : 'Сыновей нет');
         if (personSheetMeta) personSheetMeta.textContent = bits.join(' · ');
         refreshPersonSheetDates(node);
+        refreshPersonSheetPhoto(node);
         var bio = String(node.bio || '').trim();
         if (personSheetBio) {
           if (bio) {
@@ -5008,10 +5281,13 @@
           var btn = document.createElement('button');
           btn.type = 'button';
           btn.textContent = m.name;
-          if (m.fatherName) {
+          var bits = [];
+          if (m.fatherName) bits.push('отец: ' + m.fatherName);
+          if (m.years) bits.push(m.years);
+          if (bits.length) {
             var sub = document.createElement('span');
             sub.className = 'whoami-father';
-            sub.textContent = 'отец: ' + m.fatherName;
+            sub.textContent = bits.join(' · ');
             btn.appendChild(document.createElement('br'));
             btn.appendChild(sub);
           }
@@ -5701,11 +5977,12 @@
         return layoutChildren(node);
       }
 
-      function estimateBoxWidth(name) {
+      function estimateBoxWidth(name, hasPhoto) {
         var text = String(name || '');
         var padX = 16;
         var borderX = 3;
         var minW = 58;
+        var photoExtra = hasPhoto ? 34 : 0;
         try {
           if (!estimateBoxWidth._ctx) {
             estimateBoxWidth._ctx = document.createElement('canvas').getContext('2d');
@@ -5713,10 +5990,10 @@
           var ctx = estimateBoxWidth._ctx;
           if (ctx) {
             ctx.font = '600 12.8px "Source Sans 3", "Segoe UI", "Noto Sans", sans-serif';
-            return Math.max(minW, Math.ceil(ctx.measureText(text).width + padX + borderX));
+            return Math.max(minW, Math.ceil(ctx.measureText(text).width + padX + borderX)) + photoExtra;
           }
         } catch (err) {}
-        return Math.max(minW, Math.ceil(20 + text.length * 8.2));
+        return Math.max(minW, Math.ceil(20 + text.length * 8.2)) + photoExtra;
       }
 
       function shiftSubtree(node, dx) {
@@ -5775,8 +6052,12 @@
         }
 
         function measure(node) {
-          node._bw = estimateBoxWidth(node.name);
-          node._bh = nodeHasYears(node) ? NODE_H_YEARS : NODE_H;
+          var hasPhoto = !!photoVersion(node);
+          node._bw = estimateBoxWidth(node.name, hasPhoto);
+          node._bh = Math.max(
+            nodeHasYears(node) ? NODE_H_YEARS : NODE_H,
+            hasPhoto ? NODE_H_PHOTO : 0
+          );
           var sons = visibleSons(node);
           if (!sons.length) {
             node._tw = node._bw;
@@ -5857,6 +6138,7 @@
             }),
             born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
             died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
+            photo: photoVersion(node) || null,
           };
           maxR = Math.max(maxR, left + node._bw);
           maxB = Math.max(maxB, top + rowH);
@@ -6126,10 +6408,13 @@
         if (matchIds.has(meta.id) || matchIds.has(String(meta.id))) btn.classList.add('match');
         if (myBranchIds.has(meta.id) || myBranchIds.has(String(meta.id))) btn.classList.add('my-branch');
         if (myPersonId && String(meta.id) === String(myPersonId)) btn.classList.add('my-self');
+        var hasPhoto = !!photoVersion(meta);
+        var textCol = document.createElement('span');
+        textCol.className = 'person-text';
         var nameEl = document.createElement('span');
         nameEl.className = 'person-name';
         nameEl.textContent = meta.name;
-        btn.appendChild(nameEl);
+        textCol.appendChild(nameEl);
         if (hasYears) {
           var yearsEl = document.createElement('span');
           yearsEl.className = 'person-years';
@@ -6145,8 +6430,23 @@
           );
           yearsEl.appendChild(gLayer);
           yearsEl.appendChild(hLayer);
-          btn.appendChild(yearsEl);
+          textCol.appendChild(yearsEl);
         }
+        if (hasPhoto) {
+          btn.classList.add('has-photo');
+          var avatar = document.createElement('img');
+          avatar.className = 'person-avatar';
+          avatar.alt = '';
+          avatar.loading = 'lazy';
+          avatar.decoding = 'async';
+          avatar.src = photoThumbUrl(meta.id, meta.photo);
+          avatar.addEventListener('error', function () {
+            avatar.remove();
+            btn.classList.remove('has-photo');
+          });
+          btn.appendChild(avatar);
+        }
+        btn.appendChild(textCol);
         var baseTitle = hasYears ? meta.name + ' · ' + gText : meta.name;
         btn.title = baseTitle;
         if (!meta.hasSons) btn.classList.add('is-leaf');
@@ -6597,6 +6897,13 @@
                 loadBackupList(pass);
               } else if (action && action.type === 'year') {
                 openYearEditor(action.personId, action.field);
+              } else if (action && action.type === 'photo') {
+                if (personPhotoFile) {
+                  personPhotoFile.value = '';
+                  personPhotoFile.click();
+                }
+              } else if (action && action.type === 'photo-remove') {
+                removePersonPhoto(action.personId);
               } else if (action && action.type === 'bio') {
                 openBioEditor(action.personId);
               } else if (action && action.type === 'rename') {
@@ -7191,7 +7498,343 @@
         loadTreeStatus();
       }
 
+
+      function photoVersion(nodeOrMeta) {
+        if (!nodeOrMeta || nodeOrMeta.photo == null || nodeOrMeta.photo === false) return '';
+        return String(nodeOrMeta.photo).trim();
+      }
+
+      function photoThumbUrl(personId, version) {
+        var v = encodeURIComponent(String(version || '1'));
+        var id = encodeURIComponent(String(personId));
+        return PHOTO_PUBLIC_BASE + '/' + TREE_DIR + '/' + id + '-thumb.jpg?v=' + v;
+      }
+
+      function photoFullUrl(personId, version) {
+        var v = encodeURIComponent(String(version || '1'));
+        var id = encodeURIComponent(String(personId));
+        return PHOTO_PUBLIC_BASE + '/' + TREE_DIR + '/' + id + '.jpg?v=' + v;
+      }
+
+      function readViewSession() {
+        try {
+          var raw = localStorage.getItem(VIEW_SESSION_KEY);
+          if (!raw) return null;
+          var s = JSON.parse(raw);
+          if (!s || !s.personId) return null;
+          if (Date.now() - Number(s.at || 0) > 30 * 24 * 60 * 60 * 1000) return null;
+          if (!TreeModel.findById(tree, s.personId)) return null;
+          return s;
+        } catch (err) {
+          return null;
+        }
+      }
+
+      function writeViewSession(personId) {
+        try {
+          localStorage.setItem(
+            VIEW_SESSION_KEY,
+            JSON.stringify({ personId: String(personId), at: Date.now() })
+          );
+        } catch (err) {}
+      }
+
+      function clearViewSession() {
+        try {
+          localStorage.removeItem(VIEW_SESSION_KEY);
+        } catch (err) {}
+      }
+
+      function setViewLocked(locked) {
+        viewUnlocked = !locked;
+        document.body.classList.toggle('view-locked', !!locked);
+      }
+
+      function formatMatchLabel(m) {
+        var bits = [];
+        if (m.fatherName) bits.push('отец: ' + m.fatherName);
+        if (m.years) bits.push(m.years);
+        return bits.join(' · ');
+      }
+
+      function selectGatePerson(m) {
+        gateSelectedId = m.id;
+        gateSelectedLabel = m.name + (formatMatchLabel(m) ? ' · ' + formatMatchLabel(m) : '');
+        if (gatePersonId) gatePersonId.value = String(m.id);
+        if (gateSelected) {
+          gateSelected.hidden = false;
+          gateSelected.textContent = 'Выбрано: ' + gateSelectedLabel;
+        }
+        if (gateSearch) gateSearch.value = m.name;
+        if (gateResults) gateResults.replaceChildren();
+      }
+
+      function renderGateResults(query) {
+        if (!gateResults) return;
+        gateResults.replaceChildren();
+        var q = String(query || '').trim();
+        if (!q) return;
+        var matches = collectNameMatches(q).slice(0, 40);
+        if (!matches.length) {
+          var none = document.createElement('li');
+          none.style.listStyle = 'none';
+          none.style.padding = '0.45rem 0.65rem';
+          none.style.color = 'var(--text-dim)';
+          none.textContent = 'Никого не найдено';
+          gateResults.appendChild(none);
+          return;
+        }
+        matches.forEach(function (m) {
+          var li = document.createElement('li');
+          li.style.listStyle = 'none';
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.textContent = m.name;
+          if (String(m.id) === String(gateSelectedId)) btn.classList.add('is-selected');
+          var subText = formatMatchLabel(m);
+          if (subText) {
+            var sub = document.createElement('span');
+            sub.className = 'whoami-father';
+            sub.textContent = subText;
+            btn.appendChild(document.createElement('br'));
+            btn.appendChild(sub);
+          }
+          btn.addEventListener('click', function () {
+            selectGatePerson(m);
+          });
+          li.appendChild(btn);
+          gateResults.appendChild(li);
+        });
+      }
+
+      function showViewGate() {
+        setViewLocked(true);
+        gateSelectedId = null;
+        gateSelectedLabel = '';
+        if (gatePersonId) gatePersonId.value = '';
+        if (gateSelected) {
+          gateSelected.hidden = true;
+          gateSelected.textContent = '';
+        }
+        if (gatePassword) gatePassword.value = '';
+        if (gateError) {
+          gateError.hidden = true;
+          gateError.textContent = '';
+        }
+        if (gateSearch) {
+          gateSearch.value = '';
+          window.setTimeout(function () {
+            gateSearch.focus();
+          }, 80);
+        }
+        renderGateResults('');
+      }
+
+      function unlockViewWithPerson(personId, password, authData) {
+        writeViewSession(personId);
+        rememberSession(password, authData);
+        setViewLocked(false);
+        setMyPerson(personId);
+      }
+
+      function logoutView() {
+        clearViewSession();
+        clearMyPerson();
+        sessionPassword = '';
+        sessionRole = '';
+        editUnlocked = false;
+        setEditMode(false);
+        showViewGate();
+        showToast('Вы вышли', 'success');
+      }
+
+      function loadImageFromFile(file) {
+        return new Promise(function (resolve, reject) {
+          var url = URL.createObjectURL(file);
+          var img = new Image();
+          img.onload = function () {
+            URL.revokeObjectURL(url);
+            resolve(img);
+          };
+          img.onerror = function () {
+            URL.revokeObjectURL(url);
+            reject(new Error('Не удалось прочитать фото'));
+          };
+          img.src = url;
+        });
+      }
+
+      function canvasToDataUrl(canvas, mime, quality) {
+        try {
+          return canvas.toDataURL(mime, quality);
+        } catch (err) {
+          return canvas.toDataURL('image/jpeg', quality);
+        }
+      }
+
+      function compressSquarePhoto(file, size, quality) {
+        return loadImageFromFile(file).then(function (img) {
+          var side = Math.min(img.naturalWidth || img.width, img.naturalHeight || img.height);
+          var sx = Math.floor(((img.naturalWidth || img.width) - side) / 2);
+          var sy = Math.floor(((img.naturalHeight || img.height) - side) / 2);
+          var canvas = document.createElement('canvas');
+          canvas.width = size;
+          canvas.height = size;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, sx, sy, side, side, 0, 0, size, size);
+          return canvasToDataUrl(canvas, 'image/jpeg', quality);
+        });
+      }
+
+      function refreshPersonSheetPhoto(node) {
+        if (!personSheetPhoto || !node) return;
+        var ver = photoVersion(node);
+        var initial = String(node.name || '?').trim().charAt(0) || '?';
+        if (ver) {
+          personSheetPhoto.classList.remove('is-empty');
+          personSheetPhoto.textContent = '';
+          personSheetPhoto.style.backgroundImage = 'url("' + photoFullUrl(node.id, ver) + '")';
+          personSheetPhoto.style.backgroundSize = 'cover';
+          personSheetPhoto.style.backgroundPosition = 'center';
+          if (personSheetPhotoAdd) personSheetPhotoAdd.textContent = 'Сменить фото';
+          if (personSheetPhotoRemove) personSheetPhotoRemove.hidden = false;
+        } else {
+          personSheetPhoto.classList.add('is-empty');
+          personSheetPhoto.textContent = initial;
+          personSheetPhoto.style.backgroundImage = '';
+          if (personSheetPhotoAdd) personSheetPhotoAdd.textContent = 'Добавить фото';
+          if (personSheetPhotoRemove) personSheetPhotoRemove.hidden = true;
+        }
+      }
+
+      function requestPhotoEdit(id) {
+        if (editUnlocked || sessionPassword) {
+          if (personPhotoFile) {
+            personPhotoFile.value = '';
+            personPhotoFile.click();
+          }
+          return;
+        }
+        openPasswordDialog({ type: 'photo', personId: id });
+      }
+
+      function requestPhotoRemove(id) {
+        if (editUnlocked || sessionPassword) {
+          removePersonPhoto(id);
+          return;
+        }
+        openPasswordDialog({ type: 'photo-remove', personId: id });
+      }
+
+      function uploadPersonPhoto(id, file) {
+        var node = TreeModel.findById(tree, id);
+        if (!node || !file) return Promise.resolve();
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы', 'error');
+          return Promise.resolve();
+        }
+        var password = sessionPassword;
+        if (!password) {
+          showToast('Сначала введите пароль', 'error');
+          return Promise.resolve();
+        }
+        showToast('Сжимаем фото…', 'success');
+        return Promise.all([
+          compressSquarePhoto(file, 800, 0.82),
+          compressSquarePhoto(file, 96, 0.8),
+        ])
+          .then(function (parts) {
+            showToast('Загружаем…', 'success');
+            return callPublishApi({
+              action: 'upload-photo',
+              password: password,
+              treeDir: TREE_DIR,
+              personId: String(id),
+              full: parts[0],
+              thumb: parts[1],
+              version: String(Date.now()),
+            });
+          })
+          .then(function (data) {
+            node.photo = data.photo || data.version || String(Date.now());
+            persistTree();
+            pushActivity({
+              type: 'photo',
+              at: new Date().toISOString(),
+              son: node.name || '',
+              sonId: id,
+            });
+            showToast('Фото добавлено. Нажмите «Сохранить»', 'success');
+            render(false);
+            if (personSheetTargetId && String(personSheetTargetId) === String(id)) {
+              openPersonSheet(id);
+            }
+          })
+          .catch(function (err) {
+            showToast((err && err.message) || 'Не удалось загрузить фото', 'error');
+          });
+      }
+
+      function removePersonPhoto(id) {
+        var node = TreeModel.findById(tree, id);
+        if (!node) return;
+        if (!photoVersion(node)) return;
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы', 'error');
+          return;
+        }
+        var password = sessionPassword;
+        if (!password) {
+          showToast('Сначала введите пароль', 'error');
+          return;
+        }
+        askConfirm('Убрать фото у «' + (node.name || '') + '»?').then(function (ok) {
+          if (!ok) return;
+          callPublishApi({
+            action: 'delete-photo',
+            password: password,
+            treeDir: TREE_DIR,
+            personId: String(id),
+          })
+            .catch(function () {
+              return { ok: true };
+            })
+            .then(function () {
+              delete node.photo;
+              persistTree();
+              pushActivity({
+                type: 'photo-remove',
+                at: new Date().toISOString(),
+                son: node.name || '',
+                sonId: id,
+              });
+              showToast('Фото убрано. Нажмите «Сохранить»', 'success');
+              render(false);
+              if (personSheetTargetId && String(personSheetTargetId) === String(id)) {
+                openPersonSheet(id);
+              }
+            });
+        });
+      }
+
+
       function finishBoot() {
+        var session = readViewSession();
+        if (!session) {
+          showViewGate();
+          updateViewButtons();
+          refreshActivityUi();
+          updateWhoamiUi();
+          updateSaveButton();
+          return;
+        }
+        setViewLocked(false);
+        if (!myPersonId) {
+          myPersonId = session.personId;
+          try {
+            localStorage.setItem(MY_PERSON_KEY, myPersonId);
+          } catch (err) {}
+        }
         setViewFilter('all', false);
         updateViewButtons();
         refreshActivityUi();
@@ -7218,6 +7861,100 @@
           render(true);
           maybeAskWhoami();
         }
+      }
+
+
+      if (gateSearch) {
+        gateSearch.addEventListener('input', function () {
+          gateSelectedId = null;
+          if (gatePersonId) gatePersonId.value = '';
+          if (gateSelected) gateSelected.hidden = true;
+          renderGateResults(gateSearch.value);
+        });
+      }
+      if (gateForm) {
+        gateForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var personId = gateSelectedId || (gatePersonId && gatePersonId.value);
+          var password = gatePassword ? gatePassword.value : '';
+          if (!personId) {
+            if (gateError) {
+              gateError.textContent = 'Выберите себя из списка';
+              gateError.hidden = false;
+            }
+            return;
+          }
+          if (!password) {
+            if (gateError) {
+              gateError.textContent = 'Введите пароль';
+              gateError.hidden = false;
+            }
+            return;
+          }
+          if (gateSubmit) gateSubmit.disabled = true;
+          if (gateError) gateError.hidden = true;
+          verifyAuth(password)
+            .then(function (data) {
+              unlockViewWithPerson(personId, password, data);
+              if (gatePassword) gatePassword.value = '';
+              updateViewButtons();
+              refreshActivityUi();
+              updateSaveButton();
+              loadWeather();
+              rebuildLineSets();
+              updateWhoamiUi();
+              if (preferReducedWhoamiMotion()) {
+                whoamiFocusAfterReveal = false;
+                goToPerson(personId);
+                armWhoamiReveal();
+                redrawLinks();
+                startWhoamiReveal();
+              } else {
+                whoamiFocusAfterReveal = true;
+                prepareWhoamiPathView(personId);
+                armWhoamiReveal();
+                redrawLinks();
+                startWhoamiReveal();
+              }
+              showToast('Добро пожаловать', 'success');
+            })
+            .catch(function (err) {
+              if (gateError) {
+                gateError.textContent = (err && err.message) || 'Неверный пароль';
+                gateError.hidden = false;
+              }
+            })
+            .finally(function () {
+              if (gateSubmit) gateSubmit.disabled = false;
+            });
+        });
+      }
+      if (logoutBtn) {
+        logoutBtn.addEventListener('click', function () {
+          setNavMenuOpen(false);
+          logoutView();
+        });
+      }
+      if (personSheetPhotoAdd) {
+        personSheetPhotoAdd.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          requestPhotoEdit(personSheetTargetId);
+        });
+      }
+      if (personSheetPhotoRemove) {
+        personSheetPhotoRemove.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          requestPhotoRemove(personSheetTargetId);
+        });
+      }
+      if (personPhotoFile) {
+        personPhotoFile.addEventListener('change', function () {
+          var file = personPhotoFile.files && personPhotoFile.files[0];
+          var id = personSheetTargetId;
+          personPhotoFile.value = '';
+          if (!file || !id) return;
+          uploadPersonPhoto(id, file);
+        });
       }
 
       initChrome();
