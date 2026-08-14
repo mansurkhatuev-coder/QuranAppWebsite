@@ -304,8 +304,14 @@ function fallbackEditorPassword(treeDir: TreeDir) {
   );
 }
 
-function superPasswordValue() {
-  return normalizePassword(Deno.env.get('DREWO_SUPER_PASSWORD') ?? '');
+function superPasswordSecretName(treeDir: TreeDir) {
+  return treeDir === 'drewo-dada-yurt'
+    ? 'DREWO_DADA_YURT_SUPER_PASSWORD'
+    : 'DREWO_SUPER_PASSWORD';
+}
+
+function superPasswordValue(treeDir: TreeDir) {
+  return normalizePassword(Deno.env.get(superPasswordSecretName(treeDir)) ?? '');
 }
 
 function accessPath(treeDir: TreeDir) {
@@ -365,7 +371,7 @@ async function resolveRole(
 ): Promise<AuthRole | null> {
   const given = normalizePassword(password);
   if (!given) return null;
-  const superPw = superPasswordValue();
+  const superPw = superPasswordValue(treeDir);
   if (superPw && given === superPw) return 'super';
   if (access.passwordHash) {
     const hashed = await hashPassword(given);
@@ -586,7 +592,7 @@ Deno.serve(async (request) => {
     const access = parseAccess(accessFile?.content);
     const manifest = parseManifest(manifestFile?.content);
     const pinned = new Set(access.pinnedBackups.filter((name) => isSafeBackupName(name, treeDir)));
-    const superConfigured = Boolean(superPasswordValue());
+    const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
       return jsonResponse({
@@ -619,7 +625,7 @@ Deno.serve(async (request) => {
       if (!superConfigured) {
         if (allowEditorUntilConfigured && role === 'editor') return null;
         return jsonResponse(
-          { error: 'Суперпароль не настроен. Задайте секрет DREWO_SUPER_PASSWORD и задеплойте функцию.' },
+          { error: `Суперпароль не настроен. Задайте секрет ${superPasswordSecretName(treeDir)} и задеплойте функцию.` },
           503
         );
       }
