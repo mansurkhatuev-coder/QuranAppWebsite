@@ -240,7 +240,7 @@ PERSON_SHEET_PHOTO = r"""
           <button type="button" id="person-sheet-photo-add">Добавить фото</button>
           <button type="button" id="person-sheet-photo-remove" hidden>Убрать фото</button>
         </div>
-        <input id="person-photo-file" type="file" accept="image/*" capture="environment" hidden>
+        <input id="person-photo-file" type="file" accept="image/*" hidden>
       </div>
 """
 
