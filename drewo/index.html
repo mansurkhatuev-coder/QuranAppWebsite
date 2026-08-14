@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru" style="background-color: rgb(13, 26, 34);"><head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
   <title>Хьоти некъ</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -1918,16 +1918,37 @@
 
     .view-gate {
       position: fixed;
-      inset: 0;
+      left: 0;
+      right: 0;
+      top: var(--vv-offset-top, 0px);
+      width: 100%;
+      height: var(--vv-height, 100%);
+      height: var(--vv-height, 100dvh);
       z-index: 10000;
       display: flex;
       align-items: center;
       justify-content: center;
       padding: 1.25rem;
       padding-bottom: max(1.25rem, env(safe-area-inset-bottom));
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       background:
         radial-gradient(ellipse at 50% 20%, color-mix(in srgb, #1e3d36 55%, transparent), transparent 55%),
         linear-gradient(180deg, #071018 0%, #0d1a22 55%, #12261f 100%);
+    }
+    .view-gate.keyboard-open {
+      align-items: flex-start;
+      padding-top: max(0.75rem, env(safe-area-inset-top, 0px));
+      padding-bottom: 0.75rem;
+    }
+    .view-gate.keyboard-open .view-gate-card {
+      max-height: none;
+      width: min(100%, 26rem);
+    }
+    .view-gate.keyboard-open #gate-results {
+      max-height: min(28vh, 7rem);
     }
     body:not(.view-locked) .view-gate {
       display: none !important;
@@ -1935,7 +1956,10 @@
     .view-gate-card {
       width: min(100%, 26rem);
       max-height: min(92vh, 40rem);
+      max-height: min(calc(var(--vv-height, 100dvh) - 2.5rem), 40rem);
       overflow: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior: contain;
       display: flex;
       flex-direction: column;
       gap: 0.75rem;
@@ -7896,8 +7920,30 @@
       startYearsCalendarPulse();
 
 
+      function syncVisualViewportLayout() {
+        var vv = window.visualViewport;
+        var height = vv ? vv.height : window.innerHeight;
+        var offsetTop = vv ? vv.offsetTop : 0;
+        var layoutH = window.innerHeight || height;
+        var keyboardOpen = layoutH - height > 100;
+        try {
+          document.documentElement.style.setProperty('--vv-height', Math.round(height) + 'px');
+          document.documentElement.style.setProperty('--vv-offset-top', Math.round(offsetTop) + 'px');
+        } catch (err) {}
+        var gate = document.getElementById('view-gate');
+        if (gate) {
+          var showKb =
+            keyboardOpen &&
+            document.body.classList.contains('view-locked') &&
+            !gate.hidden;
+          gate.classList.toggle('keyboard-open', !!showKb);
+        }
+      }
+
       function pinAppShell() {
-        // Keep chrome on-screen, but do not fight dialogs / iOS keyboard.
+        // Always size gate to visualViewport (iOS keyboard), but do not fight
+        // dialogs / focused inputs by forcing document scroll back to 0.
+        syncVisualViewportLayout();
         try {
           if (document.querySelector('dialog[open]')) return;
           var ae = document.activeElement;
@@ -7912,6 +7958,25 @@
           document.documentElement.scrollTop = 0;
           document.body.scrollTop = 0;
         } catch (err2) {}
+      }
+
+      function ensureGateFieldVisible(el) {
+        if (!el) return;
+        var run = function () {
+          syncVisualViewportLayout();
+          try {
+            el.scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'smooth' });
+          } catch (err) {
+            try {
+              el.scrollIntoView(true);
+            } catch (err2) {}
+          }
+        };
+        requestAnimationFrame(function () {
+          run();
+          window.setTimeout(run, 120);
+          window.setTimeout(run, 320);
+        });
       }
 
       function lockPageZoom() {
@@ -8006,6 +8071,7 @@
       function setViewLocked(locked) {
         viewUnlocked = !locked;
         document.body.classList.toggle('view-locked', !!locked);
+        syncVisualViewportLayout();
       }
 
       function formatMatchLabel(m) {
@@ -8031,6 +8097,12 @@
         }
         if (gateSearch) gateSearch.value = m.name;
         if (gateResults) gateResults.replaceChildren();
+        if (gatePassword) {
+          try {
+            gatePassword.focus();
+          } catch (err) {}
+          ensureGateFieldVisible(gatePassword);
+        }
       }
 
       function renderGateResults(query) {
@@ -8343,6 +8415,14 @@
           if (gatePersonId) gatePersonId.value = '';
           if (gateSelected) gateSelected.hidden = true;
           renderGateResults(gateSearch.value);
+        });
+        gateSearch.addEventListener('focus', function () {
+          ensureGateFieldVisible(gateSearch);
+        });
+      }
+      if (gatePassword) {
+        gatePassword.addEventListener('focus', function () {
+          ensureGateFieldVisible(gatePassword);
         });
       }
       if (gateForm) {
