@@ -397,20 +397,17 @@
                                                     {
                                                       "id": "idris-mokhmad-abu",
                                                       "name": "Идрис",
-                                                      "sons": [],
-                                                      "born": 2006
+                                                      "sons": []
                                                     },
                                                     {
                                                       "id": "adam-apti-abu",
                                                       "name": "Адам",
-                                                      "sons": [],
-                                                      "born": 2008
+                                                      "sons": []
                                                     },
                                                     {
                                                       "id": "added-1785753166572-shx88n",
                                                       "name": "Мухьаммад",
-                                                      "sons": [],
-                                                      "born": 2026
+                                                      "sons": []
                                                     }
                                                   ]
                                                 },
@@ -476,14 +473,17 @@
                                                     {
                                                       "id": "khamzat-akhmad",
                                                       "name": "Хьамзат",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2009
                                                     },
                                                     {
                                                       "id": "guno",
                                                       "name": "Гуно",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2010
                                                     }
-                                                  ]
+                                                  ],
+                                                  "born": 1989
                                                 },
                                                 {
                                                   "id": "mansur",
@@ -492,12 +492,15 @@
                                                     {
                                                       "id": "mukhammad-mansur",
                                                       "name": "Мухьаммад",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2026
                                                     }
                                                   ],
                                                   "born": 1999
                                                 }
-                                              ]
+                                              ],
+                                              "born": 1952,
+                                              "died": 2011
                                             },
                                             {
                                               "id": "ruslan",
