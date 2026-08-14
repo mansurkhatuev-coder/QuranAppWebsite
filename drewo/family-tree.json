@@ -397,17 +397,20 @@
                                                     {
                                                       "id": "idris-mokhmad-abu",
                                                       "name": "Идрис",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2006
                                                     },
                                                     {
                                                       "id": "adam-apti-abu",
                                                       "name": "Адам",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2008
                                                     },
                                                     {
                                                       "id": "added-1785753166572-shx88n",
                                                       "name": "Мухьаммад",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2026
                                                     }
                                                   ]
                                                 },
