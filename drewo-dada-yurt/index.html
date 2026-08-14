@@ -7883,6 +7883,12 @@
         }
         if (gateSearch) gateSearch.value = m.name;
         if (gateResults) gateResults.replaceChildren();
+        if (gatePassword) {
+          try {
+            gatePassword.focus();
+          } catch (err) {}
+          ensureGateFieldVisible(gatePassword);
+        }
       }
 
       function renderGateResults(query) {
