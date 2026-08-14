@@ -271,11 +271,177 @@ async function githubCommitChanges(options: {
 
 const ALLOWED_TREE_DIRS = ['drewo', 'drewo-dada-yurt'] as const;
 type TreeDir = (typeof ALLOWED_TREE_DIRS)[number];
+type AuthRole = 'editor' | 'super';
+
+const AUTO_BACKUP_KEEP = 30;
+
+type AccessState = {
+  passwordHash: string | null;
+  locked: boolean;
+  lockedReason: string;
+  pinnedBackups: string[];
+};
+
+type ManifestItem = {
+  name: string;
+  savedAt: string;
+  personCount: number;
+  pinned: boolean;
+  label: string;
+};
 
 function resolveTreeDir(raw: unknown): TreeDir | null {
   const value = typeof raw === 'string' ? raw.trim() : '';
   if (!value) return 'drewo';
   return (ALLOWED_TREE_DIRS as readonly string[]).includes(value) ? (value as TreeDir) : null;
+}
+
+function fallbackEditorPassword(treeDir: TreeDir) {
+  return normalizePassword(
+    treeDir === 'drewo-dada-yurt'
+      ? Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ'
+      : Deno.env.get('DREWO_PASSWORD') ?? 'гуно'
+  );
+}
+
+function superPasswordSecretName(treeDir: TreeDir) {
+  return treeDir === 'drewo-dada-yurt'
+    ? 'DREWO_DADA_YURT_SUPER_PASSWORD'
+    : 'DREWO_SUPER_PASSWORD';
+}
+
+function superPasswordValue(treeDir: TreeDir) {
+  return normalizePassword(Deno.env.get(superPasswordSecretName(treeDir)) ?? '');
+}
+
+function accessPath(treeDir: TreeDir) {
+  return `${treeDir}/access.json`;
+}
+
+function manifestPath(treeDir: TreeDir) {
+  return `${treeDir}/backups/manifest.json`;
+}
+
+function emptyAccess(): AccessState {
+  return { passwordHash: null, locked: false, lockedReason: '', pinnedBackups: [] };
+}
+
+function parseAccess(raw?: string): AccessState {
+  const base = emptyAccess();
+  if (!raw) return base;
+  try {
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    if (typeof parsed.passwordHash === 'string' && /^[a-f0-9]{64}$/i.test(parsed.passwordHash)) {
+      base.passwordHash = parsed.passwordHash.toLowerCase();
+    }
+    base.locked = parsed.locked === true;
+    if (typeof parsed.lockedReason === 'string') {
+      base.lockedReason = parsed.lockedReason.trim().slice(0, 200);
+    }
+    if (Array.isArray(parsed.pinnedBackups)) {
+      base.pinnedBackups = parsed.pinnedBackups.filter((n): n is string => typeof n === 'string');
+    }
+  } catch {
+    return emptyAccess();
+  }
+  return base;
+}
+
+function serializeAccess(access: AccessState) {
+  return `${JSON.stringify(
+    {
+      passwordHash: access.passwordHash,
+      locked: access.locked,
+      lockedReason: access.lockedReason,
+      pinnedBackups: access.pinnedBackups,
+    },
+    null,
+    2
+  )}\n`;
+}
+
+async function hashPassword(normalized: string) {
+  return fingerprintText(`drewo-pw:${normalized}`);
+}
+
+async function resolveRole(
+  password: unknown,
+  treeDir: TreeDir,
+  access: AccessState
+): Promise<AuthRole | null> {
+  const given = normalizePassword(password);
+  if (!given) return null;
+  const superPw = superPasswordValue(treeDir);
+  if (superPw && given === superPw) return 'super';
+  if (access.passwordHash) {
+    const hashed = await hashPassword(given);
+    return hashed === access.passwordHash ? 'editor' : null;
+  }
+  return given === fallbackEditorPassword(treeDir) ? 'editor' : null;
+}
+
+function countPeopleFromTreeJson(treeJson: string): number {
+  try {
+    const tree = JSON.parse(treeJson) as { sons?: unknown[] };
+    let n = 0;
+    const walk = (node: { sons?: unknown[] } | null) => {
+      if (!node || typeof node !== 'object') return;
+      n += 1;
+      (Array.isArray(node.sons) ? node.sons : []).forEach((child) => {
+        walk(child as { sons?: unknown[] });
+      });
+    };
+    walk(tree);
+    return n;
+  } catch {
+    return 0;
+  }
+}
+
+function parseManifest(raw?: string): ManifestItem[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw) as { items?: unknown } | unknown[];
+    const items = Array.isArray(parsed)
+      ? parsed
+      : parsed && typeof parsed === 'object' && Array.isArray(parsed.items)
+        ? parsed.items
+        : [];
+    return items
+      .map((item) => {
+        if (!item || typeof item !== 'object') return null;
+        const rec = item as Record<string, unknown>;
+        if (typeof rec.name !== 'string') return null;
+        return {
+          name: rec.name,
+          savedAt: typeof rec.savedAt === 'string' ? rec.savedAt : '',
+          personCount: Number(rec.personCount) || 0,
+          pinned: rec.pinned === true,
+          label: typeof rec.label === 'string' ? rec.label : '',
+        } satisfies ManifestItem;
+      })
+      .filter((item): item is ManifestItem => !!item);
+  } catch {
+    return [];
+  }
+}
+
+function serializeManifest(items: ManifestItem[]) {
+  return `${JSON.stringify({ items }, null, 2)}\n`;
+}
+
+function guessSavedAt(name: string) {
+  const match = name.match(/(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-(\d{2})/);
+  if (!match) return '';
+  return `${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`;
+}
+
+function backupListLabel(name: string, treeDir: TreeDir) {
+  const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return name
+    .replace(new RegExp(`^${prefix}-`), '')
+    .replace(/\.(html|json)$/, '')
+    .replace(/_/g, ' ');
 }
 
 function backupNamePrefix(treeDir: TreeDir) {
@@ -305,7 +471,7 @@ async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
         item &&
         item.type === 'file' &&
         typeof item.name === 'string' &&
-        (String(item.name).endsWith('.html') || String(item.name).endsWith('.json'))
+        isSafeBackupName(String(item.name), treeDir)
     )
     .map((item) => ({
       path: String(item.path),
@@ -313,6 +479,44 @@ async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
       name: String(item.name),
     }))
     .sort((a, b) => (a.name < b.name ? 1 : a.name > b.name ? -1 : 0));
+}
+
+function pruneBackupDeletes(
+  existing: Array<{ path: string; name: string }>,
+  pinned: Set<string>,
+  extraKeep: string[]
+) {
+  const keep = new Set<string>([...pinned, ...extraKeep]);
+  const extraUnpinned = extraKeep.filter((name) => !pinned.has(name)).length;
+  const room = Math.max(0, AUTO_BACKUP_KEEP - extraUnpinned);
+  existing
+    .filter((b) => !keep.has(b.name) && !pinned.has(b.name))
+    .slice(0, room)
+    .forEach((b) => keep.add(b.name));
+  return existing
+    .filter((b) => !keep.has(b.name))
+    .map((b) => ({ path: b.path, delete: true as const }));
+}
+
+function mergeManifest(
+  previous: ManifestItem[],
+  remainingNames: string[],
+  pinned: Set<string>,
+  incoming: ManifestItem[]
+) {
+  const byName = new Map<string, ManifestItem>();
+  previous.forEach((item) => byName.set(item.name, item));
+  incoming.forEach((item) => byName.set(item.name, item));
+  return remainingNames.map((name) => {
+    const prev = byName.get(name);
+    return {
+      name,
+      savedAt: prev?.savedAt || guessSavedAt(name),
+      personCount: prev?.personCount || 0,
+      pinned: pinned.has(name),
+      label: prev?.label || '',
+    } satisfies ManifestItem;
+  });
 }
 
 function parseBackupPayload(raw: string): { treeJson: string; activityJson: string } | null {
@@ -374,39 +578,247 @@ Deno.serve(async (request) => {
       );
     }
 
-    const expectedPassword = normalizePassword(
-      treeDir === 'drewo-dada-yurt'
-        ? Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ'
-        : Deno.env.get('DREWO_PASSWORD') ?? 'гуно'
-    );
-    if (normalizePassword(body.password) !== expectedPassword) {
-      return jsonResponse({ error: 'Неверный пароль' }, 401);
-    }
     const indexPath = `${treeDir}/index.html`;
     const jsonPath = `${treeDir}/family-tree.json`;
     const backupsDir = `${treeDir}/backups`;
     const backupPrefix = backupNamePrefix(treeDir);
-    const labelPrefixRe = new RegExp(`^${backupPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}-`);
+    const action =
+      typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
 
-    const action = typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
+    const [accessFile, manifestFile] = await Promise.all([
+      githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
+      githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
+    ]);
+    const access = parseAccess(accessFile?.content);
+    const manifest = parseManifest(manifestFile?.content);
+    const pinned = new Set(access.pinnedBackups.filter((name) => isSafeBackupName(name, treeDir)));
+    const superConfigured = Boolean(superPasswordValue(treeDir));
 
-    if (action === 'list-backups') {
-      const backups = await listBackupFiles(githubToken, githubRepo, treeDir);
+    if (action === 'status') {
       return jsonResponse({
         ok: true,
         treeDir,
-        backups: backups.slice(0, 10).map((b) => ({
-          name: b.name,
-          path: b.path,
-          label: b.name
-            .replace(labelPrefixRe, '')
-            .replace(/\.(html|json)$/, '')
-            .replace(/_/g, ' '),
-        })),
+        locked: access.locked,
+        lockedReason: access.lockedReason,
+        superConfigured,
+      });
+    }
+
+    const role = await resolveRole(body.password, treeDir, access);
+    if (!role) {
+      return jsonResponse({ error: 'Неверный пароль' }, 401);
+    }
+
+    if (action === 'auth') {
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        role,
+        locked: access.locked,
+        lockedReason: access.lockedReason,
+        superConfigured,
+      });
+    }
+
+    const requireSuper = (act: string, allowEditorUntilConfigured = false) => {
+      if (role === 'super') return null;
+      if (!superConfigured) {
+        if (allowEditorUntilConfigured && role === 'editor') return null;
+        return jsonResponse(
+          { error: `Суперпароль не настроен. Задайте секрет ${superPasswordSecretName(treeDir)} и задеплойте функцию.` },
+          503
+        );
+      }
+      return jsonResponse({ error: `Для действия «${act}» нужен суперпароль` }, 403);
+    };
+
+    const writeAccess = async (next: AccessState, message: string) => {
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message,
+        changes: [{ path: accessPath(treeDir), content: serializeAccess(next) }],
+      });
+    };
+
+    if (action === 'list-backups') {
+      const backups = await listBackupFiles(githubToken, githubRepo, treeDir);
+      const byName = new Map(manifest.map((item) => [item.name, item]));
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        locked: access.locked,
+        role,
+        backups: backups.map((b) => {
+          const meta = byName.get(b.name);
+          return {
+            name: b.name,
+            path: b.path,
+            label: meta?.label || backupListLabel(b.name, treeDir),
+            savedAt: meta?.savedAt || guessSavedAt(b.name),
+            personCount: meta?.personCount || 0,
+            pinned: pinned.has(b.name),
+          };
+        }),
+      });
+    }
+
+    if (action === 'set-lock') {
+      const denied = requireSuper('set-lock');
+      if (denied) return denied;
+      const next: AccessState = {
+        ...access,
+        locked: body.locked === true,
+        lockedReason:
+          typeof body.reason === 'string' ? body.reason.trim().slice(0, 200) : access.lockedReason,
+      };
+      await writeAccess(
+        next,
+        `${next.locked ? 'Lock' : 'Unlock'} ${treeDir} family tree edits`
+      );
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        locked: next.locked,
+        lockedReason: next.lockedReason,
+      });
+    }
+
+    if (action === 'set-password') {
+      const denied = requireSuper('set-password');
+      if (denied) return denied;
+      const nextPassword = normalizePassword(body.newPassword);
+      if (nextPassword.length < 2) {
+        return jsonResponse({ error: 'Новый пароль слишком короткий' }, 400);
+      }
+      if (nextPassword.length > 64) {
+        return jsonResponse({ error: 'Новый пароль слишком длинный' }, 400);
+      }
+      const next: AccessState = {
+        ...access,
+        passwordHash: await hashPassword(nextPassword),
+      };
+      await writeAccess(next, `Change ${treeDir} editor password`);
+      return jsonResponse({ ok: true, treeDir, passwordChanged: true });
+    }
+
+    if (action === 'pin-backup') {
+      const denied = requireSuper('pin-backup', true);
+      if (denied) return denied;
+      const backupName = typeof body.backup === 'string' ? body.backup.trim() : '';
+      if (!isSafeBackupName(backupName, treeDir)) {
+        return jsonResponse({ error: 'Некорректное имя бэкапа' }, 400);
+      }
+      const nextPinned = new Set(pinned);
+      if (body.pinned === false) nextPinned.delete(backupName);
+      else nextPinned.add(backupName);
+      const next: AccessState = { ...access, pinnedBackups: Array.from(nextPinned) };
+      const nextManifest = mergeManifest(
+        manifest,
+        (await listBackupFiles(githubToken, githubRepo, treeDir)).map((b) => b.name),
+        nextPinned,
+        []
+      );
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `${nextPinned.has(backupName) ? 'Pin' : 'Unpin'} ${treeDir} backup ${backupName}`,
+        changes: [
+          { path: accessPath(treeDir), content: serializeAccess(next) },
+          { path: manifestPath(treeDir), content: serializeManifest(nextManifest) },
+        ],
+      });
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        backup: backupName,
+        pinned: nextPinned.has(backupName),
+      });
+    }
+
+    const makeSnapshotRecord = (
+      treeJson: string,
+      activityJson: string,
+      extra: Record<string, unknown> = {}
+    ) => {
+      const savedAt = new Date().toISOString();
+      const personCount = countPeopleFromTreeJson(treeJson);
+      const label = typeof extra.label === 'string' ? extra.label : '';
+      return {
+        json: JSON.stringify(
+          {
+            treeJson,
+            activityJson,
+            savedAt,
+            personCount,
+            ...extra,
+          },
+          null,
+          2
+        ),
+        savedAt,
+        personCount,
+        label,
+      };
+    };
+
+    if (action === 'snapshot') {
+      if (access.locked && role !== 'super') {
+        return jsonResponse({ error: 'Правки заблокированы. Нужен суперпароль.' }, 403);
+      }
+      const [jsonFile, current, existingBackups] = await Promise.all([
+        githubGetFile(githubToken, githubRepo, jsonPath),
+        githubGetFile(githubToken, githubRepo, indexPath),
+        listBackupFiles(githubToken, githubRepo, treeDir),
+      ]);
+      const treeJson = jsonFile?.content?.trim() || extractScriptJson(current?.content || '', 'tree-data');
+      if (!treeJson) {
+        return jsonResponse({ error: 'Нет дерева для снимка' }, 400);
+      }
+      const activityJson = extractScriptJson(current?.content || '', 'activity-log') || '[]';
+      const stamp = stampNow();
+      const backupName = `${backupPrefix}-${stamp}.json`;
+      const label =
+        typeof body.label === 'string' ? body.label.trim().slice(0, 80) : 'Ручной снимок';
+      const record = makeSnapshotRecord(treeJson, activityJson, { label, kind: 'snapshot' });
+      const remaining = [
+        backupName,
+        ...existingBackups
+          .filter((b) => !pruneBackupDeletes(existingBackups, pinned, [backupName]).some((d) => d.path === b.path))
+          .map((b) => b.name),
+      ];
+      const uniqueRemaining = Array.from(new Set(remaining));
+      const nextManifest = mergeManifest(manifest, uniqueRemaining, pinned, [
+        {
+          name: backupName,
+          savedAt: record.savedAt,
+          personCount: record.personCount,
+          pinned: false,
+          label,
+        },
+      ]);
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Snapshot ${treeDir} family tree (${stamp})`,
+        changes: [
+          { path: `${backupsDir}/${backupName}`, content: record.json + '\n' },
+          { path: manifestPath(treeDir), content: serializeManifest(nextManifest) },
+          ...pruneBackupDeletes(existingBackups, pinned, [backupName]),
+        ],
+      });
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        backup: backupName,
+        personCount: record.personCount,
+        savedAt: record.savedAt,
       });
     }
 
     if (action === 'restore') {
+      const denied = requireSuper('restore', true);
+      if (denied) return denied;
       const backupName = typeof body.backup === 'string' ? body.backup.trim() : '';
       if (!isSafeBackupName(backupName, treeDir)) {
         return jsonResponse({ error: 'Некорректное имя бэкапа' }, 400);
@@ -435,37 +847,38 @@ Deno.serve(async (request) => {
       let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', parsed.treeJson);
       htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', parsed.activityJson);
       const jsonBody = parsed.treeJson.endsWith('\n') ? parsed.treeJson : `${parsed.treeJson}\n`;
-      const snapshot = JSON.stringify(
-        {
-          treeJson: parsed.treeJson,
-          activityJson: parsed.activityJson,
-          restoredFrom: backupName,
-          savedAt: new Date().toISOString(),
-        },
-        null,
-        2
-      );
-
-      const keepNames = new Set(
-        existingBackups
-          .map((b) => b.name)
-          .filter((n) => n !== backupName)
-          .slice(0, 9)
-      );
-      const changes: TreeChange[] = [
-        { path: indexPath, content: htmlToWrite },
-        { path: jsonPath, content: jsonBody },
-        { path: `${backupsDir}/${backupPrefix}-${stamp}.json`, content: snapshot + '\n' },
-        ...existingBackups
-          .filter((b) => !keepNames.has(b.name) && b.name !== `${backupPrefix}-${stamp}.json`)
-          .map((b) => ({ path: b.path, delete: true as const })),
+      const newBackupName = `${backupPrefix}-${stamp}.json`;
+      const record = makeSnapshotRecord(parsed.treeJson, parsed.activityJson, {
+        restoredFrom: backupName,
+        kind: 'restore-point',
+        label: 'До восстановления',
+      });
+      const pruneDeletes = pruneBackupDeletes(existingBackups, pinned, [newBackupName, backupName]);
+      const remainingNames = [
+        newBackupName,
+        ...existingBackups.filter((b) => !pruneDeletes.some((d) => d.path === b.path)).map((b) => b.name),
       ];
+      const nextManifest = mergeManifest(manifest, Array.from(new Set(remainingNames)), pinned, [
+        {
+          name: newBackupName,
+          savedAt: record.savedAt,
+          personCount: record.personCount,
+          pinned: false,
+          label: 'До восстановления',
+        },
+      ]);
 
       await githubCommitChanges({
         token: githubToken,
         repo: githubRepo,
         message: `Restore ${treeDir} family tree from ${backupName}`,
-        changes,
+        changes: [
+          { path: indexPath, content: htmlToWrite },
+          { path: jsonPath, content: jsonBody },
+          { path: `${backupsDir}/${newBackupName}`, content: record.json + '\n' },
+          { path: manifestPath(treeDir), content: serializeManifest(nextManifest) },
+          ...pruneDeletes,
+        ],
       });
 
       const fingerprint = await fingerprintText(normalizeTreeJson(parsed.treeJson));
@@ -482,6 +895,10 @@ Deno.serve(async (request) => {
 
     if (action !== 'publish') {
       return jsonResponse({ error: `Неизвестное действие: ${action}` }, 400);
+    }
+
+    if (access.locked && role !== 'super') {
+      return jsonResponse({ error: 'Правки заблокированы. Нужен суперпароль.' }, 403);
     }
 
     const treeJson = typeof body.treeJson === 'string' ? body.treeJson.trim() : '';
@@ -567,28 +984,28 @@ Deno.serve(async (request) => {
       );
     }
 
-    const snapshot = JSON.stringify(
+    const backupName = `${backupPrefix}-${stamp}.json`;
+    const record = makeSnapshotRecord(treeJson, activityJson, { kind: 'auto' });
+    const pruneDeletes = pruneBackupDeletes(existingBackups, pinned, [backupName]);
+    const remainingNames = [
+      backupName,
+      ...existingBackups.filter((b) => !pruneDeletes.some((d) => d.path === b.path)).map((b) => b.name),
+    ];
+    const nextManifest = mergeManifest(manifest, Array.from(new Set(remainingNames)), pinned, [
       {
-        treeJson,
-        activityJson,
-        savedAt: new Date().toISOString(),
+        name: backupName,
+        savedAt: record.savedAt,
+        personCount: record.personCount,
+        pinned: false,
+        label: '',
       },
-      null,
-      2
-    );
-    const backupPath = `${backupsDir}/${backupPrefix}-${stamp}.json`;
-
-    // Keep newest 9 existing + this new backup (=10). Delete the rest in the same commit.
-    const keepExisting = existingBackups.slice(0, 9).map((b) => b.path);
-    const keepSet = new Set([...keepExisting, backupPath]);
-    const pruneDeletes = existingBackups
-      .filter((b) => !keepSet.has(b.path))
-      .map((b) => ({ path: b.path, delete: true as const }));
+    ]);
 
     const changes: TreeChange[] = [
       ...(indexWillChange ? [{ path: indexPath, content: htmlToWrite }] : []),
       ...(jsonWillChange ? [{ path: jsonPath, content: jsonBody }] : []),
-      { path: backupPath, content: snapshot + '\n' },
+      { path: `${backupsDir}/${backupName}`, content: record.json + '\n' },
+      { path: manifestPath(treeDir), content: serializeManifest(nextManifest) },
       ...pruneDeletes,
     ];
 
@@ -609,10 +1026,11 @@ Deno.serve(async (request) => {
       jsonChanged: jsonWillChange,
       fingerprint,
       backupCreated: true,
-      backupCount: Math.min(existingBackups.length + 1, 10),
+      backupCount: nextManifest.length,
       commitSha: commit.commitSha,
       repo: githubRepo,
       forced: force,
+      locked: access.locked,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
