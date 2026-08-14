@@ -1895,6 +1895,37 @@
       cursor: wait;
     }
 
+    .gate-status {
+      margin: 0;
+      padding: 0.55rem 0.7rem;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
+      background: color-mix(in srgb, var(--bg1) 35%, transparent);
+      color: color-mix(in srgb, #f7ecc0 88%, white);
+      font-size: 0.88rem;
+      font-weight: 600;
+      line-height: 1.35;
+    }
+    .gate-status.is-busy::before {
+      content: "";
+      display: inline-block;
+      width: 0.7em;
+      height: 0.7em;
+      margin-right: 0.45em;
+      border-radius: 50%;
+      border: 2px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      border-top-color: #f0d78a;
+      vertical-align: -0.05em;
+      animation: gate-spin 0.8s linear infinite;
+    }
+    @keyframes gate-spin {
+      to { transform: rotate(360deg); }
+    }
+    .gate-net-hint {
+      font-size: 0.78rem !important;
+      opacity: 0.9;
+    }
+
     .person-btn.has-photo {
       flex-direction: row;
       align-items: center;
@@ -1989,7 +2020,7 @@
   <div id="view-gate" class="view-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
     <form id="gate-form" class="view-gate-card">
       <strong id="gate-title">Дади-Юрт</strong>
-      <p class="install-steps">Выберите себя в списке и введите пароль семьи. Тёзок пока отличаем по отцу и годам.</p>
+      <p class="install-steps">Выберите себя в списке и введите пароль семьи. Тёзок отличаем по отцу, годам, а если годов нет — по деду и линии рода.</p>
       <label>
         Кто вы
         <input id="gate-search" type="search" placeholder="Начните вводить имя…" autocomplete="off" required>
@@ -2002,6 +2033,8 @@
         <input id="gate-password" type="password" name="password" autocomplete="current-password" required>
       </label>
       <p id="gate-error" class="dialog-error" hidden></p>
+      <p id="gate-status" class="gate-status" hidden></p>
+      <p class="install-steps gate-net-hint">Пароль проверяется через интернет (сервер). Если долго не входит — включите VPN и попробуйте снова.</p>
       <button type="submit" id="gate-submit">Войти</button>
     </form>
   </div>
@@ -3898,6 +3931,7 @@
       var gatePassword = document.getElementById('gate-password');
       var gateError = document.getElementById('gate-error');
       var gateSubmit = document.getElementById('gate-submit');
+      var gateStatus = document.getElementById('gate-status');
       var personSheetPhoto = document.getElementById('person-sheet-photo');
       var personSheetPhotoAdd = document.getElementById('person-sheet-photo-add');
       var personSheetPhotoRemove = document.getElementById('person-sheet-photo-remove');
@@ -4719,23 +4753,39 @@
         var q = String(query || '').trim().toLowerCase();
         var matches = [];
         if (!q) return matches;
-        function walk(node, parent) {
+        function walk(node, parent, grand) {
           if ((node.name || '').toLowerCase().includes(q)) {
+            var path = findPathToId(tree, node.id) || [];
+            var lineageNames = [];
+            for (var i = 0; i < path.length - 1; i++) {
+              var anc = TreeModel.findById(tree, path[i]);
+              if (anc && anc.name) lineageNames.push(anc.name);
+            }
+            // Короткая линия: … → дед → отец
+            var lineageHint = '';
+            if (lineageNames.length >= 2) {
+              var tail = lineageNames.slice(-2);
+              lineageHint = (lineageNames.length > 2 ? '… → ' : '') + tail.join(' → ');
+            } else if (lineageNames.length === 1) {
+              lineageHint = lineageNames[0];
+            }
             matches.push({
               id: node.id,
               name: node.name || '',
               fatherName: parent ? parent.name || '' : '',
               fatherId: parent ? parent.id : null,
+              grandfatherName: grand ? grand.name || '' : '',
+              lineageHint: lineageHint,
               born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
               died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
               years: TreeModel.formatLifeYears(node, 'g') || '',
             });
           }
           (node.sons || []).forEach(function (son) {
-            walk(son, node);
+            walk(son, node, parent);
           });
         }
-        walk(tree, null);
+        walk(tree, null, null);
         return matches;
       }
 
@@ -5281,13 +5331,11 @@
           var btn = document.createElement('button');
           btn.type = 'button';
           btn.textContent = m.name;
-          var bits = [];
-          if (m.fatherName) bits.push('отец: ' + m.fatherName);
-          if (m.years) bits.push(m.years);
-          if (bits.length) {
+          var subText = formatMatchLabel(m);
+          if (subText) {
             var sub = document.createElement('span');
             sub.className = 'whoami-father';
-            sub.textContent = bits.join(' · ');
+            sub.textContent = subText;
             btn.appendChild(document.createElement('br'));
             btn.appendChild(sub);
           }
@@ -7553,7 +7601,13 @@
       function formatMatchLabel(m) {
         var bits = [];
         if (m.fatherName) bits.push('отец: ' + m.fatherName);
-        if (m.years) bits.push(m.years);
+        if (m.years) {
+          bits.push(m.years);
+        } else if (m.grandfatherName) {
+          bits.push('дед: ' + m.grandfatherName);
+        } else if (m.lineageHint) {
+          bits.push(m.lineageHint);
+        }
         return bits.join(' · ');
       }
 
@@ -7620,6 +7674,15 @@
         if (gateError) {
           gateError.hidden = true;
           gateError.textContent = '';
+        }
+        if (gateStatus) {
+          gateStatus.hidden = true;
+          gateStatus.textContent = '';
+          gateStatus.classList.remove('is-busy');
+        }
+        if (gateSubmit) {
+          gateSubmit.disabled = false;
+          gateSubmit.textContent = 'Войти';
         }
         if (gateSearch) {
           gateSearch.value = '';
@@ -7891,10 +7954,22 @@
             }
             return;
           }
-          if (gateSubmit) gateSubmit.disabled = true;
+          if (gateSubmit) {
+            gateSubmit.disabled = true;
+            gateSubmit.textContent = 'Проверяем…';
+          }
           if (gateError) gateError.hidden = true;
+          if (gateStatus) {
+            gateStatus.hidden = false;
+            gateStatus.classList.add('is-busy');
+            gateStatus.textContent = 'Проверяем пароль на сервере… Если зависло — попробуйте VPN.';
+          }
           verifyAuth(password)
             .then(function (data) {
+              if (gateStatus) {
+                gateStatus.classList.remove('is-busy');
+                gateStatus.textContent = 'Готово, открываем древо…';
+              }
               unlockViewWithPerson(personId, password, data);
               if (gatePassword) gatePassword.value = '';
               updateViewButtons();
@@ -7919,13 +7994,30 @@
               showToast('Добро пожаловать', 'success');
             })
             .catch(function (err) {
+              var msg = (err && err.message) || 'Неверный пароль';
+              var networkish =
+                /failed to fetch|network|load failed|timeout|timed out|503|502|cloudflare|fetch/i.test(
+                  String(msg)
+                ) || (err && (err.status === 0 || err.status >= 500));
+              if (networkish) {
+                msg =
+                  'Не удалось связаться с сервером. Проверьте интернет или включите VPN и попробуйте снова.';
+              }
               if (gateError) {
-                gateError.textContent = (err && err.message) || 'Неверный пароль';
+                gateError.textContent = msg;
                 gateError.hidden = false;
+              }
+              if (gateStatus) {
+                gateStatus.hidden = true;
+                gateStatus.classList.remove('is-busy');
+                gateStatus.textContent = '';
               }
             })
             .finally(function () {
-              if (gateSubmit) gateSubmit.disabled = false;
+              if (gateSubmit) {
+                gateSubmit.disabled = false;
+                gateSubmit.textContent = 'Войти';
+              }
             });
         });
       }
