@@ -6992,9 +6992,13 @@
           addBtn.textContent = '+ сын';
           addBtn.style.fontSize = Math.max(8, 11 * s) + 'px';
           addBtn.style.minHeight = Math.max(18, 26 * s) + 'px';
-          addBtn.addEventListener('click', function (e) {
+          addBtn.addEventListener('pointerdown', function (e) {
             e.stopPropagation();
-            if (gestureMoved) return;
+          });
+          addBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            gestureMoved = false;
             requestAddSon(meta.id);
           });
           el.appendChild(addBtn);
@@ -7177,8 +7181,14 @@
       viewport.addEventListener('pointerdown', function (e) {
         if (dragState) return;
         if (e.pointerType === 'mouse' && e.button !== 0) return;
-        // В просмотре разрешаем pan даже с имени — иначе свайп случайно сворачивает ветку.
-        if (editMode && e.target.closest('button')) return;
+        // Не перехватывать клики по UI-кнопкам (+ сын, Удалить и т.п.).
+        // С имени (person-btn) pan в просмотре оставляем — иначе свайп сворачивает ветку.
+        var hitBtn =
+          e.target && e.target.closest
+            ? e.target.closest('button, a, input, textarea, select, label')
+            : null;
+        if (hitBtn && !hitBtn.classList.contains('person-btn')) return;
+        if (editMode && hitBtn) return;
         try {
           e.preventDefault();
           var sel = window.getSelection && window.getSelection();
