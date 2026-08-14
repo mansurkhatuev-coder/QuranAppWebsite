@@ -2090,10 +2090,13 @@
       flex-direction: row;
       align-items: center;
       justify-content: flex-start;
-      gap: 0.35rem;
+      gap: 0.55rem;
       text-align: left;
-      padding-left: 0.28rem;
-      padding-right: 0.5rem;
+      padding-left: 0.32rem;
+      padding-right: 0.55rem;
+    }
+    .person-btn.has-photo .person-avatar {
+      margin-right: 0.1rem;
     }
     .person-avatar {
       flex: 0 0 auto;
@@ -6201,7 +6204,7 @@
         var padX = 16;
         var borderX = 3;
         var minW = 58;
-        var photoExtra = hasPhoto ? 34 : 0;
+        var photoExtra = hasPhoto ? 42 : 0;
         var years = yearsTexts || null;
         try {
           if (!estimateBoxWidth._ctx) {
