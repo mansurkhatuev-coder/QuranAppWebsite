@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="ru" style="background-color: rgb(13, 26, 34);"><head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
   <title>Хьоти некъ</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
@@ -958,8 +958,10 @@
 
     .person-btn.has-years {
       min-height: 48px;
-      padding-top: 0.28rem;
-      padding-bottom: 0.28rem;
+      padding-top: 0.3rem;
+      padding-bottom: 0.32rem;
+      padding-left: 0.62rem;
+      padding-right: 0.62rem;
     }
 
     .person-name {
@@ -1893,6 +1895,217 @@
       }
     }
   
+
+    /* --- chrome polish: search / weather / fab / person sheet --- */
+    .header-bar .search-input {
+      min-height: 2.45rem;
+      padding: 0.42rem 0.95rem;
+      border-radius: 999px;
+      border-color: color-mix(in srgb, var(--sand) 40%, transparent);
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg1) 22%, transparent),
+          color-mix(in srgb, var(--bg0) 78%, black)
+        );
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sand) 10%, transparent);
+    }
+
+    .header-bar .search-input:focus {
+      border-color: color-mix(in srgb, var(--sand) 68%, white);
+      background: color-mix(in srgb, var(--bg0) 72%, black);
+    }
+
+    .search-results {
+      border-color: color-mix(in srgb, var(--sand) 36%, transparent);
+      border-radius: 14px;
+      background:
+        linear-gradient(
+          165deg,
+          color-mix(in srgb, #1a2f2a 38%, transparent),
+          transparent 46%
+        ),
+        color-mix(in srgb, var(--bg0) 94%, black);
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--sand) 14%, transparent),
+        0 18px 40px color-mix(in srgb, black 48%, transparent);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      padding: 0.4rem;
+    }
+
+    .search-result {
+      border-radius: 10px;
+      padding: 0.58rem 0.7rem;
+    }
+
+    .search-result:hover,
+    .search-result:focus-visible {
+      background: color-mix(in srgb, var(--sand) 16%, var(--bg1));
+    }
+
+    .weather-chip {
+      border-radius: 14px;
+      border-color: color-mix(in srgb, var(--sand) 40%, transparent);
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg2) 26%, var(--bg0)),
+          color-mix(in srgb, var(--bg0) 84%, black)
+        );
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sand) 12%, transparent);
+      min-height: 2.45rem;
+    }
+
+    .weather-temp {
+      color: color-mix(in srgb, var(--sand) 70%, white);
+      letter-spacing: 0.01em;
+    }
+
+    .fab-toggle {
+      width: 1.5rem;
+      height: 3.65rem;
+      border-radius: 0 14px 14px 0;
+      border-color: color-mix(in srgb, var(--sand) 48%, transparent);
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg2) 34%, var(--bg0)),
+          color-mix(in srgb, var(--bg0) 88%, black)
+        );
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--sand) 18%, transparent),
+        8px 0 22px color-mix(in srgb, black 32%, transparent);
+    }
+
+    .fab-rail[data-open="true"] .fab-toggle {
+      border-color: var(--sand);
+      background: color-mix(in srgb, var(--sand) 22%, var(--bg1));
+    }
+
+    .fab-panel button {
+      border-radius: 14px;
+      min-height: 2.6rem;
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg2) 28%, var(--bg0)),
+          color-mix(in srgb, var(--bg0) 84%, black)
+        );
+      border-color: color-mix(in srgb, var(--sand) 40%, transparent);
+    }
+
+    .fab-panel #install-home,
+    .fab-panel #reload-page {
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg2) 30%, var(--bg0)),
+          color-mix(in srgb, var(--bg0) 86%, black)
+        );
+    }
+
+    #person-sheet-dialog,
+    #whoami-dialog,
+    #bio-edit-dialog,
+    #year-edit-dialog,
+    #password-dialog,
+    #rename-dialog,
+    #save-dialog,
+    #add-dialog,
+    #admin-dialog,
+    #backup-dialog,
+    #history-dialog,
+    #install-dialog {
+      border-radius: 16px;
+      border-color: color-mix(in srgb, var(--sand) 42%, transparent);
+      background:
+        linear-gradient(
+          165deg,
+          color-mix(in srgb, #1a2f2a 40%, transparent),
+          transparent 44%
+        ),
+        color-mix(in srgb, var(--bg0) 92%, black);
+      box-shadow:
+        inset 0 1px 0 color-mix(in srgb, var(--sand) 16%, transparent),
+        0 22px 48px color-mix(in srgb, black 48%, transparent);
+    }
+
+    #person-sheet-dialog .history-body > strong,
+    #whoami-dialog .history-body > strong,
+    #bio-edit-dialog strong,
+    #year-edit-dialog strong,
+    #password-dialog strong,
+    #rename-dialog strong,
+    #save-dialog strong,
+    #add-dialog strong,
+    #admin-dialog strong,
+    #backup-dialog strong,
+    #history-dialog strong,
+    #install-dialog strong {
+      font-family: var(--font-display);
+      font-size: 1.35rem;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      color: color-mix(in srgb, var(--sand) 82%, white);
+    }
+
+    .person-sheet-meta {
+      padding: 0.35rem 0.55rem;
+      border-radius: 10px;
+      background: color-mix(in srgb, black 18%, transparent);
+      border: 1px solid color-mix(in srgb, var(--sand) 14%, transparent);
+    }
+
+    .date-chip {
+      border-radius: 999px;
+      min-height: 2.15rem;
+      padding: 0.38rem 0.85rem;
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg2) 24%, var(--bg0)),
+          color-mix(in srgb, var(--bg0) 82%, black)
+        );
+      border-color: color-mix(in srgb, var(--sand) 40%, transparent);
+      box-shadow: inset 0 1px 0 color-mix(in srgb, var(--sand) 10%, transparent);
+    }
+
+    .date-chip:not(.is-empty) {
+      color: color-mix(in srgb, var(--sand) 75%, white);
+    }
+
+    .person-sheet-bio {
+      border-radius: 12px;
+      border-color: color-mix(in srgb, var(--sand) 28%, transparent);
+      background:
+        linear-gradient(
+          180deg,
+          color-mix(in srgb, var(--bg1) 28%, transparent),
+          color-mix(in srgb, black 16%, transparent)
+        );
+    }
+
+    #person-sheet-dialog .dialog-actions button,
+    #whoami-dialog .dialog-actions button {
+      border-radius: 12px;
+      min-height: 2.4rem;
+      font-weight: 600;
+    }
+
+    html {
+      touch-action: manipulation;
+    }
+
+    body,
+    .header,
+    .nav-shell,
+    .fab-rail,
+    .view-gate,
+    dialog {
+      touch-action: manipulation;
+    }
+
     /* --- view gate + photos --- */
     body.view-locked .header,
     body.view-locked .header-anchor,
@@ -7851,7 +8064,24 @@
       }
       startYearsCalendarPulse();
 
+
+      function lockPageZoom() {
+        // Keep browser UI chrome at 1x; tree still uses its own pinch zoom in #viewport.
+        try {
+          ['gesturestart', 'gesturechange', 'gestureend'].forEach(function (type) {
+            document.addEventListener(
+              type,
+              function (e) {
+                e.preventDefault();
+              },
+              { passive: false }
+            );
+          });
+        } catch (err) {}
+      }
+
       function initChrome() {
+        lockPageZoom();
         initSkyModeUi();
         showGuideBannerIfNeeded();
         try {
