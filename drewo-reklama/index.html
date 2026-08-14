@@ -2024,6 +2024,29 @@
       font-weight: 600;
       font-size: 0.92rem;
     }
+    .gate-demo-hint {
+      margin: 0;
+      padding: 0.7rem 0.8rem;
+      border-radius: 10px;
+      border: 1px solid color-mix(in srgb, var(--sand) 45%, transparent);
+      background: color-mix(in srgb, #2a3d28 55%, #0a151c);
+      color: color-mix(in srgb, #f7ecc0 92%, white);
+      font-size: 0.92rem;
+      line-height: 1.45;
+    }
+    .gate-demo-hint b {
+      color: #fff6d6;
+      font-weight: 700;
+    }
+    .gate-demo-hint code {
+      display: inline-block;
+      padding: 0.05rem 0.4rem;
+      border-radius: 6px;
+      background: color-mix(in srgb, black 35%, transparent);
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+      font-size: 0.95em;
+      letter-spacing: 0.02em;
+    }
     .view-gate-card label {
       display: flex;
       flex-direction: column;
@@ -2032,7 +2055,8 @@
       color: var(--text-dim);
     }
     .view-gate-card input[type="search"],
-    .view-gate-card input[type="password"] {
+    .view-gate-card input[type="password"],
+    .view-gate-card input[type="text"] {
       min-height: 2.5rem;
       padding: 0.45rem 0.7rem;
       border-radius: 8px;
@@ -2180,22 +2204,26 @@
   <div id="view-gate" class="view-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
     <form id="gate-form" class="view-gate-card">
       <strong id="gate-title">Некъ — демо</strong>
-      <p class="install-steps">Демо-древо для рекламы (вымышленные имена). Пароль: <b>демо</b>. Можно войти любым человеком из списка.</p>
+      <p class="gate-demo-hint" id="gate-demo-hint">
+        Это демо для рекламы (имена вымышленные).<br>
+        Уже выбраны логин и пароль — просто нажмите <b>Войти в демо</b>.<br>
+        Логин: <code>Ислам</code> · пароль: <code>демо</code>
+      </p>
       <label>
         Кто вы
-        <input id="gate-search" type="search" placeholder="Начните вводить имя…" autocomplete="off" required>
+        <input id="gate-search" type="search" placeholder="Или введите другое имя…" autocomplete="off">
       </label>
       <ul id="gate-results"></ul>
       <p id="gate-selected" hidden></p>
       <input type="hidden" id="gate-person-id" value="">
       <label>
         Пароль
-        <input id="gate-password" type="password" name="password" autocomplete="current-password" required>
+        <input id="gate-password" type="text" name="password" inputmode="text" autocomplete="off" spellcheck="false" required>
       </label>
       <p id="gate-error" class="dialog-error" hidden></p>
       <p id="gate-status" class="gate-status" hidden></p>
-      <p class="install-steps gate-net-hint">Пароль проверяется через интернет (сервер). Если долго не входит — включите VPN и попробуйте снова.</p>
-      <button type="submit" id="gate-submit">Войти</button>
+      <p class="install-steps gate-net-hint">Нужен интернет. Если долго не входит — включите VPN и попробуйте снова.</p>
+      <button type="submit" id="gate-submit">Войти в демо</button>
     </form>
   </div>
 
@@ -7594,7 +7622,42 @@
         return bits.join(' · ');
       }
 
-      function selectGatePerson(m) {
+      var DEMO_GATE_PERSON_ID = 'islam-a';
+      var DEMO_GATE_PASSWORD = 'демо';
+
+      function gateMatchForId(personId) {
+        var node = TreeModel.findById(tree, personId);
+        if (!node) return null;
+        var path = findPathToId(tree, node.id) || [];
+        var parent = path.length >= 2 ? TreeModel.findById(tree, path[path.length - 2]) : null;
+        var grand = path.length >= 3 ? TreeModel.findById(tree, path[path.length - 3]) : null;
+        var lineageNames = [];
+        for (var i = 0; i < path.length - 1; i++) {
+          var anc = TreeModel.findById(tree, path[i]);
+          if (anc && anc.name) lineageNames.push(anc.name);
+        }
+        var lineageHint = '';
+        if (lineageNames.length >= 2) {
+          var tail = lineageNames.slice(-2);
+          lineageHint = (lineageNames.length > 2 ? '… → ' : '') + tail.join(' → ');
+        } else if (lineageNames.length === 1) {
+          lineageHint = lineageNames[0];
+        }
+        return {
+          id: node.id,
+          name: node.name || '',
+          fatherName: parent ? parent.name || '' : '',
+          fatherId: parent ? parent.id : null,
+          grandfatherName: grand ? grand.name || '' : '',
+          lineageHint: lineageHint,
+          born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
+          died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
+          years: TreeModel.formatLifeYears(node, 'g') || '',
+        };
+      }
+
+      function selectGatePerson(m, opts) {
+        opts = opts || {};
         gateSelectedId = m.id;
         gateSelectedLabel = m.name + (formatMatchLabel(m) ? ' · ' + formatMatchLabel(m) : '');
         if (gatePersonId) gatePersonId.value = String(m.id);
@@ -7604,11 +7667,24 @@
         }
         if (gateSearch) gateSearch.value = m.name;
         if (gateResults) gateResults.replaceChildren();
-        if (gatePassword) {
+        if (opts.focusPassword !== false && gatePassword) {
           try {
             gatePassword.focus();
           } catch (err) {}
           ensureGateFieldVisible(gatePassword);
+        }
+      }
+
+      function prefillDemoGate() {
+        var match = gateMatchForId(DEMO_GATE_PERSON_ID);
+        if (match) selectGatePerson(match, { focusPassword: false });
+        if (gatePassword) gatePassword.value = DEMO_GATE_PASSWORD;
+        if (gateSubmit) {
+          window.setTimeout(function () {
+            try {
+              gateSubmit.focus();
+            } catch (err) {}
+          }, 80);
         }
       }
 
@@ -7671,15 +7747,11 @@
         }
         if (gateSubmit) {
           gateSubmit.disabled = false;
-          gateSubmit.textContent = 'Войти';
+          gateSubmit.textContent = 'Войти в демо';
         }
-        if (gateSearch) {
-          gateSearch.value = '';
-          window.setTimeout(function () {
-            gateSearch.focus();
-          }, 80);
-        }
+        if (gateSearch) gateSearch.value = '';
         renderGateResults('');
+        prefillDemoGate();
       }
 
       function unlockViewWithPerson(personId, password, authData) {
@@ -8013,7 +8085,7 @@
             .finally(function () {
               if (gateSubmit) {
                 gateSubmit.disabled = false;
-                gateSubmit.textContent = 'Войти';
+                gateSubmit.textContent = 'Войти в демо';
               }
             });
         });
