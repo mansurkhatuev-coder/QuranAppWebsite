@@ -761,11 +761,15 @@
       }
     }
 
-    /* Phones: night mode used to freeze the UI — hundreds of blur + glow animations. */
+    /* Phones: night leaf glow/fx are too heavy (100+ layers). */
     @media (hover: none), (pointer: coarse), (max-width: 900px) {
       body[data-theme="premium"] .person-btn {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
+      }
+
+      body[data-theme="premium"][data-sky="night"] .leaf-glow {
+        display: none !important;
       }
 
       .leaf-glow {
@@ -776,12 +780,14 @@
       }
 
       body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
+        content: none !important;
         animation: none !important;
-        opacity: 0.9;
-        transform: none;
+      }
+
+      body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf {
         box-shadow:
-          0 0 5px 1px rgba(255, 214, 130, 0.75),
-          0 0 10px 4px rgba(255, 180, 80, 0.28);
+          0 0 0 1px color-mix(in srgb, #ffe2a0 28%, transparent),
+          0 6px 14px color-mix(in srgb, black 28%, transparent);
       }
 
       .premium-sky .sky-layer {
@@ -1824,7 +1830,7 @@
       </div>
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
-        <button type="button" id="edit-links" aria-pressed="false">Изменить связи</button>
+        <button type="button" id="edit-links" aria-pressed="false">Редактировать</button>
         <button type="button" id="history-btn" title="01.08.2026, 18:02 — Гуно">История (2)</button>
         <button type="button" id="backup-btn">Бэкапы</button>
       </div>
@@ -1837,12 +1843,10 @@
             <option value="premium" selected="">Премиум</option>
           </select>
         </label>
-        <label class="style-pick">
+        <label class="style-pick sky-mode-pick" hidden="">
           Небо
           <select id="sky-mode-select" aria-label="День или ночь">
-            <option value="auto" selected="">Авто</option>
-            <option value="day">День</option>
-            <option value="night">Ночь</option>
+            <option value="day" selected="">День</option>
           </select>
         </label>
       </div>
@@ -1853,7 +1857,7 @@
     <ol>
       <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека.</li>
       <li>Укажите <b>Кто я</b> в меню — ваша ветка подсветится золотом.</li>
-      <li><b>+ сын</b> и <b>Изменить связи</b> — сначала пароль.</li>
+      <li><b>+ сын</b> и <b>Редактировать</b> — сначала пароль.</li>
       <li>В правках: перенос на нового отца, тап — переименовать, у листьев — удалить.</li>
       <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
     </ol>
@@ -1862,7 +1866,7 @@
       <button type="button" id="guide-never" class="guide-dismiss-forever">Не показывать больше</button>
     </div>
   </aside>
-  <p id="edit-hint" class="edit-hint">Режим правки: перенос на нового отца, тап = переименовать, у листьев — удалить. Затем «Сохранить».</p>
+  <p id="edit-hint" class="edit-hint">Режим редактирования: перенос на нового отца, тап = переименовать, у листьев — удалить. Затем «Сохранить».</p>
 
   <main>
     <div id="viewport" aria-label="Древо">
@@ -3427,6 +3431,7 @@
       var SKY_NIGHT_IMAGE = 'bg-night.jpg';
       var SKY_ROTATE_MS = 8 * 60 * 1000;
       var SKY_MODE_KEY = 'drewo-sky-mode';
+      var SKY_NIGHT_ENABLED = false;
       var skyFrontIsA = true;
       var skyDayIndex = Math.floor(Math.random() * SKY_DAY_IMAGES.length);
       var skyRotateTimer = null;
@@ -3439,7 +3444,13 @@
         return window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
       }
 
+      function nightLeafFxEnabled() {
+        if (!SKY_NIGHT_ENABLED) return false;
+        return !(window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches);
+      }
+
       function readSkyMode() {
+        if (!SKY_NIGHT_ENABLED) return 'day';
         try {
           var saved = localStorage.getItem(SKY_MODE_KEY);
           if (saved === 'day' || saved === 'night' || saved === 'auto') return saved;
@@ -3457,10 +3468,30 @@
       }
 
       function resolvedSkyPeriod() {
+        if (!SKY_NIGHT_ENABLED) return 'day';
         var mode = skyModeSelect ? skyModeSelect.value : readSkyMode();
         if (mode === 'day') return 'day';
         if (mode === 'night') return 'night';
         return isNightByClock() ? 'night' : 'day';
+      }
+
+      function initSkyModeUi() {
+        var pick = document.querySelector('.sky-mode-pick');
+        if (!SKY_NIGHT_ENABLED) {
+          if (pick) pick.hidden = true;
+          if (skyModeSelect) skyModeSelect.value = 'day';
+          try {
+            localStorage.setItem(SKY_MODE_KEY, 'day');
+          } catch (err) {}
+          document.body.setAttribute('data-sky', 'day');
+          return;
+        }
+        if (pick) pick.hidden = false;
+        if (skyModeSelect && skyModeSelect.options.length < 3) {
+          skyModeSelect.innerHTML =
+            '<option value="auto">Авто</option><option value="day">День</option><option value="night">Ночь</option>';
+          skyModeSelect.value = readSkyMode();
+        }
       }
 
       function setSkyLayerImage(el, url) {
@@ -3552,7 +3583,7 @@
       }
 
       function setSkyMode(mode, persist) {
-        var next = mode === 'day' || mode === 'night' ? mode : 'auto';
+        var next = !SKY_NIGHT_ENABLED ? 'day' : mode === 'day' || mode === 'night' ? mode : 'auto';
         if (skyModeSelect) skyModeSelect.value = next;
         if (persist !== false) {
           try {
@@ -4646,7 +4677,7 @@
       }
 
       function deletePerson(id) {
-        if (!editMode || !editUnlocked) return { ok: false, reason: 'Нет режима правок' };
+        if (!editMode || !editUnlocked) return { ok: false, reason: 'Нет режима редактирования' };
         if (id === tree.id) return { ok: false, reason: 'Корень нельзя удалить' };
         var info = findParentInfo(tree, id);
         if (!info) return { ok: false, reason: 'Не найден' };
@@ -6031,7 +6062,7 @@
           };
         });
 
-        if (!meta.hasSons) {
+        if (!meta.hasSons && nightLeafFxEnabled()) {
           var leafGlow = document.createElement('span');
           leafGlow.className = 'leaf-glow';
           leafGlow.setAttribute('aria-hidden', 'true');
@@ -6886,6 +6917,7 @@
       startYearsCalendarPulse();
 
       function initChrome() {
+        initSkyModeUi();
         showGuideBannerIfNeeded();
         try {
           setSkyMode(readSkyMode(), false);
