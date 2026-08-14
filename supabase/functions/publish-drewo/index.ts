@@ -620,6 +620,128 @@ Deno.serve(async (request) => {
       });
     }
 
+    const PHOTO_BUCKET = 'drewo-photos';
+    const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
+
+    async function getStorageAdmin() {
+      const supabaseUrl = Deno.env.get('SUPABASE_URL');
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (!supabaseUrl || !serviceKey) {
+        throw new Error('Supabase Storage недоступен (нет SUPABASE_URL / SERVICE_ROLE_KEY)');
+      }
+      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+      return createClient(supabaseUrl, serviceKey, {
+        auth: { persistSession: false, autoRefreshToken: false },
+      });
+    }
+
+    async function ensurePhotoBucket(
+      admin: Awaited<ReturnType<typeof getStorageAdmin>>
+    ) {
+      const listed = await admin.storage.listBuckets();
+      if (listed.error) throw new Error(listed.error.message);
+      const exists = (listed.data || []).some((b) => b.name === PHOTO_BUCKET);
+      if (exists) return;
+      const created = await admin.storage.createBucket(PHOTO_BUCKET, {
+        public: true,
+        fileSizeLimit: 512000,
+        allowedMimeTypes: ['image/webp', 'image/jpeg', 'image/png'],
+      });
+      if (created.error && !/already exists|duplicate/i.test(created.error.message || '')) {
+        throw new Error(created.error.message);
+      }
+    }
+
+    function decodeDataUrl(dataUrl: unknown): { bytes: Uint8Array; contentType: string } | null {
+      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return null;
+      const match = dataUrl.match(/^data:(image\/(?:webp|jpeg|jpg|png));base64,([A-Za-z0-9+/=\s]+)$/i);
+      if (!match) return null;
+      const contentType = match[1].toLowerCase() === 'image/jpg' ? 'image/jpeg' : match[1].toLowerCase();
+      const binary = atob(match[2].replace(/\s/g, ''));
+      if (binary.length < 32 || binary.length > 480000) return null;
+      const bytes = new Uint8Array(binary.length);
+      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+      return { bytes, contentType };
+    }
+
+    if (action === 'upload-photo') {
+      if (access.locked && role !== 'super') {
+        return jsonResponse(
+          { error: 'Правки заблокированы. Нужен суперпароль.', locked: true },
+          403
+        );
+      }
+      const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
+      if (!PHOTO_ID_RE.test(personId)) {
+        return jsonResponse({ error: 'Некорректный id человека' }, 400);
+      }
+      const full = decodeDataUrl(body.full);
+      const thumb = decodeDataUrl(body.thumb);
+      if (!full || !thumb) {
+        return jsonResponse(
+          { error: 'Нужны сжатые фото full и thumb (webp/jpeg, data URL)' },
+          400
+        );
+      }
+      const admin = await getStorageAdmin();
+      await ensurePhotoBucket(admin);
+      const version =
+        typeof body.version === 'string' && /^[a-zA-Z0-9_-]{1,32}$/.test(body.version)
+          ? body.version
+          : String(Date.now());
+      const ext = full.contentType === 'image/png' ? 'png' : full.contentType === 'image/webp' ? 'webp' : 'jpg';
+      const thumbExt =
+        thumb.contentType === 'image/png' ? 'png' : thumb.contentType === 'image/webp' ? 'webp' : 'jpg';
+      const fullPath = `${treeDir}/${personId}.${ext}`;
+      const thumbPath = `${treeDir}/${personId}-thumb.${thumbExt}`;
+      const upFull = await admin.storage.from(PHOTO_BUCKET).upload(fullPath, full.bytes, {
+        contentType: full.contentType,
+        upsert: true,
+        cacheControl: '3600',
+      });
+      if (upFull.error) throw new Error(upFull.error.message);
+      const upThumb = await admin.storage.from(PHOTO_BUCKET).upload(thumbPath, thumb.bytes, {
+        contentType: thumb.contentType,
+        upsert: true,
+        cacheControl: '3600',
+      });
+      if (upThumb.error) throw new Error(upThumb.error.message);
+      const fullUrl = admin.storage.from(PHOTO_BUCKET).getPublicUrl(fullPath).data.publicUrl;
+      const thumbUrl = admin.storage.from(PHOTO_BUCKET).getPublicUrl(thumbPath).data.publicUrl;
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        personId,
+        version,
+        photo: version,
+        fullPath,
+        thumbPath,
+        fullUrl: `${fullUrl}?v=${encodeURIComponent(version)}`,
+        thumbUrl: `${thumbUrl}?v=${encodeURIComponent(version)}`,
+      });
+    }
+
+    if (action === 'delete-photo') {
+      if (access.locked && role !== 'super') {
+        return jsonResponse(
+          { error: 'Правки заблокированы. Нужен суперпароль.', locked: true },
+          403
+        );
+      }
+      const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
+      if (!PHOTO_ID_RE.test(personId)) {
+        return jsonResponse({ error: 'Некорректный id человека' }, 400);
+      }
+      const admin = await getStorageAdmin();
+      await ensurePhotoBucket(admin);
+      const candidates = ['webp', 'jpg', 'jpeg', 'png'].flatMap((ext) => [
+        `${treeDir}/${personId}.${ext}`,
+        `${treeDir}/${personId}-thumb.${ext}`,
+      ]);
+      await admin.storage.from(PHOTO_BUCKET).remove(candidates);
+      return jsonResponse({ ok: true, treeDir, personId, deleted: true });
+    }
+
     const requireSuper = (act: string, allowEditorUntilConfigured = false) => {
       if (role === 'super') return null;
       if (!superConfigured) {
