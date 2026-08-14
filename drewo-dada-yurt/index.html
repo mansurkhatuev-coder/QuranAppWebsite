@@ -5125,7 +5125,7 @@
 
       function setEditMode(on) {
         editMode = !!on;
-        if (!editMode) editUnlocked = false;
+        // Keep editUnlocked for the session (add son / bio / photo) until logout.
         clearDrag();
         updateViewButtons();
         render(false);
@@ -6835,9 +6835,27 @@
 
       function openAddDialog(parentId) {
         addParentId = parentId;
-        addNameInput.value = '';
-        addDialog.showModal();
-        addNameInput.focus();
+        if (addNameInput) addNameInput.value = '';
+        if (!addDialog) return;
+        try {
+          if (addDialog.open) addDialog.close();
+        } catch (err) {}
+        try {
+          if (typeof addDialog.showModal === 'function') addDialog.showModal();
+          else addDialog.setAttribute('open', '');
+        } catch (err2) {
+          window.setTimeout(function () {
+            try {
+              if (typeof addDialog.showModal === 'function') addDialog.showModal();
+            } catch (err3) {
+              showToast('Не удалось открыть форму «+ сын»', 'error');
+            }
+          }, 120);
+          return;
+        }
+        window.setTimeout(function () {
+          if (addNameInput) addNameInput.focus();
+        }, 30);
       }
 
       function closeAddDialog() {
@@ -6848,17 +6866,25 @@
 
       function saveAddSon() {
         if (!addParentId) return;
-        if (!editUnlocked) {
+        if (!editUnlocked && !(sessionRole === 'editor' || sessionRole === 'super')) {
           closeAddDialog();
+          showToast('Сначала введите пароль', 'error');
           return;
         }
-        var name = addNameInput.value.trim();
+        editUnlocked = true;
+        var name = addNameInput ? addNameInput.value.trim() : '';
         if (!name) {
-          addNameInput.focus();
+          if (addNameInput) addNameInput.focus();
           return;
         }
         var father = TreeModel.findById(tree, addParentId);
-        var result = TreeModel.addSon(tree, addParentId, name, NUTSU_ID);
+        var result;
+        try {
+          result = TreeModel.addSon(tree, addParentId, name, NUTSU_ID);
+        } catch (err) {
+          showToast((err && err.message) || 'Нельзя добавить сына сюда', 'error');
+          return;
+        }
         tree = result.tree;
         persistTree();
         pushActivity({
@@ -6871,7 +6897,8 @@
         });
         expanded.add(addParentId);
         closeAddDialog();
-        render();
+        showToast('Добавлен: ' + name, 'success');
+        render(true);
       }
 
       function beginPan(pointer) {
@@ -7100,31 +7127,38 @@
               rememberSession(pass, data);
               pendingPasswordAction = null;
               if (passwordDialog && passwordDialog.open) passwordDialog.close();
-              if (action && action.type === 'add') {
-                openAddDialog(action.parentId);
-              } else if (action && action.type === 'backups') {
-                openBackupDialog();
-                loadBackupList(pass);
-              } else if (action && action.type === 'year') {
-                openYearEditor(action.personId, action.field);
-              } else if (action && action.type === 'photo') {
-                if (personPhotoFile) {
-                  personPhotoFile.value = '';
-                  personPhotoFile.click();
+              var nextAction = action;
+              window.setTimeout(function () {
+                if (!nextAction) {
+                  setEditMode(true);
+                  return;
                 }
-              } else if (action && action.type === 'photo-remove') {
-                removePersonPhoto(action.personId);
-              } else if (action && action.type === 'bio') {
-                openBioEditor(action.personId);
-              } else if (action && action.type === 'rename') {
-                openRenameDialog(action.personId);
-              } else if (action && action.type === 'super-restore') {
-                restoreBackup(pass, action.backup, action.label || action.backup);
-              } else if (action && action.type === 'super-admin') {
-                openAdminDialog();
-              } else {
-                setEditMode(true);
-              }
+                if (nextAction.type === 'add') {
+                  openAddDialog(nextAction.parentId);
+                } else if (nextAction.type === 'backups') {
+                  openBackupDialog();
+                  loadBackupList(pass);
+                } else if (nextAction.type === 'year') {
+                  openYearEditor(nextAction.personId, nextAction.field);
+                } else if (nextAction.type === 'photo') {
+                  if (personPhotoFile) {
+                    personPhotoFile.value = '';
+                    personPhotoFile.click();
+                  }
+                } else if (nextAction.type === 'photo-remove') {
+                  removePersonPhoto(nextAction.personId);
+                } else if (nextAction.type === 'bio') {
+                  openBioEditor(nextAction.personId);
+                } else if (nextAction.type === 'rename') {
+                  openRenameDialog(nextAction.personId);
+                } else if (nextAction.type === 'super-restore') {
+                  restoreBackup(pass, nextAction.backup, nextAction.label || nextAction.backup);
+                } else if (nextAction.type === 'super-admin') {
+                  openAdminDialog();
+                } else {
+                  setEditMode(true);
+                }
+              }, 80);
             })
             .catch(function (err) {
               if (passwordError) {
@@ -7690,7 +7724,14 @@
 
 
       function pinAppShell() {
-        // Keep chrome (header/menu/FAB) on-screen: never let the document scroll/zoom away.
+        // Keep chrome on-screen, but do not fight dialogs / iOS keyboard.
+        try {
+          if (document.querySelector('dialog[open]')) return;
+          var ae = document.activeElement;
+          if (ae && (ae.tagName === 'INPUT' || ae.tagName === 'TEXTAREA' || ae.tagName === 'SELECT')) {
+            return;
+          }
+        } catch (err0) {}
         try {
           if (window.scrollX || window.scrollY) window.scrollTo(0, 0);
         } catch (err) {}
