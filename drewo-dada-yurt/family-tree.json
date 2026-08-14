@@ -654,7 +654,13 @@
                             {
                               "id": "timur-bolat",
                               "name": "Тимур-Болат",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1786733945222-z659iw",
+                                  "name": "Доурбек",
+                                  "sons": []
+                                }
+                              ]
                             },
                             {
                               "id": "askhyab",
