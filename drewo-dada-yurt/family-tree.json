@@ -544,7 +544,7 @@
                   "sons": [
                     {
                       "id": "abdul-karim",
-                      "name": "Абдул-Карим",
+                      "name": "Абдулкерим",
                       "sons": [
                         {
                           "id": "sirazhdi",
@@ -598,7 +598,8 @@
                           "sons": []
                         }
                       ],
-                      "died": 2022
+                      "died": 2022,
+                      "born": 1930
                     },
                     {
                       "id": "sha1rani",
