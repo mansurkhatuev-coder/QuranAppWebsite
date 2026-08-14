@@ -104,6 +104,30 @@
       );
     }
 
+    .firefly-canvas {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 2;
+      opacity: 0;
+      transition: opacity 0.45s ease;
+    }
+
+    body[data-theme="premium"][data-sky="night"] .firefly-canvas {
+      opacity: 1;
+    }
+
+    #links path {
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    body[data-theme="premium"] #links path {
+      stroke: color-mix(in srgb, var(--sand) 92%, white);
+    }
+
     *,
     *::before,
     *::after {
@@ -620,65 +644,9 @@
       );
     }
 
+    /* Per-node leaf-glow removed — fireflies are drawn on canvas (see JS). */
     .leaf-glow {
-      display: none;
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 150px;
-      height: 150px;
-      margin: -75px 0 0 -75px;
-      border-radius: 50%;
-      background: radial-gradient(
-        circle,
-        rgba(255, 210, 130, 0.34) 0%,
-        rgba(255, 170, 80, 0.14) 32%,
-        rgba(255, 140, 60, 0.05) 55%,
-        transparent 72%
-      );
-      mix-blend-mode: screen;
-      pointer-events: none;
-      z-index: 0;
-      animation: leaf-glow-breathe 3.4s ease-in-out infinite;
-      will-change: transform, opacity;
-    }
-
-    body[data-theme="premium"][data-sky="night"] .leaf-glow {
-      display: block;
-    }
-
-    .leaf-glow--branch {
-      background: radial-gradient(
-        circle,
-        rgba(255, 220, 150, 0.42) 0%,
-        rgba(255, 190, 100, 0.18) 32%,
-        rgba(255, 160, 70, 0.07) 55%,
-        transparent 72%
-      );
-    }
-
-    .leaf-glow--self {
-      background: radial-gradient(
-        circle,
-        rgba(255, 235, 180, 0.5) 0%,
-        rgba(255, 210, 130, 0.22) 34%,
-        rgba(255, 180, 90, 0.08) 56%,
-        transparent 74%
-      );
-    }
-
-    .person .person-btn {
-      position: relative;
-      z-index: 1;
-    }
-
-    .person:nth-child(6n+1) .leaf-glow { animation-duration: 2.8s; }
-    .person:nth-child(6n+3) .leaf-glow { animation-duration: 4.1s; animation-delay: -1.2s; }
-    .person:nth-child(6n+5) .leaf-glow { animation-duration: 3.6s; animation-delay: -0.6s; }
-
-    @keyframes leaf-glow-breathe {
-      0%, 100% { opacity: 0.55; transform: scale(0.92); }
-      50% { opacity: 1; transform: scale(1.08); }
+      display: none !important;
     }
 
     body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf {
@@ -723,29 +691,7 @@
     }
 
     body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
-      content: "";
-      position: absolute;
-      top: 18%;
-      right: 10%;
-      width: 0.42em;
-      height: 0.42em;
-      min-width: 5px;
-      min-height: 5px;
-      border-radius: 50%;
-      background: radial-gradient(circle, #fff6d0 0%, #ffd27a 45%, #ffb040 100%);
-      box-shadow:
-        0 0 6px 2px rgba(255, 214, 130, 0.95),
-        0 0 14px 6px rgba(255, 180, 80, 0.45),
-        0 0 28px 10px rgba(255, 150, 60, 0.18);
-      animation: firefly-twinkle 2.6s ease-in-out infinite;
-      pointer-events: none;
-    }
-
-    body[data-theme="premium"][data-sky="night"] .person:nth-child(odd) .person-btn.is-leaf::after {
-      animation-delay: -0.9s;
-      top: 22%;
-      right: auto;
-      left: 12%;
+      content: none;
     }
 
     @keyframes firefly-twinkle {
@@ -756,39 +702,14 @@
 
     @media (prefers-reduced-motion: reduce) {
       .premium-sky .sky-layer { transition: none; }
-      .leaf-glow,
-      body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
-        animation: none;
-      }
+      .firefly-canvas { display: none !important; }
     }
 
-    /* Phones: night leaf glow/fx are too heavy (100+ layers). */
+    /* Phones: skip blur; leaf DOM glow stays off (canvas only). */
     @media (hover: none), (pointer: coarse), (max-width: 900px) {
       body[data-theme="premium"] .person-btn {
         backdrop-filter: none;
         -webkit-backdrop-filter: none;
-      }
-
-      body[data-theme="premium"][data-sky="night"] .leaf-glow {
-        display: none !important;
-      }
-
-      .leaf-glow {
-        animation: none !important;
-        will-change: auto;
-        opacity: 0.72;
-        transform: none;
-      }
-
-      body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf::after {
-        content: none !important;
-        animation: none !important;
-      }
-
-      body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf {
-        box-shadow:
-          0 0 0 1px color-mix(in srgb, #ffe2a0 28%, transparent),
-          0 6px 14px color-mix(in srgb, black 28%, transparent);
       }
 
       .premium-sky .sky-layer {
@@ -1796,6 +1717,7 @@
     <div class="sky-layer is-on" id="sky-a"></div>
     <div class="sky-layer" id="sky-b"></div>
     <div class="sky-veil"></div>
+    <canvas id="firefly-canvas" class="firefly-canvas" aria-hidden="true" hidden=""></canvas>
   </div>
   <header class="header">
     <div class="brand">
@@ -1844,10 +1766,12 @@
             <option value="premium" selected="">Премиум</option>
           </select>
         </label>
-        <label class="style-pick sky-mode-pick" hidden="">
+        <label class="style-pick sky-mode-pick">
           Небо
           <select id="sky-mode-select" aria-label="День или ночь">
-            <option value="day" selected="">День</option>
+            <option value="auto" selected="">Авто</option>
+            <option value="day">День</option>
+            <option value="night">Ночь</option>
           </select>
         </label>
       </div>
@@ -3279,13 +3203,16 @@
       var skyModeSelect = document.getElementById('sky-mode-select');
       var skyLayerA = document.getElementById('sky-a');
       var skyLayerB = document.getElementById('sky-b');
+      var fireflyCanvas = document.getElementById('firefly-canvas');
+      var fireflyAnim = null;
+      var fireflyParticles = [];
       var viewKhotuBtn = document.getElementById('view-khotu');
       var viewAllBtn = document.getElementById('view-all');
       var SKY_DAY_IMAGES = ['bg.jpg', 'bg-day-2.jpg', 'bg-day-3.jpg'];
       var SKY_NIGHT_IMAGE = 'bg-night.jpg';
       var SKY_ROTATE_MS = 8 * 60 * 1000;
       var SKY_MODE_KEY = 'drewo-dada-yurt-sky-mode';
-      var SKY_NIGHT_ENABLED = false;
+      var SKY_NIGHT_ENABLED = true;
       var skyFrontIsA = true;
       var skyDayIndex = Math.floor(Math.random() * SKY_DAY_IMAGES.length);
       var skyRotateTimer = null;
@@ -3299,8 +3226,110 @@
       }
 
       function nightLeafFxEnabled() {
-        if (!SKY_NIGHT_ENABLED) return false;
-        return !(window.matchMedia && window.matchMedia('(hover: none), (pointer: coarse)').matches);
+        return false;
+      }
+
+      function initFireflyParticles() {
+        var touch =
+          window.matchMedia &&
+          window.matchMedia('(hover: none), (pointer: coarse)').matches;
+        var count = touch ? 26 : 42;
+        fireflyParticles = [];
+        for (var i = 0; i < count; i++) {
+          fireflyParticles.push({
+            x: Math.random(),
+            y: Math.random(),
+            r: 1.1 + Math.random() * 2.1,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.35 + Math.random() * 0.75,
+            drift: 0.00006 + Math.random() * 0.00012,
+            angle: Math.random() * Math.PI * 2,
+          });
+        }
+      }
+
+      function resizeFireflyCanvas() {
+        if (!fireflyCanvas) return;
+        var dpr = Math.min(window.devicePixelRatio || 1, 2);
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        fireflyCanvas.width = Math.max(1, Math.floor(w * dpr));
+        fireflyCanvas.height = Math.max(1, Math.floor(h * dpr));
+        fireflyCanvas.style.width = w + 'px';
+        fireflyCanvas.style.height = h + 'px';
+        var ctx = fireflyCanvas.getContext('2d');
+        if (ctx) ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      }
+
+      function paintFireflies(ts) {
+        if (!fireflyCanvas) return;
+        var ctx = fireflyCanvas.getContext('2d');
+        if (!ctx) return;
+        var w = window.innerWidth;
+        var h = window.innerHeight;
+        ctx.clearRect(0, 0, w, h);
+        var t = ts * 0.001;
+        fireflyParticles.forEach(function (f) {
+          f.angle += f.drift;
+          f.x += Math.cos(f.angle) * f.speed * 0.00028;
+          f.y += Math.sin(f.angle) * f.speed * 0.0002 - 0.00004;
+          if (f.x < -0.04) f.x = 1.04;
+          if (f.x > 1.04) f.x = -0.04;
+          if (f.y < -0.04) f.y = 1.04;
+          if (f.y > 1.04) f.y = -0.04;
+          var alpha = 0.28 + 0.62 * (0.5 + 0.5 * Math.sin(t * f.speed * 3.2 + f.phase));
+          var px = f.x * w;
+          var py = f.y * h;
+          var glow = f.r * 4.2;
+          var g = ctx.createRadialGradient(px, py, 0, px, py, glow);
+          g.addColorStop(0, 'rgba(255,246,208,' + alpha + ')');
+          g.addColorStop(0.35, 'rgba(255,210,122,' + alpha * 0.55 + ')');
+          g.addColorStop(1, 'rgba(255,150,60,0)');
+          ctx.fillStyle = g;
+          ctx.beginPath();
+          ctx.arc(px, py, glow, 0, Math.PI * 2);
+          ctx.fill();
+        });
+      }
+
+      function stopFireflies() {
+        if (fireflyAnim) {
+          cancelAnimationFrame(fireflyAnim);
+          fireflyAnim = null;
+        }
+        if (!fireflyCanvas) return;
+        fireflyCanvas.hidden = true;
+        var ctx = fireflyCanvas.getContext('2d');
+        if (ctx) ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
+      }
+
+      function startFireflies() {
+        if (
+          !SKY_NIGHT_ENABLED ||
+          !fireflyCanvas ||
+          document.body.getAttribute('data-theme') !== 'premium' ||
+          document.body.getAttribute('data-sky') !== 'night' ||
+          preferReducedSkyMotion()
+        ) {
+          stopFireflies();
+          return;
+        }
+        if (!fireflyParticles.length) initFireflyParticles();
+        resizeFireflyCanvas();
+        fireflyCanvas.hidden = false;
+        if (fireflyAnim) return;
+        function frame(ts) {
+          if (
+            document.body.getAttribute('data-sky') !== 'night' ||
+            document.body.getAttribute('data-theme') !== 'premium'
+          ) {
+            stopFireflies();
+            return;
+          }
+          paintFireflies(ts);
+          fireflyAnim = requestAnimationFrame(frame);
+        }
+        fireflyAnim = requestAnimationFrame(frame);
       }
 
       function readSkyMode() {
@@ -3420,6 +3449,7 @@
         document.body.setAttribute('data-sky', period);
         if (document.body.getAttribute('data-theme') !== 'premium') {
           stopSkyRotate();
+          stopFireflies();
           return;
         }
         if (period === 'night') {
@@ -3434,6 +3464,8 @@
         document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
           el.setAttribute('content', bar);
         });
+        if (period === 'night') startFireflies();
+        else stopFireflies();
       }
 
       function setSkyMode(mode, persist) {
@@ -3474,6 +3506,7 @@
           } catch (err) {}
         }
         applySky(true);
+        if (next !== 'premium') stopFireflies();
         if (layoutMeta && layoutMeta.nodes && Object.keys(layoutMeta.nodes).length) {
           redrawLinks();
         }
@@ -5601,7 +5634,8 @@
         linksSvg.replaceChildren();
 
         var premium = document.body.getAttribute('data-theme') === 'premium';
-        var stroke = premium ? 1.05 : Math.max(1, 1.5);
+        var stroke = premium ? 1.45 : Math.max(1, 1.5);
+        var lineOpacity = premium ? 0.92 : 1;
 
         Object.keys(layoutMeta.nodes).forEach(function (id) {
           var parent = layoutMeta.nodes[id];
@@ -5613,44 +5647,6 @@
             })
             .filter(Boolean);
           if (!centers.length) return;
-
-          if (premium) {
-            centers.forEach(function (child) {
-              var midY = parent.bottom + (child.y - parent.bottom) * 0.45;
-              var path = document.createElementNS(SVG_NS, 'path');
-              path.setAttribute(
-                'd',
-                'M ' + parent.cx + ' ' + parent.bottom +
-                  ' C ' + parent.cx + ' ' + midY + ', ' +
-                  child.cx + ' ' + midY + ', ' +
-                  child.cx + ' ' + child.y
-              );
-              path.setAttribute('fill', 'none');
-              path.setAttribute('stroke', 'var(--sand)');
-              path.setAttribute('stroke-width', String(stroke));
-              path.setAttribute('stroke-linecap', 'round');
-              path.setAttribute('opacity', '0.82');
-              linksSvg.appendChild(path);
-
-              var tip = document.createElementNS(SVG_NS, 'circle');
-              tip.setAttribute('cx', String(child.cx));
-              tip.setAttribute('cy', String(child.y));
-              tip.setAttribute('r', '1.6');
-              tip.setAttribute('fill', 'var(--sand)');
-              tip.setAttribute('opacity', '0.9');
-              linksSvg.appendChild(tip);
-
-              if (TreeModel.isMyBranchEdge(myBranchIds, id, child.id)) {
-                path.setAttribute('pathLength', '1');
-                decorateMyLink(
-                  path,
-                  whoamiRevealDrawing && !preferReducedWhoamiMotion()
-                );
-                tip.classList.add('my-link-tip');
-              }
-            });
-            return;
-          }
 
           var branchCenters = TreeModel.myBranchSonCenters(centers, myBranchIds);
           var drawing = whoamiRevealDrawing && !preferReducedWhoamiMotion();
@@ -5679,6 +5675,7 @@
           trunk.setAttribute('fill', 'none');
           trunk.setAttribute('stroke', 'var(--sand)');
           trunk.setAttribute('stroke-width', String(stroke));
+          trunk.setAttribute('opacity', String(lineOpacity));
           linksSvg.appendChild(trunk);
 
           centers.forEach(function (child) {
@@ -5690,17 +5687,35 @@
             stub.setAttribute('fill', 'none');
             stub.setAttribute('stroke', 'var(--sand)');
             stub.setAttribute('stroke-width', String(stroke));
+            stub.setAttribute('opacity', String(lineOpacity));
             linksSvg.appendChild(stub);
 
-            var arrow = document.createElementNS(SVG_NS, 'polygon');
-            arrow.setAttribute(
-              'points',
-              child.cx + ',' + child.y + ' ' +
-                (child.cx - 4) + ',' + (child.y - 5) + ' ' +
-                (child.cx + 4) + ',' + (child.y - 5)
-            );
-            arrow.setAttribute('fill', 'var(--sand)');
-            linksSvg.appendChild(arrow);
+            if (premium) {
+              var tip = document.createElementNS(SVG_NS, 'circle');
+              tip.setAttribute('cx', String(child.cx));
+              tip.setAttribute('cy', String(child.y));
+              tip.setAttribute('r', '1.8');
+              tip.setAttribute('fill', 'var(--sand)');
+              tip.setAttribute('opacity', String(lineOpacity));
+              linksSvg.appendChild(tip);
+              if (TreeModel.isMyBranchEdge(myBranchIds, id, child.id)) {
+                stub.setAttribute('pathLength', '1');
+                tip.classList.add('my-link-tip');
+                decorateMyLink(stub, drawing);
+                decorateMyLink(tip, drawing);
+              }
+            } else {
+              var arrow = document.createElementNS(SVG_NS, 'polygon');
+              arrow.setAttribute(
+                'points',
+                child.cx + ',' + child.y + ' ' +
+                  (child.cx - 4) + ',' + (child.y - 5) + ' ' +
+                  (child.cx + 4) + ',' + (child.y - 5)
+              );
+              arrow.setAttribute('fill', 'var(--sand)');
+              arrow.setAttribute('opacity', String(lineOpacity));
+              linksSvg.appendChild(arrow);
+            }
           });
 
           if (parentOnBranch && branchCenters.length) {
@@ -5915,19 +5930,6 @@
             el: el,
           };
         });
-
-        if (!meta.hasSons && nightLeafFxEnabled()) {
-          var leafGlow = document.createElement('span');
-          leafGlow.className = 'leaf-glow';
-          leafGlow.setAttribute('aria-hidden', 'true');
-          if (myBranchIds.has(meta.id) || myBranchIds.has(String(meta.id))) {
-            leafGlow.classList.add('leaf-glow--branch');
-          }
-          if (myPersonId && String(meta.id) === String(myPersonId)) {
-            leafGlow.classList.add('leaf-glow--self');
-          }
-          el.appendChild(leafGlow);
-        }
 
         el.appendChild(btn);
 
