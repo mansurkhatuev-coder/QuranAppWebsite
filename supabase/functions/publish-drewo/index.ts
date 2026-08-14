@@ -519,9 +519,10 @@ Deno.serve(async (request) => {
           ok: false,
           conflict: true,
           error:
-            'На сайте уже другая версия дерева. Обновите у себя или сохраните принудительно (ваши правки перезапишут сайт).',
+            'На сайте уже другая версия дерева. Можно объединить правки или сохранить принудительно.',
           serverFingerprint,
           baseFingerprint,
+          serverTreeJson: jsonFile?.content || '',
         },
         409
       );

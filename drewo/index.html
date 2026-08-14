@@ -2462,17 +2462,20 @@
                                                     {
                                                       "id": "idris-mokhmad-abu",
                                                       "name": "Идрис",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2006
                                                     },
                                                     {
                                                       "id": "adam-apti-abu",
                                                       "name": "Адам",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2008
                                                     },
                                                     {
                                                       "id": "added-1785753166572-shx88n",
                                                       "name": "Мухьаммад",
-                                                      "sons": []
+                                                      "sons": [],
+                                                      "born": 2026
                                                     }
                                                   ]
                                                 },
@@ -3192,6 +3195,72 @@
     return i * step;
   }
 
+  /**
+   * Merge concurrent edits: keep server structure, fill missing years/bio from local,
+   * attach locally-added sons under the same parent when possible.
+   */
+  function mergeConcurrentEdits(serverRoot, localRoot) {
+    const server = cloneTree(serverRoot);
+    const byId = new Map();
+    const parentOf = new Map();
+    function index(node, parentId) {
+      byId.set(String(node.id), node);
+      if (parentId != null) parentOf.set(String(node.id), String(parentId));
+      (node.sons || []).forEach((s) => index(s, node.id));
+    }
+    index(server, null);
+
+    const localById = new Map();
+    const localParentOf = new Map();
+    function indexLocal(node, parentId) {
+      localById.set(String(node.id), node);
+      if (parentId != null) localParentOf.set(String(node.id), String(parentId));
+      (node.sons || []).forEach((s) => indexLocal(s, node.id));
+    }
+    indexLocal(localRoot, null);
+
+    const stats = { filled: [], overridden: [], addedSons: [] };
+
+    function mergeField(serverNode, localNode, field) {
+      const sv = serverNode[field];
+      const lv = localNode[field];
+      const sEmpty = sv == null || sv === '';
+      const lEmpty = lv == null || lv === '';
+      if (sEmpty && !lEmpty) {
+        serverNode[field] = lv;
+        stats.filled.push({ id: serverNode.id, field, value: lv });
+      } else if (!sEmpty && !lEmpty && String(sv) !== String(lv)) {
+        serverNode[field] = lv;
+        stats.overridden.push({ id: serverNode.id, field, server: sv, local: lv });
+      }
+    }
+
+    localById.forEach((localNode, id) => {
+      const serverNode = byId.get(id);
+      if (!serverNode) return;
+      mergeField(serverNode, localNode, 'born');
+      mergeField(serverNode, localNode, 'died');
+      mergeField(serverNode, localNode, 'bio');
+      if ((!serverNode.name || !String(serverNode.name).trim()) && localNode.name) {
+        serverNode.name = localNode.name;
+      }
+    });
+
+    localParentOf.forEach((parentId, childId) => {
+      if (byId.has(childId)) return;
+      const parent = byId.get(parentId);
+      const localChild = localById.get(childId);
+      if (!parent || !localChild) return;
+      if (!Array.isArray(parent.sons)) parent.sons = [];
+      const copy = cloneTree(localChild);
+      parent.sons.push(copy);
+      stats.addedSons.push({ id: childId, parentId, name: copy.name });
+      index(copy, parentId);
+    });
+
+    return { tree: server, stats };
+  }
+
   global.TreeModel = {
     walk,
     findById,
@@ -3211,6 +3280,7 @@
     myBranchSonCenters,
     whoamiRevealOrder,
     whoamiRevealDelayMs,
+    mergeConcurrentEdits,
   };
 })(window);
   </script>
@@ -6376,6 +6446,58 @@
               window.clearTimeout(progressTimer);
               hideCenterBanner();
               if (err && err.conflict) {
+                var serverJson = err.data && err.data.serverTreeJson;
+                var serverFp = err.data && err.data.serverFingerprint;
+                if (serverJson && TreeModel.mergeConcurrentEdits) {
+                  try {
+                    var serverTree =
+                      typeof serverJson === 'string' ? JSON.parse(serverJson) : serverJson;
+                    var merged = TreeModel.mergeConcurrentEdits(serverTree, tree);
+                    var filled = (merged.stats && merged.stats.filled) || [];
+                    var added = (merged.stats && merged.stats.addedSons) || [];
+                    var changed = filled.length + added.length;
+                    tree = TreeModel.markAllowAdd(merged.tree, NUTSU_ID);
+                    if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
+                    if (serverFp) baseFingerprint = serverFp;
+                    setTreeDirty(true);
+                    rebuildLineSets();
+                    render(false);
+                    return askChoice(
+                      changed
+                        ? 'На сайте были другие правки. Объединил изменения (' +
+                            changed +
+                            '). Сохранить объединённое?'
+                        : 'На сайте уже другая версия. Сохранить с объединением?',
+                      [
+                        { id: 'merge', label: 'Сохранить объединённое', primary: true },
+                        { id: 'reload', label: 'Только взять с сайта' },
+                        { id: 'force', label: 'Только моё (затрёт чужое)' },
+                        { id: 'cancel', label: 'Отмена' },
+                      ]
+                    ).then(function (choice) {
+                      if (choice === 'merge') {
+                        showBusyBanner('Сохраняю объединённое…');
+                        return runPublish(false);
+                      }
+                      if (choice === 'reload') {
+                        showBusyBanner('Обновляю с сайта…');
+                        return fetchRemoteTree().then(function (remote) {
+                          hideCenterBanner();
+                          if (remote) applyRemoteTreeData(remote);
+                          else showToast('Не удалось загрузить дерево', 'error');
+                          unlockSaveForm();
+                        });
+                      }
+                      if (choice === 'force') {
+                        showBusyBanner('Сохраняю принудительно…');
+                        return runPublish(true);
+                      }
+                      unlockSaveForm();
+                    });
+                  } catch (mergeErr) {
+                    /* fall through to classic conflict UI */
+                  }
+                }
                 return askChoice(
                   'На сайте уже другая версия дерева. Что сделать?',
                   [
