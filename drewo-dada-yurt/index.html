@@ -2,11 +2,11 @@
 <html lang="ru" style="background-color: rgb(13, 26, 34);"><head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-  <title>Дада-юрт</title>
+  <title>Дади-Юрт</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-title" content="Дада-юрт">
+  <meta name="apple-mobile-web-app-title" content="Дади-Юрт">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="color-scheme" content="dark">
@@ -529,6 +529,21 @@
     }
 
     .edit-hint.visible {
+      display: block;
+    }
+
+    .lock-banner {
+      width: auto;
+      margin: 0;
+      padding: 0.45rem 1.25rem 0.55rem;
+      font-size: 0.85rem;
+      color: #f3d9a4;
+      background: color-mix(in srgb, #3a2208 70%, black);
+      border-bottom: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      display: none;
+    }
+
+    .lock-banner.visible {
       display: block;
     }
 
@@ -1430,6 +1445,39 @@
       font-weight: 600;
     }
 
+    .backup-item {
+      display: flex;
+      flex-direction: column;
+      gap: 0.35rem;
+      padding: 0.55rem 0.75rem;
+      border: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
+      border-radius: 10px;
+      background: color-mix(in srgb, var(--bg0) 55%, black);
+    }
+
+    .backup-item-title {
+      font-weight: 650;
+      font-size: 0.92rem;
+    }
+
+    .backup-item-meta {
+      margin: 0;
+      color: var(--text-dim);
+      font-size: 0.8rem;
+    }
+
+    .backup-item-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+
+    .backup-item-actions button {
+      width: auto;
+      min-height: 2.1rem;
+      padding: 0.35rem 0.7rem;
+    }
+
     #backup-empty {
       margin: 0;
       color: var(--text-dim);
@@ -1443,6 +1491,7 @@
     #install-dialog,
     #save-dialog,
     #backup-dialog,
+    #admin-dialog,
     #person-sheet-dialog,
     #whoami-dialog,
     #bio-edit-dialog,
@@ -1468,6 +1517,7 @@
     #install-dialog::backdrop,
     #save-dialog::backdrop,
     #backup-dialog::backdrop,
+    #admin-dialog::backdrop,
     #person-sheet-dialog::backdrop,
     #whoami-dialog::backdrop,
     #bio-edit-dialog::backdrop,
@@ -1479,11 +1529,13 @@
     #password-dialog form,
     #rename-dialog form,
     #save-dialog form,
+    #admin-dialog form,
     #bio-edit-dialog form,
     #year-edit-dialog form,
     #install-dialog .history-body,
     #history-dialog .history-body,
     #backup-dialog .history-body,
+    #admin-dialog .history-body,
     #person-sheet-dialog .history-body,
     #whoami-dialog .history-body {
       display: flex;
@@ -1496,6 +1548,7 @@
     #password-dialog label,
     #rename-dialog label,
     #save-dialog label,
+    #admin-dialog label,
     #bio-edit-dialog label,
     #year-edit-dialog label,
     #whoami-dialog label {
@@ -1507,6 +1560,7 @@
 
     #add-dialog input[type="text"],
     #password-dialog input[type="password"],
+    #admin-dialog input[type="password"],
     #rename-dialog input[type="text"],
     #whoami-dialog input[type="search"],
     #bio-edit-dialog textarea,
@@ -1532,6 +1586,7 @@
     #install-dialog .dialog-actions,
     #history-dialog .dialog-actions,
     #backup-dialog .dialog-actions,
+    #admin-dialog .dialog-actions,
     #person-sheet-dialog .dialog-actions,
     #whoami-dialog .dialog-actions,
     #bio-edit-dialog .dialog-actions,
@@ -1721,7 +1776,7 @@
   </div>
   <header class="header">
     <div class="brand">
-      <h1>Дада-юрт</h1>
+      <h1>Дади-Юрт</h1>
     </div>
     <div class="header-bar">
       <button type="button" id="weather-chip" class="weather-chip" hidden title="Погода рядом" aria-label="Погода рядом">
@@ -1756,6 +1811,7 @@
         <button type="button" id="edit-links" aria-pressed="false">Редактировать</button>
         <button type="button" id="history-btn" title="История добавлений">История (0)</button>
         <button type="button" id="backup-btn">Бэкапы</button>
+        <button type="button" id="admin-btn">Управление</button>
       </div>
       <p class="nav-label">Оформление</p>
       <div class="action-cluster" role="group" aria-label="Оформление">
@@ -1780,18 +1836,20 @@
   <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden="">
     <strong>Как пользоваться</strong>
     <ol>
-      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека.</li>
+      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека (имя, годы, био).</li>
       <li>Укажите <b>Кто я</b> в меню — ваша ветка подсветится золотом.</li>
-      <li><b>+ сын</b> и <b>Редактировать</b> — сначала пароль.</li>
-      <li>В правках: перенос на нового отца, тап — переименовать, у листьев — удалить.</li>
+      <li><b>+ сын</b> и <b>Редактировать</b> — сначала обычный пароль.</li>
+      <li>В «Редактировать»: перенос на нового отца, у листьев — удалить. Имя меняется из карточки.</li>
       <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
+      <li><b>Управление</b> и восстановление бэкапа — суперпароль.</li>
     </ol>
     <div class="guide-actions">
       <button type="button" id="guide-ok">Понятно</button>
       <button type="button" id="guide-never" class="guide-dismiss-forever">Не показывать больше</button>
     </div>
   </aside>
-  <p id="edit-hint" class="edit-hint">Режим редактирования: перенос на нового отца, тап = переименовать, у листьев — удалить. Затем «Сохранить».</p>
+  <p id="edit-hint" class="edit-hint">Режим редактирования: перенос на нового отца, у листьев — удалить. Имя, годы и био — долгое нажатие. Затем «Сохранить».</p>
+  <p id="lock-banner" class="lock-banner" hidden>Правки временно закрыты. Сохранение и смена связей недоступны без суперпароля.</p>
 
   <main>
     <div id="viewport" aria-label="Древо">
@@ -1905,14 +1963,42 @@
 
   <dialog id="backup-dialog" aria-labelledby="backup-dialog-title">
     <div class="history-body">
-      <strong id="backup-dialog-title">Восстановить из бэкапа</strong>
-      <p class="install-steps">Выберите копию. Текущее дерево сначала сохранится в новый бэкап.</p>
+      <strong id="backup-dialog-title">Бэкапы</strong>
+      <p class="install-steps">Список копий. Восстановление просит суперпароль. Текущее дерево сначала сохранится в новый бэкап.</p>
       <p id="backup-empty" hidden>Бэкапов пока нет</p>
       <p id="backup-status" class="dialog-status" hidden></p>
       <p id="backup-error" class="dialog-error" hidden></p>
       <ul id="backup-list"></ul>
       <div class="dialog-actions">
         <button type="button" id="backup-close">Закрыть</button>
+      </div>
+    </div>
+  </dialog>
+
+  <dialog id="admin-dialog" aria-labelledby="admin-dialog-title">
+    <div class="history-body">
+      <strong id="admin-dialog-title">Управление</strong>
+      <p id="admin-lock-status" class="install-steps">Правки открыты</p>
+      <div class="dialog-actions">
+        <button type="button" id="admin-toggle-lock">Заблокировать правки</button>
+        <button type="button" id="admin-snapshot">Сделать бэкап сейчас</button>
+      </div>
+      <form id="admin-password-form">
+        <label>
+          Новый обычный пароль
+          <input id="admin-new-password" type="password" autocomplete="new-password" required="">
+        </label>
+        <label>
+          Ещё раз
+          <input id="admin-new-password2" type="password" autocomplete="new-password" required="">
+        </label>
+        <p id="admin-error" class="dialog-error" hidden=""></p>
+        <div class="dialog-actions">
+          <button type="submit">Сменить пароль</button>
+        </div>
+      </form>
+      <div class="dialog-actions">
+        <button type="button" id="admin-close">Закрыть</button>
       </div>
     </div>
   </dialog>
@@ -1927,6 +2013,7 @@
       </div>
       <div id="person-sheet-bio" class="person-sheet-bio is-empty">Краткой биографии пока нет.</div>
       <div class="dialog-actions">
+        <button type="button" id="person-sheet-rename">Изменить имя</button>
         <button type="button" id="person-sheet-edit-bio">Добавить / изменить</button>
         <button type="button" id="person-sheet-set-me">Это я</button>
         <button type="button" id="person-sheet-close">Закрыть</button>
@@ -1999,7 +2086,7 @@
     {
       "id": "dada",
       "name": "Дада",
-      "note": "Основатель Дада-юрт",
+      "note": "Основатель Дади-Юрт",
       "sons": [
         {
           "id": "tovzar",
@@ -3532,6 +3619,17 @@
       var backupStatus = document.getElementById('backup-status');
       var backupError = document.getElementById('backup-error');
       var backupCloseBtn = document.getElementById('backup-close');
+      var adminBtn = document.getElementById('admin-btn');
+      var adminDialog = document.getElementById('admin-dialog');
+      var adminLockStatus = document.getElementById('admin-lock-status');
+      var adminToggleLock = document.getElementById('admin-toggle-lock');
+      var adminSnapshot = document.getElementById('admin-snapshot');
+      var adminPasswordForm = document.getElementById('admin-password-form');
+      var adminNewPassword = document.getElementById('admin-new-password');
+      var adminNewPassword2 = document.getElementById('admin-new-password2');
+      var adminError = document.getElementById('admin-error');
+      var adminCloseBtn = document.getElementById('admin-close');
+      var lockBanner = document.getElementById('lock-banner');
       var activityEl = document.getElementById('activity-log');
       var weatherChip = document.getElementById('weather-chip');
       var weatherTemp = document.getElementById('weather-temp');
@@ -3550,6 +3648,7 @@
       var personSheetDied = document.getElementById('person-sheet-died');
       var personSheetBio = document.getElementById('person-sheet-bio');
       var personSheetEditBio = document.getElementById('person-sheet-edit-bio');
+      var personSheetRename = document.getElementById('person-sheet-rename');
       var personSheetSetMe = document.getElementById('person-sheet-set-me');
       var personSheetClose = document.getElementById('person-sheet-close');
       var bioEditDialog = document.getElementById('bio-edit-dialog');
@@ -3587,6 +3686,7 @@
       var passwordInput = document.getElementById('password-input');
       var passwordError = document.getElementById('password-error');
       var passwordCancelBtn = document.getElementById('password-cancel');
+      var passwordDialogTitle = document.getElementById('password-dialog-title');
       var renameDialog = document.getElementById('rename-dialog');
       var renameForm = document.getElementById('rename-form');
       var renameInput = document.getElementById('rename-input');
@@ -3616,7 +3716,9 @@
         /iPad|iPhone|iPod/.test(navigator.userAgent) ||
         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
       var isAndroid = /Android/i.test(navigator.userAgent);
-      var EDIT_PASSWORD = 'баташ';
+      var sessionPassword = '';
+      var sessionRole = '';
+      var treeLocked = false;
       var pendingPasswordAction = null;
       var editUnlocked = false;
       var renameTargetId = null;
@@ -3647,8 +3749,67 @@
           .toLocaleLowerCase('ru-RU');
       }
 
-      function passwordsMatch(value) {
-        return normalizePassword(value) === normalizePassword(EDIT_PASSWORD);
+      function applyLockState(locked, reason) {
+        treeLocked = !!locked;
+        if (lockBanner) {
+          lockBanner.hidden = !treeLocked;
+          lockBanner.classList.toggle('visible', treeLocked);
+          if (reason) {
+            lockBanner.textContent =
+              'Правки временно закрыты' + (reason ? ': ' + reason : '') +
+              '. Сохранение без суперпароля недоступно.';
+          }
+        }
+        refreshAdminLockUi();
+      }
+
+      function refreshAdminLockUi() {
+        if (adminLockStatus) {
+          adminLockStatus.textContent = treeLocked
+            ? 'Правки заблокированы. Обычный пароль не сможет сохранить дерево.'
+            : 'Правки открыты.';
+        }
+        if (adminToggleLock) {
+          adminToggleLock.textContent = treeLocked ? 'Разрешить правки' : 'Заблокировать правки';
+        }
+      }
+
+      function rememberSession(password, data) {
+        sessionPassword = password || '';
+        sessionRole = (data && data.role) || '';
+        editUnlocked = sessionRole === 'editor' || sessionRole === 'super';
+        applyLockState(!!(data && data.locked), data && data.lockedReason);
+      }
+
+      function isSuperSession() {
+        return sessionRole === 'super';
+      }
+
+      function legacyEditorPasswordMatch(password) {
+        var expected = TREE_DIR === 'drewo-dada-yurt' ? 'баташ' : 'гуно';
+        return normalizePassword(password) === normalizePassword(expected);
+      }
+
+      function verifyAuth(password) {
+        return callPublishApi({
+          action: 'auth',
+          password: password,
+          treeDir: TREE_DIR,
+        }).catch(function (err) {
+          var msg = (err && err.message) || '';
+          if (/Неизвестное действие|unknown/i.test(msg) && legacyEditorPasswordMatch(password)) {
+            return { role: 'editor', locked: false, superConfigured: false };
+          }
+          throw err;
+        });
+      }
+
+      function loadTreeStatus() {
+        return callPublishApi({ action: 'status', treeDir: TREE_DIR, password: '' })
+          .then(function (data) {
+            applyLockState(!!(data && data.locked), data && data.lockedReason);
+          })
+          .catch(function () {});
       }
 
       function collectAllIds(root) {
@@ -4514,8 +4675,15 @@
 
       function openPasswordDialog(action) {
         pendingPasswordAction = action || { type: 'edit' };
-        if (passwordError) passwordError.hidden = true;
+        if (passwordError) {
+          passwordError.hidden = true;
+          passwordError.textContent = 'Неверный пароль';
+        }
         if (passwordInput) passwordInput.value = '';
+        if (passwordDialogTitle) {
+          var isSuper = pendingPasswordAction && String(pendingPasswordAction.type).indexOf('super') === 0;
+          passwordDialogTitle.textContent = isSuper ? 'Суперпароль' : 'Пароль для правок';
+        }
         if (passwordDialog && passwordDialog.showModal) passwordDialog.showModal();
         if (passwordInput) passwordInput.focus();
       }
@@ -4530,6 +4698,10 @@
           setEditMode(false);
           return;
         }
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы. Нужен суперпароль в «Управление».', 'error', 4200);
+          return;
+        }
         if (editUnlocked) {
           setEditMode(true);
           return;
@@ -4537,7 +4709,31 @@
         openPasswordDialog({ type: 'edit' });
       }
 
+      function requestRename(id) {
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы. Нужен суперпароль.', 'error', 4200);
+          return;
+        }
+        if (editUnlocked) {
+          openRenameDialog(id);
+          return;
+        }
+        openPasswordDialog({ type: 'rename', personId: id });
+      }
+
+      function requestAdmin() {
+        if (isSuperSession()) {
+          openAdminDialog();
+          return;
+        }
+        openPasswordDialog({ type: 'super-admin' });
+      }
+
       function requestAddSon(parentId) {
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы. Нужен суперпароль.', 'error', 4200);
+          return;
+        }
         if (editUnlocked) {
           openAddDialog(parentId);
           return;
@@ -4684,6 +4880,10 @@
       }
 
       function requestYearEdit(id, field) {
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы. Нужен суперпароль.', 'error', 4200);
+          return;
+        }
         if (editUnlocked) {
           openYearEditor(id, field);
           return;
@@ -4746,6 +4946,10 @@
       }
 
       function requestBioEdit(id) {
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы. Нужен суперпароль.', 'error', 4200);
+          return;
+        }
         if (editUnlocked) {
           openBioEditor(id);
           return;
@@ -5097,12 +5301,29 @@
       }
 
       function requestBackups() {
-        if (editUnlocked) {
+        if (sessionPassword) {
           openBackupDialog();
-          loadBackupList(EDIT_PASSWORD);
+          loadBackupList(sessionPassword);
           return;
         }
         openPasswordDialog({ type: 'backups' });
+      }
+
+      function formatBackupWhen(item) {
+        var raw = (item && (item.savedAt || item.label)) || '';
+        if (item && item.savedAt) {
+          var d = new Date(item.savedAt);
+          if (!isNaN(d.getTime())) {
+            return d.toLocaleString('ru-RU', {
+              day: '2-digit',
+              month: '2-digit',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+            });
+          }
+        }
+        return raw || (item && item.name) || 'бэкап';
       }
 
       function loadBackupList(password) {
@@ -5113,6 +5334,7 @@
         }
         return callPublishApi({ action: 'list-backups', password: password, treeDir: TREE_DIR })
           .then(function (data) {
+            if (data && data.role) sessionRole = data.role;
             if (backupStatus) {
               backupStatus.hidden = true;
               backupStatus.removeAttribute('data-busy');
@@ -5127,13 +5349,38 @@
             if (backupEmpty) backupEmpty.hidden = true;
             items.forEach(function (item) {
               var li = document.createElement('li');
-              var btn = document.createElement('button');
-              btn.type = 'button';
-              btn.textContent = item.label || item.name;
-              btn.addEventListener('click', function () {
-                restoreBackup(password, item.name, item.label || item.name);
+              li.className = 'backup-item';
+              var title = document.createElement('div');
+              title.className = 'backup-item-title';
+              title.textContent = formatBackupWhen(item);
+              var meta = document.createElement('p');
+              meta.className = 'backup-item-meta';
+              var bits = [];
+              if (item.personCount) bits.push(item.personCount + ' чел.');
+              if (item.pinned) bits.push('закреплён');
+              if (item.label && item.label !== formatBackupWhen(item)) bits.push(item.label);
+              meta.textContent = bits.join(' · ') || 'копия дерева';
+              var actions = document.createElement('div');
+              actions.className = 'backup-item-actions';
+              var restoreBtn = document.createElement('button');
+              restoreBtn.type = 'button';
+              restoreBtn.textContent = 'Восстановить';
+              restoreBtn.addEventListener('click', function () {
+                requestRestoreBackup(item.name, formatBackupWhen(item));
               });
-              li.appendChild(btn);
+              actions.appendChild(restoreBtn);
+              if (isSuperSession()) {
+                var pinBtn = document.createElement('button');
+                pinBtn.type = 'button';
+                pinBtn.textContent = item.pinned ? 'Открепить' : 'Закрепить';
+                pinBtn.addEventListener('click', function () {
+                  pinBackup(item.name, !item.pinned);
+                });
+                actions.appendChild(pinBtn);
+              }
+              li.appendChild(title);
+              li.appendChild(meta);
+              li.appendChild(actions);
               backupList.appendChild(li);
             });
           })
@@ -5146,6 +5393,31 @@
               backupError.hidden = false;
               backupError.textContent = err.message || String(err);
             }
+          });
+      }
+
+      function requestRestoreBackup(name, label) {
+        if (isSuperSession()) {
+          restoreBackup(sessionPassword, name, label);
+          return;
+        }
+        openPasswordDialog({ type: 'super-restore', backup: name, label: label });
+      }
+
+      function pinBackup(name, pinned) {
+        callPublishApi({
+          action: 'pin-backup',
+          password: sessionPassword,
+          backup: name,
+          pinned: !!pinned,
+          treeDir: TREE_DIR,
+        })
+          .then(function () {
+            showToast(pinned ? 'Бэкап закреплён' : 'Бэкап откреплён', 'success');
+            loadBackupList(sessionPassword);
+          })
+          .catch(function (err) {
+            showToast(err.message || String(err), 'error', 5000);
           });
       }
 
@@ -5170,6 +5442,52 @@
               });
           }
         );
+      }
+
+      function openAdminDialog() {
+        refreshAdminLockUi();
+        if (adminError) {
+          adminError.hidden = true;
+          adminError.textContent = '';
+        }
+        if (adminNewPassword) adminNewPassword.value = '';
+        if (adminNewPassword2) adminNewPassword2.value = '';
+        if (adminDialog && adminDialog.showModal) adminDialog.showModal();
+      }
+
+      function setTreeLock(locked) {
+        callPublishApi({
+          action: 'set-lock',
+          password: sessionPassword,
+          locked: !!locked,
+          treeDir: TREE_DIR,
+        })
+          .then(function (data) {
+            applyLockState(!!data.locked, data.lockedReason);
+            showToast(data.locked ? 'Правки заблокированы' : 'Правки снова открыты', 'success');
+            if (data.locked && editMode) setEditMode(false);
+          })
+          .catch(function (err) {
+            showToast(err.message || String(err), 'error', 5000);
+          });
+      }
+
+      function makeManualSnapshot() {
+        showBusyBanner('Сохраняю снимок…');
+        callPublishApi({
+          action: 'snapshot',
+          password: sessionPassword,
+          label: 'Ручной снимок',
+          treeDir: TREE_DIR,
+        })
+          .then(function () {
+            hideCenterBanner();
+            showToast('Снимок сохранён в бэкапы', 'success');
+          })
+          .catch(function (err) {
+            hideCenterBanner();
+            showToast(err.message || String(err), 'error', 5000);
+          });
       }
 
       function showToast(message, kind, ms) {
@@ -5842,6 +6160,8 @@
               : baseTitle + ' — раскрыть ветвь';
         } else if (editMode) {
           btn.title = baseTitle + ' — перетащите на нового отца';
+        } else {
+          btn.title = baseTitle + ' — долгое нажатие: карточка';
         }
         btn.style.width = '100%';
         btn.style.maxWidth = 'none';
@@ -5870,7 +6190,6 @@
         btn.addEventListener('click', function (e) {
           e.stopPropagation();
           if (gestureMoved || longPressFired) return;
-          // В режиме правок переименование открывается из onDragEnd (tap без сдвига).
           if (editMode) return;
           if (!meta.hasSons) return;
           if (expanded.has(meta.id)) expanded.delete(meta.id);
@@ -6098,12 +6417,8 @@
         var dropId = moved ? personFromPoint(e.clientX, e.clientY) : null;
         clearDrag();
         if (!editMode || !editUnlocked) return;
-        // Короткий тап без сдвига — переименовать (не после long-press карточки).
-        if (!moved) {
-          if (longPressFired) return;
-          openRenameDialog(childId);
-          return;
-        }
+        // Короткий тап без сдвига больше не переименовывает — имя из карточки (долгое нажатие).
+        if (!moved) return;
         if (!dropId || dropId === childId) return;
         var result = reparentNode(childId, dropId);
         if (!result.ok) {
@@ -6251,27 +6566,55 @@
       if (passwordForm) {
         passwordForm.addEventListener('submit', function (e) {
           e.preventDefault();
-          if (!passwordsMatch(passwordInput.value)) {
-            passwordError.hidden = false;
-            return;
-          }
           var action = pendingPasswordAction;
           var pass = passwordInput.value;
-          editUnlocked = true;
-          pendingPasswordAction = null;
-          if (passwordDialog && passwordDialog.open) passwordDialog.close();
-          if (action && action.type === 'add') {
-            openAddDialog(action.parentId);
-          } else if (action && action.type === 'backups') {
-            openBackupDialog();
-            loadBackupList(pass);
-          } else if (action && action.type === 'year') {
-            openYearEditor(action.personId, action.field);
-          } else if (action && action.type === 'bio') {
-            openBioEditor(action.personId);
-          } else {
-            setEditMode(true);
-          }
+          if (passwordError) passwordError.hidden = true;
+          verifyAuth(pass)
+            .then(function (data) {
+              var needSuper = action && String(action.type).indexOf('super') === 0;
+              if (needSuper && data.role !== 'super') {
+                var restoreBootstrap =
+                  action.type === 'super-restore' &&
+                  data.superConfigured === false &&
+                  data.role === 'editor';
+                if (!restoreBootstrap) {
+                  if (passwordError) {
+                    passwordError.hidden = false;
+                    passwordError.textContent = data.superConfigured === false
+                      ? 'Суперпароль ещё не задан на сервере'
+                      : 'Нужен суперпароль';
+                  }
+                  return;
+                }
+              }
+              rememberSession(pass, data);
+              pendingPasswordAction = null;
+              if (passwordDialog && passwordDialog.open) passwordDialog.close();
+              if (action && action.type === 'add') {
+                openAddDialog(action.parentId);
+              } else if (action && action.type === 'backups') {
+                openBackupDialog();
+                loadBackupList(pass);
+              } else if (action && action.type === 'year') {
+                openYearEditor(action.personId, action.field);
+              } else if (action && action.type === 'bio') {
+                openBioEditor(action.personId);
+              } else if (action && action.type === 'rename') {
+                openRenameDialog(action.personId);
+              } else if (action && action.type === 'super-restore') {
+                restoreBackup(pass, action.backup, action.label || action.backup);
+              } else if (action && action.type === 'super-admin') {
+                openAdminDialog();
+              } else {
+                setEditMode(true);
+              }
+            })
+            .catch(function (err) {
+              if (passwordError) {
+                passwordError.hidden = false;
+                passwordError.textContent = err.message || 'Неверный пароль';
+              }
+            });
         });
       }
       if (passwordCancelBtn) {
@@ -6386,11 +6729,6 @@
         saveForm.addEventListener('submit', function (e) {
           e.preventDefault();
           var pass = savePasswordInput.value;
-          if (!passwordsMatch(pass)) {
-            saveError.hidden = false;
-            saveError.textContent = 'Неверный пароль';
-            return;
-          }
           saveError.hidden = true;
           if (saveDialog && saveDialog.open) saveDialog.close();
           if (saveRemoteBtn) saveRemoteBtn.disabled = true;
@@ -6579,6 +6917,59 @@
           requestBackups();
         });
       }
+      if (adminBtn) {
+        adminBtn.addEventListener('click', function () {
+          setNavMenuOpen(false);
+          requestAdmin();
+        });
+      }
+      if (adminCloseBtn) {
+        adminCloseBtn.addEventListener('click', function () {
+          if (adminDialog && adminDialog.open) adminDialog.close();
+        });
+      }
+      if (adminToggleLock) {
+        adminToggleLock.addEventListener('click', function () {
+          setTreeLock(!treeLocked);
+        });
+      }
+      if (adminSnapshot) {
+        adminSnapshot.addEventListener('click', function () {
+          makeManualSnapshot();
+        });
+      }
+      if (adminPasswordForm) {
+        adminPasswordForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          var a = adminNewPassword ? adminNewPassword.value : '';
+          var b = adminNewPassword2 ? adminNewPassword2.value : '';
+          if (normalizePassword(a) !== normalizePassword(b)) {
+            if (adminError) {
+              adminError.hidden = false;
+              adminError.textContent = 'Пароли не совпадают';
+            }
+            return;
+          }
+          if (adminError) adminError.hidden = true;
+          callPublishApi({
+            action: 'set-password',
+            password: sessionPassword,
+            newPassword: a,
+            treeDir: TREE_DIR,
+          })
+            .then(function () {
+              showToast('Обычный пароль изменён', 'success');
+              if (adminNewPassword) adminNewPassword.value = '';
+              if (adminNewPassword2) adminNewPassword2.value = '';
+            })
+            .catch(function (err) {
+              if (adminError) {
+                adminError.hidden = false;
+                adminError.textContent = err.message || String(err);
+              }
+            });
+        });
+      }
       if (historyCloseBtn) {
         historyCloseBtn.addEventListener('click', closeHistoryDialog);
       }
@@ -6621,6 +7012,14 @@
       }
       if (personSheetClose) {
         personSheetClose.addEventListener('click', closePersonSheet);
+      }
+      if (personSheetRename) {
+        personSheetRename.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          var id = personSheetTargetId;
+          closePersonSheet();
+          requestRename(id);
+        });
       }
       if (personSheetEditBio) {
         personSheetEditBio.addEventListener('click', function () {
@@ -6789,6 +7188,7 @@
         }
         startSkyWatch();
         warmSkyCache();
+        loadTreeStatus();
       }
 
       function finishBoot() {

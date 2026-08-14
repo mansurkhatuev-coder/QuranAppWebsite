@@ -1,7 +1,7 @@
 {
-  "name": "Дада-юрт",
-  "short_name": "Дада-юрт",
-  "description": "Родовое древо Дада-юрт",
+  "name": "Дади-Юрт",
+  "short_name": "Дади-Юрт",
+  "description": "Родовое древо Дади-Юрт",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
