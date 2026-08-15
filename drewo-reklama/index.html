@@ -2184,6 +2184,87 @@
       font-weight: 700;
       color: color-mix(in srgb, var(--sand) 75%, white);
     }
+
+    .person-sheet-photo.has-photo {
+      cursor: zoom-in;
+    }
+    .person-sheet-photo.has-photo:focus-visible {
+      outline: 2px solid color-mix(in srgb, var(--sand) 70%, white);
+      outline-offset: 3px;
+    }
+    #photo-lightbox-dialog {
+      margin: 0;
+      padding: 0;
+      border: 0;
+      width: 100vw;
+      max-width: 100vw;
+      height: 100vh;
+      height: 100dvh;
+      max-height: 100vh;
+      max-height: 100dvh;
+      background: rgba(3, 9, 16, 0.92);
+      color: var(--text);
+    }
+    #photo-lightbox-dialog::backdrop {
+      background: rgba(0, 0, 0, 0.72);
+    }
+    .photo-lightbox-body {
+      box-sizing: border-box;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+      justify-content: center;
+      gap: 0.75rem;
+      width: 100%;
+      height: 100%;
+      padding: max(0.75rem, env(safe-area-inset-top)) max(0.75rem, env(safe-area-inset-right)) max(0.75rem, env(safe-area-inset-bottom)) max(0.75rem, env(safe-area-inset-left));
+    }
+    .photo-lightbox-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.75rem;
+      flex: 0 0 auto;
+    }
+    .photo-lightbox-toolbar strong {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: color-mix(in srgb, #f7ecc0 90%, white);
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    #photo-lightbox-close {
+      min-height: 2.3rem;
+      padding: 0.35rem 0.85rem;
+      border-radius: 8px;
+      border: 1px solid color-mix(in srgb, var(--sand) 40%, transparent);
+      background: color-mix(in srgb, var(--bg1) 45%, transparent);
+      color: var(--text);
+      font-weight: 600;
+      cursor: pointer;
+    }
+    .photo-lightbox-frame {
+      flex: 1 1 auto;
+      min-height: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-out;
+    }
+    #photo-lightbox-img {
+      display: block;
+      max-width: 100%;
+      max-height: 100%;
+      width: auto;
+      height: auto;
+      object-fit: contain;
+      border-radius: 10px;
+      box-shadow: 0 12px 36px rgba(0, 0, 0, 0.45);
+      background: #0a151c;
+    }
     .person-sheet-photo-actions {
       display: flex;
       flex-wrap: wrap;
@@ -2592,6 +2673,19 @@
       <div class="dialog-actions">
         <button type="button" id="photo-crop-apply">Готово</button>
         <button type="button" id="photo-crop-cancel">Отмена</button>
+      </div>
+    </div>
+  </dialog>
+
+
+  <dialog id="photo-lightbox-dialog" aria-labelledby="photo-lightbox-title">
+    <div class="photo-lightbox-body">
+      <div class="photo-lightbox-toolbar">
+        <strong id="photo-lightbox-title">Фото</strong>
+        <button type="button" id="photo-lightbox-close">Закрыть</button>
+      </div>
+      <div class="photo-lightbox-frame" id="photo-lightbox-frame">
+        <img id="photo-lightbox-img" alt="">
       </div>
     </div>
   </dialog>
@@ -3874,6 +3968,11 @@
       var gateSubmit = document.getElementById('gate-submit');
       var gateStatus = document.getElementById('gate-status');
       var personSheetPhoto = document.getElementById('person-sheet-photo');
+      var photoLightboxDialog = document.getElementById('photo-lightbox-dialog');
+      var photoLightboxTitle = document.getElementById('photo-lightbox-title');
+      var photoLightboxImg = document.getElementById('photo-lightbox-img');
+      var photoLightboxClose = document.getElementById('photo-lightbox-close');
+      var photoLightboxFrame = document.getElementById('photo-lightbox-frame');
       var personSheetPhotoAdd = document.getElementById('person-sheet-photo-add');
       var personSheetPhotoRemove = document.getElementById('person-sheet-photo-remove');
       var personPhotoFile = document.getElementById('person-photo-file');
@@ -8123,6 +8222,11 @@
         var initial = String(node.name || '?').trim().charAt(0) || '?';
         if (ver) {
           personSheetPhoto.classList.remove('is-empty');
+          personSheetPhoto.classList.add('has-photo');
+          personSheetPhoto.setAttribute('role', 'button');
+          personSheetPhoto.setAttribute('tabindex', '0');
+          personSheetPhoto.setAttribute('aria-label', 'Открыть полное фото');
+          personSheetPhoto.title = 'Нажмите, чтобы открыть полное фото';
           personSheetPhoto.textContent = '';
           personSheetPhoto.style.backgroundImage = 'url("' + photoFullUrl(node.id, ver) + '")';
           personSheetPhoto.style.backgroundSize = 'cover';
@@ -8131,10 +8235,49 @@
           if (personSheetPhotoRemove) personSheetPhotoRemove.hidden = false;
         } else {
           personSheetPhoto.classList.add('is-empty');
+          personSheetPhoto.classList.remove('has-photo');
+          personSheetPhoto.removeAttribute('role');
+          personSheetPhoto.removeAttribute('tabindex');
+          personSheetPhoto.removeAttribute('aria-label');
+          personSheetPhoto.title = '';
           personSheetPhoto.textContent = initial;
           personSheetPhoto.style.backgroundImage = '';
           if (personSheetPhotoAdd) personSheetPhotoAdd.textContent = 'Добавить фото';
           if (personSheetPhotoRemove) personSheetPhotoRemove.hidden = true;
+        }
+      }
+
+      function openPhotoLightbox(personId) {
+        var node = TreeModel.findById(tree, personId);
+        if (!node || !photoVersion(node) || !photoLightboxDialog || !photoLightboxImg) return;
+        var ver = photoVersion(node);
+        if (photoLightboxTitle) photoLightboxTitle.textContent = node.name || 'Фото';
+        photoLightboxImg.alt = node.name || 'Фото';
+        photoLightboxImg.src = photoFullUrl(node.id, ver);
+        try {
+          if (personSheetDialog && personSheetDialog.open) personSheetDialog.close();
+        } catch (err) {}
+        var open = function () {
+          try {
+            if (typeof photoLightboxDialog.showModal === 'function') photoLightboxDialog.showModal();
+            else photoLightboxDialog.setAttribute('open', '');
+          } catch (err2) {
+            showToast('Не удалось открыть фото', 'error');
+          }
+        };
+        window.setTimeout(open, 40);
+      }
+
+      function closePhotoLightbox() {
+        if (photoLightboxImg) {
+          photoLightboxImg.removeAttribute('src');
+          photoLightboxImg.alt = '';
+        }
+        if (photoLightboxDialog && photoLightboxDialog.open) photoLightboxDialog.close();
+        if (personSheetTargetId) {
+          window.setTimeout(function () {
+            openPersonSheet(personSheetTargetId);
+          }, 40);
         }
       }
 
@@ -8401,6 +8544,41 @@
         logoutBtn.addEventListener('click', function () {
           setNavMenuOpen(false);
           logoutView();
+        });
+      }
+      if (personSheetPhoto) {
+        personSheetPhoto.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          if (!personSheetPhoto.classList.contains('has-photo')) return;
+          openPhotoLightbox(personSheetTargetId);
+        });
+        personSheetPhoto.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          if (!personSheetTargetId || !personSheetPhoto.classList.contains('has-photo')) return;
+          e.preventDefault();
+          openPhotoLightbox(personSheetTargetId);
+        });
+      }
+      if (photoLightboxClose) {
+        photoLightboxClose.addEventListener('click', function () {
+          closePhotoLightbox();
+        });
+      }
+      if (photoLightboxFrame) {
+        photoLightboxFrame.addEventListener('click', function () {
+          closePhotoLightbox();
+        });
+      }
+      if (photoLightboxImg) {
+        photoLightboxImg.addEventListener('click', function (e) {
+          e.stopPropagation();
+          closePhotoLightbox();
+        });
+      }
+      if (photoLightboxDialog) {
+        photoLightboxDialog.addEventListener('cancel', function (e) {
+          e.preventDefault();
+          closePhotoLightbox();
         });
       }
       if (personSheetPhotoAdd) {
