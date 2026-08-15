@@ -422,26 +422,84 @@
     }
   }
 
+  const AUTH_LOCK_SCOPE = 'trees';
+  let authLockTimer = null;
+
+  function authLockApi() {
+    return window.AuthLock || null;
+  }
+
+  function setLoginError(message, visible = true) {
+    const err = $('#login-error');
+    if (!err) return;
+    err.hidden = !visible;
+    if (visible) err.textContent = message;
+  }
+
+  function syncLoginLockUi() {
+    const api = authLockApi();
+    const submit = $('#login-submit');
+    if (!api) return;
+    const state = api.getState(AUTH_LOCK_SCOPE);
+    if (state.locked) {
+      setLoginError(state.message, true);
+      if (submit) submit.disabled = true;
+      return;
+    }
+    if (submit && isAuthReady()) submit.disabled = false;
+  }
+
+  function startAuthLockTicker() {
+    if (authLockTimer) return;
+    authLockTimer = window.setInterval(() => {
+      const api = authLockApi();
+      if (!api) return;
+      const state = api.getState(AUTH_LOCK_SCOPE);
+      if (state.locked) {
+        setLoginError(state.message, true);
+        const submit = $('#login-submit');
+        if (submit) submit.disabled = true;
+        return;
+      }
+      clearInterval(authLockTimer);
+      authLockTimer = null;
+      syncLoginLockUi();
+      const err = $('#login-error');
+      if (err && /Слишком много попыток|Осталось попыток/.test(err.textContent || '')) {
+        err.hidden = true;
+      }
+    }, 1000);
+  }
+
   async function handleLogin(event) {
     event.preventDefault();
+    setLoginError('', false);
     const email = $('#login-email').value.trim();
     const password = $('#login-password').value;
-    const err = $('#login-error');
-    if (err) err.hidden = true;
 
     const sb = getClient();
     if (!sb) {
-      if (err) {
-        err.hidden = false;
-        err.textContent = 'Supabase не настроен';
-      }
+      setLoginError('Supabase не настроен');
       return;
+    }
+
+    const lock = authLockApi();
+    if (lock) {
+      try {
+        lock.assertAllowed(AUTH_LOCK_SCOPE);
+      } catch (error) {
+        setLoginError(error instanceof Error ? error.message : 'Слишком много попыток.');
+        startAuthLockTicker();
+        syncLoginLockUi();
+        return;
+      }
     }
 
     showBoot('Вход…');
     try {
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
+      if (lock) lock.clear(AUTH_LOCK_SCOPE);
       try {
         localStorage.setItem(EMAIL_KEY, email);
       } catch {
@@ -451,12 +509,18 @@
       await refresh({ boot: true });
       startPolling();
     } catch (error) {
-      if (err) {
-        err.hidden = false;
-        err.textContent = error?.message?.includes('Invalid')
-          ? 'Неверные данные для входа'
-          : error?.message || 'Ошибка входа';
+      let message = error?.message?.includes('Invalid')
+        ? 'Неверные данные для входа'
+        : error?.message || 'Ошибка входа';
+      if (lock) {
+        const after = lock.recordFailure(AUTH_LOCK_SCOPE);
+        message = after.locked
+          ? after.message
+          : `Неверные данные для входа. Осталось попыток: ${after.attemptsLeft}`;
+        if (after.locked) startAuthLockTicker();
       }
+      setLoginError(message);
+      syncLoginLockUi();
       hideBoot();
     }
   }
@@ -584,6 +648,16 @@
     } catch {
       // ignore
     }
+
+    if (!isAuthReady()) {
+      const notice = $('#login-setup-notice');
+      const submit = $('#login-submit');
+      if (notice) notice.hidden = false;
+      if (submit) submit.disabled = true;
+    }
+    syncLoginLockUi();
+    const lock = authLockApi();
+    if (lock?.getState(AUTH_LOCK_SCOPE).locked) startAuthLockTicker();
 
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible' && !$('#app-screen').hidden) {

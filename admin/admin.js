@@ -1278,6 +1278,59 @@ async function persistReleaseState() {
   await window.AdminSupabase.saveRelease(state.release);
 }
 
+const AUTH_LOCK_SCOPE = 'admin';
+let authLockTimer = null;
+
+function authLockApi() {
+  return window.AuthLock || null;
+}
+
+function setLoginError(message, visible = true) {
+  const el = $('#login-error');
+  if (!el) return;
+  el.hidden = !visible;
+  if (visible) el.textContent = message;
+}
+
+function syncLoginLockUi() {
+  const api = authLockApi();
+  const submit = $('#login-submit') || $('#login-form button[type="submit"]');
+  if (!api) return;
+
+  const state = api.getState(AUTH_LOCK_SCOPE);
+  if (state.locked) {
+    setLoginError(state.message, true);
+    if (submit) submit.disabled = true;
+    return;
+  }
+
+  if (submit && isSupabaseReady()) submit.disabled = false;
+}
+
+function startAuthLockTicker() {
+  if (authLockTimer) return;
+  authLockTimer = window.setInterval(() => {
+    const api = authLockApi();
+    if (!api) return;
+    const snapshot = api.getState(AUTH_LOCK_SCOPE);
+    if (snapshot.locked) {
+      setLoginError(snapshot.message, true);
+      const submit = $('#login-submit') || $('#login-form button[type="submit"]');
+      if (submit) submit.disabled = true;
+      return;
+    }
+    if (authLockTimer) {
+      clearInterval(authLockTimer);
+      authLockTimer = null;
+    }
+    syncLoginLockUi();
+    const err = $('#login-error');
+    if (err && /Слишком много попыток|Осталось попыток/.test(err.textContent || '')) {
+      err.hidden = true;
+    }
+  }, 1000);
+}
+
 function bindEvents() {
   const loginForm = $('#login-form');
   if (!loginForm) throw new Error('login-form not found');
@@ -1289,6 +1342,18 @@ function bindEvents() {
       $('#login-error').textContent = 'Supabase не настроен. Проверьте supabase-config.js на сайте.';
       $('#login-error').hidden = false;
       return;
+    }
+
+    const lock = authLockApi();
+    if (lock) {
+      try {
+        lock.assertAllowed(AUTH_LOCK_SCOPE);
+      } catch (error) {
+        setLoginError(error instanceof Error ? error.message : 'Слишком много попыток.');
+        startAuthLockTicker();
+        syncLoginLockUi();
+        return;
+      }
     }
 
     const email = $('#login-email').value.trim();
@@ -1307,6 +1372,7 @@ function bindEvents() {
     try {
       setLoginBusy(true, 'Вход…');
       await window.AdminSupabase.signIn(email, password);
+      if (lock) lock.clear(AUTH_LOCK_SCOPE);
       await rememberLoginCredentials(email, password);
       setLoginBusy(true, 'Загрузка данных…');
       showApp();
@@ -1316,9 +1382,17 @@ function bindEvents() {
     } catch (error) {
       hideBootOverlay();
       setLoginBusy(false);
-      $('#login-error').hidden = false;
-      $('#login-error').textContent =
+      let message =
         error instanceof Error ? error.message : 'Неверный email или пароль Supabase';
+      if (lock) {
+        const after = lock.recordFailure(AUTH_LOCK_SCOPE);
+        message = after.locked
+          ? after.message
+          : `Неверный email или пароль. Осталось попыток: ${after.attemptsLeft}`;
+        if (after.locked) startAuthLockTicker();
+      }
+      setLoginError(message, true);
+      syncLoginLockUi();
     }
   });
 
@@ -1415,6 +1489,9 @@ function configureLoginUi() {
   $('#login-setup-notice').hidden = ready;
   const submit = $('#login-submit') || $('#login-form button[type="submit"]');
   if (submit) submit.disabled = !ready;
+  syncLoginLockUi();
+  const lock = authLockApi();
+  if (lock?.getState(AUTH_LOCK_SCOPE).locked) startAuthLockTicker();
 }
 
 async function init() {
