@@ -654,8 +654,9 @@ function parseBackupPayload(raw: string): { treeJson: string; activityJson: stri
   };
 }
 
-/** Sessions with a heartbeat newer than this are counted as online. */
-const PRESENCE_TTL_MS = 2 * 60 * 1000;
+/** Sessions with a heartbeat newer than this are counted as online.
+ *  Mobile browsers throttle timers in background, so keep a wider window. */
+const PRESENCE_TTL_MS = 5 * 60 * 1000;
 const PRESENCE_SESSION_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{7,79}$/;
 
 function normalizePresenceSessionId(raw: unknown): string | null {
@@ -730,6 +731,61 @@ async function safeOnlineCount(treeDir: TreeDir): Promise<number | null> {
   }
 }
 
+async function readVisitCountFromStats(
+  admin: Awaited<ReturnType<typeof getServiceClient>>,
+  treeDir: TreeDir
+): Promise<number | null> {
+  const { data, error } = await admin
+    .from('drewo_tree_stats')
+    .select('visit_count')
+    .eq('tree_dir', treeDir)
+    .maybeSingle();
+  if (error) throw new Error(error.message);
+  if (!data) return null;
+  return normalizeVisitCount((data as { visit_count?: unknown }).visit_count);
+}
+
+async function safeVisitCount(treeDir: TreeDir, fallback: number): Promise<number> {
+  try {
+    const admin = await getServiceClient();
+    const fromStats = await readVisitCountFromStats(admin, treeDir);
+    return fromStats != null ? fromStats : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+async function incrementVisitCount(
+  treeDir: TreeDir,
+  fallbackAccessCount: number
+): Promise<{ visitCount: number; usedStats: boolean }> {
+  try {
+    const admin = await getServiceClient();
+    // Seed once from access.json so we don't reset an existing GitHub counter.
+    const existing = await readVisitCountFromStats(admin, treeDir);
+    if (existing == null && fallbackAccessCount > 0) {
+      await admin.from('drewo_tree_stats').upsert(
+        {
+          tree_dir: treeDir,
+          visit_count: fallbackAccessCount,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'tree_dir' }
+      );
+    }
+    const { data, error } = await admin.rpc('drewo_increment_visit', {
+      p_tree_dir: treeDir,
+    });
+    if (error) throw new Error(error.message);
+    return { visitCount: normalizeVisitCount(data), usedStats: true };
+  } catch {
+    return {
+      visitCount: normalizeVisitCount(fallbackAccessCount) + 1,
+      usedStats: false,
+    };
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -771,34 +827,45 @@ Deno.serve(async (request) => {
     const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
-      const onlineCount = await safeOnlineCount(treeDir);
+      const [onlineCount, visitCount] = await Promise.all([
+        safeOnlineCount(treeDir),
+        safeVisitCount(treeDir, access.visitCount),
+      ]);
       return jsonResponse({
         ok: true,
         treeDir,
         locked: access.locked,
         lockedReason: access.lockedReason,
         superConfigured,
-        visitCount: access.visitCount,
+        visitCount,
         ...(onlineCount != null ? { onlineCount } : {}),
       });
     }
 
     if (action === 'record-visit') {
-      const next: AccessState = {
-        ...access,
-        visitCount: normalizeVisitCount(access.visitCount) + 1,
-      };
-      await githubCommitChanges({
-        token: githubToken,
-        repo: githubRepo,
-        message: `Record visit for ${treeDir}`,
-        changes: [{ path: accessPath(treeDir), content: serializeAccess(next) }],
-      });
+      const bumped = await incrementVisitCount(treeDir, access.visitCount);
+      // Keep access.json in sync when possible (best-effort; stats table is source of truth).
+      if (bumped.visitCount !== access.visitCount) {
+        const next: AccessState = {
+          ...access,
+          visitCount: bumped.visitCount,
+        };
+        try {
+          await githubCommitChanges({
+            token: githubToken,
+            repo: githubRepo,
+            message: `Record visit for ${treeDir}`,
+            changes: [{ path: accessPath(treeDir), content: serializeAccess(next) }],
+          });
+        } catch {
+          // Stats already incremented; ignore GitHub sync failures.
+        }
+      }
       const onlineCount = await safeOnlineCount(treeDir);
       return jsonResponse({
         ok: true,
         treeDir,
-        visitCount: next.visitCount,
+        visitCount: bumped.visitCount,
         ...(onlineCount != null ? { onlineCount } : {}),
       });
     }
