@@ -3569,7 +3569,7 @@
       var MY_PERSON_KEY = 'drewo-reklama-my-person-id';
       var WHOAMI_SKIP_KEY = 'drewo-reklama-whoami-skip';
       var WEATHER_CACHE_KEY = 'drewo-reklama-weather-cache';
-      var MAP_SCALE_MIN = 0.15;
+      var MAP_SCALE_MIN = 0.06;
       var MAP_SCALE_MAX = 2.5;
       var dataEl = document.getElementById('tree-data');
       var tree = TreeModel.markAllowAdd(JSON.parse(dataEl.textContent), NUTSU_ID);
@@ -6276,7 +6276,7 @@
         var vh = viewport.clientHeight || 480;
         var tw = layoutMeta.width || 1;
         var th = layoutMeta.height || 1;
-        var scale = clamp(Math.min((vw - 24) / tw, (vh - 24) / th, 1), 0.2, 1);
+        var scale = clamp(Math.min((vw - 24) / tw, (vh - 24) / th, 1), MAP_SCALE_MIN, 1);
         map.scale = scale;
         map.x = (vw - tw * scale) / 2;
         map.y = 20;
