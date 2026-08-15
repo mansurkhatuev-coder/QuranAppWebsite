@@ -802,6 +802,61 @@ Deno.serve(async (request) => {
     }
 
     const body = await request.json();
+    const action =
+      typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
+
+    /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
+    if (action === 'hub-overview') {
+      const trees = await Promise.all(
+        ALLOWED_TREE_DIRS.map(async (dir) => {
+          const [accessFile, manifestFile, onlineCount] = await Promise.all([
+            githubGetFile(githubToken, githubRepo, accessPath(dir)),
+            githubGetFile(githubToken, githubRepo, manifestPath(dir)),
+            safeOnlineCount(dir),
+          ]);
+          const access = parseAccess(accessFile?.content);
+          const manifest = parseManifest(manifestFile?.content);
+          const visitCount = await safeVisitCount(dir, access.visitCount);
+          const latestWithPeople = manifest.find((item) => item.personCount > 0) ?? manifest[0] ?? null;
+          const previousWithPeople =
+            manifest.find(
+              (item, index) => index > 0 && item.personCount > 0 && item.personCount !== latestWithPeople?.personCount
+            ) ?? null;
+          const baseline =
+            [...manifest].reverse().find((item) => item.personCount > 0) ?? null;
+          const personCount = latestWithPeople?.personCount ?? 0;
+          const addedSinceBaseline =
+            baseline && personCount >= baseline.personCount
+              ? personCount - baseline.personCount
+              : null;
+          const addedSincePrevious =
+            previousWithPeople && personCount >= previousWithPeople.personCount
+              ? personCount - previousWithPeople.personCount
+              : null;
+
+          return {
+            treeDir: dir,
+            locked: access.locked,
+            lockedReason: access.lockedReason,
+            superConfigured: Boolean(superPasswordValue(dir)),
+            visitCount,
+            ...(onlineCount != null ? { onlineCount } : {}),
+            personCount,
+            backupCount: manifest.length,
+            lastSavedAt: latestWithPeople?.savedAt ?? null,
+            addedSinceBaseline,
+            addedSincePrevious,
+          };
+        })
+      );
+
+      return jsonResponse({
+        ok: true,
+        generatedAt: new Date().toISOString(),
+        trees,
+      });
+    }
+
     const treeDir = resolveTreeDir(body.treeDir);
     if (!treeDir) {
       return jsonResponse(
@@ -814,8 +869,6 @@ Deno.serve(async (request) => {
     const jsonPath = `${treeDir}/family-tree.json`;
     const backupsDir = `${treeDir}/backups`;
     const backupPrefix = backupNamePrefix(treeDir);
-    const action =
-      typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
 
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
