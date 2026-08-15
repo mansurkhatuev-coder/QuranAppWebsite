@@ -4204,8 +4204,10 @@
       }
 
       var presenceTimer = null;
+      var presencePollTimer = null;
       var presenceStarted = false;
-      var PRESENCE_INTERVAL_MS = 45000;
+      var PRESENCE_INTERVAL_MS = 20000;
+      var PRESENCE_POLL_MS = 12000;
       var STATS_ROTATE_MS = 4000;
       var statsRotateTimer = null;
       var statsMode = 'online';
@@ -4333,26 +4335,56 @@
           });
       }
 
+      function refreshPresenceStats() {
+        if (!presenceStarted) return;
+        callPublishApi({ action: 'status', treeDir: TREE_DIR, password: '' })
+          .then(function (data) {
+            if (data && data.visitCount != null) applyVisitCount(data.visitCount);
+            if (data && data.onlineCount != null) applyOnlineCount(data.onlineCount);
+          })
+          .catch(function () {});
+      }
+
       function onPresenceVisibility() {
-        if (document.visibilityState === 'visible' && presenceStarted) {
+        if (!presenceStarted) return;
+        if (document.visibilityState === 'visible') {
+          sendPresence('presence-heartbeat');
+          refreshPresenceStats();
+        } else {
+          // Keep a last heartbeat while backgrounding so the other device
+          // still sees us for the server TTL window.
           sendPresence('presence-heartbeat');
         }
+      }
+
+      function onPresenceFocus() {
+        if (!presenceStarted) return;
+        sendPresence('presence-heartbeat');
+        refreshPresenceStats();
       }
 
       function startPresence() {
         if (presenceStarted) {
           sendPresence('presence-heartbeat');
+          refreshPresenceStats();
           return;
         }
         presenceStarted = true;
         sendPresence('presence-heartbeat');
+        refreshPresenceStats();
         if (presenceTimer) clearInterval(presenceTimer);
         presenceTimer = setInterval(function () {
           if (!presenceStarted) return;
-          if (document.visibilityState === 'hidden') return;
           sendPresence('presence-heartbeat');
         }, PRESENCE_INTERVAL_MS);
+        if (presencePollTimer) clearInterval(presencePollTimer);
+        presencePollTimer = setInterval(function () {
+          if (!presenceStarted) return;
+          refreshPresenceStats();
+        }, PRESENCE_POLL_MS);
         document.addEventListener('visibilitychange', onPresenceVisibility);
+        window.addEventListener('focus', onPresenceFocus);
+        window.addEventListener('pageshow', onPresenceFocus);
       }
 
       function stopPresence() {
@@ -4361,7 +4393,13 @@
           clearInterval(presenceTimer);
           presenceTimer = null;
         }
+        if (presencePollTimer) {
+          clearInterval(presencePollTimer);
+          presencePollTimer = null;
+        }
         document.removeEventListener('visibilitychange', onPresenceVisibility);
+        window.removeEventListener('focus', onPresenceFocus);
+        window.removeEventListener('pageshow', onPresenceFocus);
         sendPresence('presence-leave');
       }
 
