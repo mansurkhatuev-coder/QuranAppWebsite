@@ -1193,6 +1193,7 @@
     .visit-count {
       font-size: 0.92rem;
       font-weight: 700;
+      transition: opacity 0.25s ease;
     }
     .visit-sub {
       font-size: 0.68rem;
@@ -1202,6 +1203,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      transition: opacity 0.25s ease;
     }
 
     .person-sheet-meta {
@@ -2396,9 +2398,9 @@
         <span class="weather-temp" id="weather-temp">…</span>
         <span class="weather-sub" id="weather-sub">погода</span>
       </button>
-      <div id="visit-chip" class="visit-chip" hidden title="Посещения древа" aria-label="Посещения древа">
+      <div id="visit-chip" class="visit-chip" hidden title="Онлайн и посещения" aria-label="Онлайн и посещения">
         <span class="visit-count" id="visit-count">…</span>
-        <span class="visit-sub" id="visit-sub">посещений</span>
+        <span class="visit-sub" id="visit-sub">онлайн</span>
       </div>
       <div class="search-wrap">
         <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
@@ -4593,6 +4595,15 @@
         });
       }
 
+      var presenceTimer = null;
+      var presenceStarted = false;
+      var PRESENCE_INTERVAL_MS = 45000;
+      var STATS_ROTATE_MS = 4000;
+      var statsRotateTimer = null;
+      var statsMode = 'online';
+      var knownOnlineCount = null;
+      var knownVisitCount = null;
+
       function visitWord(n) {
         var abs = Math.abs(Number(n) || 0) % 100;
         var n1 = abs % 10;
@@ -4602,13 +4613,62 @@
         return 'посещений';
       }
 
-      function applyVisitCount(count) {
+      function normalizeStatCount(count) {
         var n = Number(count);
-        if (!Number.isFinite(n) || n < 0) n = 0;
-        n = Math.floor(n);
-        if (visitCountEl) visitCountEl.textContent = String(n);
-        if (visitSubEl) visitSubEl.textContent = visitWord(n);
+        if (!Number.isFinite(n) || n < 0) return 0;
+        return Math.floor(n);
+      }
+
+      function renderStatsChip() {
+        var hasOnline = knownOnlineCount != null;
+        var hasVisits = knownVisitCount != null;
+        if (!hasOnline && !hasVisits) {
+          if (visitChip) visitChip.hidden = true;
+          return;
+        }
         if (visitChip) visitChip.hidden = false;
+
+        var mode = statsMode;
+        if (mode === 'online' && !hasOnline) mode = 'visits';
+        if (mode === 'visits' && !hasVisits) mode = 'online';
+
+        if (mode === 'visits' && hasVisits) {
+          if (visitCountEl) visitCountEl.textContent = String(knownVisitCount);
+          if (visitSubEl) visitSubEl.textContent = visitWord(knownVisitCount);
+          if (visitChip) {
+            visitChip.title = 'Всего посещений';
+            visitChip.setAttribute('aria-label', 'Всего посещений: ' + knownVisitCount);
+          }
+        } else {
+          if (visitCountEl) visitCountEl.textContent = String(knownOnlineCount);
+          if (visitSubEl) visitSubEl.textContent = 'онлайн';
+          if (visitChip) {
+            visitChip.title = 'Сейчас в сети';
+            visitChip.setAttribute('aria-label', 'Сейчас в сети: ' + knownOnlineCount);
+          }
+        }
+      }
+
+      function ensureStatsRotate() {
+        if (statsRotateTimer) return;
+        if (knownOnlineCount == null || knownVisitCount == null) return;
+        statsRotateTimer = setInterval(function () {
+          if (knownOnlineCount == null || knownVisitCount == null) return;
+          statsMode = statsMode === 'online' ? 'visits' : 'online';
+          renderStatsChip();
+        }, STATS_ROTATE_MS);
+      }
+
+      function applyOnlineCount(count) {
+        knownOnlineCount = normalizeStatCount(count);
+        renderStatsChip();
+        ensureStatsRotate();
+      }
+
+      function applyVisitCount(count) {
+        knownVisitCount = normalizeStatCount(count);
+        renderStatsChip();
+        ensureStatsRotate();
       }
 
       function todayKey() {
@@ -4623,6 +4683,80 @@
         return TREE_DIR + '-visit-day';
       }
 
+      function presenceSessionKey() {
+        return TREE_DIR + '-presence-id';
+      }
+
+      function getOrCreatePresenceSessionId() {
+        try {
+          var existing = localStorage.getItem(presenceSessionKey());
+          if (existing && /^[a-zA-Z0-9][a-zA-Z0-9._-]{7,79}$/.test(existing)) return existing;
+        } catch (err) {}
+        var id = '';
+        try {
+          if (window.crypto && typeof window.crypto.randomUUID === 'function') {
+            id = window.crypto.randomUUID().replace(/-/g, '');
+          }
+        } catch (err) {}
+        if (!id) {
+          id = 's' + Date.now().toString(36) + Math.random().toString(36).slice(2, 12);
+        }
+        id = String(id).slice(0, 80);
+        try {
+          localStorage.setItem(presenceSessionKey(), id);
+        } catch (err) {}
+        return id;
+      }
+
+      function sendPresence(action) {
+        var sessionId = getOrCreatePresenceSessionId();
+        return callPublishApi({
+          action: action,
+          treeDir: TREE_DIR,
+          password: '',
+          sessionId: sessionId,
+        })
+          .then(function (data) {
+            if (data && data.onlineCount != null) applyOnlineCount(data.onlineCount);
+            return data;
+          })
+          .catch(function () {
+            return null;
+          });
+      }
+
+      function onPresenceVisibility() {
+        if (document.visibilityState === 'visible' && presenceStarted) {
+          sendPresence('presence-heartbeat');
+        }
+      }
+
+      function startPresence() {
+        if (presenceStarted) {
+          sendPresence('presence-heartbeat');
+          return;
+        }
+        presenceStarted = true;
+        sendPresence('presence-heartbeat');
+        if (presenceTimer) clearInterval(presenceTimer);
+        presenceTimer = setInterval(function () {
+          if (!presenceStarted) return;
+          if (document.visibilityState === 'hidden') return;
+          sendPresence('presence-heartbeat');
+        }, PRESENCE_INTERVAL_MS);
+        document.addEventListener('visibilitychange', onPresenceVisibility);
+      }
+
+      function stopPresence() {
+        presenceStarted = false;
+        if (presenceTimer) {
+          clearInterval(presenceTimer);
+          presenceTimer = null;
+        }
+        document.removeEventListener('visibilitychange', onPresenceVisibility);
+        sendPresence('presence-leave');
+      }
+
       function recordVisitOnce() {
         var day = todayKey();
         try {
@@ -4634,6 +4768,7 @@
               localStorage.setItem(visitDayStorageKey(), day);
             } catch (err) {}
             if (data && data.visitCount != null) applyVisitCount(data.visitCount);
+            if (data && data.onlineCount != null) applyOnlineCount(data.onlineCount);
           })
           .catch(function () {});
       }
@@ -4643,6 +4778,7 @@
           .then(function (data) {
             applyLockState(!!(data && data.locked), data && data.lockedReason);
             if (data && data.visitCount != null) applyVisitCount(data.visitCount);
+            if (data && data.onlineCount != null) applyOnlineCount(data.onlineCount);
           })
           .catch(function () {});
       }
@@ -5269,7 +5405,7 @@
         var exportVisitCount = doc.querySelector('#visit-count');
         if (exportVisitCount) exportVisitCount.textContent = '…';
         var exportVisitSub = doc.querySelector('#visit-sub');
-        if (exportVisitSub) exportVisitSub.textContent = 'посещений';
+        if (exportVisitSub) exportVisitSub.textContent = 'онлайн';
         var exportVisitChip = doc.querySelector('#visit-chip');
         if (exportVisitChip) exportVisitChip.setAttribute('hidden', '');
         // outerHTML sometimes misses script textContent — re-inject JSON via string replace.
@@ -8396,9 +8532,11 @@
         setViewLocked(false);
         setMyPerson(personId);
         recordVisitOnce();
+        startPresence();
       }
 
       function logoutView() {
+        stopPresence();
         clearViewSession();
         clearMyPerson();
         sessionPassword = '';
@@ -8867,6 +9005,7 @@
         updateWhoamiUi();
         updateSaveButton();
         recordVisitOnce();
+        startPresence();
         loadWeather();
         if (myPersonId && TreeModel.findById(tree, myPersonId)) {
           rebuildLineSets();
