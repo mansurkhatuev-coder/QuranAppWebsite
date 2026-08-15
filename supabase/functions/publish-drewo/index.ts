@@ -382,6 +382,89 @@ async function resolveRole(
   return given === fallbackEditorPassword(treeDir) ? 'editor' : null;
 }
 
+/** Brute-force guard for password checks (per tree + client IP, in-memory). */
+type AuthAttemptState = {
+  fails: number;
+  windowStart: number;
+  lockedUntil: number;
+};
+
+const AUTH_ATTEMPTS = new Map<string, AuthAttemptState>();
+const AUTH_FAIL_WINDOW_MS = 15 * 60 * 1000;
+const AUTH_MAX_FAILS = 5;
+const AUTH_LOCK_MS = 15 * 60 * 1000;
+
+function clientIp(request: Request): string {
+  const cf = request.headers.get('cf-connecting-ip');
+  if (cf?.trim()) return cf.trim();
+  const xff = request.headers.get('x-forwarded-for');
+  if (xff) {
+    const first = xff.split(',')[0]?.trim();
+    if (first) return first;
+  }
+  const real = request.headers.get('x-real-ip');
+  if (real?.trim()) return real.trim();
+  return 'unknown';
+}
+
+function authAttemptKey(treeDir: TreeDir, request: Request) {
+  return `${treeDir}:${clientIp(request)}`;
+}
+
+function getAuthAttempt(key: string): AuthAttemptState {
+  const now = Date.now();
+  let state = AUTH_ATTEMPTS.get(key);
+  if (!state) {
+    state = { fails: 0, windowStart: now, lockedUntil: 0 };
+    AUTH_ATTEMPTS.set(key, state);
+    return state;
+  }
+  if (state.lockedUntil > now) return state;
+  if (now - state.windowStart > AUTH_FAIL_WINDOW_MS) {
+    state = { fails: 0, windowStart: now, lockedUntil: 0 };
+    AUTH_ATTEMPTS.set(key, state);
+  }
+  return state;
+}
+
+function authLockResponse(state: AuthAttemptState) {
+  const retryAfterSec = Math.max(1, Math.ceil((state.lockedUntil - Date.now()) / 1000));
+  const mins = Math.max(1, Math.ceil(retryAfterSec / 60));
+  return new Response(
+    JSON.stringify({
+      error: `Слишком много попыток. Подождите ${mins} мин.`,
+      retryAfterSec,
+      lockedUntil: state.lockedUntil,
+    }),
+    {
+      status: 429,
+      headers: {
+        ...corsHeaders,
+        'Content-Type': 'application/json',
+        'Retry-After': String(retryAfterSec),
+      },
+    }
+  );
+}
+
+function recordAuthFailure(key: string): AuthAttemptState {
+  const now = Date.now();
+  let state = AUTH_ATTEMPTS.get(key);
+  if (!state || (state.lockedUntil <= now && now - state.windowStart > AUTH_FAIL_WINDOW_MS)) {
+    state = { fails: 0, windowStart: now, lockedUntil: 0 };
+  }
+  state.fails += 1;
+  if (state.fails >= AUTH_MAX_FAILS) {
+    state.lockedUntil = now + AUTH_LOCK_MS;
+  }
+  AUTH_ATTEMPTS.set(key, state);
+  return state;
+}
+
+function clearAuthFailures(key: string) {
+  AUTH_ATTEMPTS.delete(key);
+}
+
 function countPeopleFromTreeJson(treeJson: string): number {
   try {
     const tree = JSON.parse(treeJson) as { sons?: unknown[] };
@@ -606,10 +689,31 @@ Deno.serve(async (request) => {
       });
     }
 
+    const attemptKey = authAttemptKey(treeDir, request);
+    const attemptState = getAuthAttempt(attemptKey);
+    if (attemptState.lockedUntil > Date.now()) {
+      return authLockResponse(attemptState);
+    }
+
     const role = await resolveRole(body.password, treeDir, access);
     if (!role) {
-      return jsonResponse({ error: 'Неверный пароль' }, 401);
+      const failed = recordAuthFailure(attemptKey);
+      if (failed.lockedUntil > Date.now()) {
+        return authLockResponse(failed);
+      }
+      const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
+      return jsonResponse(
+        {
+          error:
+            attemptsLeft > 0
+              ? `Неверный пароль. Осталось попыток: ${attemptsLeft}`
+              : 'Неверный пароль',
+          attemptsLeft,
+        },
+        401
+      );
     }
+    clearAuthFailures(attemptKey);
 
     if (action === 'auth') {
       return jsonResponse({

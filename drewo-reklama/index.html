@@ -8514,10 +8514,15 @@
             })
             .catch(function (err) {
               var msg = (err && err.message) || 'Неверный пароль';
+              var status = err && err.status;
+              var rateLimited = status === 429;
               var networkish =
-                /failed to fetch|network|load failed|timeout|timed out|503|502|cloudflare|fetch/i.test(
+                !rateLimited &&
+                (/failed to fetch|network|load failed|timeout|timed out|503|502|cloudflare|fetch/i.test(
                   String(msg)
-                ) || (err && (err.status === 0 || err.status >= 500));
+                ) ||
+                  status === 0 ||
+                  (typeof status === 'number' && status >= 500));
               if (networkish) {
                 msg =
                   'Не удалось связаться с сервером. Проверьте интернет или включите VPN и попробуйте снова.';
