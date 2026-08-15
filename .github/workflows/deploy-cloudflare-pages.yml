@@ -1,10 +1,10 @@
+# Disabled: waydean.ru is served from GitHub Pages.
+# Cloudflare Pages deploy was failing (missing CLOUDFLARE_API_TOKEN) and is unused for the live site.
+# To re-enable later: restore `push` triggers below, set CLOUDFLARE_API_TOKEN + CLOUDFLARE_ACCOUNT_ID,
+# and remove `if: false` from the job.
 name: Deploy to Cloudflare Pages
 
 on:
-  push:
-    branches:
-      - main
-      - master
   workflow_dispatch:
 
 concurrency:
@@ -13,6 +13,7 @@ concurrency:
 
 jobs:
   deploy:
+    if: false
     runs-on: ubuntu-latest
     permissions:
       contents: read
