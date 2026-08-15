@@ -654,6 +654,82 @@ function parseBackupPayload(raw: string): { treeJson: string; activityJson: stri
   };
 }
 
+/** Sessions with a heartbeat newer than this are counted as online. */
+const PRESENCE_TTL_MS = 2 * 60 * 1000;
+const PRESENCE_SESSION_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{7,79}$/;
+
+function normalizePresenceSessionId(raw: unknown): string | null {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  return PRESENCE_SESSION_RE.test(value) ? value : null;
+}
+
+async function getServiceClient() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Supabase недоступен (нет SUPABASE_URL / SERVICE_ROLE_KEY)');
+  }
+  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
+  return createClient(supabaseUrl, serviceKey, {
+    auth: { persistSession: false, autoRefreshToken: false },
+  });
+}
+
+async function countOnlinePresence(
+  admin: Awaited<ReturnType<typeof getServiceClient>>,
+  treeDir: TreeDir
+): Promise<number> {
+  const cutoff = new Date(Date.now() - PRESENCE_TTL_MS).toISOString();
+  const { count, error } = await admin
+    .from('drewo_presence')
+    .select('*', { count: 'exact', head: true })
+    .eq('tree_dir', treeDir)
+    .gte('last_seen_at', cutoff);
+  if (error) throw new Error(error.message);
+  return typeof count === 'number' && count > 0 ? count : 0;
+}
+
+async function upsertPresenceHeartbeat(
+  admin: Awaited<ReturnType<typeof getServiceClient>>,
+  treeDir: TreeDir,
+  sessionId: string
+): Promise<number> {
+  const now = new Date().toISOString();
+  const { error } = await admin.from('drewo_presence').upsert(
+    {
+      tree_dir: treeDir,
+      session_id: sessionId,
+      last_seen_at: now,
+    },
+    { onConflict: 'tree_dir,session_id' }
+  );
+  if (error) throw new Error(error.message);
+
+  // Drop stale rows for this tree (older than 1 day) so the table stays small.
+  const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+  await admin.from('drewo_presence').delete().eq('tree_dir', treeDir).lt('last_seen_at', staleBefore);
+
+  return countOnlinePresence(admin, treeDir);
+}
+
+async function leavePresence(
+  admin: Awaited<ReturnType<typeof getServiceClient>>,
+  treeDir: TreeDir,
+  sessionId: string
+): Promise<number> {
+  await admin.from('drewo_presence').delete().eq('tree_dir', treeDir).eq('session_id', sessionId);
+  return countOnlinePresence(admin, treeDir);
+}
+
+async function safeOnlineCount(treeDir: TreeDir): Promise<number | null> {
+  try {
+    const admin = await getServiceClient();
+    return await countOnlinePresence(admin, treeDir);
+  } catch {
+    return null;
+  }
+}
+
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -695,6 +771,7 @@ Deno.serve(async (request) => {
     const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
+      const onlineCount = await safeOnlineCount(treeDir);
       return jsonResponse({
         ok: true,
         treeDir,
@@ -702,6 +779,7 @@ Deno.serve(async (request) => {
         lockedReason: access.lockedReason,
         superConfigured,
         visitCount: access.visitCount,
+        ...(onlineCount != null ? { onlineCount } : {}),
       });
     }
 
@@ -716,11 +794,44 @@ Deno.serve(async (request) => {
         message: `Record visit for ${treeDir}`,
         changes: [{ path: accessPath(treeDir), content: serializeAccess(next) }],
       });
+      const onlineCount = await safeOnlineCount(treeDir);
       return jsonResponse({
         ok: true,
         treeDir,
         visitCount: next.visitCount,
+        ...(onlineCount != null ? { onlineCount } : {}),
       });
+    }
+
+    if (action === 'presence-heartbeat' || action === 'presence-leave') {
+      const sessionId = normalizePresenceSessionId(body.sessionId);
+      if (!sessionId) {
+        return jsonResponse({ error: 'Некорректный sessionId' }, 400);
+      }
+      try {
+        const admin = await getServiceClient();
+        const onlineCount =
+          action === 'presence-leave'
+            ? await leavePresence(admin, treeDir, sessionId)
+            : await upsertPresenceHeartbeat(admin, treeDir, sessionId);
+        return jsonResponse({
+          ok: true,
+          treeDir,
+          onlineCount,
+        });
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        if (/drewo_presence|does not exist|relation/i.test(message)) {
+          return jsonResponse(
+            {
+              error:
+                'Таблица присутствия ещё не создана. Выполните admin/supabase-migration-drewo-presence.sql',
+            },
+            503
+          );
+        }
+        throw err;
+      }
     }
 
     const attemptKey = authAttemptKey(treeDir, request);
@@ -764,15 +875,7 @@ Deno.serve(async (request) => {
     const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
 
     async function getStorageAdmin() {
-      const supabaseUrl = Deno.env.get('SUPABASE_URL');
-      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-      if (!supabaseUrl || !serviceKey) {
-        throw new Error('Supabase Storage недоступен (нет SUPABASE_URL / SERVICE_ROLE_KEY)');
-      }
-      const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
-      return createClient(supabaseUrl, serviceKey, {
-        auth: { persistSession: false, autoRefreshToken: false },
-      });
+      return getServiceClient();
     }
 
     async function ensurePhotoBucket(
