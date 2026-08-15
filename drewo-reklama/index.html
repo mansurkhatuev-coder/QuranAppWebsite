@@ -4704,7 +4704,9 @@
           redrawLinks();
           startWhoamiReveal();
         }
-        showToast('Это вы: ' + (node.name || ''), 'success');
+        if (!options.silent) {
+          showToast('Это вы: ' + (node.name || ''), 'success');
+        }
         return true;
       }
 
@@ -8216,13 +8218,33 @@
         prefillDemoGate();
       }
 
+      function setGateBusy(message) {
+        if (!gateStatus) return;
+        gateStatus.hidden = false;
+        gateStatus.classList.add('is-busy');
+        gateStatus.textContent = message || 'Загружаем…';
+      }
+
+      function clearGateBusy() {
+        if (!gateStatus) return;
+        gateStatus.hidden = true;
+        gateStatus.classList.remove('is-busy');
+        gateStatus.textContent = '';
+      }
+
       function unlockViewWithPerson(personId, password, authData) {
         writeViewSession(personId);
         rememberSession(password, authData);
+        clearGateBusy();
         setViewLocked(false);
-        setMyPerson(personId);
         recordVisitOnce();
         startPresence();
+        // One whoami path, deferred so unlock UI can paint; banner covers the paint hitch.
+        showBusyBanner('Открываем древо…');
+        window.requestAnimationFrame(function () {
+          setMyPerson(personId, { silent: true });
+          hideCenterBanner();
+        });
       }
 
       function logoutView() {
@@ -8675,6 +8697,7 @@
       function finishBoot() {
         var session = readViewSession();
         if (!session) {
+          clearGateBusy();
           showViewGate();
           updateViewButtons();
           refreshActivityUi();
@@ -8682,6 +8705,7 @@
           updateSaveButton();
           return;
         }
+        clearGateBusy();
         setViewLocked(false);
         if (!myPersonId) {
           myPersonId = session.personId;
@@ -8697,26 +8721,30 @@
         recordVisitOnce();
         startPresence();
         loadWeather();
-        if (myPersonId && TreeModel.findById(tree, myPersonId)) {
-          rebuildLineSets();
-          updateWhoamiUi();
-          if (preferReducedWhoamiMotion()) {
-            whoamiFocusAfterReveal = false;
-            goToPerson(myPersonId);
-            armWhoamiReveal();
-            redrawLinks();
-            startWhoamiReveal();
+        showBusyBanner('Открываем древо…');
+        window.requestAnimationFrame(function () {
+          if (myPersonId && TreeModel.findById(tree, myPersonId)) {
+            rebuildLineSets();
+            updateWhoamiUi();
+            if (preferReducedWhoamiMotion()) {
+              whoamiFocusAfterReveal = false;
+              goToPerson(myPersonId);
+              armWhoamiReveal();
+              redrawLinks();
+              startWhoamiReveal();
+            } else {
+              whoamiFocusAfterReveal = true;
+              prepareWhoamiPathView(myPersonId);
+              armWhoamiReveal();
+              redrawLinks();
+              startWhoamiReveal();
+            }
           } else {
-            whoamiFocusAfterReveal = true;
-            prepareWhoamiPathView(myPersonId);
-            armWhoamiReveal();
-            redrawLinks();
-            startWhoamiReveal();
+            render(true);
+            maybeAskWhoami();
           }
-        } else {
-          render(true);
-          maybeAskWhoami();
-        }
+          hideCenterBanner();
+        });
       }
 
 
@@ -8777,21 +8805,6 @@
               refreshActivityUi();
               updateSaveButton();
               loadWeather();
-              rebuildLineSets();
-              updateWhoamiUi();
-              if (preferReducedWhoamiMotion()) {
-                whoamiFocusAfterReveal = false;
-                goToPerson(personId);
-                armWhoamiReveal();
-                redrawLinks();
-                startWhoamiReveal();
-              } else {
-                whoamiFocusAfterReveal = true;
-                prepareWhoamiPathView(personId);
-                armWhoamiReveal();
-                redrawLinks();
-                startWhoamiReveal();
-              }
               showToast('Марша вохийла', 'success');
             })
             .catch(function (err) {
@@ -9005,15 +9018,18 @@
       initChrome();
 
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
+      setGateBusy('Загружаем древо…');
       fetchRemoteTree().then(function (remote) {
         if (remote && typeof remote === 'object' && remote.id) {
           tree = TreeModel.markAllowAdd(remote, NUTSU_ID);
           if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
         }
+        setGateBusy('Открываем…');
         return rememberFingerprintFromTree();
       }).then(function () {
         finishBoot();
       }).catch(function () {
+        setGateBusy('Открываем…');
         rememberFingerprintFromTree().finally(finishBoot);
       });
     })();
