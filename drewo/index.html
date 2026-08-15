@@ -1398,6 +1398,12 @@
       border-color: color-mix(in srgb, var(--sand) 35%, transparent);
     }
 
+    .fab-panel #share-tree {
+      background: color-mix(in srgb, var(--bg1) 60%, #2a4a3e);
+      color: var(--text);
+      border-color: color-mix(in srgb, var(--sand) 38%, transparent);
+    }
+
     .fab-panel #save-remote {
       background: linear-gradient(180deg, color-mix(in srgb, var(--sand) 82%, white), var(--sand-dim));
       color: #1a1510;
@@ -2487,6 +2493,7 @@
     <div class="fab-panel" id="fab-panel">
       <button type="button" id="install-home">На экран Домой</button>
       <button type="button" id="reload-page">Обновить</button>
+      <button type="button" id="share-tree">Поделиться</button>
       <button type="button" id="save-remote" hidden>Сохранить</button>
     </div>
   </div>
@@ -4547,6 +4554,7 @@
       var addCancelBtn = document.getElementById('add-cancel');
       var installHomeBtn = document.getElementById('install-home');
       var reloadPageBtn = document.getElementById('reload-page');
+      var shareTreeBtn = document.getElementById('share-tree');
       var saveRemoteBtn = document.getElementById('save-remote');
       var fabRail = document.getElementById('fab-rail');
       var fabToggle = document.getElementById('fab-toggle');
@@ -7883,6 +7891,77 @@
         if (e.target.closest && e.target.closest('.fab-rail')) return;
         setFabOpen(false);
       });
+
+      function getSharePayload() {
+        var titleEl = document.querySelector('.brand h1');
+        var title = (titleEl && titleEl.textContent.trim()) || 'Семейное древо';
+        var url = '';
+        try {
+          url = location.origin + location.pathname.replace(/\/?$/, '/');
+        } catch (err) {
+          url = 'https://waydean.ru/' + TREE_DIR + '/';
+        }
+        return {
+          title: title,
+          text: title + ' — семейное древо',
+          url: url,
+        };
+      }
+
+      function copyShareText(text) {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          return navigator.clipboard.writeText(text);
+        }
+        return new Promise(function (resolve, reject) {
+          var textarea = document.createElement('textarea');
+          textarea.value = text;
+          textarea.setAttribute('readonly', '');
+          textarea.style.position = 'fixed';
+          textarea.style.opacity = '0';
+          document.body.appendChild(textarea);
+          textarea.select();
+          try {
+            var copied = document.execCommand('copy');
+            document.body.removeChild(textarea);
+            if (copied) resolve();
+            else reject(new Error('copy failed'));
+          } catch (err) {
+            document.body.removeChild(textarea);
+            reject(err);
+          }
+        });
+      }
+
+      function handleShareTree() {
+        var payload = getSharePayload();
+        setFabOpen(false);
+        if (navigator.share) {
+          navigator
+            .share(payload)
+            .catch(function (err) {
+              if (err && err.name === 'AbortError') return;
+              return copyShareText(payload.text + '\n' + payload.url)
+                .then(function () {
+                  showToast('Ссылка скопирована', 'success');
+                })
+                .catch(function () {
+                  showToast('Не удалось поделиться', 'error');
+                });
+            });
+          return;
+        }
+        copyShareText(payload.text + '\n' + payload.url)
+          .then(function () {
+            showToast('Ссылка скопирована', 'success');
+          })
+          .catch(function () {
+            showToast('Не удалось скопировать ссылку', 'error');
+          });
+      }
+
+      if (shareTreeBtn) {
+        shareTreeBtn.addEventListener('click', handleShareTree);
+      }
 
       if (installHomeBtn) {
         installHomeBtn.addEventListener('click', function () {
