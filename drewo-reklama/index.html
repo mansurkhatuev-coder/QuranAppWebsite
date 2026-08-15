@@ -1168,6 +1168,42 @@
       white-space: nowrap;
     }
 
+    .visit-chip {
+      flex: 0 0 auto;
+      display: inline-flex;
+      flex-direction: column;
+      align-items: flex-start;
+      justify-content: center;
+      gap: 0.05rem;
+      min-height: 2.35rem;
+      padding: 0.28rem 0.65rem;
+      border-radius: 12px;
+      border: 1px solid color-mix(in srgb, var(--sand) 35%, transparent);
+      background: linear-gradient(
+        180deg,
+        color-mix(in srgb, var(--bg1) 55%, transparent),
+        color-mix(in srgb, var(--bg0) 80%, black)
+      );
+      color: var(--text);
+      line-height: 1.15;
+      text-align: left;
+      pointer-events: none;
+    }
+    .visit-chip[hidden] { display: none !important; }
+    .visit-count {
+      font-size: 0.92rem;
+      font-weight: 700;
+    }
+    .visit-sub {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-dim);
+      max-width: 7.5rem;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
     .person-sheet-meta {
       margin: 0;
       color: var(--text-dim);
@@ -1857,6 +1893,14 @@
       .weather-sub {
         max-width: 100%;
       }
+
+      .visit-chip {
+        max-width: 5.5rem;
+      }
+
+      .visit-sub {
+        max-width: 100%;
+      }
     }
 
     @media (max-width: 360px) {
@@ -2380,6 +2424,10 @@
         <span class="weather-temp" id="weather-temp">…</span>
         <span class="weather-sub" id="weather-sub">погода</span>
       </button>
+      <div id="visit-chip" class="visit-chip" hidden title="Посещения древа" aria-label="Посещения древа">
+        <span class="visit-count" id="visit-count">…</span>
+        <span class="visit-sub" id="visit-sub">посещений</span>
+      </div>
       <div class="search-wrap">
         <input id="search" class="search-input" type="search" placeholder="Поиск…" aria-label="Поиск" autocomplete="off" role="combobox" aria-autocomplete="list" aria-controls="search-results" aria-expanded="false">
         <div id="search-results" class="search-results" role="listbox" hidden=""></div>
@@ -3948,6 +3996,9 @@
       var lockBanner = document.getElementById('lock-banner');
       var activityEl = document.getElementById('activity-log');
       var weatherChip = document.getElementById('weather-chip');
+      var visitChip = document.getElementById('visit-chip');
+      var visitCountEl = document.getElementById('visit-count');
+      var visitSubEl = document.getElementById('visit-sub');
       var weatherTemp = document.getElementById('weather-temp');
       var weatherSub = document.getElementById('weather-sub');
       var whoamiBtn = document.getElementById('whoami-btn');
@@ -4150,10 +4201,56 @@
         });
       }
 
+      function visitWord(n) {
+        var abs = Math.abs(Number(n) || 0) % 100;
+        var n1 = abs % 10;
+        if (abs > 10 && abs < 20) return 'посещений';
+        if (n1 === 1) return 'посещение';
+        if (n1 >= 2 && n1 <= 4) return 'посещения';
+        return 'посещений';
+      }
+
+      function applyVisitCount(count) {
+        var n = Number(count);
+        if (!Number.isFinite(n) || n < 0) n = 0;
+        n = Math.floor(n);
+        if (visitCountEl) visitCountEl.textContent = String(n);
+        if (visitSubEl) visitSubEl.textContent = visitWord(n);
+        if (visitChip) visitChip.hidden = false;
+      }
+
+      function todayKey() {
+        var d = new Date();
+        var y = d.getFullYear();
+        var m = String(d.getMonth() + 1).padStart(2, '0');
+        var day = String(d.getDate()).padStart(2, '0');
+        return y + '-' + m + '-' + day;
+      }
+
+      function visitDayStorageKey() {
+        return TREE_DIR + '-visit-day';
+      }
+
+      function recordVisitOnce() {
+        var day = todayKey();
+        try {
+          if (localStorage.getItem(visitDayStorageKey()) === day) return;
+        } catch (err) {}
+        callPublishApi({ action: 'record-visit', treeDir: TREE_DIR, password: '' })
+          .then(function (data) {
+            try {
+              localStorage.setItem(visitDayStorageKey(), day);
+            } catch (err) {}
+            if (data && data.visitCount != null) applyVisitCount(data.visitCount);
+          })
+          .catch(function () {});
+      }
+
       function loadTreeStatus() {
         return callPublishApi({ action: 'status', treeDir: TREE_DIR, password: '' })
           .then(function (data) {
             applyLockState(!!(data && data.locked), data && data.lockedReason);
+            if (data && data.visitCount != null) applyVisitCount(data.visitCount);
           })
           .catch(function () {});
       }
@@ -4777,6 +4874,12 @@
         }
         var exportAnchor = doc.querySelector('#header-anchor');
         if (exportAnchor) exportAnchor.removeAttribute('style');
+        var exportVisitCount = doc.querySelector('#visit-count');
+        if (exportVisitCount) exportVisitCount.textContent = '…';
+        var exportVisitSub = doc.querySelector('#visit-sub');
+        if (exportVisitSub) exportVisitSub.textContent = 'посещений';
+        var exportVisitChip = doc.querySelector('#visit-chip');
+        if (exportVisitChip) exportVisitChip.setAttribute('hidden', '');
         // outerHTML sometimes misses script textContent — re-inject JSON via string replace.
         var html = '<!DOCTYPE html>\n' + doc.outerHTML;
         html = injectScriptJson(html, 'tree-data', treeJson);
@@ -7944,6 +8047,7 @@
         rememberSession(password, authData);
         setViewLocked(false);
         setMyPerson(personId);
+        recordVisitOnce();
       }
 
       function logoutView() {
@@ -8414,6 +8518,7 @@
         refreshActivityUi();
         updateWhoamiUi();
         updateSaveButton();
+        recordVisitOnce();
         loadWeather();
         if (myPersonId && TreeModel.findById(tree, myPersonId)) {
           rebuildLineSets();

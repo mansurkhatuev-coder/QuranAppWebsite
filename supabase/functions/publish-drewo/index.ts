@@ -280,6 +280,7 @@ type AccessState = {
   locked: boolean;
   lockedReason: string;
   pinnedBackups: string[];
+  visitCount: number;
 };
 
 type ManifestItem = {
@@ -325,7 +326,19 @@ function manifestPath(treeDir: TreeDir) {
 }
 
 function emptyAccess(): AccessState {
-  return { passwordHash: null, locked: false, lockedReason: '', pinnedBackups: [] };
+  return {
+    passwordHash: null,
+    locked: false,
+    lockedReason: '',
+    pinnedBackups: [],
+    visitCount: 0,
+  };
+}
+
+function normalizeVisitCount(value: unknown): number {
+  const n = typeof value === 'number' ? value : Number(value);
+  if (!Number.isFinite(n) || n < 0) return 0;
+  return Math.min(Math.floor(n), Number.MAX_SAFE_INTEGER);
 }
 
 function parseAccess(raw?: string): AccessState {
@@ -343,6 +356,7 @@ function parseAccess(raw?: string): AccessState {
     if (Array.isArray(parsed.pinnedBackups)) {
       base.pinnedBackups = parsed.pinnedBackups.filter((n): n is string => typeof n === 'string');
     }
+    base.visitCount = normalizeVisitCount(parsed.visitCount);
   } catch {
     return emptyAccess();
   }
@@ -356,6 +370,7 @@ function serializeAccess(access: AccessState) {
       locked: access.locked,
       lockedReason: access.lockedReason,
       pinnedBackups: access.pinnedBackups,
+      visitCount: normalizeVisitCount(access.visitCount),
     },
     null,
     2
@@ -603,6 +618,25 @@ Deno.serve(async (request) => {
         locked: access.locked,
         lockedReason: access.lockedReason,
         superConfigured,
+        visitCount: access.visitCount,
+      });
+    }
+
+    if (action === 'record-visit') {
+      const next: AccessState = {
+        ...access,
+        visitCount: normalizeVisitCount(access.visitCount) + 1,
+      };
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Record visit for ${treeDir}`,
+        changes: [{ path: accessPath(treeDir), content: serializeAccess(next) }],
+      });
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        visitCount: next.visitCount,
       });
     }
 
