@@ -1193,6 +1193,7 @@
     .visit-count {
       font-size: 0.92rem;
       font-weight: 700;
+      transition: opacity 0.25s ease;
     }
     .visit-sub {
       font-size: 0.68rem;
@@ -1202,6 +1203,7 @@
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
+      transition: opacity 0.25s ease;
     }
 
     .person-sheet-meta {
@@ -2396,7 +2398,7 @@
         <span class="weather-temp" id="weather-temp">…</span>
         <span class="weather-sub" id="weather-sub">погода</span>
       </button>
-      <div id="visit-chip" class="visit-chip" hidden title="Сейчас в сети" aria-label="Сейчас в сети">
+      <div id="visit-chip" class="visit-chip" hidden title="Онлайн и посещения" aria-label="Онлайн и посещения">
         <span class="visit-count" id="visit-count">…</span>
         <span class="visit-sub" id="visit-sub">онлайн</span>
       </div>
@@ -4596,14 +4598,77 @@
       var presenceTimer = null;
       var presenceStarted = false;
       var PRESENCE_INTERVAL_MS = 45000;
+      var STATS_ROTATE_MS = 4000;
+      var statsRotateTimer = null;
+      var statsMode = 'online';
+      var knownOnlineCount = null;
+      var knownVisitCount = null;
+
+      function visitWord(n) {
+        var abs = Math.abs(Number(n) || 0) % 100;
+        var n1 = abs % 10;
+        if (abs > 10 && abs < 20) return 'посещений';
+        if (n1 === 1) return 'посещение';
+        if (n1 >= 2 && n1 <= 4) return 'посещения';
+        return 'посещений';
+      }
+
+      function normalizeStatCount(count) {
+        var n = Number(count);
+        if (!Number.isFinite(n) || n < 0) return 0;
+        return Math.floor(n);
+      }
+
+      function renderStatsChip() {
+        var hasOnline = knownOnlineCount != null;
+        var hasVisits = knownVisitCount != null;
+        if (!hasOnline && !hasVisits) {
+          if (visitChip) visitChip.hidden = true;
+          return;
+        }
+        if (visitChip) visitChip.hidden = false;
+
+        var mode = statsMode;
+        if (mode === 'online' && !hasOnline) mode = 'visits';
+        if (mode === 'visits' && !hasVisits) mode = 'online';
+
+        if (mode === 'visits' && hasVisits) {
+          if (visitCountEl) visitCountEl.textContent = String(knownVisitCount);
+          if (visitSubEl) visitSubEl.textContent = visitWord(knownVisitCount);
+          if (visitChip) {
+            visitChip.title = 'Всего посещений';
+            visitChip.setAttribute('aria-label', 'Всего посещений: ' + knownVisitCount);
+          }
+        } else {
+          if (visitCountEl) visitCountEl.textContent = String(knownOnlineCount);
+          if (visitSubEl) visitSubEl.textContent = 'онлайн';
+          if (visitChip) {
+            visitChip.title = 'Сейчас в сети';
+            visitChip.setAttribute('aria-label', 'Сейчас в сети: ' + knownOnlineCount);
+          }
+        }
+      }
+
+      function ensureStatsRotate() {
+        if (statsRotateTimer) return;
+        if (knownOnlineCount == null || knownVisitCount == null) return;
+        statsRotateTimer = setInterval(function () {
+          if (knownOnlineCount == null || knownVisitCount == null) return;
+          statsMode = statsMode === 'online' ? 'visits' : 'online';
+          renderStatsChip();
+        }, STATS_ROTATE_MS);
+      }
 
       function applyOnlineCount(count) {
-        var n = Number(count);
-        if (!Number.isFinite(n) || n < 0) n = 0;
-        n = Math.floor(n);
-        if (visitCountEl) visitCountEl.textContent = String(n);
-        if (visitSubEl) visitSubEl.textContent = 'онлайн';
-        if (visitChip) visitChip.hidden = false;
+        knownOnlineCount = normalizeStatCount(count);
+        renderStatsChip();
+        ensureStatsRotate();
+      }
+
+      function applyVisitCount(count) {
+        knownVisitCount = normalizeStatCount(count);
+        renderStatsChip();
+        ensureStatsRotate();
       }
 
       function todayKey() {
@@ -4702,6 +4767,7 @@
             try {
               localStorage.setItem(visitDayStorageKey(), day);
             } catch (err) {}
+            if (data && data.visitCount != null) applyVisitCount(data.visitCount);
             if (data && data.onlineCount != null) applyOnlineCount(data.onlineCount);
           })
           .catch(function () {});
@@ -4711,6 +4777,7 @@
         return callPublishApi({ action: 'status', treeDir: TREE_DIR, password: '' })
           .then(function (data) {
             applyLockState(!!(data && data.locked), data && data.lockedReason);
+            if (data && data.visitCount != null) applyVisitCount(data.visitCount);
             if (data && data.onlineCount != null) applyOnlineCount(data.onlineCount);
           })
           .catch(function () {});
