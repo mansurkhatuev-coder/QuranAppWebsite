@@ -244,7 +244,12 @@
   border-radius: 12px;
   padding: 10px 12px;
   font: inherit;
+  font-size: 16px; /* iOS: avoid focus zoom */
   color-scheme: dark;
+}
+
+#login-form input {
+  font-size: 16px;
 }
 
 .admin-form select option,
