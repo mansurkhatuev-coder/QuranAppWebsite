@@ -1,3 +1,5 @@
+import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -1416,6 +1418,8 @@ Deno.serve(async (request) => {
     const force = body.force === true;
     const baseFingerprint =
       typeof body.baseFingerprint === 'string' ? body.baseFingerprint.trim() : '';
+    const baseTreeJson =
+      typeof body.baseTreeJson === 'string' ? body.baseTreeJson.trim() : '';
 
     const [jsonFile, current, existingBackups] = await Promise.all([
       githubGetFile(githubToken, githubRepo, jsonPath),
@@ -1423,23 +1427,47 @@ Deno.serve(async (request) => {
       listBackupFiles(githubToken, githubRepo, treeDir),
     ]);
 
-    const serverFingerprint = jsonFile?.content
-      ? await fingerprintText(normalizeTreeJson(jsonFile.content))
+    const serverTreeRaw =
+      jsonFile?.content?.trim() || extractScriptJson(current?.content || '', 'tree-data') || '';
+    const serverFingerprint = serverTreeRaw
+      ? await fingerprintText(normalizeTreeJson(serverTreeRaw))
       : '';
 
+    let merged = false;
+    let mergeStats: Record<string, unknown> | null = null;
+    let publishTreeJson = treeJson;
+    let publishActivityJson = activityJson;
+    let publishNormalized = normalizedTree;
+
     if (serverFingerprint && baseFingerprint && serverFingerprint !== baseFingerprint && !force) {
-      return jsonResponse(
-        {
-          ok: false,
-          conflict: true,
-          error:
-            'На сайте уже другая версия дерева. Можно объединить правки или сохранить принудительно.',
-          serverFingerprint,
-          baseFingerprint,
-          serverTreeJson: jsonFile?.content || '',
-        },
-        409
-      );
+      try {
+        const mergedTrees = mergeTreesForPublish(serverTreeRaw, treeJson, baseTreeJson);
+        const serverActivity = extractScriptJson(current?.content || '', 'activity-log') || '[]';
+        publishTreeJson = mergedTrees.treeJson.endsWith('\n')
+          ? mergedTrees.treeJson
+          : `${mergedTrees.treeJson}\n`;
+        publishActivityJson = mergeActivityLogs(serverActivity, activityJson);
+        publishNormalized = normalizeTreeJson(publishTreeJson);
+        merged = true;
+        mergeStats = {
+          ...mergedTrees.stats,
+          usedThreeWay: mergedTrees.usedThreeWay,
+        };
+      } catch {
+        return jsonResponse(
+          {
+            ok: false,
+            conflict: true,
+            error:
+              'На сайте уже другая версия дерева. Можно объединить правки или сохранить принудительно.',
+            serverFingerprint,
+            baseFingerprint,
+            serverTreeJson: serverTreeRaw,
+            serverActivityJson: extractScriptJson(current?.content || '', 'activity-log') || '[]',
+          },
+          409
+        );
+      }
     }
 
     const stamp = stampNow();
@@ -1458,14 +1486,15 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Нет HTML страницы для обновления' }, 400);
     }
 
-    let htmlToWrite = injectOrInsertScript(htmlBase, 'tree-data', treeJson);
-    if (activityJson) {
-      htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', activityJson);
+    let htmlToWrite = injectOrInsertScript(htmlBase, 'tree-data', publishTreeJson);
+    if (publishActivityJson) {
+      htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', publishActivityJson);
     }
 
-    const jsonBody = treeJson.endsWith('\n') ? treeJson : `${treeJson}\n`;
+    const jsonBody = publishTreeJson.endsWith('\n') ? publishTreeJson : `${publishTreeJson}\n`;
     const indexWillChange = !current?.content || current.content !== htmlToWrite;
-    const jsonWillChange = !jsonFile?.content || normalizeTreeJson(jsonFile.content) !== normalizedTree;
+    const jsonWillChange =
+      !jsonFile?.content || normalizeTreeJson(jsonFile.content) !== publishNormalized;
 
     let photoWrites: TreeChange[] = [];
     try {
@@ -1498,22 +1527,30 @@ Deno.serve(async (request) => {
     const photoGitChanges = [...photoWrites, ...photoDeletes];
 
     if (!indexWillChange && !jsonWillChange && !photoGitChanges.length) {
-      return jsonResponse(
-        {
-          ok: false,
-          error: 'На GitHub уже такая же версия дерева.',
-          indexChanged: false,
-          jsonChanged: false,
-          fingerprint: await fingerprintText(normalizedTree),
-          publishedAt: new Date().toISOString(),
-        },
-        409
-      );
+      return jsonResponse({
+        ok: true,
+        unchanged: true,
+        merged,
+        mergeStats,
+        treeJson: publishTreeJson,
+        activityJson: publishActivityJson,
+        indexChanged: false,
+        jsonChanged: false,
+        fingerprint: await fingerprintText(publishNormalized),
+        publishedAt: new Date().toISOString(),
+        photosWritten: 0,
+        photoDeletesWritten: 0,
+        forced: force,
+        locked: access.locked,
+      });
     }
 
     const treeFilesChange = indexWillChange || jsonWillChange;
     const backupName = `${backupPrefix}-${stamp}.json`;
-    const record = makeSnapshotRecord(treeJson, activityJson, { kind: 'auto' });
+    const record = makeSnapshotRecord(publishTreeJson, publishActivityJson, {
+      kind: 'auto',
+      merged,
+    });
     const pruneDeletes = pruneBackupDeletes(existingBackups, pinned, [backupName]);
     const remainingNames = [
       backupName,
@@ -1549,7 +1586,7 @@ Deno.serve(async (request) => {
       changes,
     });
 
-    const fingerprint = await fingerprintText(normalizedTree);
+    const fingerprint = await fingerprintText(publishNormalized);
     return jsonResponse({
       ok: true,
       publishedAt: new Date().toISOString(),
@@ -1566,6 +1603,10 @@ Deno.serve(async (request) => {
       repo: githubRepo,
       forced: force,
       locked: access.locked,
+      merged,
+      mergeStats,
+      treeJson: publishTreeJson,
+      activityJson: publishActivityJson,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
