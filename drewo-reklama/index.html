@@ -4111,7 +4111,11 @@
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo-reklama';
       var VIEW_SESSION_KEY = 'drewo-reklama-view-session';
-      var PHOTO_PUBLIC_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
+      var PHOTO_PUBLIC_BASE = 'photos';
+      var PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
+      var editorPasswordHash = '';
+      var accessLocked = false;
+      var accessLockedReason = '';
       var NODE_H_PHOTO = 40;
       var gateSelectedId = null;
       var gateSelectedLabel = '';
@@ -4190,12 +4194,51 @@
         return sessionRole === 'super';
       }
 
-      function legacyEditorPasswordMatch(password) {
-        var expected =
-          TREE_DIR === 'drewo-dada-yurt' ? 'баташ' :
-          TREE_DIR === 'drewo-reklama' ? 'демо' :
-          'гуно';
-        return normalizePassword(password) === normalizePassword(expected);
+      function hashEditorPassword(normalized) {
+        if (!(window.crypto && crypto.subtle && window.TextEncoder)) {
+          return Promise.resolve('');
+        }
+        return crypto.subtle
+          .digest('SHA-256', new TextEncoder().encode('drewo-pw:' + normalized))
+          .then(function (buf) {
+            return Array.from(new Uint8Array(buf))
+              .map(function (b) {
+                return ('0' + b.toString(16)).slice(-2);
+              })
+              .join('');
+          });
+      }
+
+      function applyAccessFile(data) {
+        if (!data || typeof data !== 'object') return;
+        if (typeof data.passwordHash === 'string' && /^[a-f0-9]{64}$/i.test(data.passwordHash)) {
+          editorPasswordHash = data.passwordHash.toLowerCase();
+        }
+        accessLocked = !!data.locked;
+        accessLockedReason = data.lockedReason || '';
+        applyLockState(accessLocked, accessLockedReason);
+      }
+
+      function fetchAccessFile() {
+        return fetch('access.json?v=' + Date.now(), { cache: 'no-store' })
+          .then(function (res) {
+            return res.ok ? res.json() : null;
+          })
+          .then(function (data) {
+            applyAccessFile(data);
+            return data;
+          })
+          .catch(function () {
+            return null;
+          });
+      }
+
+      function verifyLocalEditor(password) {
+        var given = normalizePassword(password);
+        if (!given || !editorPasswordHash) return Promise.resolve(false);
+        return hashEditorPassword(given).then(function (h) {
+          return h === editorPasswordHash;
+        });
       }
 
       function verifyAuth(password) {
@@ -4203,12 +4246,9 @@
           action: 'auth',
           password: password,
           treeDir: TREE_DIR,
-        }).catch(function (err) {
-          var msg = (err && err.message) || '';
-          if (/Неизвестное действие|unknown/i.test(msg) && legacyEditorPasswordMatch(password)) {
-            return { role: 'editor', locked: false, superConfigured: false };
-          }
-          throw err;
+        }).then(function (data) {
+          if (data) data.fromServer = true;
+          return data;
         });
       }
 
@@ -5714,10 +5754,11 @@
         return map[code] || 'погода';
       }
 
-      function fetchWithTimeout(url, ms) {
+      function fetchWithTimeout(url, ms, init) {
         var controller = new AbortController();
         var timer = window.setTimeout(function () { controller.abort(); }, ms || 10000);
-        return fetch(url, { signal: controller.signal }).finally(function () {
+        var opts = Object.assign({}, init || {}, { signal: controller.signal });
+        return fetch(url, opts).finally(function () {
           window.clearTimeout(timer);
         });
       }
@@ -6319,7 +6360,7 @@
       }
 
       function callPublishApi(payload) {
-        return fetch(PUBLISH_URL, {
+        return fetchWithTimeout(PUBLISH_URL, 12000, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -6846,6 +6887,11 @@
           avatar.decoding = 'async';
           avatar.src = photoThumbUrl(meta.id, meta.photo);
           avatar.addEventListener('error', function () {
+            if (avatar.dataset.photoFallback !== '1') {
+              avatar.dataset.photoFallback = '1';
+              avatar.src = photoThumbFallbackUrl(meta.id, meta.photo);
+              return;
+            }
             avatar.remove();
             btn.classList.remove('has-photo');
           });
@@ -8109,13 +8155,25 @@
       function photoThumbUrl(personId, version) {
         var v = encodeURIComponent(String(version || '1'));
         var id = encodeURIComponent(String(personId));
-        return PHOTO_PUBLIC_BASE + '/' + TREE_DIR + '/' + id + '-thumb.jpg?v=' + v;
+        return PHOTO_PUBLIC_BASE + '/' + id + '-thumb.jpg?v=' + v;
       }
 
       function photoFullUrl(personId, version) {
         var v = encodeURIComponent(String(version || '1'));
         var id = encodeURIComponent(String(personId));
-        return PHOTO_PUBLIC_BASE + '/' + TREE_DIR + '/' + id + '.jpg?v=' + v;
+        return PHOTO_PUBLIC_BASE + '/' + id + '.jpg?v=' + v;
+      }
+
+      function photoThumbFallbackUrl(personId, version) {
+        var v = encodeURIComponent(String(version || '1'));
+        var id = encodeURIComponent(String(personId));
+        return PHOTO_FALLBACK_BASE + '/' + TREE_DIR + '/' + id + '-thumb.jpg?v=' + v;
+      }
+
+      function photoFullFallbackUrl(personId, version) {
+        var v = encodeURIComponent(String(version || '1'));
+        var id = encodeURIComponent(String(personId));
+        return PHOTO_FALLBACK_BASE + '/' + TREE_DIR + '/' + id + '.jpg?v=' + v;
       }
 
       function readViewSession() {
@@ -8317,8 +8375,10 @@
         rememberSession(password, authData);
         clearGateBusy();
         setViewLocked(false);
-        recordVisitOnce();
-        startPresence();
+        if (authData && authData.fromServer) {
+          recordVisitOnce();
+          startPresence();
+        }
         // One whoami path, deferred so unlock UI can paint; banner covers the paint hitch.
         showBusyBanner('Открываем древо…');
         window.requestAnimationFrame(function () {
@@ -8635,6 +8695,12 @@
         var ver = photoVersion(node);
         if (photoLightboxTitle) photoLightboxTitle.textContent = node.name || 'Фото';
         photoLightboxImg.alt = node.name || 'Фото';
+        photoLightboxImg.dataset.photoFallback = '';
+        photoLightboxImg.onerror = function () {
+          if (photoLightboxImg.dataset.photoFallback === '1') return;
+          photoLightboxImg.dataset.photoFallback = '1';
+          photoLightboxImg.src = photoFullFallbackUrl(node.id, ver);
+        };
         photoLightboxImg.src = photoFullUrl(node.id, ver);
         try {
           if (personSheetDialog && personSheetDialog.open) personSheetDialog.close();
@@ -8798,8 +8864,6 @@
         refreshActivityUi();
         updateWhoamiUi();
         updateSaveButton();
-        recordVisitOnce();
-        startPresence();
         loadWeather();
         showBusyBanner('Открываем древо…');
         window.requestAnimationFrame(function () {
@@ -8871,9 +8935,20 @@
           if (gateStatus) {
             gateStatus.hidden = false;
             gateStatus.classList.add('is-busy');
-            gateStatus.textContent = 'Проверяем пароль на сервере… Если зависло — попробуйте VPN.';
+            gateStatus.textContent = 'Проверяем пароль…';
           }
-          verifyAuth(password)
+          verifyLocalEditor(password)
+            .then(function (ok) {
+              if (ok) {
+                return {
+                  role: 'editor',
+                  locked: accessLocked,
+                  lockedReason: accessLockedReason,
+                  fromServer: false,
+                };
+              }
+              return verifyAuth(password);
+            })
             .then(function (data) {
               if (gateStatus) {
                 gateStatus.classList.remove('is-busy');
@@ -8893,14 +8968,16 @@
               var rateLimited = status === 429;
               var networkish =
                 !rateLimited &&
-                (/failed to fetch|network|load failed|timeout|timed out|503|502|cloudflare|fetch/i.test(
+                (/failed to fetch|network|load failed|timeout|timed out|abort|503|502|cloudflare|fetch/i.test(
                   String(msg)
                 ) ||
                   status === 0 ||
                   (typeof status === 'number' && status >= 500));
-              if (networkish) {
+              if (networkish && editorPasswordHash) {
+                msg = 'Неверный пароль';
+              } else if (networkish) {
                 msg =
-                  'Не удалось связаться с сервером. Проверьте интернет или включите VPN и попробуйте снова.';
+                  'Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.';
               }
               if (gateError) {
                 gateError.textContent = msg;
@@ -9099,7 +9176,8 @@
 
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
       setGateBusy('Загружаем древо…');
-      fetchRemoteTree().then(function (remote) {
+      Promise.all([fetchRemoteTree(), fetchAccessFile()]).then(function (pair) {
+        var remote = pair[0];
         if (remote && typeof remote === 'object' && remote.id) {
           tree = TreeModel.markAllowAdd(remote, NUTSU_ID);
           if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);

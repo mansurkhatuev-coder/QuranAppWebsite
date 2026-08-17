@@ -897,23 +897,7 @@ Deno.serve(async (request) => {
 
     if (action === 'record-visit') {
       const bumped = await incrementVisitCount(treeDir, access.visitCount);
-      // Keep access.json in sync when possible (best-effort; stats table is source of truth).
-      if (bumped.visitCount !== access.visitCount) {
-        const next: AccessState = {
-          ...access,
-          visitCount: bumped.visitCount,
-        };
-        try {
-          await githubCommitChanges({
-            token: githubToken,
-            repo: githubRepo,
-            message: `Record visit for ${treeDir}`,
-            changes: [{ path: accessPath(treeDir), content: serializeAccess(next) }],
-          });
-        } catch {
-          // Stats already incremented; ignore GitHub sync failures.
-        }
-      }
+      // Do not commit access.json: stats table is source of truth, GitHub deploys are limited.
       const onlineCount = await safeOnlineCount(treeDir);
       return jsonResponse({
         ok: true,
