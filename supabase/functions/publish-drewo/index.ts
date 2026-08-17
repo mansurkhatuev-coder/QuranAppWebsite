@@ -140,8 +140,70 @@ async function githubGetFile(
 }
 
 type TreeChange =
-  | { path: string; content: string }
+  | { path: string; content: string; encoding?: 'utf-8' | 'base64' }
   | { path: string; delete: true };
+
+const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = '';
+  const chunk = 0x2000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunk));
+  }
+  return btoa(binary);
+}
+
+function decodeDataUrl(dataUrl: unknown): { bytes: Uint8Array; contentType: string } | null {
+  if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return null;
+  const match = dataUrl.match(/^data:(image\/(?:webp|jpeg|jpg|png));base64,([A-Za-z0-9+/=\s]+)$/i);
+  if (!match) return null;
+  const contentType = match[1].toLowerCase() === 'image/jpg' ? 'image/jpeg' : match[1].toLowerCase();
+  const binary = atob(match[2].replace(/\s/g, ''));
+  if (binary.length < 32 || binary.length > 480000) return null;
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  return { bytes, contentType };
+}
+
+function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unknown): TreeChange[] {
+  const out: TreeChange[] = [];
+  const list = Array.isArray(photos) ? photos : [];
+  if (list.length > 20) {
+    throw new Error('Слишком много фото за одно сохранение (макс. 20)');
+  }
+  for (const item of list) {
+    if (!item || typeof item !== 'object') continue;
+    const rec = item as Record<string, unknown>;
+    const personId = typeof rec.personId === 'string' ? rec.personId.trim() : '';
+    if (!PHOTO_ID_RE.test(personId)) {
+      throw new Error('Некорректный id человека для фото');
+    }
+    const full = decodeDataUrl(rec.full);
+    const thumb = decodeDataUrl(rec.thumb);
+    if (!full || !thumb) {
+      throw new Error(`Нужны сжатые jpeg full и thumb для ${personId}`);
+    }
+    out.push({
+      path: `${treeDir}/photos/${personId}.jpg`,
+      content: bytesToBase64(full.bytes),
+      encoding: 'base64',
+    });
+    out.push({
+      path: `${treeDir}/photos/${personId}-thumb.jpg`,
+      content: bytesToBase64(thumb.bytes),
+      encoding: 'base64',
+    });
+  }
+  const del = Array.isArray(deletes) ? deletes : [];
+  for (const raw of del) {
+    const personId = String(raw || '').trim();
+    if (!PHOTO_ID_RE.test(personId)) continue;
+    out.push({ path: `${treeDir}/photos/${personId}.jpg`, delete: true });
+    out.push({ path: `${treeDir}/photos/${personId}-thumb.jpg`, delete: true });
+  }
+  return out;
+}
 
 /** One atomic commit for multiple file writes/deletes (much faster than Contents API). */
 async function githubCommitChanges(options: {
@@ -180,18 +242,24 @@ async function githubCommitChanges(options: {
   const baseTreeSha = String((commitRes.json.tree as { sha?: string } | undefined)?.sha || '');
   if (!baseTreeSha) throw new Error('Empty base tree');
 
-  const writes = changes.filter((c): c is { path: string; content: string } => 'content' in c);
+  const writes = changes.filter(
+    (c): c is { path: string; content: string; encoding?: 'utf-8' | 'base64' } => 'content' in c
+  );
   const deletes = changes.filter((c): c is { path: string; delete: true } => 'delete' in c && c.delete);
 
   const blobShas = await Promise.all(
     writes.map(async (file) => {
+      const rawBase64 =
+        file.encoding === 'base64'
+          ? file.content.replace(/\s/g, '')
+          : btoa(unescape(encodeURIComponent(file.content)));
       const blobRes = await githubJson(
         options.token,
         `https://api.github.com/repos/${options.repo}/git/blobs`,
         {
           method: 'POST',
           body: JSON.stringify({
-            content: btoa(unescape(encodeURIComponent(file.content))),
+            content: rawBase64,
             encoding: 'base64',
           }),
         }
@@ -975,42 +1043,6 @@ Deno.serve(async (request) => {
       });
     }
 
-    const PHOTO_BUCKET = 'drewo-photos';
-    const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
-
-    async function getStorageAdmin() {
-      return getServiceClient();
-    }
-
-    async function ensurePhotoBucket(
-      admin: Awaited<ReturnType<typeof getStorageAdmin>>
-    ) {
-      const listed = await admin.storage.listBuckets();
-      if (listed.error) throw new Error(listed.error.message);
-      const exists = (listed.data || []).some((b) => b.name === PHOTO_BUCKET);
-      if (exists) return;
-      const created = await admin.storage.createBucket(PHOTO_BUCKET, {
-        public: true,
-        fileSizeLimit: 512000,
-        allowedMimeTypes: ['image/webp', 'image/jpeg', 'image/png'],
-      });
-      if (created.error && !/already exists|duplicate/i.test(created.error.message || '')) {
-        throw new Error(created.error.message);
-      }
-    }
-
-    function decodeDataUrl(dataUrl: unknown): { bytes: Uint8Array; contentType: string } | null {
-      if (typeof dataUrl !== 'string' || !dataUrl.startsWith('data:')) return null;
-      const match = dataUrl.match(/^data:(image\/(?:webp|jpeg|jpg|png));base64,([A-Za-z0-9+/=\s]+)$/i);
-      if (!match) return null;
-      const contentType = match[1].toLowerCase() === 'image/jpg' ? 'image/jpeg' : match[1].toLowerCase();
-      const binary = atob(match[2].replace(/\s/g, ''));
-      if (binary.length < 32 || binary.length > 480000) return null;
-      const bytes = new Uint8Array(binary.length);
-      for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-      return { bytes, contentType };
-    }
-
     if (action === 'upload-photo') {
       if (access.locked && role !== 'super') {
         return jsonResponse(
@@ -1019,52 +1051,37 @@ Deno.serve(async (request) => {
         );
       }
       const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
-      if (!PHOTO_ID_RE.test(personId)) {
-        return jsonResponse({ error: 'Некорректный id человека' }, 400);
-      }
-      const full = decodeDataUrl(body.full);
-      const thumb = decodeDataUrl(body.thumb);
-      if (!full || !thumb) {
-        return jsonResponse(
-          { error: 'Нужны сжатые фото full и thumb (webp/jpeg, data URL)' },
-          400
-        );
-      }
-      const admin = await getStorageAdmin();
-      await ensurePhotoBucket(admin);
       const version =
         typeof body.version === 'string' && /^[a-zA-Z0-9_-]{1,32}$/.test(body.version)
           ? body.version
           : String(Date.now());
-      const ext = full.contentType === 'image/png' ? 'png' : full.contentType === 'image/webp' ? 'webp' : 'jpg';
-      const thumbExt =
-        thumb.contentType === 'image/png' ? 'png' : thumb.contentType === 'image/webp' ? 'webp' : 'jpg';
-      const fullPath = `${treeDir}/${personId}.${ext}`;
-      const thumbPath = `${treeDir}/${personId}-thumb.${thumbExt}`;
-      const upFull = await admin.storage.from(PHOTO_BUCKET).upload(fullPath, full.bytes, {
-        contentType: full.contentType,
-        upsert: true,
-        cacheControl: '3600',
+      let photoChanges: TreeChange[] = [];
+      try {
+        photoChanges = collectPhotoGitChanges(
+          treeDir,
+          [{ personId, full: body.full, thumb: body.thumb }],
+          []
+        );
+      } catch (err) {
+        return jsonResponse(
+          { error: err instanceof Error ? err.message : 'Некорректное фото' },
+          400
+        );
+      }
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Add photo ${personId} on ${treeDir}`,
+        changes: photoChanges,
       });
-      if (upFull.error) throw new Error(upFull.error.message);
-      const upThumb = await admin.storage.from(PHOTO_BUCKET).upload(thumbPath, thumb.bytes, {
-        contentType: thumb.contentType,
-        upsert: true,
-        cacheControl: '3600',
-      });
-      if (upThumb.error) throw new Error(upThumb.error.message);
-      const fullUrl = admin.storage.from(PHOTO_BUCKET).getPublicUrl(fullPath).data.publicUrl;
-      const thumbUrl = admin.storage.from(PHOTO_BUCKET).getPublicUrl(thumbPath).data.publicUrl;
       return jsonResponse({
         ok: true,
         treeDir,
         personId,
         version,
         photo: version,
-        fullPath,
-        thumbPath,
-        fullUrl: `${fullUrl}?v=${encodeURIComponent(version)}`,
-        thumbUrl: `${thumbUrl}?v=${encodeURIComponent(version)}`,
+        fullPath: `${treeDir}/photos/${personId}.jpg`,
+        thumbPath: `${treeDir}/photos/${personId}-thumb.jpg`,
       });
     }
 
@@ -1079,13 +1096,24 @@ Deno.serve(async (request) => {
       if (!PHOTO_ID_RE.test(personId)) {
         return jsonResponse({ error: 'Некорректный id человека' }, 400);
       }
-      const admin = await getStorageAdmin();
-      await ensurePhotoBucket(admin);
-      const candidates = ['webp', 'jpg', 'jpeg', 'png'].flatMap((ext) => [
-        `${treeDir}/${personId}.${ext}`,
-        `${treeDir}/${personId}-thumb.${ext}`,
-      ]);
-      await admin.storage.from(PHOTO_BUCKET).remove(candidates);
+      const candidates = [
+        `${treeDir}/photos/${personId}.jpg`,
+        `${treeDir}/photos/${personId}-thumb.jpg`,
+      ];
+      const existing = await Promise.all(
+        candidates.map(async (path) => ((await githubGetFile(githubToken, githubRepo, path)) ? path : null))
+      );
+      const deletes = existing
+        .filter((path): path is string => Boolean(path))
+        .map((path) => ({ path, delete: true as const }));
+      if (deletes.length) {
+        await githubCommitChanges({
+          token: githubToken,
+          repo: githubRepo,
+          message: `Remove photo ${personId} on ${treeDir}`,
+          changes: deletes,
+        });
+      }
       return jsonResponse({ ok: true, treeDir, personId, deleted: true });
     }
 
@@ -1439,7 +1467,37 @@ Deno.serve(async (request) => {
     const indexWillChange = !current?.content || current.content !== htmlToWrite;
     const jsonWillChange = !jsonFile?.content || normalizeTreeJson(jsonFile.content) !== normalizedTree;
 
-    if (!indexWillChange && !jsonWillChange) {
+    let photoWrites: TreeChange[] = [];
+    try {
+      photoWrites = collectPhotoGitChanges(treeDir, body.photos, []);
+    } catch (err) {
+      return jsonResponse(
+        { error: err instanceof Error ? err.message : 'Некорректные фото' },
+        400
+      );
+    }
+    const photoDeleteIds = Array.from(
+      new Set(
+        (Array.isArray(body.photoDeletes) ? body.photoDeletes : [])
+          .map((value) => String(value || '').trim())
+          .filter((id) => PHOTO_ID_RE.test(id))
+      )
+    );
+    const photoDeleteCandidates = photoDeleteIds.flatMap((id) => [
+      `${treeDir}/photos/${id}.jpg`,
+      `${treeDir}/photos/${id}-thumb.jpg`,
+    ]);
+    const photoDeleteExisting = await Promise.all(
+      photoDeleteCandidates.map(async (path) =>
+        (await githubGetFile(githubToken, githubRepo, path)) ? path : null
+      )
+    );
+    const photoDeletes: TreeChange[] = photoDeleteExisting
+      .filter((path): path is string => Boolean(path))
+      .map((path) => ({ path, delete: true as const }));
+    const photoGitChanges = [...photoWrites, ...photoDeletes];
+
+    if (!indexWillChange && !jsonWillChange && !photoGitChanges.length) {
       return jsonResponse(
         {
           ok: false,
@@ -1453,6 +1511,7 @@ Deno.serve(async (request) => {
       );
     }
 
+    const treeFilesChange = indexWillChange || jsonWillChange;
     const backupName = `${backupPrefix}-${stamp}.json`;
     const record = makeSnapshotRecord(treeJson, activityJson, { kind: 'auto' });
     const pruneDeletes = pruneBackupDeletes(existingBackups, pinned, [backupName]);
@@ -1473,9 +1532,14 @@ Deno.serve(async (request) => {
     const changes: TreeChange[] = [
       ...(indexWillChange ? [{ path: indexPath, content: htmlToWrite }] : []),
       ...(jsonWillChange ? [{ path: jsonPath, content: jsonBody }] : []),
-      { path: `${backupsDir}/${backupName}`, content: record.json + '\n' },
-      { path: manifestPath(treeDir), content: serializeManifest(nextManifest) },
-      ...pruneDeletes,
+      ...(treeFilesChange
+        ? [
+            { path: `${backupsDir}/${backupName}`, content: record.json + '\n' },
+            { path: manifestPath(treeDir), content: serializeManifest(nextManifest) },
+            ...pruneDeletes,
+          ]
+        : []),
+      ...photoGitChanges,
     ];
 
     const commit = await githubCommitChanges({
@@ -1494,8 +1558,10 @@ Deno.serve(async (request) => {
       indexChanged: indexWillChange,
       jsonChanged: jsonWillChange,
       fingerprint,
-      backupCreated: true,
-      backupCount: nextManifest.length,
+      backupCreated: treeFilesChange,
+      backupCount: treeFilesChange ? nextManifest.length : manifest.length,
+      photosWritten: photoWrites.length / 2,
+      photoDeletesWritten: photoDeletes.length / 2,
       commitSha: commit.commitSha,
       repo: githubRepo,
       forced: force,
