@@ -4019,67 +4019,123 @@
   }
 
   /**
-   * Merge concurrent edits: keep server structure, fill missing years/bio from local,
-   * attach locally-added sons under the same parent when possible.
+   * Merge concurrent edits by person id.
+   * With baseRoot (the tree this editor loaded): keep the other person's field
+   * changes and apply ours. Same field, both changed → local wins.
+   * Deletes and reparents are not applied.
    */
-  function mergeConcurrentEdits(serverRoot, localRoot) {
+  function mergeConcurrentEdits(serverRoot, localRoot, baseRoot) {
     const server = cloneTree(serverRoot);
     const byId = new Map();
-    const parentOf = new Map();
     function index(node, parentId) {
       byId.set(String(node.id), node);
-      if (parentId != null) parentOf.set(String(node.id), String(parentId));
       (node.sons || []).forEach((s) => index(s, node.id));
     }
     index(server, null);
 
     const localById = new Map();
-    const localParentOf = new Map();
-    function indexLocal(node, parentId) {
+    function indexLocal(node) {
       localById.set(String(node.id), node);
-      if (parentId != null) localParentOf.set(String(node.id), String(parentId));
-      (node.sons || []).forEach((s) => indexLocal(s, node.id));
+      (node.sons || []).forEach(indexLocal);
     }
-    indexLocal(localRoot, null);
+    indexLocal(localRoot);
 
-    const stats = { filled: [], overridden: [], addedSons: [] };
+    const baseById = new Map();
+    if (baseRoot) {
+      (function indexBase(node) {
+        baseById.set(String(node.id), node);
+        (node.sons || []).forEach(indexBase);
+      })(baseRoot);
+    }
 
-    function mergeField(serverNode, localNode, field) {
-      const sv = serverNode[field];
-      const lv = localNode[field];
-      const sEmpty = sv == null || sv === '';
-      const lEmpty = lv == null || lv === '';
-      if (sEmpty && !lEmpty) {
-        serverNode[field] = lv;
-        stats.filled.push({ id: serverNode.id, field, value: lv });
-      } else if (!sEmpty && !lEmpty && String(sv) !== String(lv)) {
-        serverNode[field] = lv;
-        stats.overridden.push({ id: serverNode.id, field, server: sv, local: lv });
+    const stats = { filled: [], overridden: [], addedSons: [], skippedDeletes: [] };
+    const fields = ['name', 'born', 'died', 'bio', 'photo'];
+
+    function fieldValueOf(node, field) {
+      const value = node && node[field];
+      if (value == null || value === false || value === '') return '';
+      return String(value);
+    }
+
+    function applyTwoWay(serverNode, localNode, field, onlyIfServerEmpty) {
+      const sv = fieldValueOf(serverNode, field);
+      const lv = fieldValueOf(localNode, field);
+      if (!lv) return;
+      if (onlyIfServerEmpty && sv) return;
+      if (!sv) {
+        serverNode[field] = localNode[field];
+        stats.filled.push({ id: serverNode.id, field, value: localNode[field] });
+        return;
+      }
+      if (sv !== lv) {
+        const previous = serverNode[field];
+        serverNode[field] = localNode[field];
+        stats.overridden.push({
+          id: serverNode.id,
+          field,
+          server: previous,
+          local: localNode[field],
+        });
+      }
+    }
+
+    function applyThreeWay(serverNode, localNode, baseNode, field) {
+      const sv = fieldValueOf(serverNode, field);
+      const lv = fieldValueOf(localNode, field);
+      const bv = fieldValueOf(baseNode, field);
+      if (lv === bv) return;
+      if (!lv) {
+        stats.skippedDeletes.push({ id: serverNode.id, field });
+        return;
+      }
+      if (sv === lv) return;
+      const previous = serverNode[field];
+      serverNode[field] = localNode[field];
+      if (!sv) {
+        stats.filled.push({ id: serverNode.id, field, value: localNode[field] });
+      } else {
+        stats.overridden.push({
+          id: serverNode.id,
+          field,
+          server: previous,
+          local: localNode[field],
+        });
       }
     }
 
     localById.forEach((localNode, id) => {
       const serverNode = byId.get(id);
       if (!serverNode) return;
-      mergeField(serverNode, localNode, 'born');
-      mergeField(serverNode, localNode, 'died');
-      mergeField(serverNode, localNode, 'bio');
-      if ((!serverNode.name || !String(serverNode.name).trim()) && localNode.name) {
-        serverNode.name = localNode.name;
+      if (baseRoot) {
+        const baseNode = baseById.get(id);
+        fields.forEach((field) => applyThreeWay(serverNode, localNode, baseNode, field));
+      } else {
+        applyTwoWay(serverNode, localNode, 'born', false);
+        applyTwoWay(serverNode, localNode, 'died', false);
+        applyTwoWay(serverNode, localNode, 'bio', false);
+        applyTwoWay(serverNode, localNode, 'photo', false);
+        applyTwoWay(serverNode, localNode, 'name', true);
       }
     });
 
-    localParentOf.forEach((parentId, childId) => {
-      if (byId.has(childId)) return;
-      const parent = byId.get(parentId);
-      const localChild = localById.get(childId);
-      if (!parent || !localChild) return;
-      if (!Array.isArray(parent.sons)) parent.sons = [];
-      const copy = cloneTree(localChild);
-      parent.sons.push(copy);
-      stats.addedSons.push({ id: childId, parentId, name: copy.name });
-      index(copy, parentId);
-    });
+    function attach(localNode, parentOnResult) {
+      const id = String(localNode.id);
+      const existing = byId.get(id);
+      if (existing) {
+        (localNode.sons || []).forEach((son) => attach(son, existing));
+        return;
+      }
+      if (baseRoot && baseById.has(id)) return;
+      if (!parentOnResult) return;
+      const copy = cloneTree(localNode);
+      copy.sons = [];
+      if (!Array.isArray(parentOnResult.sons)) parentOnResult.sons = [];
+      parentOnResult.sons.push(copy);
+      byId.set(id, copy);
+      stats.addedSons.push({ id, parentId: parentOnResult.id, name: copy.name });
+      (localNode.sons || []).forEach((son) => attach(son, copy));
+    }
+    attach(localRoot, null);
 
     return { tree: server, stats };
   }
@@ -4595,6 +4651,7 @@
       var confirmResolver = null;
       var choiceResolver = null;
       var baseFingerprint = '';
+      var baseTreeJson = '';
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo';
       var VIEW_SESSION_KEY = 'drewo-view-session';
@@ -6574,12 +6631,27 @@
           treeJson: treeJson,
           activityJson: JSON.stringify(loadActivity(), null, 2),
           baseFingerprint: baseFingerprint || '',
+          baseTreeJson: baseTreeJson || '',
           force: !!opts.force,
           message: 'Update family tree from web editor',
           photos: pendingPhotos,
           photoDeletes: pendingPhotoDeletes.slice(),
         };
         var data = await callPublishApi(payload);
+        if (data && data.treeJson) {
+          try {
+            var publishedTree = JSON.parse(data.treeJson);
+            if (publishedTree && publishedTree.id) {
+              tree = TreeModel.markAllowAdd(publishedTree, NUTSU_ID);
+              treeJson = treeJsonForEmbed(tree);
+              if (dataEl) dataEl.textContent = treeJson;
+            }
+          } catch (applyErr) {}
+        }
+        if (data && typeof data.activityJson === 'string' && activityEl) {
+          activityEl.textContent = data.activityJson;
+          refreshActivityUi();
+        }
         if (!pendingPhotos.length || data.photosWritten != null) {
           await clearPendingPhotos(pendingPhotos.map(function (row) { return row.personId; }), true);
           pendingPhotoDeletes = [];
@@ -6587,6 +6659,7 @@
         }
         if (data && data.fingerprint) baseFingerprint = data.fingerprint;
         else baseFingerprint = await fingerprintTreeText(treeJson);
+        baseTreeJson = treeJson;
         setTreeDirty(false);
         return data;
       }
@@ -6986,7 +7059,9 @@
       }
 
       function rememberFingerprintFromTree() {
-        return fingerprintTreeText(treeJsonForEmbed(tree)).then(function (fp) {
+        var snapshot = treeJsonForEmbed(tree);
+        baseTreeJson = snapshot;
+        return fingerprintTreeText(snapshot).then(function (fp) {
           baseFingerprint = fp;
           return fp;
         });
@@ -8255,96 +8330,76 @@
             }
           }
 
-          function runPublish(force) {
-            return publishToGitHub(pass, { force: !!force }).then(function () {
+          function runPublish(force, mergeAttempt) {
+            mergeAttempt = mergeAttempt || 0;
+            return publishToGitHub(pass, { force: !!force }).then(function (data) {
               window.clearTimeout(progressTimer);
               setTreeDirty(false);
               hideCenterBanner();
-              showToast('Сохранено на waydean.ru/drewo', 'success', 3200);
+              if (data && data.merged) {
+                try {
+                  rebuildLineSets();
+                  render(false);
+                } catch (renderErr) {}
+              }
+              showToast(
+                data && data.merged
+                  ? 'Сохранено вместе с правками с сайта'
+                  : 'Сохранено на waydean.ru/drewo',
+                'success',
+                3200
+              );
               unlockSaveForm();
+            }).catch(function (err) {
+              if (err) err.mergeAttempt = mergeAttempt;
+              throw err;
             });
           }
 
           runPublish(false)
-            .catch(function (err) {
+            .catch(function handleSaveError(err) {
               window.clearTimeout(progressTimer);
               hideCenterBanner();
               if (err && err.conflict) {
+                var attempt = (err.mergeAttempt || 0) + 1;
+                if (attempt > 2) {
+                  showToast('Не удалось объединить правки. Обновите страницу.', 'error', 5000);
+                  unlockSaveForm();
+                  return;
+                }
                 var serverJson = err.data && err.data.serverTreeJson;
                 var serverFp = err.data && err.data.serverFingerprint;
                 if (serverJson && TreeModel.mergeConcurrentEdits) {
                   try {
                     var serverTree =
                       typeof serverJson === 'string' ? JSON.parse(serverJson) : serverJson;
-                    var merged = TreeModel.mergeConcurrentEdits(serverTree, tree);
-                    var filled = (merged.stats && merged.stats.filled) || [];
-                    var added = (merged.stats && merged.stats.addedSons) || [];
-                    var changed = filled.length + added.length;
+                    var baseForMerge = null;
+                    try {
+                      baseForMerge = baseTreeJson ? JSON.parse(baseTreeJson) : null;
+                    } catch (baseErr) {
+                      baseForMerge = null;
+                    }
+                    var merged = TreeModel.mergeConcurrentEdits(serverTree, tree, baseForMerge);
                     tree = TreeModel.markAllowAdd(merged.tree, NUTSU_ID);
                     if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
                     if (serverFp) baseFingerprint = serverFp;
+                    try {
+                      baseTreeJson = JSON.stringify(serverTree);
+                    } catch (baseSetErr) {}
                     setTreeDirty(true);
                     rebuildLineSets();
                     render(false);
-                    return askChoice(
-                      changed
-                        ? 'На сайте были другие правки. Объединил изменения (' +
-                            changed +
-                            '). Сохранить объединённое?'
-                        : 'На сайте уже другая версия. Сохранить с объединением?',
-                      [
-                        { id: 'merge', label: 'Сохранить объединённое', primary: true },
-                        { id: 'reload', label: 'Только взять с сайта' },
-                        { id: 'force', label: 'Только моё (затрёт чужое)' },
-                        { id: 'cancel', label: 'Отмена' },
-                      ]
-                    ).then(function (choice) {
-                      if (choice === 'merge') {
-                        showBusyBanner('Сохраняю объединённое…');
-                        return runPublish(false);
-                      }
-                      if (choice === 'reload') {
-                        showBusyBanner('Обновляю с сайта…');
-                        return fetchRemoteTree().then(function (remote) {
-                          hideCenterBanner();
-                          if (remote) applyRemoteTreeData(remote);
-                          else showToast('Не удалось загрузить дерево', 'error');
-                          unlockSaveForm();
-                        });
-                      }
-                      if (choice === 'force') {
-                        showBusyBanner('Сохраняю принудительно…');
-                        return runPublish(true);
-                      }
-                      unlockSaveForm();
-                    });
+                    showBusyBanner('Сохраняю вместе с правками с сайта…');
+                    return runPublish(false, attempt).catch(handleSaveError);
                   } catch (mergeErr) {
-                    /* fall through to classic conflict UI */
+                    showToast('Не удалось объединить правки', 'error', 5000);
+                    unlockSaveForm();
+                    return;
                   }
                 }
-                return askChoice(
-                  'На сайте уже другая версия дерева. Что сделать?',
-                  [
-                    { id: 'reload', label: 'Обновить у себя', primary: true },
-                    { id: 'force', label: 'Всё равно сохранить' },
-                    { id: 'cancel', label: 'Отмена' },
-                  ]
-                ).then(function (choice) {
-                  if (choice === 'reload') {
-                    showBusyBanner('Обновляю с сайта…');
-                    return fetchRemoteTree().then(function (remote) {
-                      hideCenterBanner();
-                      if (remote) applyRemoteTreeData(remote);
-                      else showToast('Не удалось загрузить дерево', 'error');
-                      unlockSaveForm();
-                    });
-                  }
-                  if (choice === 'force') {
-                    showBusyBanner('Сохраняю принудительно…');
-                    return runPublish(true);
-                  }
-                  unlockSaveForm();
-                });
+                showToast((err && err.message) || 'На сайте уже другая версия', 'error', 5000);
+                unlockSaveForm();
+                return;
               }
               showToast(err.message || String(err), 'error', 5000);
               unlockSaveForm();
