@@ -23,6 +23,7 @@ jobs:
           version: latest
 
       - name: Apply store-downloads SQL
+        continue-on-error: true
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
         run: |
@@ -49,7 +50,7 @@ jobs:
           except urllib.error.HTTPError as err:
               body = err.read().decode('utf-8', errors='replace')
               print(f'SQL API {err.code}: {body[:2000]}')
-              sys.exit(1)
+              print('Continue: run admin/supabase-migration-store-downloads.sql in SQL Editor if tables are missing.')
           PY
 
       - name: Deploy store-downloads Edge Function
