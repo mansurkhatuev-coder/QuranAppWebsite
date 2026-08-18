@@ -266,8 +266,6 @@
 
         return {
           ...local,
-          onlineCount: remote?.onlineCount ?? null,
-          visitCount: remote?.visitCount ?? null,
           locked: Boolean(remote?.locked),
           lockedReason: remote?.lockedReason || '',
           lastSavedAt: remote?.lastSavedAt || local.lastSavedAt,
@@ -288,13 +286,9 @@
   }
 
   function renderSummary(rows) {
-    const online = rows.reduce((sum, row) => sum + (Number(row.onlineCount) || 0), 0);
-    const visits = rows.reduce((sum, row) => sum + (Number(row.visitCount) || 0), 0);
     const people = rows.reduce((sum, row) => sum + (Number(row.people) || 0), 0);
     const added = rows.reduce((sum, row) => sum + (Number(row.addedSinceBaseline) || 0), 0);
 
-    $('#sum-online').textContent = formatNumber(online);
-    $('#sum-visits').textContent = formatNumber(visits);
     $('#sum-people').textContent = formatNumber(people);
     $('#sum-added').textContent = formatNumber(added);
   }
@@ -303,10 +297,7 @@
     if (row.locked) {
       return `<span class="badge badge-locked">Закрыто</span>`;
     }
-    if (Number(row.onlineCount) > 0) {
-      return `<span class="badge badge-live"><span class="pulse" aria-hidden="true"></span>${formatNumber(row.onlineCount)} онлайн</span>`;
-    }
-    return `<span class="badge badge-quiet">Никого онлайн</span>`;
+    return '';
   }
 
   function renderCards(rows) {
@@ -334,10 +325,6 @@
             </div>
             <div class="metrics">
               <div class="metric">
-                <span class="m-label">Визиты</span>
-                <span class="m-value">${formatNumber(row.visitCount)}</span>
-              </div>
-              <div class="metric">
                 <span class="m-label">Люди</span>
                 <span class="m-value">${formatNumber(row.people)}</span>
                 <span class="m-hint">${photoText}</span>
@@ -346,10 +333,6 @@
                 <span class="m-label">Добавлено</span>
                 <span class="m-value">${formatNumber(row.addedSinceBaseline)}</span>
                 <span class="m-hint">${addedHint}</span>
-              </div>
-              <div class="metric">
-                <span class="m-label">Онлайн</span>
-                <span class="m-value">${formatNumber(row.onlineCount)}</span>
               </div>
               <div class="metric">
                 <span class="m-label">Бэкапы</span>
