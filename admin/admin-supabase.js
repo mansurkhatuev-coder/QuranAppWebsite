@@ -335,6 +335,40 @@
     return json;
   }
 
+  async function callStoreDownloads(payload, query = '') {
+    const session = await getSession();
+    if (!session?.access_token) throw new Error('Нужен вход в Supabase');
+    const url = config.storeDownloadsUrl;
+    if (!url) throw new Error('Не задан storeDownloadsUrl в supabase-config.js');
+    const response = await fetch(`${url}${query}`, {
+      method: payload ? 'POST' : 'GET',
+      headers: {
+        Authorization: `Bearer ${session.access_token}`,
+        apikey: config.anonKey || '',
+        ...(payload ? { 'Content-Type': 'application/json' } : {}),
+      },
+      cache: 'no-store',
+      body: payload ? JSON.stringify(payload) : undefined,
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `Store downloads failed (${response.status})`);
+    }
+    return json;
+  }
+
+  async function loadStoreDownloads() {
+    return callStoreDownloads(null);
+  }
+
+  async function uploadRustoreCsv(csv) {
+    return callStoreDownloads({ action: 'upload-rustore', csv });
+  }
+
+  async function refreshAppleDownloads() {
+    return callStoreDownloads({ action: 'refresh-apple' });
+  }
+
   async function publishContent(payload) {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
@@ -377,5 +411,8 @@
     loadAnalyticsInstallations,
     loadRuStoreVersion,
     syncAppRelease,
+    loadStoreDownloads,
+    uploadRustoreCsv,
+    refreshAppleDownloads,
   };
 })(window);

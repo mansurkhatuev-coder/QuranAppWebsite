@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=17" />
+    <link rel="stylesheet" href="./admin.css?v=16" />
   </head>
   <body class="admin-body">
     <div id="admin-pwa-banner" class="admin-pwa-banner" hidden>
@@ -281,7 +281,7 @@
       <section class="admin-panel" data-panel="analytics">
         <div class="admin-callout">
           <strong>Продуктовая аналитика</strong> — обезличенные события из приложения.
-          «Активные» — кто присылал события за период. «Новые установки» — первый визит (first_seen) за период, не скачивания из RuStore/App Store.
+          «Активные» — уникальные установки, которые присылали события за период (если аналитика не отключена).
           Платформа — ОС (android / ios), без разделения RuStore / прямой APK / App Store.
         </div>
         <div class="admin-toolbar admin-panel-toolbar">
@@ -301,7 +301,7 @@
           </div>
         </div>
         <div id="analytics-metrics"></div>
-        <div id="analytics-installs-chart" class="admin-analytics-social"></div>
+        <div id="analytics-stores" class="admin-analytics-social"></div>
         <div id="analytics-social" class="admin-analytics-social"></div>
         <div id="analytics-breakdown" class="admin-analytics-breakdown"></div>
       </section>
@@ -475,15 +475,14 @@
     </dialog>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../assets/auth-lock.js?v=1"></script>
-    <script src="./supabase-config.js?v=5"></script>
-    <script src="./admin-supabase.js?v=11"></script>
+    <script src="./supabase-config.js?v=6"></script>
+    <script src="./admin-supabase.js?v=12"></script>
     <script src="./admin-command-center.js?v=7"></script>
     <script src="./admin-home.js?v=3"></script>
     <script src="./admin-academy-feedback.js?v=3"></script>
-    <script src="./admin-analytics.js?v=5"></script>
+    <script src="./admin-analytics.js?v=6"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=26"></script>
+    <script src="./admin.js?v=25"></script>
     <script src="./admin-pwa.js?v=2"></script>
   </body>
 </html>

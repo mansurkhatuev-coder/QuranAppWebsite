@@ -80,6 +80,12 @@
    `supabase functions deploy academy-giveaway-enter`
 3. В админке → вкладка **Розыгрыш** → включите тумблер и сохраните.
 
+Если нужна вкладка аналитики «Сторы · скачивания»:
+
+1. **SQL Editor** → выполните `website/admin/supabase-migration-store-downloads.sql`
+2. Задеплойте Edge Function: `supabase functions deploy store-downloads --no-verify-jwt`
+3. Секреты App Store Connect: `APP_STORE_ISSUER_ID`, `APP_STORE_KEY_ID`, `APP_STORE_PRIVATE_KEY` (текст `.p8`). RuStore CSV работает и без них.
+
 ---
 
 ## Часть 3. Создать пользователя админки

@@ -14,4 +14,7 @@ window.SUPABASE_CONFIG = {
 
   /** Edge Functions → sync-app-release → sync store channels into app-release.json */
   syncAppReleaseUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/sync-app-release',
+
+  /** Edge Functions → store-downloads → RuStore CSV + App Store Connect */
+  storeDownloadsUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/store-downloads',
 };

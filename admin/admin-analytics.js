@@ -21,6 +21,9 @@
   let installations = [];
   let rangeDays = 7;
   let installationsAvailable = false;
+  let storeSnapshot = null;
+  let storeError = '';
+  let storeBusy = false;
 
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
@@ -86,64 +89,6 @@
     return countUniqueInstallationsFromEvents(withinDays);
   }
 
-  function dayKeyFromTimestamp(ts) {
-    const d = new Date(ts);
-    d.setHours(0, 0, 0, 0);
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-
-  function formatChartDayLabel(dayKey) {
-    const parts = dayKey.split('-');
-    if (parts.length !== 3) return dayKey;
-    return `${parts[2]}.${parts[1]}`;
-  }
-
-  /** First time we saw each installation (registry first_seen_at or earliest event). */
-  function getFirstSeenEntries() {
-    if (hasInstallationRegistry()) {
-      return installations
-        .map((row) => ({
-          id: row.installation_id,
-          at: Date.parse(row.first_seen_at),
-        }))
-        .filter((entry) => entry.id && Number.isFinite(entry.at));
-    }
-    const map = new Map();
-    for (const row of allRows) {
-      if (!row.installation_id) continue;
-      const at = Date.parse(row.created_at);
-      if (!Number.isFinite(at)) continue;
-      const prev = map.get(row.installation_id);
-      if (!prev || at < prev) map.set(row.installation_id, at);
-    }
-    return [...map.entries()].map(([id, at]) => ({ id, at }));
-  }
-
-  function countNewInstalls(withinDays) {
-    const entries = getFirstSeenEntries();
-    if (!withinDays) return entries.length;
-    const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
-    return entries.filter((entry) => entry.at >= cutoff).length;
-  }
-
-  function buildDailyNewInstalls(dayCount) {
-    const buckets = new Map();
-    for (let offset = dayCount - 1; offset >= 0; offset -= 1) {
-      const d = new Date();
-      d.setHours(0, 0, 0, 0);
-      d.setDate(d.getDate() - offset);
-      buckets.set(dayKeyFromTimestamp(d.getTime()), 0);
-    }
-    for (const entry of getFirstSeenEntries()) {
-      const key = dayKeyFromTimestamp(entry.at);
-      if (buckets.has(key)) buckets.set(key, buckets.get(key) + 1);
-    }
-    return [...buckets.entries()];
-  }
-
   function countBy(rows, keyFn) {
     const map = new Map();
     for (const row of rows) {
@@ -169,16 +114,12 @@
     const active30 = countActiveInstalls(30);
     const active365 = countActiveInstalls(365);
     const totalKnown = countActiveInstalls(0);
-    const newSelected = countNewInstalls(rangeDays);
-    const new1 = countNewInstalls(1);
-    const new7 = countNewInstalls(7);
-    const new30 = countNewInstalls(30);
     const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
     const sourceNote = hasInstallationRegistry()
-      ? 'Активные — кто присылал события за период (last_seen). Новые — первый визит (first_seen) за период. Не скачивания из магазинов. Платформа = ОС (android/ios).'
+      ? 'Активные — уникальные установки (installation_id), которые присылали события. Платформа = ОС (android/ios), не магазин (RuStore / APK / App Store). Без аналитики или офлайн устройство не видно.'
       : installationsAvailable
-        ? 'Реестр установок пуст — активные и новые считаем по событиям (первое событие = новая установка).'
-        : 'Активные и новые считаются по событиям. Полный учёт установок появится после обновления сервера.';
+        ? 'Реестр установок пуст — считаем по событиям. «Всё время» = уникальные installation_id из загруженных событий.'
+        : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
 
     container.innerHTML = `
       <div class="admin-analytics-grid">
@@ -191,13 +132,6 @@
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 30 дн.</p><p class="admin-analytics-value">${active30}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 1 год</p><p class="admin-analytics-value">${active365}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Всего за всё время</p><p class="admin-analytics-value">${totalKnown}</p></article>
-        <article class="admin-analytics-card">
-          <p class="admin-muted">Новые · ${rangeLabel(rangeDays)}</p>
-          <p class="admin-analytics-value">${newSelected}</p>
-        </article>
-        <article class="admin-analytics-card"><p class="admin-muted">Новые · 24ч</p><p class="admin-analytics-value">${new1}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Новые · 7 дн.</p><p class="admin-analytics-value">${new7}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Новые · 30 дн.</p><p class="admin-analytics-value">${new30}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Событий · период</p><p class="admin-analytics-value">${rows.length}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Азкары</p><p class="admin-analytics-value">${byEvent.azkar_item_completed || 0}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Уроки</p><p class="admin-analytics-value">${byEvent.academy_lesson_completed || 0}</p></article>
@@ -329,58 +263,6 @@
     }
 
     return out.sort((a, b) => b.started - a.started);
-  }
-
-  function renderNewInstallsChart(container) {
-    if (!container) return;
-    const chartDays = rangeDays && rangeDays <= 30 ? rangeDays : 30;
-    const daily = buildDailyNewInstalls(chartDays);
-    const max = Math.max(1, ...daily.map(([, count]) => count));
-    const totalInChart = daily.reduce((sum, [, count]) => sum + count, 0);
-
-    const block = document.createElement('div');
-    block.className = 'admin-analytics-chart';
-    block.innerHTML = `
-      <div class="admin-analytics-social-head">
-        <h3>Новые установки по дням</h3>
-        <p class="admin-muted">
-          Первый визит устройства (first_seen), не скачивание из RuStore/App Store.
-          За ${chartDays} дн.: ${totalInChart}.
-        </p>
-      </div>
-    `;
-
-    if (!totalInChart) {
-      const empty = document.createElement('p');
-      empty.className = 'admin-muted';
-      empty.textContent = 'За выбранный период новых установок пока нет (или аналитика отключена).';
-      block.appendChild(empty);
-      container.replaceChildren(block);
-      return;
-    }
-
-    const bars = document.createElement('div');
-    bars.className = 'admin-analytics-chart-bars';
-    bars.setAttribute('role', 'img');
-    bars.setAttribute(
-      'aria-label',
-      `График новых установок за ${chartDays} дней, всего ${totalInChart}`
-    );
-
-    for (const [dayKey, count] of daily) {
-      const bar = document.createElement('div');
-      bar.className = 'admin-analytics-chart-bar';
-      const heightPct = Math.max(6, Math.round((count / max) * 100));
-      bar.innerHTML = `
-        <span class="admin-analytics-chart-bar-value">${count || ''}</span>
-        <span class="admin-analytics-chart-bar-fill" style="height:${heightPct}%"></span>
-        <span class="admin-analytics-chart-bar-label">${formatChartDayLabel(dayKey)}</span>
-      `;
-      bars.appendChild(bar);
-    }
-
-    block.appendChild(bars);
-    container.replaceChildren(block);
   }
 
   function renderSocialLearning(container) {
@@ -538,9 +420,90 @@
     renderBreakdown(container, 'Версии приложения', pairs, (key) => (key === '—' ? '—' : `v${key}`));
   }
 
+  function sumStoreRows(rows, withinDays) {
+    const list = Array.isArray(rows) ? rows : [];
+    if (!withinDays) {
+      return list.reduce((sum, row) => sum + (Number(row.downloads) || 0), 0);
+    }
+    const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
+    return list.reduce((sum, row) => {
+      const t = Date.parse(`${row.day}T00:00:00.000Z`);
+      if (!Number.isFinite(t) || t < cutoff) return sum;
+      return sum + (Number(row.downloads) || 0);
+    }, 0);
+  }
+
+  function storeStatusLabel(entry) {
+    const status = entry?.status || 'empty';
+    if (status === 'needs_secrets') return 'Нет ключа Apple в секретах Supabase.';
+    if (status === 'waiting') return entry.message || 'Apple готовит отчёт (сутки–двое).';
+    if (status === 'error') return entry.message || 'Ошибка App Store Connect.';
+    if (status === 'ok') return entry.message || '';
+    return entry?.message || 'Пока нет данных.';
+  }
+
+  function renderStoreDownloads(container) {
+    if (!container) return;
+    const rustore = storeSnapshot?.rustore || { rows: [], total: 0 };
+    const apple = storeSnapshot?.apple || { rows: [], total: 0 };
+    const rustorePeriod = sumStoreRows(rustore.rows, rangeDays);
+    const applePeriod = sumStoreRows(apple.rows, rangeDays);
+    const rustoreAll = sumStoreRows(rustore.rows, 0);
+    const appleAll = sumStoreRows(apple.rows, 0);
+    const periodNote = rangeDays ? `за ${rangeLabel(rangeDays)}` : 'за всё время';
+    const errorLine = storeError
+      ? `<p class="admin-error">${storeError}</p>`
+      : '';
+
+    container.innerHTML = `
+      <div class="admin-analytics-social-head">
+        <h3>Сторы · скачивания</h3>
+        <p class="admin-muted">Цифры магазинов, не наши «устройства». Скачал ≠ открыл приложение.</p>
+      </div>
+      ${errorLine}
+      <div class="admin-analytics-grid">
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">RuStore · ${periodNote}</p>
+          <p class="admin-analytics-value">${rustorePeriod}</p>
+        </article>
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">App Store · ${periodNote}</p>
+          <p class="admin-analytics-value">${applePeriod}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">Сторы вместе · ${periodNote}</p>
+          <p class="admin-analytics-value">${rustorePeriod + applePeriod}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">RuStore · всё время</p>
+          <p class="admin-analytics-value">${rustoreAll}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">App Store · всё время</p>
+          <p class="admin-analytics-value">${appleAll}</p>
+        </article>
+      </div>
+      <p class="admin-muted admin-analytics-note">${storeStatusLabel(apple)} ${storeStatusLabel(rustore)}</p>
+      <div class="admin-toolbar" style="margin-top:12px;gap:10px;flex-wrap:wrap">
+        <label class="admin-inline-field">
+          CSV RuStore
+          <input type="file" id="analytics-rustore-csv" accept=".csv,.txt,.tsv,text/csv" ${storeBusy ? 'disabled' : ''} />
+        </label>
+        <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+          Обновить App Store
+        </button>
+      </div>
+    `;
+  }
+
+  async function applyStoreSnapshot(next) {
+    storeSnapshot = next;
+    storeError = '';
+    renderStoreDownloads(document.querySelector('#analytics-stores'));
+  }
+
   function renderAll() {
     const metrics = document.querySelector('#analytics-metrics');
-    const installsChart = document.querySelector('#analytics-installs-chart');
     const social = document.querySelector('#analytics-social');
     const breakdown = document.querySelector('#analytics-breakdown');
     const stats = document.querySelector('#analytics-stats');
@@ -548,11 +511,10 @@
 
     if (stats) {
       const active = countActiveInstalls(rangeDays);
-      const fresh = countNewInstalls(rangeDays);
-      stats.textContent = `Активных · ${rangeLabel(rangeDays)}: ${active} · новых: ${fresh} · событий: ${rows.length}`;
+      stats.textContent = `Активных · ${rangeLabel(rangeDays)}: ${active} · событий: ${rows.length}`;
     }
     renderMetricCards(metrics, rows);
-    renderNewInstallsChart(installsChart);
+    renderStoreDownloads(document.querySelector('#analytics-stores'));
     renderSocialLearning(social);
 
     if (!breakdown) return;
@@ -606,10 +568,10 @@
     if (!metrics || !global.AdminSupabase?.loadAnalyticsEvents) return;
 
     metrics.innerHTML = '<p class="admin-muted">Загрузка…</p>';
-    const installsChart = document.querySelector('#analytics-installs-chart');
     const social = document.querySelector('#analytics-social');
-    if (installsChart) installsChart.innerHTML = '';
+    const stores = document.querySelector('#analytics-stores');
     if (social) social.innerHTML = '';
+    if (stores) stores.innerHTML = '<p class="admin-muted">Сторы: загрузка…</p>';
     if (breakdown) breakdown.innerHTML = '';
     if (stats) stats.textContent = 'Загрузка…';
 
@@ -629,6 +591,23 @@
         }
       }
       renderAll();
+      if (typeof global.AdminSupabase.loadStoreDownloads === 'function') {
+        try {
+          const snap = await global.AdminSupabase.loadStoreDownloads();
+          await applyStoreSnapshot(snap);
+          if (typeof global.AdminSupabase.refreshAppleDownloads === 'function') {
+            void global.AdminSupabase.refreshAppleDownloads()
+              .then((next) => applyStoreSnapshot(next))
+              .catch((appleError) => {
+                storeError = appleError instanceof Error ? appleError.message : String(appleError);
+                renderStoreDownloads(document.querySelector('#analytics-stores'));
+              });
+          }
+        } catch (storeLoadError) {
+          storeError = storeLoadError instanceof Error ? storeLoadError.message : String(storeLoadError);
+          renderStoreDownloads(document.querySelector('#analytics-stores'));
+        }
+      }
     } catch (error) {
       allRows = [];
       installations = [];
@@ -650,6 +629,47 @@
     if (refresh) {
       refresh.addEventListener('click', () => {
         void loadAndRender();
+      });
+    }
+    const stores = document.querySelector('#analytics-stores');
+    if (stores && !stores.dataset.bound) {
+      stores.dataset.bound = '1';
+      stores.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || input.id !== 'analytics-rustore-csv') return;
+        const file = input.files && input.files[0];
+        if (!file || typeof global.AdminSupabase.uploadRustoreCsv !== 'function') return;
+        storeBusy = true;
+        renderStoreDownloads(stores);
+        void file
+          .text()
+          .then((csv) => global.AdminSupabase.uploadRustoreCsv(csv))
+          .then((snap) => applyStoreSnapshot(snap))
+          .catch((error) => {
+            storeError = error instanceof Error ? error.message : String(error);
+            renderStoreDownloads(stores);
+          })
+          .finally(() => {
+            storeBusy = false;
+            renderStoreDownloads(stores);
+          });
+      });
+      stores.addEventListener('click', (event) => {
+        const target = event.target;
+        if (!(target instanceof HTMLElement) || target.id !== 'analytics-apple-refresh') return;
+        if (typeof global.AdminSupabase.refreshAppleDownloads !== 'function') return;
+        storeBusy = true;
+        renderStoreDownloads(stores);
+        void global.AdminSupabase.refreshAppleDownloads()
+          .then((snap) => applyStoreSnapshot(snap))
+          .catch((error) => {
+            storeError = error instanceof Error ? error.message : String(error);
+            renderStoreDownloads(stores);
+          })
+          .finally(() => {
+            storeBusy = false;
+            renderStoreDownloads(stores);
+          });
       });
     }
   }

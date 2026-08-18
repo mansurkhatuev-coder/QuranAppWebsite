@@ -11,3 +11,6 @@ verify_jwt = false
 
 [functions.academy-giveaway-enter]
 verify_jwt = false
+
+[functions.store-downloads]
+verify_jwt = false
