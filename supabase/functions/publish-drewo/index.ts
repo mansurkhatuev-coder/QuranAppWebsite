@@ -724,138 +724,6 @@ function parseBackupPayload(raw: string): { treeJson: string; activityJson: stri
   };
 }
 
-/** Sessions with a heartbeat newer than this are counted as online.
- *  Mobile browsers throttle timers in background, so keep a wider window. */
-const PRESENCE_TTL_MS = 5 * 60 * 1000;
-const PRESENCE_SESSION_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{7,79}$/;
-
-function normalizePresenceSessionId(raw: unknown): string | null {
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  return PRESENCE_SESSION_RE.test(value) ? value : null;
-}
-
-async function getServiceClient() {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceKey) {
-    throw new Error('Supabase недоступен (нет SUPABASE_URL / SERVICE_ROLE_KEY)');
-  }
-  const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2.49.1');
-  return createClient(supabaseUrl, serviceKey, {
-    auth: { persistSession: false, autoRefreshToken: false },
-  });
-}
-
-async function countOnlinePresence(
-  admin: Awaited<ReturnType<typeof getServiceClient>>,
-  treeDir: TreeDir
-): Promise<number> {
-  const cutoff = new Date(Date.now() - PRESENCE_TTL_MS).toISOString();
-  const { count, error } = await admin
-    .from('drewo_presence')
-    .select('*', { count: 'exact', head: true })
-    .eq('tree_dir', treeDir)
-    .gte('last_seen_at', cutoff);
-  if (error) throw new Error(error.message);
-  return typeof count === 'number' && count > 0 ? count : 0;
-}
-
-async function upsertPresenceHeartbeat(
-  admin: Awaited<ReturnType<typeof getServiceClient>>,
-  treeDir: TreeDir,
-  sessionId: string
-): Promise<number> {
-  const now = new Date().toISOString();
-  const { error } = await admin.from('drewo_presence').upsert(
-    {
-      tree_dir: treeDir,
-      session_id: sessionId,
-      last_seen_at: now,
-    },
-    { onConflict: 'tree_dir,session_id' }
-  );
-  if (error) throw new Error(error.message);
-
-  // Drop stale rows for this tree (older than 1 day) so the table stays small.
-  const staleBefore = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  await admin.from('drewo_presence').delete().eq('tree_dir', treeDir).lt('last_seen_at', staleBefore);
-
-  return countOnlinePresence(admin, treeDir);
-}
-
-async function leavePresence(
-  admin: Awaited<ReturnType<typeof getServiceClient>>,
-  treeDir: TreeDir,
-  sessionId: string
-): Promise<number> {
-  await admin.from('drewo_presence').delete().eq('tree_dir', treeDir).eq('session_id', sessionId);
-  return countOnlinePresence(admin, treeDir);
-}
-
-async function safeOnlineCount(treeDir: TreeDir): Promise<number | null> {
-  try {
-    const admin = await getServiceClient();
-    return await countOnlinePresence(admin, treeDir);
-  } catch {
-    return null;
-  }
-}
-
-async function readVisitCountFromStats(
-  admin: Awaited<ReturnType<typeof getServiceClient>>,
-  treeDir: TreeDir
-): Promise<number | null> {
-  const { data, error } = await admin
-    .from('drewo_tree_stats')
-    .select('visit_count')
-    .eq('tree_dir', treeDir)
-    .maybeSingle();
-  if (error) throw new Error(error.message);
-  if (!data) return null;
-  return normalizeVisitCount((data as { visit_count?: unknown }).visit_count);
-}
-
-async function safeVisitCount(treeDir: TreeDir, fallback: number): Promise<number> {
-  try {
-    const admin = await getServiceClient();
-    const fromStats = await readVisitCountFromStats(admin, treeDir);
-    return fromStats != null ? fromStats : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
-async function incrementVisitCount(
-  treeDir: TreeDir,
-  fallbackAccessCount: number
-): Promise<{ visitCount: number; usedStats: boolean }> {
-  try {
-    const admin = await getServiceClient();
-    // Seed once from access.json so we don't reset an existing GitHub counter.
-    const existing = await readVisitCountFromStats(admin, treeDir);
-    if (existing == null && fallbackAccessCount > 0) {
-      await admin.from('drewo_tree_stats').upsert(
-        {
-          tree_dir: treeDir,
-          visit_count: fallbackAccessCount,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'tree_dir' }
-      );
-    }
-    const { data, error } = await admin.rpc('drewo_increment_visit', {
-      p_tree_dir: treeDir,
-    });
-    if (error) throw new Error(error.message);
-    return { visitCount: normalizeVisitCount(data), usedStats: true };
-  } catch {
-    return {
-      visitCount: normalizeVisitCount(fallbackAccessCount) + 1,
-      usedStats: false,
-    };
-  }
-}
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
@@ -879,14 +747,12 @@ Deno.serve(async (request) => {
     if (action === 'hub-overview') {
       const trees = await Promise.all(
         ALLOWED_TREE_DIRS.map(async (dir) => {
-          const [accessFile, manifestFile, onlineCount] = await Promise.all([
+          const [accessFile, manifestFile] = await Promise.all([
             githubGetFile(githubToken, githubRepo, accessPath(dir)),
             githubGetFile(githubToken, githubRepo, manifestPath(dir)),
-            safeOnlineCount(dir),
           ]);
           const access = parseAccess(accessFile?.content);
           const manifest = parseManifest(manifestFile?.content);
-          const visitCount = await safeVisitCount(dir, access.visitCount);
           const latestWithPeople = manifest.find((item) => item.personCount > 0) ?? manifest[0] ?? null;
           const previousWithPeople =
             manifest.find(
@@ -909,8 +775,6 @@ Deno.serve(async (request) => {
             locked: access.locked,
             lockedReason: access.lockedReason,
             superConfigured: Boolean(superPasswordValue(dir)),
-            visitCount,
-            ...(onlineCount != null ? { onlineCount } : {}),
             personCount,
             backupCount: manifest.length,
             lastSavedAt: latestWithPeople?.savedAt ?? null,
@@ -950,62 +814,17 @@ Deno.serve(async (request) => {
     const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
-      const [onlineCount, visitCount] = await Promise.all([
-        safeOnlineCount(treeDir),
-        safeVisitCount(treeDir, access.visitCount),
-      ]);
       return jsonResponse({
         ok: true,
         treeDir,
         locked: access.locked,
         lockedReason: access.lockedReason,
         superConfigured,
-        visitCount,
-        ...(onlineCount != null ? { onlineCount } : {}),
       });
     }
 
-    if (action === 'record-visit') {
-      const bumped = await incrementVisitCount(treeDir, access.visitCount);
-      // Do not commit access.json: stats table is source of truth, GitHub deploys are limited.
-      const onlineCount = await safeOnlineCount(treeDir);
-      return jsonResponse({
-        ok: true,
-        treeDir,
-        visitCount: bumped.visitCount,
-        ...(onlineCount != null ? { onlineCount } : {}),
-      });
-    }
-
-    if (action === 'presence-heartbeat' || action === 'presence-leave') {
-      const sessionId = normalizePresenceSessionId(body.sessionId);
-      if (!sessionId) {
-        return jsonResponse({ error: 'Некорректный sessionId' }, 400);
-      }
-      try {
-        const admin = await getServiceClient();
-        const onlineCount =
-          action === 'presence-leave'
-            ? await leavePresence(admin, treeDir, sessionId)
-            : await upsertPresenceHeartbeat(admin, treeDir, sessionId);
-        return jsonResponse({
-          ok: true,
-          treeDir,
-          onlineCount,
-        });
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        if (/drewo_presence|does not exist|relation/i.test(message)) {
-          return jsonResponse(
-            {
-              error:
-                'Таблица присутствия ещё не создана. Выполните admin/supabase-migration-drewo-presence.sql',
-            },
-            503
-          );
-        }
-        throw err;
-      }
+    if (action === 'record-visit' || action === 'presence-heartbeat' || action === 'presence-leave') {
+      return jsonResponse({ ok: true, treeDir, ignored: true });
     }
 
     const attemptKey = authAttemptKey(treeDir, request);
