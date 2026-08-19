@@ -1377,6 +1377,21 @@
 .admin-store-progress .admin-button {
   margin-top: 4px;
 }
+.admin-store-links {
+  margin: 0 0 4px;
+}
+.admin-store-link {
+  color: #e8d4a0;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+.admin-store-link:hover {
+  color: #fff4d4;
+}
+.admin-store-progress-head .admin-store-link {
+  font-size: 0.85rem;
+  font-weight: 600;
+}
 
 .admin-login-status {
   margin: 0.35rem 0 0;

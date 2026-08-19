@@ -7,7 +7,8 @@ import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
 import { buildAppleProgress } from './apple-progress.ts';
 import { syncAppleDownloads } from './apple-reports.ts';
-import { parseStoreDownloadTable, type StoreDownloadDay } from './parse-store-days.ts';
+import { ensureStoreDownloadSchema } from './ensure-schema.ts';
+import { formatParseError, parseStoreDownloadTable, type StoreDownloadDay } from './parse-store-days.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -183,6 +184,7 @@ Deno.serve(async (request) => {
 
   try {
     await requireUser(request);
+    await ensureStoreDownloadSchema(serviceClient());
 
     if (request.method === 'GET') {
       return jsonResponse(await snapshot());
@@ -205,7 +207,7 @@ Deno.serve(async (request) => {
       const csv = String(body.csv || '');
       const parsed = parseStoreDownloadTable(csv);
       if (!parsed.ok) {
-        return jsonResponse({ error: `CSV: ${parsed.reason}` }, 400);
+        return jsonResponse({ error: formatParseError(parsed.reason) }, 400);
       }
       await upsertDays('rustore', parsed.rows, 'csv');
       await writeMeta('rustore', {

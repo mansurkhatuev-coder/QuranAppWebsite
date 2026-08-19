@@ -16,6 +16,8 @@
 
   /** Days without a new lesson completion → count as abandoned. */
   const ABANDON_IDLE_DAYS = 14;
+  const RUSTORE_APP_URL = 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp';
+  const RUSTORE_CONSOLE_URL = 'https://console.rustore.ru/';
 
   let allRows = [];
   let installations = [];
@@ -488,6 +490,60 @@
     `;
   }
 
+  function looksLikeStoreTable(text) {
+    return /дата|date|установ|install|скач|download/i.test(String(text || ''));
+  }
+
+  function decodeStoreCsv(buffer) {
+    const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
+    if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
+      return new TextDecoder('utf-16le').decode(bytes);
+    }
+    if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
+      return new TextDecoder('utf-16be').decode(bytes);
+    }
+    const utf8 = new TextDecoder('utf-8').decode(bytes);
+    if (looksLikeStoreTable(utf8)) return utf8;
+    try {
+      const cp = new TextDecoder('windows-1251').decode(bytes);
+      if (looksLikeStoreTable(cp)) return cp;
+    } catch {
+      // not every browser ships this encoding
+    }
+    return utf8;
+  }
+
+  function renderRustoreUpload(rustore) {
+    const rustoreBusy = storeBusyKind === 'rustore';
+    const hint = rustoreBusy
+      ? storeBusyHint || 'Читаю CSV и отправляю на сервер…'
+      : rustore && rustore.fetchedAt
+        ? `CSV загружен. Последний день в файле: ${rustore.lastDay || '—'}.`
+        : 'В консоли: Приложения → Статистика по приложению → таблица → экспорт CSV. Не отзывы.';
+    const button = rustoreBusy ? 'Загружаю CSV…' : 'Загрузить CSV';
+    return `
+      <div class="admin-store-progress ${rustoreBusy ? 'is-busy' : ''}" aria-live="polite">
+        <div class="admin-store-progress-head">
+          <strong>RuStore · CSV</strong>
+          <a class="admin-store-link" href="${RUSTORE_APP_URL}" target="_blank" rel="noopener noreferrer">Страница в RuStore</a>
+        </div>
+        <p class="admin-muted admin-analytics-note">${escapeHtml(hint)}</p>
+        <p class="admin-store-links">
+          <a class="admin-store-link" href="${RUSTORE_CONSOLE_URL}" target="_blank" rel="noopener noreferrer">Консоль RuStore · статистика</a>
+        </p>
+        <div class="admin-toolbar" style="margin-top:8px;gap:10px;flex-wrap:wrap;align-items:center">
+          <label class="admin-inline-field">
+            Файл CSV
+            <input type="file" id="analytics-rustore-csv" accept=".csv,.txt,.tsv,text/csv,text/plain" ${storeBusy ? 'disabled' : ''} />
+          </label>
+          <button type="button" id="analytics-rustore-upload" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+            ${escapeHtml(button)}
+          </button>
+        </div>
+      </div>
+    `;
+  }
+
   function renderStoreDownloads(container) {
     if (!container) return;
     const rustore = storeSnapshot?.rustore || { rows: [], total: 0 };
@@ -500,9 +556,6 @@
     const errorLine = storeError
       ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
       : '';
-    const rustoreHint = rustore.fetchedAt
-      ? `RuStore CSV загружен. Последний день в файле: ${rustore.lastDay || '—'}.`
-      : 'RuStore: выгрузите CSV из консоли (Статистика) и выберите файл здесь.';
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
@@ -532,14 +585,8 @@
           <p class="admin-analytics-value">${appleAll}</p>
         </article>
       </div>
+      ${renderRustoreUpload(rustore)}
       ${renderAppleProgress(apple)}
-      <p class="admin-muted admin-analytics-note">${escapeHtml(rustoreHint)}</p>
-      <div class="admin-toolbar" style="margin-top:12px;gap:10px;flex-wrap:wrap">
-        <label class="admin-inline-field">
-          CSV RuStore
-          <input type="file" id="analytics-rustore-csv" accept=".csv,.txt,.tsv,text/csv" ${storeBusy ? 'disabled' : ''} />
-        </label>
-      </div>
     `;
   }
 
@@ -673,16 +720,16 @@
     const stores = document.querySelector('#analytics-stores');
     if (stores && !stores.dataset.bound) {
       stores.dataset.bound = '1';
-      stores.addEventListener('change', (event) => {
-        const input = event.target;
-        if (!(input instanceof HTMLInputElement) || input.id !== 'analytics-rustore-csv') return;
-        const file = input.files && input.files[0];
+      const uploadRustoreFile = (file) => {
         if (!file || typeof global.AdminSupabase.uploadRustoreCsv !== 'function') return;
         storeBusy = true;
         storeBusyKind = 'rustore';
+        storeBusyHint = 'Читаю CSV и отправляю на сервер…';
+        storeError = '';
         renderStoreDownloads(stores);
         void file
-          .text()
+          .arrayBuffer()
+          .then((buffer) => decodeStoreCsv(buffer))
           .then((csv) => global.AdminSupabase.uploadRustoreCsv(csv))
           .then((snap) => applyStoreSnapshot(snap))
           .catch((error) => {
@@ -695,10 +742,26 @@
             storeBusyHint = '';
             renderStoreDownloads(stores);
           });
+      };
+      stores.addEventListener('change', (event) => {
+        const input = event.target;
+        if (!(input instanceof HTMLInputElement) || input.id !== 'analytics-rustore-csv') return;
+        uploadRustoreFile(input.files && input.files[0]);
       });
       stores.addEventListener('click', (event) => {
         const target = event.target;
-        if (!(target instanceof HTMLElement) || target.id !== 'analytics-apple-refresh') return;
+        if (!(target instanceof HTMLElement)) return;
+        if (target.closest('#analytics-rustore-upload')) {
+          const input = stores.querySelector('#analytics-rustore-csv');
+          const file = input instanceof HTMLInputElement ? input.files && input.files[0] : null;
+          if (file) {
+            uploadRustoreFile(file);
+            return;
+          }
+          if (input instanceof HTMLInputElement) input.click();
+          return;
+        }
+        if (!target.closest('#analytics-apple-refresh')) return;
         if (typeof global.AdminSupabase.refreshAppleDownloads !== 'function') return;
         storeBusy = true;
         storeBusyKind = 'apple';

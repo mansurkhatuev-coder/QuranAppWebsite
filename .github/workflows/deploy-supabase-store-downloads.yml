@@ -51,6 +51,7 @@ jobs:
                   f"APP_STORE_KEY_ID={os.environ['APP_STORE_KEY_ID'].strip()}",
                   f"APP_STORE_PRIVATE_KEY={quote(os.environ['APP_STORE_PRIVATE_KEY'].strip())}",
                   'APP_STORE_APP_ID=6782619598',
+                  f"SUPABASE_MGMT_TOKEN={quote(os.environ['SUPABASE_ACCESS_TOKEN'].strip())}",
               ]) + '\n',
               encoding='utf-8',
           )

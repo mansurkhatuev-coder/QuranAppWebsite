@@ -31,7 +31,9 @@ function normalizeHeader(value: string): string {
 function headerKind(value: string): 'date' | 'downloads' | 'updates' | 'type' | 'counts' | 'other' {
   const h = normalizeHeader(value);
   if (!h) return 'other';
-  if (/^(date|дата|day|день)$/i.test(h) || /(^| )(date|дата)($| )/.test(h)) return 'date';
+  if (/конверси|просмотр|view|conversion/.test(h)) return 'other';
+  if (/период|period/.test(h) && !/дата/.test(h)) return 'other';
+  if (/^(date|дата|day|день)$/i.test(h) || /(^| )(date|дата)($| )/.test(h) || /дата начала/.test(h)) return 'date';
   if (/download type|тип.*скач|тип.*загруз/.test(h) || h === 'type') return 'type';
   if (/обнов|update/.test(h)) return 'updates';
   if (/установ|install|скач|download/.test(h)) return 'downloads';
@@ -73,6 +75,32 @@ function isFirstTimeType(value: string): boolean {
   return !/re-?download|redownload/i.test(v);
 }
 
+function findHeader(lines: string[]): { index: number; delimiter: string } | null {
+  const max = Math.min(lines.length, 25);
+  for (let i = 0; i < max; i++) {
+    const delimiter = detectDelimiter(lines[i]);
+    if (!delimiter || (delimiter === ',' && !(lines[i].includes(',') || lines[i].includes(';') || lines[i].includes('\t')))) {
+      continue;
+    }
+    const kinds = splitLine(lines[i], delimiter).map(headerKind);
+    if (kinds.includes('date') && (kinds.includes('downloads') || kinds.includes('counts'))) {
+      return { index: i, delimiter };
+    }
+  }
+  return null;
+}
+
+export function formatParseError(reason: string): string {
+  if (reason === 'empty') return 'Файл пустой.';
+  if (reason === 'no-rows') return 'В файле нет строк с цифрами.';
+  if (reason === 'no-date-column') {
+    return 'Нет колонки с датой. Нужна выгрузка статистики установок, не отзывы.';
+  }
+  if (reason === 'no-downloads-column') return 'Нет колонки установок / скачиваний.';
+  if (reason === 'no-valid-rows') return 'Даты в файле не разобрал. Нужен CSV из «Статистика по приложению».';
+  return `CSV: ${reason}`;
+}
+
 export function parseStoreDownloadTable(input: string): ParseStoreTableResult {
   const text = String(input || '').replace(/^\uFEFF/, '').trim();
   if (!text) return { ok: false, reason: 'empty' };
@@ -80,8 +108,11 @@ export function parseStoreDownloadTable(input: string): ParseStoreTableResult {
   const lines = text.split(/\r?\n/).map((line) => line.trimEnd()).filter((line) => line.trim());
   if (lines.length < 2) return { ok: false, reason: 'no-rows' };
 
-  const delimiter = detectDelimiter(lines[0]);
-  const headers = splitLine(lines[0], delimiter).map(normalizeHeader);
+  const header = findHeader(lines);
+  if (!header) return { ok: false, reason: 'no-date-column' };
+
+  const delimiter = header.delimiter;
+  const headers = splitLine(lines[header.index], delimiter).map(normalizeHeader);
   const kinds = headers.map(headerKind);
   const dateIdx = kinds.indexOf('date');
   if (dateIdx < 0) return { ok: false, reason: 'no-date-column' };
@@ -94,7 +125,7 @@ export function parseStoreDownloadTable(input: string): ParseStoreTableResult {
   if (downloadsIdx < 0) return { ok: false, reason: 'no-downloads-column' };
 
   const merged = new Map<string, StoreDownloadDay>();
-  for (const line of lines.slice(1)) {
+  for (const line of lines.slice(header.index + 1)) {
     const cells = splitLine(line, delimiter);
     const day = parseDay(cells[dateIdx] || '');
     if (!day) continue;
