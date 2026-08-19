@@ -32,10 +32,12 @@ function headerKind(value: string): 'date' | 'downloads' | 'updates' | 'type' | 
   const h = normalizeHeader(value);
   if (!h) return 'other';
   if (/конверси|просмотр|view|conversion/.test(h)) return 'other';
-  if (/период|period/.test(h) && !/дата/.test(h)) return 'other';
+  if (/^timeperiod$|^time[_\s-]*period$/.test(h)) return 'date';
+  if (/период/.test(h) && !/дата/.test(h)) return 'other';
   if (/^(date|дата|day|день)$/i.test(h) || /(^| )(date|дата)($| )/.test(h) || /дата начала/.test(h)) return 'date';
   if (/download type|тип.*скач|тип.*загруз/.test(h) || h === 'type') return 'type';
   if (/обнов|update/.test(h)) return 'updates';
+  if (/^всего$|^total$|^итого$/.test(h)) return 'downloads';
   if (/установ|install|скач|download/.test(h)) return 'downloads';
   if (/^counts?$/.test(h) || h === 'количество') return 'counts';
   return 'other';
@@ -48,10 +50,18 @@ function parseCount(raw: string): number {
   return Math.round(n);
 }
 
+function lastDayOfMonth(year: number, month: number): string {
+  const last = new Date(Date.UTC(year, month, 0));
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${last.getUTCFullYear()}-${pad(last.getUTCMonth() + 1)}-${pad(last.getUTCDate())}`;
+}
+
 function parseDay(raw: string): string | null {
   const value = raw.trim();
   const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
   if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+  const yearMonth = /^(\d{4})-(\d{2})$/.exec(value);
+  if (yearMonth) return lastDayOfMonth(Number(yearMonth[1]), Number(yearMonth[2]));
   const dotted = /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(value);
   if (dotted) {
     const day = dotted[1].padStart(2, '0');
@@ -94,7 +104,7 @@ export function formatParseError(reason: string): string {
   if (reason === 'empty') return 'Файл пустой.';
   if (reason === 'no-rows') return 'В файле нет строк с цифрами.';
   if (reason === 'no-date-column') {
-    return 'Нет колонки с датой. Нужна выгрузка статистики установок, не отзывы.';
+    return 'Нет колонки с датой. Нужен CSV статистики (timePeriod / Дата), не отзывы.';
   }
   if (reason === 'no-downloads-column') return 'Нет колонки установок / скачиваний.';
   if (reason === 'no-valid-rows') return 'Даты в файле не разобрал. Нужен CSV из «Статистика по приложению».';
@@ -127,7 +137,9 @@ export function parseStoreDownloadTable(input: string): ParseStoreTableResult {
   const merged = new Map<string, StoreDownloadDay>();
   for (const line of lines.slice(header.index + 1)) {
     const cells = splitLine(line, delimiter);
-    const day = parseDay(cells[dateIdx] || '');
+    const rawDay = cells[dateIdx] || '';
+    if (/^(всего|total|итого)$/i.test(rawDay.trim())) continue;
+    const day = parseDay(rawDay);
     if (!day) continue;
     if (typeIdx >= 0 && !isFirstTimeType(cells[typeIdx] || '')) continue;
     const downloads = parseCount(cells[downloadsIdx] || '0');

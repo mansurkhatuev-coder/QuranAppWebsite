@@ -17,7 +17,7 @@
   /** Days without a new lesson completion → count as abandoned. */
   const ABANDON_IDLE_DAYS = 14;
   const RUSTORE_APP_URL = 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp';
-  const RUSTORE_CONSOLE_URL = 'https://console.rustore.ru/';
+  const RUSTORE_CONSOLE_URL = 'https://console.rustore.ru/apps/2063710429/statistics';
 
   let allRows = [];
   let installations = [];
@@ -519,7 +519,7 @@
       ? storeBusyHint || 'Читаю CSV и отправляю на сервер…'
       : rustore && rustore.fetchedAt
         ? `CSV загружен. Последний день в файле: ${rustore.lastDay || '—'}.`
-        : 'В консоли: Приложения → Статистика по приложению → таблица → экспорт CSV. Не отзывы.';
+        : 'В консоли откройте статистику приложения → таблица → экспорт CSV. Подойдёт и помесячный файл с колонками timePeriod и Всего.';
     const button = rustoreBusy ? 'Загружаю CSV…' : 'Загрузить CSV';
     return `
       <div class="admin-store-progress ${rustoreBusy ? 'is-busy' : ''}" aria-live="polite">
