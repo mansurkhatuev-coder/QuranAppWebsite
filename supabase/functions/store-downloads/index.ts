@@ -5,6 +5,7 @@
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
+import { buildAppleProgress } from './apple-progress.ts';
 import { syncAppleDownloads } from './apple-reports.ts';
 import { parseStoreDownloadTable, type StoreDownloadDay } from './parse-store-days.ts';
 
@@ -111,16 +112,29 @@ async function writeMeta(key: string, payload: Json) {
   if (error) throw error;
 }
 
-function storeSummary(rows: StoreDownloadDay[], meta: Json) {
+function storeSummary(rows: StoreDownloadDay[], meta: Json, store: 'rustore' | 'appstore') {
   const lastDay = rows.length ? rows[rows.length - 1].day : null;
   const total = rows.reduce((sum, row) => sum + row.downloads, 0);
-  return {
+  const status = String(meta.status || (rows.length ? 'ok' : 'empty'));
+  const base = {
     days: rows.length,
     total,
     lastDay,
-    status: meta.status || (rows.length ? 'ok' : 'empty'),
-    message: meta.message || '',
+    status,
+    message: String(meta.message || ''),
     fetchedAt: meta.fetchedAt || null,
+    requestedAt: meta.requestedAt || null,
+  };
+  if (store !== 'appstore') return base;
+  return {
+    ...base,
+    progress: buildAppleProgress({
+      status: status as 'ok' | 'waiting' | 'error' | 'needs_secrets' | 'empty',
+      requestedAt: typeof meta.requestedAt === 'string' ? meta.requestedAt : null,
+      lastCheckedAt: typeof meta.fetchedAt === 'string' ? meta.fetchedAt : null,
+      dayCount: rows.length,
+      message: String(meta.message || ''),
+    }),
   };
 }
 
@@ -131,23 +145,30 @@ async function snapshot() {
   const appleMeta = await readMeta('apple');
   return {
     ok: true,
-    rustore: { ...storeSummary(rustoreRows, rustoreMeta), rows: rustoreRows },
-    apple: { ...storeSummary(appleRows, appleMeta), rows: appleRows },
+    rustore: { ...storeSummary(rustoreRows, rustoreMeta, 'rustore'), rows: rustoreRows },
+    apple: { ...storeSummary(appleRows, appleMeta, 'appstore'), rows: appleRows },
   };
 }
 
 async function refreshApple() {
+  const prev = await readMeta('apple');
+  const nowIso = new Date().toISOString();
   const result = await syncAppleDownloads({
     issuerId: Deno.env.get('APP_STORE_ISSUER_ID') || undefined,
     keyId: Deno.env.get('APP_STORE_KEY_ID') || undefined,
     privateKey: Deno.env.get('APP_STORE_PRIVATE_KEY') || undefined,
     appId: Deno.env.get('APP_STORE_APP_ID') || undefined,
   });
+  const requestedAt =
+    (typeof prev.requestedAt === 'string' && prev.requestedAt) ||
+    result.requestedAt ||
+    (result.requested ? nowIso : null);
   await writeMeta('apple', {
     status: result.status,
     message: result.message,
-    fetchedAt: new Date().toISOString(),
+    fetchedAt: nowIso,
     requested: result.requested,
+    requestedAt,
   });
   if (result.rows.length) {
     await upsertDays('appstore', result.rows, 'apple_report');
@@ -164,10 +185,6 @@ Deno.serve(async (request) => {
     await requireUser(request);
 
     if (request.method === 'GET') {
-      const url = new URL(request.url);
-      if (url.searchParams.get('refresh') === '1') {
-        await refreshApple();
-      }
       return jsonResponse(await snapshot());
     }
 

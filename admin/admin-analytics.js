@@ -24,6 +24,8 @@
   let storeSnapshot = null;
   let storeError = '';
   let storeBusy = false;
+  let storeBusyKind = '';
+  let storeBusyHint = '';
 
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
@@ -433,13 +435,57 @@
     }, 0);
   }
 
-  function storeStatusLabel(entry) {
-    const status = entry?.status || 'empty';
-    if (status === 'needs_secrets') return 'Нет ключа Apple в секретах Supabase.';
-    if (status === 'waiting') return entry.message || 'Apple готовит отчёт (сутки–двое).';
-    if (status === 'error') return entry.message || 'Ошибка App Store Connect.';
-    if (status === 'ok') return entry.message || '';
-    return entry?.message || 'Пока нет данных.';
+  function escapeHtml(value) {
+    return String(value || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function defaultAppleSteps() {
+    return [
+      { label: 'Ключ App Store Connect', done: false, detail: 'Сначала секреты в Supabase, потом эта кнопка.' },
+      { label: 'Заказ ежедневного отчёта', done: false, detail: 'Ещё не заказывали.' },
+      { label: 'Дневные файлы скачиваний', done: false, detail: 'Apple отдаёт файлы через 24–48 часов после заказа.' },
+      { label: 'Цифры в админке', done: false, detail: 'Появятся, когда файлы разберём.' },
+    ];
+  }
+
+  function renderAppleProgress(apple) {
+    const appleBusy = storeBusyKind === 'apple';
+    const progress = apple && apple.progress;
+    const steps = progress && Array.isArray(progress.steps) && progress.steps.length
+      ? progress.steps
+      : defaultAppleSteps();
+    const percent = Number(progress && progress.percent) || 0;
+    const hint = appleBusy
+      ? storeBusyHint || 'Спрашиваю Apple… обычно до минуты. Не закрывайте вкладку.'
+      : (progress && progress.hint) || 'Нажмите кнопку — закажем отчёт у Apple. Готовые файлы приходят не сразу, обычно сутки–двое.';
+    const button = appleBusy
+      ? 'Спрашиваю Apple…'
+      : (progress && progress.button) || 'Проверить App Store';
+    const stepList = `<ol class="admin-store-steps">${steps.map((step) => `
+          <li class="${step.done ? 'is-done' : ''}">
+            <strong>${escapeHtml(step.label)}</strong>
+            <span>${escapeHtml(step.detail)}</span>
+          </li>`).join('')}</ol>`;
+    return `
+      <div class="admin-store-progress ${appleBusy ? 'is-busy' : ''}" aria-live="polite">
+        <div class="admin-store-progress-head">
+          <strong>App Store · прогресс</strong>
+          <span>${appleBusy ? 'идёт запрос' : `${percent}%`}</span>
+        </div>
+        <div class="admin-store-bar" aria-hidden="true">
+          <span style="width:${appleBusy ? Math.max(percent, 15) : percent}%"></span>
+        </div>
+        ${stepList}
+        <p class="admin-muted admin-analytics-note">${escapeHtml(hint)}</p>
+        <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+          ${escapeHtml(button)}
+        </button>
+      </div>
+    `;
   }
 
   function renderStoreDownloads(container) {
@@ -452,8 +498,11 @@
     const appleAll = sumStoreRows(apple.rows, 0);
     const periodNote = rangeDays ? `за ${rangeLabel(rangeDays)}` : 'за всё время';
     const errorLine = storeError
-      ? `<p class="admin-error">${storeError}</p>`
+      ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
       : '';
+    const rustoreHint = rustore.fetchedAt
+      ? `RuStore CSV загружен. Последний день в файле: ${rustore.lastDay || '—'}.`
+      : 'RuStore: выгрузите CSV из консоли (Статистика) и выберите файл здесь.';
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
@@ -483,15 +532,13 @@
           <p class="admin-analytics-value">${appleAll}</p>
         </article>
       </div>
-      <p class="admin-muted admin-analytics-note">${storeStatusLabel(apple)} ${storeStatusLabel(rustore)}</p>
+      ${renderAppleProgress(apple)}
+      <p class="admin-muted admin-analytics-note">${escapeHtml(rustoreHint)}</p>
       <div class="admin-toolbar" style="margin-top:12px;gap:10px;flex-wrap:wrap">
         <label class="admin-inline-field">
           CSV RuStore
           <input type="file" id="analytics-rustore-csv" accept=".csv,.txt,.tsv,text/csv" ${storeBusy ? 'disabled' : ''} />
         </label>
-        <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
-          Обновить App Store
-        </button>
       </div>
     `;
   }
@@ -595,14 +642,6 @@
         try {
           const snap = await global.AdminSupabase.loadStoreDownloads();
           await applyStoreSnapshot(snap);
-          if (typeof global.AdminSupabase.refreshAppleDownloads === 'function') {
-            void global.AdminSupabase.refreshAppleDownloads()
-              .then((next) => applyStoreSnapshot(next))
-              .catch((appleError) => {
-                storeError = appleError instanceof Error ? appleError.message : String(appleError);
-                renderStoreDownloads(document.querySelector('#analytics-stores'));
-              });
-          }
         } catch (storeLoadError) {
           storeError = storeLoadError instanceof Error ? storeLoadError.message : String(storeLoadError);
           renderStoreDownloads(document.querySelector('#analytics-stores'));
@@ -640,6 +679,7 @@
         const file = input.files && input.files[0];
         if (!file || typeof global.AdminSupabase.uploadRustoreCsv !== 'function') return;
         storeBusy = true;
+        storeBusyKind = 'rustore';
         renderStoreDownloads(stores);
         void file
           .text()
@@ -651,6 +691,8 @@
           })
           .finally(() => {
             storeBusy = false;
+            storeBusyKind = '';
+            storeBusyHint = '';
             renderStoreDownloads(stores);
           });
       });
@@ -659,6 +701,8 @@
         if (!(target instanceof HTMLElement) || target.id !== 'analytics-apple-refresh') return;
         if (typeof global.AdminSupabase.refreshAppleDownloads !== 'function') return;
         storeBusy = true;
+        storeBusyKind = 'apple';
+        storeBusyHint = 'Спрашиваю Apple: ключ → заказ отчёта → файлы. Обычно до минуты.';
         renderStoreDownloads(stores);
         void global.AdminSupabase.refreshAppleDownloads()
           .then((snap) => applyStoreSnapshot(snap))
@@ -668,6 +712,8 @@
           })
           .finally(() => {
             storeBusy = false;
+            storeBusyKind = '';
+            storeBusyHint = '';
             renderStoreDownloads(stores);
           });
       });

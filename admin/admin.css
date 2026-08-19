@@ -1294,6 +1294,90 @@
 .admin-store-drift[hidden] { display: none !important; }
 .admin-store-drift strong { color: #ffe9b8; }
 
+.admin-store-progress {
+  margin: 1rem 0 0.5rem;
+  padding: 14px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(201, 162, 77, 0.28);
+  background: rgba(255, 255, 255, 0.03);
+}
+.admin-store-progress.is-busy {
+  border-color: rgba(201, 162, 77, 0.5);
+}
+.admin-store-progress-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 10px;
+}
+.admin-store-progress-head strong {
+  font-size: 0.95rem;
+}
+.admin-store-progress-head span {
+  color: rgba(232, 220, 196, 0.72);
+  font-size: 0.85rem;
+}
+.admin-store-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+.admin-store-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, #c9a24d, #e8d4a0);
+  transition: width 0.35s ease;
+}
+.admin-store-progress.is-busy .admin-store-bar span {
+  animation: admin-store-bar-pulse 1.2s ease-in-out infinite;
+}
+@keyframes admin-store-bar-pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+.admin-store-steps {
+  margin: 12px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 8px;
+}
+.admin-store-steps li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  column-gap: 8px;
+  font-size: 0.88rem;
+  line-height: 1.4;
+}
+.admin-store-steps li::before {
+  content: '';
+  width: 10px;
+  height: 10px;
+  margin-top: 5px;
+  border-radius: 50%;
+  border: 1px solid rgba(201, 162, 77, 0.45);
+  background: transparent;
+}
+.admin-store-steps li.is-done::before {
+  background: #c9a24d;
+  border-color: #c9a24d;
+}
+.admin-store-steps li strong {
+  grid-column: 2;
+  font-weight: 600;
+}
+.admin-store-steps li span {
+  grid-column: 2;
+  color: rgba(232, 220, 196, 0.7);
+  font-size: 0.82rem;
+}
+.admin-store-progress .admin-button {
+  margin-top: 4px;
+}
+
 .admin-login-status {
   margin: 0.35rem 0 0;
   min-height: 1.2em;

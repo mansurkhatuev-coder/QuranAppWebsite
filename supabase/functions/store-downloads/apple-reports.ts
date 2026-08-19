@@ -110,6 +110,7 @@ export type AppleSyncResult = {
   message: string;
   rows: StoreDownloadDay[];
   requested: boolean;
+  requestedAt?: string;
 };
 
 export async function syncAppleDownloads(env: {
@@ -133,6 +134,7 @@ export async function syncAppleDownloads(env: {
 
   const token = await createAppleJwt(issuerId, keyId, privateKey);
   const ongoing = await ensureReportRequest(token, appId, 'ONGOING');
+  const requestedAt = ongoing.created ? new Date().toISOString() : undefined;
   try {
     await ensureReportRequest(token, appId, 'ONE_TIME_SNAPSHOT');
   } catch {
@@ -140,7 +142,13 @@ export async function syncAppleDownloads(env: {
   }
 
   if (!ongoing.id) {
-    return { status: 'error', message: 'Apple не вернул id запроса отчёта.', rows: [], requested: ongoing.created };
+    return {
+      status: 'error',
+      message: 'Apple не вернул id запроса отчёта.',
+      rows: [],
+      requested: ongoing.created,
+      requestedAt,
+    };
   }
 
   const reportsRes = await appleFetch(
@@ -159,9 +167,10 @@ export async function syncAppleDownloads(env: {
   if (!report?.id) {
     return {
       status: 'waiting',
-      message: 'Отчёт Apple ещё готовится (обычно 24–48 часов после первого запроса).',
+      message: 'Отчёт заказан. Apple готовит файлы — обычно 24–48 часов. Потом нажмите «Проверить».',
       rows: [],
       requested: true,
+      requestedAt,
     };
   }
 
@@ -173,9 +182,10 @@ export async function syncAppleDownloads(env: {
   if (!instances.length) {
     return {
       status: 'waiting',
-      message: 'Запрос отчёта есть, дневных файлов пока нет. Подождите сутки–двое.',
+      message: 'Заказ есть, дневных файлов пока нет. Подождите сутки–двое и нажмите «Проверить».',
       rows: [],
       requested: true,
+      requestedAt,
     };
   }
 
@@ -211,7 +221,14 @@ export async function syncAppleDownloads(env: {
       message: 'Файлы Apple скачались, но колонок скачиваний в них нет. Повторите завтра.',
       rows: [],
       requested: true,
+      requestedAt,
     };
   }
-  return { status: 'ok', message: `App Store: ${rows.length} дн.`, rows, requested: ongoing.created };
+  return {
+    status: 'ok',
+    message: `App Store: ${rows.length} дн.`,
+    rows,
+    requested: ongoing.created,
+    requestedAt,
+  };
 }
