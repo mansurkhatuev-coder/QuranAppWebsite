@@ -1,6 +1,13 @@
 {
   "items": [
     {
+      "name": "drewo-dada-yurt-2026-08-19_19-21-04.json",
+      "savedAt": "2026-08-19T19:21:04.541Z",
+      "personCount": 133,
+      "pinned": false,
+      "label": "Ручной снимок"
+    },
+    {
       "name": "drewo-dada-yurt-2026-08-19_18-20-56.json",
       "savedAt": "2026-08-19T18:20:56.115Z",
       "personCount": 133,
@@ -199,13 +206,6 @@
     {
       "name": "drewo-dada-yurt-2026-08-14_19-20-11.json",
       "savedAt": "2026-08-14T19:20:11.016Z",
-      "personCount": 127,
-      "pinned": false,
-      "label": ""
-    },
-    {
-      "name": "drewo-dada-yurt-2026-08-14_19-17-36.json",
-      "savedAt": "2026-08-14T19:17:36.252Z",
       "personCount": 127,
       "pinned": false,
       "label": ""
