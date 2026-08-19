@@ -163,7 +163,13 @@
                             {
                               "id": "lom-ali",
                               "name": "Лом-Али",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1787157734375-eq657z",
+                                  "name": "Турпал-Али",
+                                  "sons": []
+                                }
+                              ]
                             },
                             {
                               "id": "vakhita-lechi",
