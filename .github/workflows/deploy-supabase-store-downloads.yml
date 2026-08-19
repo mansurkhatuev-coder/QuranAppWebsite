@@ -30,9 +30,9 @@ jobs:
           APP_STORE_PRIVATE_KEY: ${{ secrets.APP_STORE_PRIVATE_KEY }}
         run: |
           python - <<'PY'
-          import json, os, sys, urllib.request
-          token = os.environ.get('SUPABASE_ACCESS_TOKEN') or ''
-          if not token:
+          import os, subprocess, sys
+          from pathlib import Path
+          if not (os.environ.get('SUPABASE_ACCESS_TOKEN') or '').strip():
               print('Missing SUPABASE_ACCESS_TOKEN')
               sys.exit(1)
           required = ['APP_STORE_ISSUER_ID', 'APP_STORE_KEY_ID', 'APP_STORE_PRIVATE_KEY']
@@ -40,23 +40,29 @@ jobs:
           if missing:
               print('Missing GitHub secrets:', ', '.join(missing))
               sys.exit(1)
-          payload = [
-              {'name': 'APP_STORE_ISSUER_ID', 'value': os.environ['APP_STORE_ISSUER_ID'].strip()},
-              {'name': 'APP_STORE_KEY_ID', 'value': os.environ['APP_STORE_KEY_ID'].strip()},
-              {'name': 'APP_STORE_PRIVATE_KEY', 'value': os.environ['APP_STORE_PRIVATE_KEY'].strip()},
-              {'name': 'APP_STORE_APP_ID', 'value': '6782619598'},
-          ]
-          req = urllib.request.Request(
-              'https://api.supabase.com/v1/projects/rivjkiksknnesahrvamf/secrets',
-              data=json.dumps(payload).encode('utf-8'),
-              headers={
-                  'Authorization': f'Bearer {token}',
-                  'Content-Type': 'application/json',
-              },
-              method='POST',
+
+          def quote(value: str) -> str:
+              return '"' + value.replace('\\', '\\\\').replace('"', '\\"').replace('\n', '\\n') + '"'
+
+          path = Path('/tmp/app-store-secrets.env')
+          path.write_text(
+              '\n'.join([
+                  f"APP_STORE_ISSUER_ID={os.environ['APP_STORE_ISSUER_ID'].strip()}",
+                  f"APP_STORE_KEY_ID={os.environ['APP_STORE_KEY_ID'].strip()}",
+                  f"APP_STORE_PRIVATE_KEY={quote(os.environ['APP_STORE_PRIVATE_KEY'].strip())}",
+                  'APP_STORE_APP_ID=6782619598',
+              ]) + '\n',
+              encoding='utf-8',
           )
-          with urllib.request.urlopen(req, timeout=60) as res:
-              print('app_store_secrets_status', res.status)
+          try:
+              subprocess.check_call([
+                  'supabase', 'secrets', 'set',
+                  '--project-ref', 'rivjkiksknnesahrvamf',
+                  '--env-file', str(path),
+              ])
+          finally:
+              path.unlink(missing_ok=True)
+          print('app_store_secrets_ok')
           PY
 
       - name: Apply store-downloads SQL
