@@ -431,7 +431,6 @@ async function githubCommitChanges(options: {
   return { skipped: false as const, commitSha: newCommitSha };
 }
 
-const ALLOWED_TREE_DIRS_UNUSED_REMOVED = true; // placeholder remove
 type TreeDir = string;
 
 async function loadRegistry(token: string, repo: string): Promise<RegistryFile> {
@@ -456,9 +455,43 @@ function registryEntryFor(registry: RegistryFile, treeDir: string): RegistryEntr
   return registry.trees.find((item) => item.treeDir === treeDir) || null;
 }
 
-type AuthRole = 'editor' | 'super';
+const DEMO_TREE_DIR = 'drewo-reklama';
+/** Hard cap so the ad demo cannot grow into someone's real family tree. */
+const DEMO_MAX_PEOPLE = 90;
 
-const AUTO_BACKUP_KEEP = 30;
+function countTreePeople(node: unknown): number {
+  if (!node || typeof node !== 'object') return 0;
+  const rec = node as { sons?: unknown };
+  const sons = Array.isArray(rec.sons) ? rec.sons : [];
+  return 1 + sons.reduce<number>((sum, child) => sum + countTreePeople(child), 0);
+}
+
+function demoGuardMessage(kind: 'password' | 'photo' | 'people'): string {
+  if (kind === 'password') {
+    return 'В демо нельзя сменить пароль. Это витрина с вымышленными именами, не ваше древо.';
+  }
+  if (kind === 'photo') {
+    return 'В демо фото отключены. Для своего рода закажите отдельное древо.';
+  }
+  return `В демо нельзя больше ${DEMO_MAX_PEOPLE} человек. Для своего рода закажите отдельное древо.`;
+}
+
+function assertDemoAllowsPublish(treeDir: TreeDir, treeJson: string, photos: unknown) {
+  if (treeDir !== DEMO_TREE_DIR) return null;
+  const hasPhotos = Array.isArray(photos) && photos.length > 0;
+  if (hasPhotos) {
+    return jsonResponse({ error: demoGuardMessage('photo') }, 403);
+  }
+  try {
+    const people = countTreePeople(JSON.parse(treeJson));
+    if (people > DEMO_MAX_PEOPLE) {
+      return jsonResponse({ error: demoGuardMessage('people') }, 403);
+    }
+  } catch {
+    return jsonResponse({ error: 'treeJson не является JSON' }, 400);
+  }
+  return null;
+}
 
 type AccessState = {
   passwordHash: string | null;
@@ -1132,6 +1165,9 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'upload-photo') {
+      if (treeDir === DEMO_TREE_DIR) {
+        return jsonResponse({ error: demoGuardMessage('photo') }, 403);
+      }
       if (access.locked && role !== 'super') {
         return jsonResponse(
           { error: 'Правки заблокированы. Нужен суперпароль.', locked: true },
@@ -1174,6 +1210,9 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'delete-photo') {
+      if (treeDir === DEMO_TREE_DIR) {
+        return jsonResponse({ error: demoGuardMessage('photo') }, 403);
+      }
       if (access.locked && role !== 'super') {
         return jsonResponse(
           { error: 'Правки заблокированы. Нужен суперпароль.', locked: true },
@@ -1270,6 +1309,9 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'set-password') {
+      if (treeDir === DEMO_TREE_DIR) {
+        return jsonResponse({ error: demoGuardMessage('password') }, 403);
+      }
       const denied = requireSuper('set-password');
       if (denied) return denied;
       const nextPassword = normalizePassword(body.newPassword);
@@ -1490,6 +1532,8 @@ Deno.serve(async (request) => {
     if (!treeJson) {
       return jsonResponse({ error: 'Пустое дерево (treeJson)' }, 400);
     }
+    const demoBlocked = assertDemoAllowsPublish(treeDir, treeJson, body.photos);
+    if (demoBlocked) return demoBlocked;
     let normalizedTree: string;
     try {
       normalizedTree = normalizeTreeJson(treeJson);
