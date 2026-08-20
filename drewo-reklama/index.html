@@ -2343,6 +2343,38 @@
       accent-color: var(--sand);
     }
 
+
+    /* --- DEMO RIBBON --- */
+    .demo-ribbon {
+      position: fixed;
+      left: 50%;
+      bottom: calc(0.75rem + env(safe-area-inset-bottom, 0px));
+      transform: translateX(-50%);
+      z-index: 90;
+      width: min(calc(100% - 1.25rem), 26rem);
+      padding: 0.7rem 0.85rem;
+      border-radius: 14px;
+      background: rgba(12, 24, 20, 0.94);
+      border: 1px solid rgba(226, 196, 138, 0.35);
+      color: #f3ebe0;
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+      font-size: 0.86rem;
+      line-height: 1.35;
+      text-align: center;
+    }
+    .demo-ribbon strong {
+      display: block;
+      margin-bottom: 0.15rem;
+      color: #e2c48a;
+      font-size: 0.92rem;
+    }
+    .demo-ribbon a {
+      color: #e2c48a;
+      font-weight: 600;
+    }
+    body.view-locked .demo-ribbon { display: none; }
   </style>
 </head>
 <body class="view-locked" data-theme="premium" data-sky="day">
@@ -2392,9 +2424,9 @@
     <form id="gate-form" class="view-gate-card">
       <strong id="gate-title">Некъ — демо</strong>
       <p class="gate-demo-hint" id="gate-demo-hint">
-        Это демо для рекламы (имена вымышленные).<br>
-        Уже выбраны логин и пароль — просто нажмите <b>Войти в демо</b>.<br>
-        Логин: <code>Ислам</code> · пароль: <code>демо</code>
+        Это <b>демо-витрина</b>: имена вымышленные. Не сохраняйте сюда свой род.<br>
+        Можно посмотреть карту и чуть попробовать правки (лимит людей, без фото).<br>
+        Логин: <code>Ислам</code> · пароль: <code>демо</code> — затем <b>Войти в демо</b>.
       </p>
       <label>
         Кто вы
@@ -2420,6 +2452,13 @@
     <div class="sky-veil"></div>
     <canvas id="firefly-canvas" class="firefly-canvas" aria-hidden="true" hidden=""></canvas>
   </div>
+
+  <aside id="demo-ribbon" class="demo-ribbon" hidden>
+    <strong>Демо, не ваше древо</strong>
+    Имена вымышленные. Без фото, лимит людей, пароль не сменить.
+    Свой род — отдельное древо:
+    <a href="mailto:neunitxadi@mail.ru?subject=%D0%A5%D0%BE%D1%87%D1%83%20%D1%81%D0%B5%D0%BC%D0%B5%D0%B9%D0%BD%D0%BE%D0%B5%20%D0%B4%D1%80%D0%B5%D0%B2%D0%BE">написать заказ</a>
+  </aside>
   <header class="header">
     <div class="brand">
       <h1>Некъ</h1>
@@ -2631,6 +2670,7 @@
         <button type="button" id="admin-toggle-lock">Заблокировать правки</button>
         <button type="button" id="admin-snapshot">Сделать бэкап сейчас</button>
       </div>
+        <p id="demo-admin-note" class="install-steps">В демо пароль семьи не меняется — иначе это станет «чужим» постоянным древом.</p>
       <form id="admin-password-form">
         <label>
           Новый обычный пароль
@@ -4156,6 +4196,8 @@
       var baseTreeJson = '';
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo-reklama';
+      var DEMO_MODE = true;
+      var DEMO_MAX_PEOPLE = 90;
       var VIEW_SESSION_KEY = 'drewo-reklama-view-session';
       var PHOTO_PUBLIC_BASE = 'photos';
       var PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
@@ -4165,6 +4207,45 @@
 
       var pendingPhotoUrls = {};
       var pendingPhotoDeletes = [];
+
+      function countTreePeople(node) {
+        if (!node || typeof node !== 'object') return 0;
+        var sons = Array.isArray(node.sons) ? node.sons : [];
+        var total = 1;
+        for (var i = 0; i < sons.length; i++) total += countTreePeople(sons[i]);
+        return total;
+      }
+
+      function demoPeopleLeft() {
+        return Math.max(0, DEMO_MAX_PEOPLE - countTreePeople(tree));
+      }
+
+      function assertDemoCanAddPerson() {
+        if (!DEMO_MODE) return true;
+        if (demoPeopleLeft() <= 0) {
+          showToast('Демо: лимит ' + DEMO_MAX_PEOPLE + ' человек. Для своего рода закажите отдельное древо.', 'error');
+          return false;
+        }
+        return true;
+      }
+
+      function applyDemoUiLimits() {
+        if (!DEMO_MODE) return;
+        var ribbon = document.getElementById('demo-ribbon');
+        if (ribbon) ribbon.hidden = false;
+        if (personSheetPhotoAdd) {
+          personSheetPhotoAdd.hidden = true;
+          personSheetPhotoAdd.disabled = true;
+        }
+        if (personSheetPhotoRemove) {
+          personSheetPhotoRemove.hidden = true;
+          personSheetPhotoRemove.disabled = true;
+        }
+        var adminPassForm = document.getElementById('admin-password-form');
+        if (adminPassForm) adminPassForm.hidden = true;
+        var demoAdminNote = document.getElementById('demo-admin-note');
+        if (demoAdminNote) demoAdminNote.hidden = false;
+      }
 
       function pendingPhotoDbName() {
         return TREE_DIR + '-pending-photos';
@@ -7144,6 +7225,9 @@
           if (addNameInput) addNameInput.focus();
           return;
         }
+        if (!assertDemoCanAddPerson()) {
+          return;
+        }
         var father = TreeModel.findById(tree, addParentId);
         var result;
         try {
@@ -7816,6 +7900,14 @@
       if (adminPasswordForm) {
         adminPasswordForm.addEventListener('submit', function (e) {
           e.preventDefault();
+          if (DEMO_MODE) {
+            if (adminError) {
+              adminError.hidden = false;
+              adminError.textContent = 'В демо нельзя сменить пароль';
+            }
+            showToast('В демо пароль не меняется — это витрина.', 'error');
+            return;
+          }
           var a = adminNewPassword ? adminNewPassword.value : '';
           var b = adminNewPassword2 ? adminNewPassword2.value : '';
           if (normalizePassword(a) !== normalizePassword(b)) {
@@ -8335,6 +8427,7 @@
       }
 
       function showViewGate() {
+        applyDemoUiLimits();
         setViewLocked(true);
         gateSelectedId = null;
         gateSelectedLabel = '';
@@ -8396,6 +8489,7 @@
         sessionRole = '';
         editUnlocked = false;
         setEditMode(false);
+        applyDemoUiLimits();
         showViewGate();
         showToast('Вы вышли', 'success');
       }
@@ -8996,6 +9090,10 @@
       }
       if (personSheetPhotoAdd) {
         personSheetPhotoAdd.addEventListener('click', function () {
+          if (DEMO_MODE) {
+            showToast('В демо фото отключены. Для своего рода закажите отдельное древо.', 'error');
+            return;
+          }
           if (!personSheetTargetId) return;
           requestPhotoEdit(personSheetTargetId);
         });
