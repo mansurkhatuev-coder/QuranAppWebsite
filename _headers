@@ -23,6 +23,9 @@
 /trees/*
   Cache-Control: no-store
 
+/t/*
+  Cache-Control: no-store
+
 /data/*
   Cache-Control: public, max-age=300, must-revalidate
 

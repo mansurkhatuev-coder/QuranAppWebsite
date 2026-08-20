@@ -252,10 +252,44 @@ export function buildManifest(title: string): string {
   )}\n`;
 }
 
+export function buildInviteStubHtml(options: {
+  title: string;
+  treeDir: string;
+}): string {
+  const target = `/${options.treeDir}/`;
+  const title = options.title.trim().slice(0, 80) || 'Древо';
+  const safeTitle = title
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+  return `<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta http-equiv="refresh" content="0;url=${target}" />
+    <link rel="canonical" href="https://waydean.ru${target}" />
+    <title>${safeTitle}</title>
+    <script>location.replace(${JSON.stringify(target)});</script>
+  </head>
+  <body>
+    <p><a href="${target}">Открыть «${safeTitle}»</a></p>
+  </body>
+</html>
+`;
+}
+
+export function invitePathForCode(code: string): string {
+  return `/t/${code}`;
+}
+
 export function buildReadme(title: string, treeDir: string, code: string): string {
   return `# ${title}
 
 Страница: https://waydean.ru/${treeDir}/
+
+Короткая ссылка: https://waydean.ru/t/${code}
 
 Код приглашения: \`${code}\`
 
