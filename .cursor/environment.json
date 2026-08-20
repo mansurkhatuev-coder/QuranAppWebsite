@@ -1,0 +1,11 @@
+{
+  "name": "Коран и Азкары — website",
+  "install": "bash .cursor/install.sh",
+  "terminals": [
+    {
+      "name": "site",
+      "command": "python3 -m http.server 8000 --bind 0.0.0.0"
+    }
+  ],
+  "ports": [8000]
+}
