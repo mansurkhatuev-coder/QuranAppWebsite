@@ -19,7 +19,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;650;700&family=Fraunces:opsz,wght@9..144,500;9..144,560;9..144,650&display=swap"
     />
-    <link rel="stylesheet" href="./trees.css?v=2" />
+    <link rel="stylesheet" href="./trees.css?v=3" />
   </head>
   <body>
     <div class="bg-stage" aria-hidden="true">
@@ -90,6 +90,7 @@
           <p class="muted" id="updated-at">Обновление…</p>
         </div>
         <div class="topbar-actions">
+          <button type="button" class="btn btn-primary" id="create-tree-btn">Создать древо</button>
           <button type="button" class="icon-btn" id="refresh-btn" title="Обновить" aria-label="Обновить">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M21 12a9 9 0 1 1-2.6-6.2" />
@@ -115,9 +116,64 @@
       <p id="status-line" class="status-line" aria-live="polite"></p>
     </div>
 
+    <dialog id="create-tree-dialog" class="create-dialog">
+      <form id="create-tree-form" action="#" method="post">
+        <header class="create-dialog-head">
+          <h2>Создать древо</h2>
+          <button type="button" class="icon-btn" id="create-tree-close" aria-label="Закрыть">×</button>
+        </header>
+        <p class="muted create-dialog-lead">
+          Новое пустое древо на сайте. Старые ссылки семьи не меняются.
+        </p>
+        <label>
+          Название
+          <input id="create-title" name="title" type="text" maxlength="80" required placeholder="Род Ахмада" />
+        </label>
+        <label>
+          Код ссылки
+          <input
+            id="create-code"
+            name="code"
+            type="text"
+            maxlength="25"
+            required
+            pattern="[a-z][a-z0-9-]{1,24}"
+            placeholder="ahmad"
+            autocapitalize="off"
+            spellcheck="false"
+          />
+        </label>
+        <p class="field-hint">Будет адрес <code id="create-path-preview">/drewo-…/</code></p>
+        <label>
+          Пароль семьи
+          <input id="create-password" name="password" type="text" maxlength="64" required minlength="2" autocomplete="off" />
+        </label>
+        <label>
+          Имя корня
+          <input id="create-root" name="rootName" type="text" maxlength="80" required placeholder="Ахмад" />
+        </label>
+        <label>
+          Чей род
+          <select id="create-ownership" name="ownership">
+            <option value="mine">Мой / семья</option>
+            <option value="customer">Заказчик</option>
+          </select>
+        </label>
+        <label>
+          Заметка (только вам)
+          <input id="create-note" name="note" type="text" maxlength="200" placeholder="Имя заказчика, откуда заказ" />
+        </label>
+        <p id="create-tree-error" class="error" hidden></p>
+        <div class="create-dialog-actions">
+          <button type="button" class="btn btn-ghost" id="create-tree-cancel">Отмена</button>
+          <button type="submit" class="btn btn-primary" id="create-tree-submit">Создать</button>
+        </div>
+      </form>
+    </dialog>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/auth-lock.js?v=1"></script>
-    <script src="./supabase-config.js?v=1"></script>
-    <script src="./trees.js?v=3"></script>
+    <script src="./supabase-config.js?v=2"></script>
+    <script src="./trees.js?v=4"></script>
   </body>
 </html>

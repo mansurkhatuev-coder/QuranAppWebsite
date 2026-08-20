@@ -2322,6 +2322,47 @@
 </head>
 <body class="view-locked" data-theme="premium" data-sky="day">
 
+  <div id="trees-hub-back" class="trees-hub-back" hidden>
+    <a href="/trees/">← К списку древ</a>
+  </div>
+  <style>
+    .trees-hub-back {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 10050;
+      display: flex;
+      align-items: center;
+      min-height: calc(2.4rem + env(safe-area-inset-top, 0px));
+      padding: calc(0.35rem + env(safe-area-inset-top, 0px)) 0.85rem 0.35rem;
+      background: rgba(10, 22, 18, 0.92);
+      border-bottom: 1px solid rgba(238, 244, 239, 0.1);
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
+    }
+    .trees-hub-back[hidden] { display: none !important; }
+    .trees-hub-back a {
+      color: #e2c48a;
+      text-decoration: none;
+      font: 600 0.92rem/1.2 "Source Sans 3", "Segoe UI", sans-serif;
+    }
+    body.has-trees-hub-back { padding-top: calc(2.4rem + env(safe-area-inset-top, 0px)); }
+  </style>
+  <script>
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get("from") !== "trees") return;
+        var bar = document.getElementById("trees-hub-back");
+        if (!bar) return;
+        bar.hidden = false;
+        document.body.classList.add("has-trees-hub-back");
+      } catch (err) {}
+    })();
+  </script>
+
+
   <div id="view-gate" class="view-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
     <form id="gate-form" class="view-gate-card">
       <strong id="gate-title">Хьоти некъ</strong>

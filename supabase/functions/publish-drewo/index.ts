@@ -1,5 +1,27 @@
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
 
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+
+import {
+  LEGACY_TREE_DIRS,
+  REGISTRY_PATH,
+  TEMPLATE_DIR,
+  assertCreatableTreeDir,
+  buildManifest,
+  buildReadme,
+  buildRootTreeJson,
+  customizeTemplateHtml,
+  isValidTreeCode,
+  normalizeTreeCode,
+  parseRegistry,
+  serializeRegistry,
+  templateAssetNames,
+  treeDirFromCode,
+  type RegistryEntry,
+  type RegistryFile,
+  type RegistryOwnership,
+} from './create-tree.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -143,7 +165,65 @@ async function githubGetFile(
 
 type TreeChange =
   | { path: string; content: string; encoding?: 'utf-8' | 'base64' }
+  | { path: string; sha: string }
   | { path: string; delete: true };
+
+type GithubDirItem = {
+  name: string;
+  path: string;
+  sha: string;
+  type: string;
+};
+
+async function requireHubUser(request: Request) {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error('Supabase env is not configured');
+  }
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
+    const error = new Error('Войдите в Trees');
+    (error as Error & { status?: number }).status = 401;
+    throw error;
+  }
+  const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data, error } = await supabase.auth.getUser();
+  if (error || !data.user) {
+    const err = new Error('Войдите в Trees');
+    (err as Error & { status?: number }).status = 401;
+    throw err;
+  }
+  return data.user;
+}
+
+async function githubListDir(
+  token: string,
+  repo: string,
+  path: string
+): Promise<GithubDirItem[]> {
+  const { ok, status, json } = await githubJson(
+    token,
+    `https://api.github.com/repos/${repo}/contents/${path}`
+  );
+  if (status === 404) return [];
+  if (!ok) {
+    throw new Error(String(json.message || `GitHub list failed ${status}`));
+  }
+  if (!Array.isArray(json)) {
+    throw new Error(`Ожидалась папка: ${path}`);
+  }
+  return (json as Array<Record<string, unknown>>)
+    .map((item) => ({
+      name: String(item.name || ''),
+      path: String(item.path || ''),
+      sha: String(item.sha || ''),
+      type: String(item.type || ''),
+    }))
+    .filter((item) => item.name && item.path && item.sha);
+}
 
 const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
 
@@ -218,6 +298,7 @@ async function githubCommitChanges(options: {
   const branch = options.branch || 'main';
   const changes = options.changes.filter((c) => {
     if ('delete' in c && c.delete) return true;
+    if ('sha' in c && typeof c.sha === 'string' && c.sha) return true;
     return 'content' in c && typeof c.content === 'string';
   });
   if (!changes.length) {
@@ -245,7 +326,12 @@ async function githubCommitChanges(options: {
   if (!baseTreeSha) throw new Error('Empty base tree');
 
   const writes = changes.filter(
-    (c): c is { path: string; content: string; encoding?: 'utf-8' | 'base64' } => 'content' in c
+    (c): c is { path: string; content: string; encoding?: 'utf-8' | 'base64' } =>
+      'content' in c && typeof (c as { content?: string }).content === 'string'
+  );
+  const copies = changes.filter(
+    (c): c is { path: string; sha: string } =>
+      'sha' in c && typeof (c as { sha?: string }).sha === 'string' && !('content' in c)
   );
   const deletes = changes.filter((c): c is { path: string; delete: true } => 'delete' in c && c.delete);
 
@@ -275,6 +361,12 @@ async function githubCommitChanges(options: {
 
   const treeItems: Array<Record<string, string>> = [
     ...blobShas.map((b) => ({
+      path: b.path,
+      mode: '100644',
+      type: 'blob',
+      sha: b.sha,
+    })),
+    ...copies.map((b) => ({
       path: b.path,
       mode: '100644',
       type: 'blob',
@@ -339,8 +431,31 @@ async function githubCommitChanges(options: {
   return { skipped: false as const, commitSha: newCommitSha };
 }
 
-const ALLOWED_TREE_DIRS = ['drewo', 'drewo-dada-yurt', 'drewo-reklama'] as const;
-type TreeDir = (typeof ALLOWED_TREE_DIRS)[number];
+const ALLOWED_TREE_DIRS_UNUSED_REMOVED = true; // placeholder remove
+type TreeDir = string;
+
+async function loadRegistry(token: string, repo: string): Promise<RegistryFile> {
+  const file = await githubGetFile(token, repo, REGISTRY_PATH);
+  return parseRegistry(file?.content);
+}
+
+function knownTreeDirs(registry: RegistryFile): string[] {
+  const dirs = new Set<string>(LEGACY_TREE_DIRS);
+  for (const item of registry.trees) dirs.add(item.treeDir);
+  return Array.from(dirs);
+}
+
+function resolveTreeDir(raw: unknown, registry?: RegistryFile): TreeDir | null {
+  const value = typeof raw === 'string' ? raw.trim() : '';
+  if (!value) return 'drewo';
+  const dirs = registry ? knownTreeDirs(registry) : [...LEGACY_TREE_DIRS];
+  return dirs.includes(value) ? value : null;
+}
+
+function registryEntryFor(registry: RegistryFile, treeDir: string): RegistryEntry | null {
+  return registry.trees.find((item) => item.treeDir === treeDir) || null;
+}
+
 type AuthRole = 'editor' | 'super';
 
 const AUTO_BACKUP_KEEP = 30;
@@ -361,12 +476,6 @@ type ManifestItem = {
   label: string;
 };
 
-function resolveTreeDir(raw: unknown): TreeDir | null {
-  const value = typeof raw === 'string' ? raw.trim() : '';
-  if (!value) return 'drewo';
-  return (ALLOWED_TREE_DIRS as readonly string[]).includes(value) ? (value as TreeDir) : null;
-}
-
 function fallbackEditorPassword(treeDir: TreeDir) {
   if (treeDir === 'drewo-dada-yurt') {
     return normalizePassword(Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ');
@@ -384,7 +493,13 @@ function superPasswordSecretName(treeDir: TreeDir) {
 }
 
 function superPasswordValue(treeDir: TreeDir) {
-  return normalizePassword(Deno.env.get(superPasswordSecretName(treeDir)) ?? '');
+  const specific = normalizePassword(Deno.env.get(superPasswordSecretName(treeDir)) ?? '');
+  if (specific) return specific;
+  // New (registry) trees share the main super password — no per-tree secret.
+  if (!(LEGACY_TREE_DIRS as readonly string[]).includes(treeDir)) {
+    return normalizePassword(Deno.env.get('DREWO_SUPER_PASSWORD') ?? '');
+  }
+  return '';
 }
 
 function accessPath(treeDir: TreeDir) {
@@ -743,10 +858,21 @@ Deno.serve(async (request) => {
     const action =
       typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
 
+    const registry = await loadRegistry(githubToken, githubRepo);
+    const allowedDirs = knownTreeDirs(registry);
+
     /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
     if (action === 'hub-overview') {
       const trees = await Promise.all(
-        ALLOWED_TREE_DIRS.map(async (dir) => {
+        allowedDirs.map(async (dir) => {
+          const meta = registryEntryFor(registry, dir) || {
+            treeDir: dir,
+            code: dir.replace(/^drewo-?/, '') || dir,
+            title: dir,
+            ownership: 'mine' as RegistryOwnership,
+            note: '',
+            createdAt: '',
+          };
           const [accessFile, manifestFile] = await Promise.all([
             githubGetFile(githubToken, githubRepo, accessPath(dir)),
             githubGetFile(githubToken, githubRepo, manifestPath(dir)),
@@ -756,7 +882,8 @@ Deno.serve(async (request) => {
           const latestWithPeople = manifest.find((item) => item.personCount > 0) ?? manifest[0] ?? null;
           const previousWithPeople =
             manifest.find(
-              (item, index) => index > 0 && item.personCount > 0 && item.personCount !== latestWithPeople?.personCount
+              (item, index) =>
+                index > 0 && item.personCount > 0 && item.personCount !== latestWithPeople?.personCount
             ) ?? null;
           const baseline =
             [...manifest].reverse().find((item) => item.personCount > 0) ?? null;
@@ -772,6 +899,11 @@ Deno.serve(async (request) => {
 
           return {
             treeDir: dir,
+            code: meta.code,
+            title: meta.title,
+            ownership: meta.ownership,
+            note: meta.note,
+            path: `/${dir}/`,
             locked: access.locked,
             lockedReason: access.lockedReason,
             superConfigured: Boolean(superPasswordValue(dir)),
@@ -791,10 +923,145 @@ Deno.serve(async (request) => {
       });
     }
 
-    const treeDir = resolveTreeDir(body.treeDir);
+    if (action === 'create-tree') {
+      try {
+        await requireHubUser(request);
+      } catch (err) {
+        const status = (err as Error & { status?: number }).status || 401;
+        return jsonResponse(
+          { error: err instanceof Error ? err.message : 'Войдите в Trees' },
+          status
+        );
+      }
+
+      const code = normalizeTreeCode(body.code);
+      const title = typeof body.title === 'string' ? body.title.trim() : '';
+      const rootName = typeof body.rootName === 'string' ? body.rootName.trim() : '';
+      const note = typeof body.note === 'string' ? body.note.trim().slice(0, 200) : '';
+      const ownership: RegistryOwnership = body.ownership === 'customer' ? 'customer' : 'mine';
+      const password = normalizePassword(body.password);
+
+      if (!isValidTreeCode(code)) {
+        return jsonResponse(
+          {
+            error:
+              'Код: латиница, 2–25 символов, начинается с буквы (например ahmad или rod-ali)',
+          },
+          400
+        );
+      }
+      if (title.length < 2) {
+        return jsonResponse({ error: 'Укажите название древа' }, 400);
+      }
+      if (rootName.length < 1) {
+        return jsonResponse({ error: 'Укажите имя корня' }, 400);
+      }
+      if (password.length < 2 || password.length > 64) {
+        return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
+      }
+
+      const treeDir = treeDirFromCode(code);
+      try {
+        assertCreatableTreeDir(treeDir, allowedDirs);
+      } catch (err) {
+        return jsonResponse(
+          { error: err instanceof Error ? err.message : 'Код занят' },
+          400
+        );
+      }
+
+      const existingIndex = await githubGetFile(githubToken, githubRepo, `${treeDir}/index.html`);
+      if (existingIndex?.content) {
+        return jsonResponse({ error: 'Папка древа уже есть на сайте' }, 409);
+      }
+
+      const templateHtml = await githubGetFile(
+        githubToken,
+        githubRepo,
+        `${TEMPLATE_DIR}/index.html`
+      );
+      if (!templateHtml?.content || templateHtml.content.length < 100) {
+        return jsonResponse({ error: 'Не найден шаблон drewo-reklama/index.html' }, 500);
+      }
+
+      const templateFiles = await githubListDir(githubToken, githubRepo, TEMPLATE_DIR);
+      const assetNames = new Set(templateAssetNames());
+      const assetCopies = templateFiles
+        .filter((item) => item.type === 'file' && assetNames.has(item.name))
+        .map((item) => ({
+          path: `${treeDir}/${item.name}`,
+          sha: item.sha,
+        }));
+
+      if (assetCopies.length < 3) {
+        return jsonResponse(
+          { error: 'В шаблоне не хватает картинок (bg/icon). Проверьте drewo-reklama/' },
+          500
+        );
+      }
+
+      const treeJson = buildRootTreeJson(rootName);
+      const html = customizeTemplateHtml({
+        html: templateHtml.content,
+        treeDir,
+        title,
+        rootName,
+        treeJson,
+      });
+      const passwordHash = await hashPassword(password);
+      const access: AccessState = {
+        ...emptyAccess(),
+        passwordHash,
+      };
+      const entry: RegistryEntry = {
+        treeDir,
+        code,
+        title: title.slice(0, 80),
+        ownership,
+        note,
+        createdAt: new Date().toISOString(),
+      };
+      const nextRegistry: RegistryFile = {
+        version: 1,
+        trees: [...registry.trees.filter((item) => item.treeDir !== treeDir), entry],
+      };
+
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Create family tree ${treeDir} (${title})`,
+        changes: [
+          ...assetCopies,
+          { path: `${treeDir}/index.html`, content: html },
+          { path: `${treeDir}/family-tree.json`, content: treeJson },
+          { path: `${treeDir}/access.json`, content: serializeAccess(access) },
+          {
+            path: `${treeDir}/backups/manifest.json`,
+            content: serializeManifest([]),
+          },
+          { path: `${treeDir}/manifest.webmanifest`, content: buildManifest(title) },
+          { path: `${treeDir}/README.md`, content: buildReadme(title, treeDir, code) },
+          { path: REGISTRY_PATH, content: serializeRegistry(nextRegistry) },
+        ],
+      });
+
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        code,
+        title: entry.title,
+        ownership: entry.ownership,
+        note: entry.note,
+        path: `/${treeDir}/`,
+        inviteUrl: `https://waydean.ru/${treeDir}/`,
+        createdAt: entry.createdAt,
+      });
+    }
+
+    const treeDir = resolveTreeDir(body.treeDir, registry);
     if (!treeDir) {
       return jsonResponse(
-        { error: `Неизвестный treeDir. Допустимо: ${ALLOWED_TREE_DIRS.join(', ')}` },
+        { error: `Неизвестный treeDir. Допустимо: ${allowedDirs.join(', ')}` },
         400
       );
     }
