@@ -173,14 +173,30 @@
     return response.json();
   }
 
+  async function authHeaders() {
+    const headers = {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${config.anonKey || ''}`,
+      apikey: config.anonKey || '',
+    };
+    const sb = getClient();
+    if (sb) {
+      try {
+        const { data } = await sb.auth.getSession();
+        if (data?.session?.access_token) {
+          headers.Authorization = `Bearer ${data.session.access_token}`;
+        }
+      } catch {
+        // keep anon
+      }
+    }
+    return headers;
+  }
+
   async function callHubOverview() {
     const response = await fetch(publishUrl(), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.anonKey || ''}`,
-        apikey: config.anonKey || '',
-      },
+      headers: await authHeaders(),
       body: JSON.stringify({ action: 'hub-overview' }),
     });
     if (!response.ok) {
@@ -193,11 +209,7 @@
   async function callStatus(treeDir) {
     const response = await fetch(publishUrl(), {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${config.anonKey || ''}`,
-        apikey: config.anonKey || '',
-      },
+      headers: await authHeaders(),
       body: JSON.stringify({ action: 'status', treeDir }),
     });
     if (!response.ok) {
@@ -205,6 +217,42 @@
       throw new Error(err.error || `status ${response.status}`);
     }
     return response.json();
+  }
+
+  async function callCreateTree(payload) {
+    const response = await fetch(publishUrl(), {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ action: 'create-tree', ...payload }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `create-tree ${response.status}`);
+    }
+    return json;
+  }
+
+  function metaFromRemote(remote) {
+    const dir = remote.treeDir || remote.dir;
+    return {
+      dir,
+      title: remote.title || dir,
+      path: remote.path || `/${dir}/`,
+      code: remote.code || '',
+      ownership: remote.ownership === 'customer' ? 'customer' : 'mine',
+      note: remote.note || '',
+      accent: remote.ownership === 'customer' ? 'amber' : 'moss',
+    };
+  }
+
+  function mergeTreeMetas(overviewTrees) {
+    const byDir = new Map(TREES.map((meta) => [meta.dir, { ...meta }]));
+    (overviewTrees || []).forEach((remote) => {
+      const meta = metaFromRemote(remote);
+      const prev = byDir.get(meta.dir) || {};
+      byDir.set(meta.dir, { ...prev, ...meta });
+    });
+    return Array.from(byDir.values());
   }
 
   async function loadLocalStats(meta) {
@@ -237,18 +285,20 @@
   }
 
   async function loadAll() {
-    // Prefer hub-overview when deployed; fall back to per-tree status.
+    let overviewTrees = [];
     let overviewByDir = new Map();
     try {
       const overview = await callHubOverview();
       if (overview?.ok && Array.isArray(overview.trees)) {
+        overviewTrees = overview.trees;
         overview.trees.forEach((row) => overviewByDir.set(row.treeDir, row));
       }
     } catch {
       overviewByDir = new Map();
     }
 
-    const locals = await Promise.all(TREES.map((meta) => loadLocalStats(meta)));
+    const metas = mergeTreeMetas(overviewTrees);
+    const locals = await Promise.all(metas.map((meta) => loadLocalStats(meta)));
 
     return Promise.all(
       locals.map(async (local) => {
@@ -294,10 +344,28 @@
   }
 
   function badgeHtml(row) {
-    if (row.locked) {
-      return `<span class="badge badge-locked">Закрыто</span>`;
+    const bits = [];
+    if (row.meta.ownership === 'customer') {
+      bits.push(`<span class="badge badge-quiet">Заказчик</span>`);
     }
-    return '';
+    if (row.locked) {
+      bits.push(`<span class="badge badge-locked">Закрыто</span>`);
+    }
+    return bits.join(' ');
+  }
+
+  function openHref(path) {
+    const url = new URL(path, window.location.origin);
+    url.searchParams.set('from', 'trees');
+    return url.pathname + url.search + (url.hash || '');
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
   }
 
   function renderCards(rows) {
@@ -313,13 +381,16 @@
         const yearsText =
           row.withYears != null ? `${formatNumber(row.withYears)} с годами` : '';
         const depthText = row.maxDepth != null ? `глубина ${formatNumber(row.maxDepth)}` : '';
+        const codeText = row.meta.code ? `код ${escapeHtml(row.meta.code)}` : '';
+        const noteText = row.meta.note ? escapeHtml(row.meta.note) : '';
+        const href = openHref(row.meta.path);
 
         return `
-          <article class="tree-card" data-i="${index}" data-dir="${row.meta.dir}">
+          <article class="tree-card" data-i="${index}" data-dir="${escapeHtml(row.meta.dir)}">
             <div class="tree-card-head">
               <div>
-                <h2>${row.meta.title}</h2>
-                <p class="tree-slug">${row.meta.path}</p>
+                <h2>${escapeHtml(row.meta.title)}</h2>
+                <p class="tree-slug">${escapeHtml(row.meta.path)}${codeText ? ` · ${codeText}` : ''}</p>
               </div>
               ${badgeHtml(row)}
             </div>
@@ -346,12 +417,13 @@
             </div>
             <p class="tree-meta">
               <span>Сохранено ${formatRelative(row.lastSavedAt)}</span>
-              ${row.locked && row.lockedReason ? `<span>${row.lockedReason}</span>` : ''}
+              ${noteText ? `<span>${noteText}</span>` : ''}
+              ${row.locked && row.lockedReason ? `<span>${escapeHtml(row.lockedReason)}</span>` : ''}
               ${row.liveOk ? '' : '<span>статус недоступен</span>'}
             </p>
             <div class="tree-actions">
-              <a class="btn btn-primary" href="${row.meta.path}" target="_blank" rel="noopener">Открыть древо</a>
-              <button type="button" class="btn btn-amber" data-copy="${row.meta.path}">Копировать ссылку</button>
+              <a class="btn btn-primary" href="${href}">Открыть древо</a>
+              <button type="button" class="btn btn-amber" data-copy="${escapeHtml(row.meta.path)}">Копировать ссылку</button>
             </div>
           </article>
         `;
@@ -609,6 +681,82 @@
     }
   }
 
+  function openCreateDialog() {
+    const dialog = $('#create-tree-dialog');
+    const err = $('#create-tree-error');
+    if (err) {
+      err.hidden = true;
+      err.textContent = '';
+    }
+    if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
+    else if (dialog) dialog.hidden = false;
+    updateCodePreview();
+  }
+
+  function closeCreateDialog() {
+    const dialog = $('#create-tree-dialog');
+    if (dialog && typeof dialog.close === 'function') dialog.close();
+    else if (dialog) dialog.hidden = true;
+  }
+
+  function updateCodePreview() {
+    const codeInput = $('#create-code');
+    const preview = $('#create-path-preview');
+    if (!preview) return;
+    const code = String(codeInput?.value || '')
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, '-');
+    preview.textContent = code ? `/drewo-${code}/` : '/drewo-…/';
+  }
+
+  async function handleCreateTree(event) {
+    event.preventDefault();
+    const err = $('#create-tree-error');
+    const submit = $('#create-tree-submit');
+    if (err) {
+      err.hidden = true;
+      err.textContent = '';
+    }
+
+    const payload = {
+      title: $('#create-title')?.value.trim() || '',
+      code: $('#create-code')?.value.trim() || '',
+      password: $('#create-password')?.value || '',
+      rootName: $('#create-root')?.value.trim() || '',
+      ownership: $('#create-ownership')?.value || 'mine',
+      note: $('#create-note')?.value.trim() || '',
+    };
+
+    if (submit) submit.disabled = true;
+    showBoot('Создаю древо…');
+    try {
+      const created = await callCreateTree(payload);
+      closeCreateDialog();
+      const form = $('#create-tree-form');
+      if (form) form.reset();
+      updateCodePreview();
+      await refresh();
+      const status = $('#status-line');
+      if (status) {
+        status.textContent = `Создано: ${created.path || ''} · код ${created.code || ''}. Откройте и добавьте людей.`;
+      }
+      if (created.path) {
+        window.setTimeout(() => {
+          window.location.href = openHref(created.path);
+        }, 600);
+      }
+    } catch (error) {
+      if (err) {
+        err.hidden = false;
+        err.textContent = error instanceof Error ? error.message : 'Не удалось создать';
+      }
+    } finally {
+      if (submit) submit.disabled = false;
+      hideBoot();
+    }
+  }
+
   function bind() {
     $('#login-form')?.addEventListener('submit', (event) => {
       void handleLogin(event);
@@ -618,6 +766,15 @@
     });
     $('#refresh-btn')?.addEventListener('click', () => {
       void refresh();
+    });
+    $('#create-tree-btn')?.addEventListener('click', () => {
+      openCreateDialog();
+    });
+    $('#create-tree-close')?.addEventListener('click', () => closeCreateDialog());
+    $('#create-tree-cancel')?.addEventListener('click', () => closeCreateDialog());
+    $('#create-code')?.addEventListener('input', updateCodePreview);
+    $('#create-tree-form')?.addEventListener('submit', (event) => {
+      void handleCreateTree(event);
     });
     $('#tree-list')?.addEventListener('click', (event) => {
       const btn = event.target.closest('[data-copy]');

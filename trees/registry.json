@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "trees": [
+    {
+      "treeDir": "drewo",
+      "code": "hoti",
+      "title": "Хьоти некъ",
+      "ownership": "mine",
+      "note": "Семейное древо",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "treeDir": "drewo-dada-yurt",
+      "code": "dada",
+      "title": "Дади-Юрт",
+      "ownership": "mine",
+      "note": "Родовое древо Дади-Юрт",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "treeDir": "drewo-reklama",
+      "code": "demo",
+      "title": "Демо (реклама)",
+      "ownership": "mine",
+      "note": "Витрина для рекламы",
+      "createdAt": "2026-01-01T00:00:00.000Z"
+    }
+  ]
+}
