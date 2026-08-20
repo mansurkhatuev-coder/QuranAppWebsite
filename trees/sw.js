@@ -1,5 +1,5 @@
 /* Trees PWA — network-first shell cache for offline reopen. */
-const CACHE = 'waydean-trees-v1';
+const CACHE = 'waydean-trees-v5';
 const PRECACHE = [
   './',
   './index.html',

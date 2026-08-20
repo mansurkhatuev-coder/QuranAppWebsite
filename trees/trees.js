@@ -351,7 +351,17 @@
     if (row.locked) {
       bits.push(`<span class="badge badge-locked">Закрыто</span>`);
     }
-    return bits.join(' ');
+    if (!bits.length) return '';
+    return `<div class="badge-row">${bits.join('')}</div>`;
+  }
+
+  function treeGlyphSvg() {
+    return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 21v-6"/>
+      <path d="M12 15c-3.2-1.2-5-3.4-5-6.2C7 6.2 9.2 4 12 4s5 2.2 5 4.8c0 2.8-1.8 5-5 6.2Z"/>
+      <path d="M9.2 10.2c.9-.7 1.9-1 2.8-1"/>
+      <path d="M14.8 11.5c-.7.5-1.6.8-2.8.8"/>
+    </svg>`;
   }
 
   function openHref(path) {
@@ -385,45 +395,49 @@
         const noteText = row.meta.note ? escapeHtml(row.meta.note) : '';
         const href = openHref(row.meta.path);
 
+        const accent = escapeHtml(row.meta.accent || 'moss');
         return `
-          <article class="tree-card" data-i="${index}" data-dir="${escapeHtml(row.meta.dir)}">
-            <div class="tree-card-head">
-              <div>
-                <h2>${escapeHtml(row.meta.title)}</h2>
-                <p class="tree-slug">${escapeHtml(row.meta.path)}${codeText ? ` · ${codeText}` : ''}</p>
+          <article class="tree-card" data-i="${index}" data-dir="${escapeHtml(row.meta.dir)}" data-accent="${accent}">
+            <div class="tree-glyph">${treeGlyphSvg()}</div>
+            <div class="tree-body">
+              <div class="tree-card-head">
+                <div>
+                  <h2>${escapeHtml(row.meta.title)}</h2>
+                  <p class="tree-slug">${escapeHtml(row.meta.path)}${codeText ? ` · ${codeText}` : ''}</p>
+                </div>
+                ${badgeHtml(row)}
               </div>
-              ${badgeHtml(row)}
+              <div class="metrics">
+                <div class="metric">
+                  <span class="m-label">Люди</span>
+                  <span class="m-value">${formatNumber(row.people)}</span>
+                  <span class="m-hint">${photoText}</span>
+                </div>
+                <div class="metric">
+                  <span class="m-label">Добавлено</span>
+                  <span class="m-value">${formatNumber(row.addedSinceBaseline)}</span>
+                  <span class="m-hint">${addedHint}</span>
+                </div>
+                <div class="metric">
+                  <span class="m-label">Бэкапы</span>
+                  <span class="m-value">${formatNumber(row.backupCount)}</span>
+                </div>
+                <div class="metric">
+                  <span class="m-label">Состав</span>
+                  <span class="m-value">${formatNumber(row.withBio)}</span>
+                  <span class="m-hint">${[yearsText, depthText].filter(Boolean).join(' · ') || 'био / заметки'}</span>
+                </div>
+              </div>
+              <p class="tree-meta">
+                <span>Сохранено ${formatRelative(row.lastSavedAt)}</span>
+                ${noteText ? `<span>${noteText}</span>` : ''}
+                ${row.locked && row.lockedReason ? `<span>${escapeHtml(row.lockedReason)}</span>` : ''}
+                ${row.liveOk ? '' : '<span>статус недоступен</span>'}
+              </p>
             </div>
-            <div class="metrics">
-              <div class="metric">
-                <span class="m-label">Люди</span>
-                <span class="m-value">${formatNumber(row.people)}</span>
-                <span class="m-hint">${photoText}</span>
-              </div>
-              <div class="metric">
-                <span class="m-label">Добавлено</span>
-                <span class="m-value">${formatNumber(row.addedSinceBaseline)}</span>
-                <span class="m-hint">${addedHint}</span>
-              </div>
-              <div class="metric">
-                <span class="m-label">Бэкапы</span>
-                <span class="m-value">${formatNumber(row.backupCount)}</span>
-              </div>
-              <div class="metric">
-                <span class="m-label">Состав</span>
-                <span class="m-value">${formatNumber(row.withBio)}</span>
-                <span class="m-hint">${[yearsText, depthText].filter(Boolean).join(' · ') || 'био / заметки'}</span>
-              </div>
-            </div>
-            <p class="tree-meta">
-              <span>Сохранено ${formatRelative(row.lastSavedAt)}</span>
-              ${noteText ? `<span>${noteText}</span>` : ''}
-              ${row.locked && row.lockedReason ? `<span>${escapeHtml(row.lockedReason)}</span>` : ''}
-              ${row.liveOk ? '' : '<span>статус недоступен</span>'}
-            </p>
             <div class="tree-actions">
               <a class="btn btn-primary" href="${href}">Открыть древо</a>
-              <button type="button" class="btn btn-amber" data-copy="${escapeHtml(row.meta.path)}">Копировать ссылку</button>
+              <button type="button" class="btn btn-quiet" data-copy="${escapeHtml(row.meta.path)}">Копировать ссылку</button>
             </div>
           </article>
         `;
