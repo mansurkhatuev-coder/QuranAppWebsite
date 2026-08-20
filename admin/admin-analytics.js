@@ -448,8 +448,8 @@
   function defaultAppleSteps() {
     return [
       { label: 'Ключ App Store Connect', done: false, detail: 'Сначала секреты в Supabase, потом эта кнопка.' },
-      { label: 'Заказ ежедневного отчёта', done: false, detail: 'Ещё не заказывали.' },
-      { label: 'Дневные файлы скачиваний', done: false, detail: 'Apple отдаёт файлы через 24–48 часов после заказа.' },
+      { label: 'Заказ отчётов Apple', done: false, detail: 'Ещё не заказывали.' },
+      { label: 'Файлы скачиваний', done: false, detail: 'Apple отдаёт файлы через 24–48 часов после заказа. История может прийти позже.' },
       { label: 'Цифры в админке', done: false, detail: 'Появятся, когда файлы разберём.' },
     ];
   }
@@ -544,6 +544,15 @@
     `;
   }
 
+  function storeCoverageNote(store) {
+    if (!store || !store.days) return '';
+    const first = store.firstDay || '';
+    const last = store.lastDay || '';
+    if (first && last && first !== last) return `${store.days} дн. · ${first}…${last}`;
+    if (last) return `${store.days} дн. · до ${last}`;
+    return `${store.days} дн.`;
+  }
+
   function renderStoreDownloads(container) {
     if (!container) return;
     const rustore = storeSnapshot?.rustore || { rows: [], total: 0 };
@@ -556,11 +565,13 @@
     const errorLine = storeError
       ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
       : '';
+    const appleCoverage = storeCoverageNote(apple);
+    const rustoreCoverage = storeCoverageNote(rustore);
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
         <h3>Сторы · скачивания</h3>
-        <p class="admin-muted">Цифры магазинов, не наши «устройства». Скачал ≠ открыл приложение.</p>
+        <p class="admin-muted">Цифры магазинов, не наши «устройства». Считаем first-time downloads (без обновлений и повторных скачиваний). «Всё время» = сумма дней, которые уже подтянуты из отчётов, а не lifetime из App Store Connect целиком.</p>
       </div>
       ${errorLine}
       <div class="admin-analytics-grid">
@@ -579,10 +590,12 @@
         <article class="admin-analytics-card">
           <p class="admin-muted">RuStore · всё время</p>
           <p class="admin-analytics-value">${rustoreAll}</p>
+          ${rustoreCoverage ? `<p class="admin-muted admin-analytics-note">${escapeHtml(rustoreCoverage)}</p>` : ''}
         </article>
         <article class="admin-analytics-card">
           <p class="admin-muted">App Store · всё время</p>
           <p class="admin-analytics-value">${appleAll}</p>
+          ${appleCoverage ? `<p class="admin-muted admin-analytics-note">${escapeHtml(appleCoverage)}</p>` : ''}
         </article>
       </div>
       ${renderRustoreUpload(rustore)}

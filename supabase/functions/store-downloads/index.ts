@@ -114,12 +114,14 @@ async function writeMeta(key: string, payload: Json) {
 }
 
 function storeSummary(rows: StoreDownloadDay[], meta: Json, store: 'rustore' | 'appstore') {
+  const firstDay = rows.length ? rows[0].day : null;
   const lastDay = rows.length ? rows[rows.length - 1].day : null;
   const total = rows.reduce((sum, row) => sum + row.downloads, 0);
   const status = String(meta.status || (rows.length ? 'ok' : 'empty'));
   const base = {
     days: rows.length,
     total,
+    firstDay,
     lastDay,
     status,
     message: String(meta.message || ''),

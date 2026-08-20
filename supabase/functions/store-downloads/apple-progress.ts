@@ -69,22 +69,22 @@ export function buildAppleProgress(input: {
     },
     {
       id: 'request',
-      label: 'Заказ ежедневного отчёта',
+      label: 'Заказ отчётов Apple',
       done: requestDone && Boolean(input.requestedAt || status === 'ok' || status === 'waiting'),
       detail: input.requestedAt
-        ? `Заказан ${formatCheckedAt(input.requestedAt)}.`
+        ? `Заказан ${formatCheckedAt(input.requestedAt)} (текущие + история).`
         : status === 'error'
           ? input.message || 'Apple отклонил запрос.'
           : 'Ещё не заказывали. Нажмите «Проверить App Store».',
     },
     {
       id: 'files',
-      label: 'Дневные файлы скачиваний',
+      label: 'Файлы скачиваний',
       done: filesDone,
       detail: filesDone
-        ? 'Файлы уже есть.'
+        ? 'Файлы уже есть (текущие и/или история).'
         : waited == null
-          ? 'Apple отдаёт файлы через 24–48 часов после заказа.'
+          ? 'Apple отдаёт файлы через 24–48 часов после заказа. История (snapshot) может прийти позже текущих дней.'
           : waited < 24
             ? `Прошло ${formatHours(waited)} из 24–48 ч. Пока рано, но проверить можно.`
             : waited < 48
@@ -95,7 +95,9 @@ export function buildAppleProgress(input: {
       id: 'numbers',
       label: 'Цифры в админке',
       done: numbersDone,
-      detail: numbersDone ? `${dayCount} дн. в таблице.` : 'Появятся, когда файлы разберём.',
+      detail: numbersDone
+        ? `${dayCount} дн. в таблице (first-time downloads).`
+        : 'Появятся, когда файлы разберём.',
     },
   ];
 
