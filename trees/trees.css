@@ -7,7 +7,7 @@
   --bg: #e6ede8;
   --bg-deep: #d2ddd5;
   --ink: #13241c;
-  --ink-soft: #4f6559;
+  --ink-soft: #3d5248;
   --surface: rgba(255, 255, 255, 0.78);
   --surface-solid: #f8faf8;
   --moss: #2d6a4f;
@@ -15,8 +15,8 @@
   --moss-soft: rgba(45, 106, 79, 0.14);
   --bark: #6b5a45;
   --bark-soft: rgba(107, 90, 69, 0.12);
-  --line: rgba(19, 36, 28, 0.09);
-  --line-strong: rgba(19, 36, 28, 0.16);
+  --line: rgba(19, 36, 28, 0.11);
+  --line-strong: rgba(19, 36, 28, 0.22);
   --danger: #b45a4c;
   --ok: #2f7a55;
   --radius: 20px;
@@ -298,10 +298,10 @@ select {
 .create-dialog label {
   display: grid;
   gap: 0.35rem;
-  font-size: 0.8rem;
-  font-weight: 500;
-  color: var(--ink-soft);
-  letter-spacing: 0.02em;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--ink);
+  letter-spacing: 0.01em;
 }
 
 .login-form input,
@@ -310,8 +310,8 @@ select {
   width: 100%;
   padding: 0.8rem 0.95rem;
   border-radius: 12px;
-  border: 1px solid var(--line-strong);
-  background: rgba(255, 255, 255, 0.88);
+  border: 1.5px solid var(--line-strong);
+  background: #fff;
   color: var(--ink);
   font-size: 16px;
   outline: none;
@@ -321,8 +321,13 @@ select {
 .login-form input:focus,
 .create-dialog input:focus,
 .create-dialog select:focus {
-  border-color: rgba(45, 106, 79, 0.55);
+  border-color: var(--moss);
   box-shadow: 0 0 0 3px var(--moss-soft);
+}
+
+.login-form input::placeholder,
+.create-dialog input::placeholder {
+  color: rgba(61, 82, 72, 0.55);
 }
 
 /* ---- App chrome ---- */
