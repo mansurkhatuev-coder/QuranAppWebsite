@@ -5212,18 +5212,54 @@
         });
       }
 
+      function parseBornYear(node) {
+        if (!node || node.born == null || node.born === '') return null;
+        var value = Number(node.born);
+        return Number.isFinite(value) ? value : null;
+      }
+
+      function sortSonsByBirth(sons) {
+        return (sons || [])
+          .map(function (son, idx) {
+            return {
+              son: son,
+              idx: idx,
+              born: parseBornYear(son),
+              name: String((son && son.name) || '').trim().toLocaleLowerCase('ru-RU'),
+            };
+          })
+          .sort(function (a, b) {
+            var aHas = a.born != null;
+            var bHas = b.born != null;
+            if (aHas && bHas) {
+              if (a.born !== b.born) return a.born - b.born; // older (smaller year) first
+              if (a.name && b.name && a.name !== b.name) return a.name.localeCompare(b.name, 'ru');
+              return a.idx - b.idx;
+            }
+            if (aHas !== bHas) return aHas ? -1 : 1; // known years first
+            return a.idx - b.idx;
+          })
+          .map(function (row) {
+            return row.son;
+          });
+      }
+
       function layoutChildren(node) {
-        var sons = node.sons || [];
+        var sons = sortSonsByBirth(node.sons || []);
         if (viewFilter === 'all') return sons;
         if (khotuPath.has(node.id) && node.id !== KHOTU_ID) {
-          return sons.filter(function (s) {
-            return khotuPath.has(s.id);
-          });
+          return sortSonsByBirth(
+            sons.filter(function (s) {
+              return khotuPath.has(s.id);
+            })
+          );
         }
         if (underKhotu.has(node.id)) return sons;
-        return sons.filter(function (s) {
-          return khotuPath.has(s.id) || underKhotu.has(s.id);
-        });
+        return sortSonsByBirth(
+          sons.filter(function (s) {
+            return khotuPath.has(s.id) || underKhotu.has(s.id);
+          })
+        );
       }
 
       function loadActivity() {
