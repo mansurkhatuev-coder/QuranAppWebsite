@@ -2,5 +2,6 @@ User-agent: *
 Allow: /
 Disallow: /admin/
 Disallow: /trees/
+Disallow: /t/
 
 Sitemap: https://waydean.ru/sitemap.xml
