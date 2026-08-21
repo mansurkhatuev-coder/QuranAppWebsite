@@ -544,82 +544,65 @@
     `;
   }
 
-  function storeCoverageNote(store) {
-    if (!store || !store.days) return '';
-    const first = store.firstDay || '';
-    const last = store.lastDay || '';
-    if (first && last && first !== last) return `${store.days} дн. · ${first}…${last}`;
-    if (last) return `${store.days} дн. · до ${last}`;
-    return `${store.days} дн.`;
+  /** Period for the +N badge: selected range, or last 1 day when «всё время». */
+  function storeDeltaDays() {
+    return rangeDays > 0 ? rangeDays : 1;
+  }
+
+  function formatStoreDelta(delta) {
+    const n = Number(delta) || 0;
+    if (n > 0) return `+${n}`;
+    if (n < 0) return String(n);
+    return '+0';
+  }
+
+  function renderStoreValue(total, delta) {
+    const n = Number(delta) || 0;
+    if (!n) {
+      return `<p class="admin-analytics-value admin-store-value"><span>${total}</span></p>`;
+    }
+    const deltaClass = n > 0 ? 'is-up' : 'is-down';
+    return `
+      <p class="admin-analytics-value admin-store-value">
+        <span>${total}</span>
+        <span class="admin-store-delta ${deltaClass}" title="За ${rangeLabel(storeDeltaDays())}">${formatStoreDelta(n)}</span>
+      </p>`;
   }
 
   function renderStoreDownloads(container) {
     if (!container) return;
     const rustore = storeSnapshot?.rustore || { rows: [], total: 0 };
     const apple = storeSnapshot?.apple || { rows: [], total: 0 };
-    const rustorePeriod = sumStoreRows(rustore.rows, rangeDays);
-    const applePeriod = sumStoreRows(apple.rows, rangeDays);
+    const deltaDays = storeDeltaDays();
     const rustoreAll = sumStoreRows(rustore.rows, 0);
     const appleAll = sumStoreRows(apple.rows, 0);
+    const rustoreDelta = sumStoreRows(rustore.rows, deltaDays);
+    const appleDelta = sumStoreRows(apple.rows, deltaDays);
     const storesAll = rustoreAll + appleAll;
+    const storesDelta = rustoreDelta + appleDelta;
     const errorLine = storeError
       ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
-      : '';
-    const appleCoverage = storeCoverageNote(apple);
-    const rustoreCoverage = storeCoverageNote(rustore);
-    const coverageLine = [rustoreCoverage && `RuStore: ${rustoreCoverage}`, appleCoverage && `App Store: ${appleCoverage}`]
-      .filter(Boolean)
-      .join(' · ');
-
-    const periodBlock = rangeDays
-      ? `
-      <div class="admin-analytics-social-head admin-store-subhead">
-        <h4>Сторы · ${escapeHtml(rangeLabel(rangeDays))}</h4>
-      </div>
-      <div class="admin-analytics-grid">
-        <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">RuStore</p>
-          <p class="admin-analytics-value">${rustorePeriod}</p>
-        </article>
-        <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">App Store</p>
-          <p class="admin-analytics-value">${applePeriod}</p>
-        </article>
-        <article class="admin-analytics-card">
-          <p class="admin-muted">Вместе</p>
-          <p class="admin-analytics-value">${rustorePeriod + applePeriod}</p>
-        </article>
-      </div>`
       : '';
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
         <h3>Сторы · скачивания</h3>
-        <p class="admin-muted">Цифры магазинов, не наши «устройства». Считаем first-time downloads (без обновлений и повторных скачиваний).</p>
       </div>
       ${errorLine}
-      <div class="admin-store-alltime" id="analytics-stores-alltime">
-        <div class="admin-analytics-social-head admin-store-subhead">
-          <h4>Сторы · всё время</h4>
-          <p class="admin-muted">Сумма дней, уже подтянутых из отчётов RuStore / App Store — не lifetime из консоли Apple целиком.</p>
-        </div>
-        <div class="admin-analytics-grid">
-          <article class="admin-analytics-card admin-analytics-card--hero">
-            <p class="admin-muted">RuStore · всё время</p>
-            <p class="admin-analytics-value">${rustoreAll}</p>
-          </article>
-          <article class="admin-analytics-card admin-analytics-card--hero">
-            <p class="admin-muted">App Store · всё время</p>
-            <p class="admin-analytics-value">${appleAll}</p>
-          </article>
-          <article class="admin-analytics-card admin-analytics-card--hero">
-            <p class="admin-muted">Сторы вместе · всё время</p>
-            <p class="admin-analytics-value">${storesAll}</p>
-          </article>
-        </div>
-        ${coverageLine ? `<p class="admin-muted admin-analytics-note">${escapeHtml(coverageLine)}</p>` : ''}
+      <div class="admin-analytics-grid" id="analytics-stores-alltime">
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">RuStore</p>
+          ${renderStoreValue(rustoreAll, rustoreDelta)}
+        </article>
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">App Store</p>
+          ${renderStoreValue(appleAll, appleDelta)}
+        </article>
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">Вместе</p>
+          ${renderStoreValue(storesAll, storesDelta)}
+        </article>
       </div>
-      ${periodBlock}
       ${renderRustoreUpload(rustore)}
       ${renderAppleProgress(apple)}
     `;

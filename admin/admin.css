@@ -553,23 +553,29 @@
   font-size: 1.05rem;
 }
 
-.admin-store-subhead h4 {
-  margin: 0.35rem 0 0.2rem;
-  font-size: 0.98rem;
+.admin-store-value {
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.admin-store-delta {
+  font-size: 0.92rem;
   font-weight: 650;
+  letter-spacing: 0.01em;
 }
 
-.admin-store-alltime {
-  display: grid;
-  gap: 0.35rem;
-  padding: 0.85rem 0.95rem 1rem;
-  border-radius: 16px;
-  border: 1px solid rgba(201, 162, 77, 0.35);
-  background: rgba(201, 162, 77, 0.06);
+.admin-store-delta.is-up {
+  color: #6fbf73;
 }
 
-.admin-store-alltime .admin-analytics-grid {
-  margin-top: 0.35rem;
+.admin-store-delta.is-down {
+  color: #e08989;
+}
+
+.admin-store-delta.is-flat {
+  color: rgba(255, 255, 255, 0.35);
 }
 
 .admin-analytics-social-list {
