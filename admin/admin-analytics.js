@@ -561,43 +561,65 @@
     const applePeriod = sumStoreRows(apple.rows, rangeDays);
     const rustoreAll = sumStoreRows(rustore.rows, 0);
     const appleAll = sumStoreRows(apple.rows, 0);
-    const periodNote = rangeDays ? `за ${rangeLabel(rangeDays)}` : 'за всё время';
+    const storesAll = rustoreAll + appleAll;
     const errorLine = storeError
       ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
       : '';
     const appleCoverage = storeCoverageNote(apple);
     const rustoreCoverage = storeCoverageNote(rustore);
+    const coverageLine = [rustoreCoverage && `RuStore: ${rustoreCoverage}`, appleCoverage && `App Store: ${appleCoverage}`]
+      .filter(Boolean)
+      .join(' · ');
+
+    const periodBlock = rangeDays
+      ? `
+      <div class="admin-analytics-social-head admin-store-subhead">
+        <h4>Сторы · ${escapeHtml(rangeLabel(rangeDays))}</h4>
+      </div>
+      <div class="admin-analytics-grid">
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">RuStore</p>
+          <p class="admin-analytics-value">${rustorePeriod}</p>
+        </article>
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">App Store</p>
+          <p class="admin-analytics-value">${applePeriod}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">Вместе</p>
+          <p class="admin-analytics-value">${rustorePeriod + applePeriod}</p>
+        </article>
+      </div>`
+      : '';
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
         <h3>Сторы · скачивания</h3>
-        <p class="admin-muted">Цифры магазинов, не наши «устройства». Считаем first-time downloads (без обновлений и повторных скачиваний). «Всё время» = сумма дней, которые уже подтянуты из отчётов, а не lifetime из App Store Connect целиком.</p>
+        <p class="admin-muted">Цифры магазинов, не наши «устройства». Считаем first-time downloads (без обновлений и повторных скачиваний).</p>
       </div>
       ${errorLine}
-      <div class="admin-analytics-grid">
-        <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">RuStore · ${periodNote}</p>
-          <p class="admin-analytics-value">${rustorePeriod}</p>
-        </article>
-        <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">App Store · ${periodNote}</p>
-          <p class="admin-analytics-value">${applePeriod}</p>
-        </article>
-        <article class="admin-analytics-card">
-          <p class="admin-muted">Сторы вместе · ${periodNote}</p>
-          <p class="admin-analytics-value">${rustorePeriod + applePeriod}</p>
-        </article>
-        <article class="admin-analytics-card">
-          <p class="admin-muted">RuStore · всё время</p>
-          <p class="admin-analytics-value">${rustoreAll}</p>
-          ${rustoreCoverage ? `<p class="admin-muted admin-analytics-note">${escapeHtml(rustoreCoverage)}</p>` : ''}
-        </article>
-        <article class="admin-analytics-card">
-          <p class="admin-muted">App Store · всё время</p>
-          <p class="admin-analytics-value">${appleAll}</p>
-          ${appleCoverage ? `<p class="admin-muted admin-analytics-note">${escapeHtml(appleCoverage)}</p>` : ''}
-        </article>
+      <div class="admin-store-alltime" id="analytics-stores-alltime">
+        <div class="admin-analytics-social-head admin-store-subhead">
+          <h4>Сторы · всё время</h4>
+          <p class="admin-muted">Сумма дней, уже подтянутых из отчётов RuStore / App Store — не lifetime из консоли Apple целиком.</p>
+        </div>
+        <div class="admin-analytics-grid">
+          <article class="admin-analytics-card admin-analytics-card--hero">
+            <p class="admin-muted">RuStore · всё время</p>
+            <p class="admin-analytics-value">${rustoreAll}</p>
+          </article>
+          <article class="admin-analytics-card admin-analytics-card--hero">
+            <p class="admin-muted">App Store · всё время</p>
+            <p class="admin-analytics-value">${appleAll}</p>
+          </article>
+          <article class="admin-analytics-card admin-analytics-card--hero">
+            <p class="admin-muted">Сторы вместе · всё время</p>
+            <p class="admin-analytics-value">${storesAll}</p>
+          </article>
+        </div>
+        ${coverageLine ? `<p class="admin-muted admin-analytics-note">${escapeHtml(coverageLine)}</p>` : ''}
       </div>
+      ${periodBlock}
       ${renderRustoreUpload(rustore)}
       ${renderAppleProgress(apple)}
     `;
