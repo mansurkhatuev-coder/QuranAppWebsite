@@ -697,15 +697,14 @@ export default function NewLoanPage() {
                 value={value.investor_id}
                 onChange={(e) => {
                   const inv = investors.find((i) => i.id === e.target.value);
+                  setShareManual(false);
                   setValue({
                     ...value,
                     investor_id: e.target.value,
                     income_share_investor: inv
-                      ? String(inv.share_percent)
-                      : value.income_share_investor,
-                    income_share_manager: inv
-                      ? String(Math.max(0, 100 - Number(inv.share_percent)))
-                      : "100",
+                      ? value.income_share_investor
+                      : "0",
+                    income_share_manager: inv ? value.income_share_manager : "100",
                     investor_amount: e.target.value ? value.investor_amount : "",
                   });
                 }}
