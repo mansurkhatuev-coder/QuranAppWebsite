@@ -7,7 +7,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
   const { organization, settings } = await getSessionProfile();
   const supabase = await createClient();
 
-  const [{ data: loan }, { data: schedules }] = await Promise.all([
+  const [{ data: loan }, { data: schedules }, { data: guarantors }] = await Promise.all([
     supabase
       .from("loans")
       .select("*, clients(full_name, phone), investors(name)")
@@ -19,6 +19,11 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
       .select("*")
       .eq("loan_id", id)
       .order("sequence_number"),
+    supabase
+      .from("loan_guarantors")
+      .select("*")
+      .eq("loan_id", id)
+      .order("created_at"),
   ]);
 
   if (!loan || !settings) notFound();
@@ -27,6 +32,7 @@ export default async function LoanPage({ params }: { params: Promise<{ id: strin
     <LoanDetail
       loan={loan}
       schedules={schedules ?? []}
+      guarantors={guarantors ?? []}
       settings={settings}
       orgName={organization!.name}
     />

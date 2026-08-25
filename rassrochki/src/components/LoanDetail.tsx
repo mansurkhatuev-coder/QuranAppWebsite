@@ -3,7 +3,12 @@
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
-import type { LoanWithRelations, OrganizationSettings, PaymentSchedule } from "@/types/database";
+import type {
+  LoanGuarantor,
+  LoanWithRelations,
+  OrganizationSettings,
+  PaymentSchedule,
+} from "@/types/database";
 import { fillContractTemplate, generateContractPdf } from "@/lib/contract";
 import {
   PaymentConfirmModal,
@@ -21,11 +26,13 @@ import {
 export function LoanDetail({
   loan,
   schedules,
+  guarantors,
   settings,
   orgName,
 }: {
   loan: LoanWithRelations;
   schedules: PaymentSchedule[];
+  guarantors: LoanGuarantor[];
   settings: OrganizationSettings;
   orgName: string;
 }) {
@@ -151,6 +158,18 @@ export function LoanDetail({
       )
       .join("\n");
 
+    const guarantorsText =
+      guarantors.length === 0
+        ? "—"
+        : guarantors
+            .map(
+              (g, i) =>
+                `${i + 1}. ${g.full_name}${g.phone ? `, тел. ${g.phone}` : ""}${
+                  g.notes ? ` (${g.notes})` : ""
+                }`
+            )
+            .join("\n");
+
     const body = fillContractTemplate(settings.contract_template, {
       organization: orgName,
       client: loan.clients?.full_name ?? "",
@@ -163,6 +182,7 @@ export function LoanDetail({
       manager_share: String(loan.income_share_manager),
       investor_share: String(loan.income_share_investor),
       investor: loan.investors?.name ?? "—",
+      guarantors: guarantorsText,
     });
 
     generateContractPdf(`Договор_${loan.clients?.full_name ?? "client"}`, body);
@@ -230,6 +250,24 @@ export function LoanDetail({
           )}
         </div>
       </div>
+
+      {guarantors.length > 0 && (
+        <div className="card">
+          <h2 className="mb-3 font-semibold">Поручители</h2>
+          <ul className="space-y-2">
+            {guarantors.map((g) => (
+              <li
+                key={g.id}
+                className="rounded-xl border border-[var(--border)] px-3 py-2 text-sm"
+              >
+                <p className="font-medium">{g.full_name}</p>
+                <p className="text-[var(--muted)]">{g.phone ?? "Телефон не указан"}</p>
+                {g.notes && <p className="text-xs text-[var(--muted)]">{g.notes}</p>}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="card">
         <h2 className="mb-3 font-semibold">График платежей</h2>

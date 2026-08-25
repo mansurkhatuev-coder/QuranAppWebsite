@@ -95,9 +95,20 @@ export type Payment = {
   receipt_path: string | null;
 };
 
+export type LoanGuarantor = {
+  id: string;
+  loan_id: string;
+  organization_id: string;
+  full_name: string;
+  phone: string | null;
+  notes: string | null;
+  created_at: string;
+};
+
 export type LoanWithRelations = Loan & {
   clients: Pick<Client, "full_name" | "phone"> | null;
   investors: Pick<Investor, "name"> | null;
+  loan_guarantors?: LoanGuarantor[];
 };
 
 export type ScheduleWithLoan = PaymentSchedule & {

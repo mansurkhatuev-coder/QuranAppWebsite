@@ -31,7 +31,17 @@ MVP веб-приложения для учёта рассрочек: клиен
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
 
-Если проект уже создан и `001`/`002` выполнены — достаточно выполнить **`003_receipts_investor_amount.sql`**.
+Если проект уже создан — выполните недостающие миграции по порядку (`002`, `003`, `004`).
+
+### Бэкапы
+
+1. В приложении: **Настройки → Скачать полный бэкап (JSON)** (раз в неделю)
+2. GitHub Actions: workflow `Rassrochki DB backup` — артефакт раз в неделю (секреты
+   `RASSROCHKI_SUPABASE_URL`, `RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY`)
+3. Опционально: пуш в **отдельный приватный** репозиторий
+   (`RASSROCHKI_BACKUP_REPO`, `RASSROCHKI_BACKUP_TOKEN`)
+
+Не коммитьте данные клиентов в публичный репозиторий сайта.
 
 ### 2. Локально
 

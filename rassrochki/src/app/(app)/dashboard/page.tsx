@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { addDays, format } from "date-fns";
+import { BackupReminder } from "@/components/BackupReminder";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { getSessionProfile, createClient } from "@/lib/supabase/server";
 import { formatDateShort, formatMoney, profitFromPaid, splitIncome } from "@/lib/utils";
@@ -74,6 +75,7 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-4">
+      <BackupReminder />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Главная</h1>

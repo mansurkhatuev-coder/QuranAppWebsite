@@ -6,6 +6,13 @@ import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import type { Investor, Organization, OrganizationSettings } from "@/types/database";
 import { downloadCsv } from "@/lib/utils";
+import {
+  buildFullOrgBackup,
+  daysSinceBackup,
+  downloadJson,
+  markBackupDone,
+  needsBackupReminder,
+} from "@/lib/backup";
 
 type SettingsDraft = {
   orgName: string;
@@ -23,6 +30,19 @@ export default function SettingsPage() {
   const [orgId, setOrgId] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupHint, setBackupHint] = useState<string>("");
+
+  useEffect(() => {
+    const days = daysSinceBackup();
+    if (days === null) {
+      setBackupHint("Полный бэкап ещё не скачивали с этого устройства");
+    } else if (needsBackupReminder()) {
+      setBackupHint(`Последний бэкап ${days} дн. назад — лучше скачать снова`);
+    } else {
+      setBackupHint(`Последний бэкап ${days} дн. назад`);
+    }
+  }, []);
 
   const { value, setValue, status } = useDraft<SettingsDraft>("draft:settings-v2", {
     orgName: "",
@@ -126,6 +146,24 @@ export default function SettingsPage() {
     }
     setInvestors((prev) => [...prev, data]);
     setNewInvestor({ name: "", share_percent: "70" });
+  }
+
+  async function exportFullBackup() {
+    if (!orgId) return;
+    setBackupBusy(true);
+    setMessage(null);
+    try {
+      const data = await buildFullOrgBackup(orgId);
+      const stamp = new Date().toISOString().slice(0, 10);
+      downloadJson(`rassrochki-backup-${stamp}.json`, data);
+      markBackupDone();
+      setBackupHint("Бэкап только что скачан — сохрани файл на компьютер");
+      setMessage("Полный бэкап JSON скачан");
+    } catch (err) {
+      setMessage(err instanceof Error ? err.message : "Ошибка бэкапа");
+    } finally {
+      setBackupBusy(false);
+    }
   }
 
   async function exportAll() {
@@ -238,7 +276,7 @@ export default function SettingsPage() {
           <p className="text-xs text-[var(--muted)]">
             Переменные: {"{organization}"}, {"{client}"}, {"{phone}"}, {"{amount}"}, {"{term_months}"},
             {" {monthly_payment}"}, {"{start_date}"}, {"{schedule}"}, {"{manager_share}"},
-            {" {investor_share}"}, {"{investor}"}
+            {" {investor_share}"}, {"{investor}"}, {"{guarantors}"}
           </p>
           <textarea
             className="input min-h-64 font-mono text-xs"
@@ -283,14 +321,32 @@ export default function SettingsPage() {
         </ul>
       </div>
 
-      <div className="card">
-        <h2 className="mb-2 font-semibold">Экспорт данных</h2>
-        <p className="mb-3 text-sm text-[var(--muted)]">
-          Скачайте CSV как резервную копию на компьютер.
+      <div className="card space-y-3">
+        <h2 className="mb-1 font-semibold">Бэкапы</h2>
+        <p className="text-sm text-[var(--muted)]">{backupHint}</p>
+        <p className="text-sm text-[var(--muted)]">
+          Полный JSON — все клиенты, рассрочки, платежи, поручители. CSV — краткая таблица
+          займов. Раз в неделю скачивай JSON на компьютер.
         </p>
-        <button type="button" className="btn-secondary" onClick={exportAll}>
-          Скачать CSV
-        </button>
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="btn-primary"
+            disabled={backupBusy}
+            onClick={exportFullBackup}
+          >
+            {backupBusy ? "Готовим…" : "Скачать полный бэкап (JSON)"}
+          </button>
+          <button type="button" className="btn-secondary" onClick={exportAll}>
+            Скачать CSV
+          </button>
+        </div>
+        <p className="text-xs text-[var(--muted)]">
+          Автобэкап в GitHub: Actions → «Rassrochki DB backup» (артефакты, не в публичные файлы
+          сайта). Нужны секреты RASSROCHKI_SUPABASE_URL и RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY.
+          Для постоянного хранения — отдельный <strong>приватный</strong> репозиторий
+          (секреты RASSROCHKI_BACKUP_REPO + RASSROCHKI_BACKUP_TOKEN).
+        </p>
       </div>
     </div>
   );

@@ -1,0 +1,86 @@
+# Weekly + manual full database backup for Рассрочки
+# Saves as a GitHub Actions artifact (NOT committed to the public website tree).
+#
+# Secrets required:
+#   RASSROCHKI_SUPABASE_URL
+#   RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY
+#
+# Optional private repo push:
+#   RASSROCHKI_BACKUP_REPO   e.g. mansurkhatuev-coder/rassrochki-backups (private)
+#   RASSROCHKI_BACKUP_TOKEN  PAT with contents:write on that private repo
+
+name: Rassrochki DB backup
+
+on:
+  schedule:
+    - cron: "0 3 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check secrets
+        env:
+          URL: ${{ secrets.RASSROCHKI_SUPABASE_URL }}
+          KEY: ${{ secrets.RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [ -z "$URL" ] || [ -z "$KEY" ]; then
+            echo "Add secrets RASSROCHKI_SUPABASE_URL and RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
+
+      - name: Export tables to JSON
+        env:
+          SUPABASE_URL: ${{ secrets.RASSROCHKI_SUPABASE_URL }}
+          SERVICE_KEY: ${{ secrets.RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p backup-out
+          STAMP=$(date -u +%Y-%m-%dT%H-%MZ)
+          echo "{\"exported_at\":\"$(date -u +%Y-%m-%dT%H:%M:%SZ)\",\"version\":1}" > backup-out/meta.json
+
+          for table in organizations profiles organization_settings clients investors loans payment_schedules payments loan_guarantors; do
+            echo "Export $table"
+            curl -fsS \
+              -H "apikey: ${SERVICE_KEY}" \
+              -H "Authorization: Bearer ${SERVICE_KEY}" \
+              -H "Accept: application/json" \
+              "${SUPABASE_URL}/rest/v1/${table}?select=*" \
+              -o "backup-out/${table}.json"
+          done
+
+          tar -czf "rassrochki-backup-${STAMP}.tar.gz" -C backup-out .
+          echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "ARCHIVE=rassrochki-backup-${STAMP}.tar.gz" >> "$GITHUB_ENV"
+
+      - name: Upload artifact (kept ~90 days)
+        uses: actions/upload-artifact@v4
+        with:
+          name: rassrochki-backup-${{ env.STAMP }}
+          path: ${{ env.ARCHIVE }}
+          retention-days: 90
+
+      - name: Push to private backup repo (optional)
+        env:
+          BACKUP_REPO: ${{ secrets.RASSROCHKI_BACKUP_REPO }}
+          BACKUP_TOKEN: ${{ secrets.RASSROCHKI_BACKUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_REPO:-}" ] || [ -z "${BACKUP_TOKEN:-}" ]; then
+            echo "Skip private repo push (secrets RASSROCHKI_BACKUP_REPO / RASSROCHKI_BACKUP_TOKEN not set)"
+            exit 0
+          fi
+          git clone --depth 1 "https://x-access-token:${BACKUP_TOKEN}@github.com/${BACKUP_REPO}.git" backup-repo
+          mkdir -p backup-repo/backups
+          cp "${ARCHIVE}" backup-repo/backups/
+          cd backup-repo
+          git config user.name "rassrochki-backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          git add "backups/${ARCHIVE}"
+          git commit -m "backup: ${STAMP}" || echo "No changes"
+          git push

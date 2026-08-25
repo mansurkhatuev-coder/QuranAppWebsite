@@ -48,6 +48,9 @@ export default function NewLoanPage() {
   const [showNewInvestor, setShowNewInvestor] = useState(false);
   const [newInvestor, setNewInvestor] = useState({ name: "", share_percent: "70" });
   const [savingInvestor, setSavingInvestor] = useState(false);
+  const [guarantors, setGuarantors] = useState<
+    { full_name: string; phone: string; notes: string }[]
+  >([]);
 
   const initial: LoanDraft = {
     client_id: "",
@@ -296,6 +299,26 @@ export default function NewLoanPage() {
     if (scheduleError) {
       setError(scheduleError.message);
       return;
+    }
+
+    const guarantorRows = guarantors
+      .filter((g) => g.full_name.trim())
+      .map((g) => ({
+        loan_id: loan.id,
+        organization_id: profile.organization_id,
+        full_name: g.full_name.trim(),
+        phone: g.phone.trim() || null,
+        notes: g.notes.trim() || null,
+      }));
+
+    if (guarantorRows.length > 0) {
+      const { error: guarantorError } = await supabase
+        .from("loan_guarantors")
+        .insert(guarantorRows);
+      if (guarantorError) {
+        setError(guarantorError.message);
+        return;
+      }
     }
 
     clearDraft();
@@ -689,6 +712,80 @@ export default function NewLoanPage() {
               )}
             </>
           )}
+
+          <div className="space-y-3 border-t border-[var(--border)] pt-4">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <h3 className="font-semibold">Поручители</h3>
+                <p className="text-xs text-[var(--muted)]">Можно несколько или ни одного</p>
+              </div>
+              <button
+                type="button"
+                className="btn-secondary text-xs"
+                onClick={() =>
+                  setGuarantors((prev) => [...prev, { full_name: "", phone: "", notes: "" }])
+                }
+              >
+                + Поручитель
+              </button>
+            </div>
+            {guarantors.length === 0 && (
+              <p className="text-sm text-[var(--muted)]">Поручителей пока нет</p>
+            )}
+            {guarantors.map((g, index) => (
+              <div
+                key={index}
+                className="space-y-2 rounded-xl border border-[var(--border)] bg-slate-50/80 p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <p className="text-sm font-medium">Поручитель {index + 1}</p>
+                  <button
+                    type="button"
+                    className="text-xs text-red-600"
+                    onClick={() => setGuarantors((prev) => prev.filter((_, i) => i !== index))}
+                  >
+                    Удалить
+                  </button>
+                </div>
+                <input
+                  className="input"
+                  placeholder="ФИО"
+                  value={g.full_name}
+                  onChange={(e) =>
+                    setGuarantors((prev) =>
+                      prev.map((row, i) =>
+                        i === index ? { ...row, full_name: e.target.value } : row
+                      )
+                    )
+                  }
+                />
+                <input
+                  className="input"
+                  placeholder="Телефон"
+                  value={g.phone}
+                  onChange={(e) =>
+                    setGuarantors((prev) =>
+                      prev.map((row, i) =>
+                        i === index ? { ...row, phone: e.target.value } : row
+                      )
+                    )
+                  }
+                />
+                <input
+                  className="input"
+                  placeholder="Заметка (необяз.)"
+                  value={g.notes}
+                  onChange={(e) =>
+                    setGuarantors((prev) =>
+                      prev.map((row, i) =>
+                        i === index ? { ...row, notes: e.target.value } : row
+                      )
+                    )
+                  }
+                />
+              </div>
+            ))}
+          </div>
 
           <div>
             <label className="label">Заметки</label>
