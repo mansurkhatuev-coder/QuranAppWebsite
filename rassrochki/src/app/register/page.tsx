@@ -59,7 +59,9 @@ export default function RegisterPage() {
       <form onSubmit={onSubmit} className="card w-full max-w-md space-y-4">
         <div>
           <h1 className="text-2xl font-bold">Регистрация</h1>
-          <p className="text-sm text-[var(--muted)]">Создайте организацию и начните учёт</p>
+          <p className="text-sm text-[var(--muted)]">
+            30 дней бесплатно — создайте организацию и начните учёт
+          </p>
         </div>
         {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div>
