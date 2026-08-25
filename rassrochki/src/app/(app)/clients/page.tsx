@@ -6,7 +6,7 @@ import { createClient, getSessionProfile } from "@/lib/supabase/server";
 export default async function ClientsPage() {
   const { organization } = await getSessionProfile();
   const supabase = await createClient();
-  const { data: clients } = await supabase
+  const { data: clients, error } = await supabase
     .from("clients")
     .select("*")
     .eq("organization_id", organization!.id)
@@ -24,11 +24,17 @@ export default async function ClientsPage() {
         </Link>
       </div>
 
-      {(clients ?? []).length === 0 ? (
-        <EmptyState title="Клиентов пока нет" description="Добавьте первого клиента." />
-      ) : (
-        <ClientsTable clients={clients ?? []} />
+      {error && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Не удалось загрузить клиентов. Обновите страницу.
+        </div>
       )}
+
+      {!error && (clients ?? []).length === 0 ? (
+        <EmptyState title="Клиентов пока нет" description="Добавьте первого клиента." />
+      ) : !error ? (
+        <ClientsTable clients={clients ?? []} />
+      ) : null}
     </div>
   );
 }

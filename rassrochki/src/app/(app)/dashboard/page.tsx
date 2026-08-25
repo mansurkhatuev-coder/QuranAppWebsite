@@ -117,10 +117,13 @@ function normalizeLoanRow(loan: Record<string, unknown>): LoanFinanceInput & {
 }
 
 export default async function DashboardPage() {
-  const { organization } = await getSessionProfile();
+  const { organization, settings } = await getSessionProfile();
   const supabase = await createClient();
   const orgId = organization!.id;
   const today = format(new Date(), "yyyy-MM-dd");
+  const overdueGrace = Math.max(0, Number(settings?.overdue_days ?? 0));
+  // pending → overdue, если дата платежа раньше (сегодня − дней из настроек)
+  const overdueCutoff = format(addDays(new Date(), -overdueGrace), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEndDate = format(endOfMonth(new Date()), "yyyy-MM-dd");
   const next30 = format(addDays(new Date(), 30), "yyyy-MM-dd");
@@ -130,7 +133,7 @@ export default async function DashboardPage() {
     .update({ status: "overdue" })
     .eq("organization_id", orgId)
     .eq("status", "pending")
-    .lt("due_date", today);
+    .lt("due_date", overdueCutoff);
 
   const [
     dueSoonRes,
@@ -197,11 +200,17 @@ export default async function DashboardPage() {
 
   const paidByLoan = new Map<string, number>();
   for (const s of schedules) {
-    if (s.status !== "paid") continue;
-    paidByLoan.set(
-      s.loan_id,
-      (paidByLoan.get(s.loan_id) ?? 0) + Number(s.paid_amount ?? s.amount)
-    );
+    if (s.status === "paid") {
+      paidByLoan.set(
+        s.loan_id,
+        (paidByLoan.get(s.loan_id) ?? 0) + Number(s.paid_amount ?? s.amount)
+      );
+    } else if (s.paid_amount != null && Number(s.paid_amount) > 0) {
+      paidByLoan.set(
+        s.loan_id,
+        (paidByLoan.get(s.loan_id) ?? 0) + Number(s.paid_amount)
+      );
+    }
   }
 
   // active = не закрыта (на случай старых/пустых статусов)
@@ -213,6 +222,7 @@ export default async function DashboardPage() {
   let expectedInvestorCapital = 0;
   let remainingOwner = 0;
   let remainingInvestor = 0;
+  let remainingInvestorProfitOnly = 0;
   let portfolioProfit = 0;
 
   for (const loan of activeLoans) {
@@ -222,6 +232,7 @@ export default async function DashboardPage() {
     expectedInvestorCapital += proj.investorCapital;
     remainingOwner += proj.ownerStillToReceive;
     remainingInvestor += proj.investorStillToReceive;
+    remainingInvestorProfitOnly += proj.remainingInvestorProfit;
     portfolioProfit += proj.profit;
   }
 
@@ -271,16 +282,20 @@ export default async function DashboardPage() {
           {formatMoney(portfolioProfit)}
         </p>
         <p className="mt-2 break-words text-sm leading-relaxed text-teal-50">
-          Ещё получить: вам {formatMoney(remainingOwner)}
-          {expectedInvestorProfit > 0 || expectedInvestorCapital > 0
-            ? ` · инвесторам ${formatMoney(remainingInvestor)}`
+          Ещё прибыль: вам {formatMoney(remainingOwner)}
+          {expectedInvestorProfit > 0
+            ? ` · инвесторам ${formatMoney(remainingInvestorProfitOnly)}`
+            : ""}
+          {expectedInvestorCapital > 0
+            ? ` · вернуть капитал инвесторам ${formatMoney(remainingInvestor - remainingInvestorProfitOnly)}`
             : ""}
         </p>
         <div className="mt-4 rounded-xl bg-black/15 p-3">
           <ShareBar
             owner={remainingOwner}
-            investor={remainingInvestor}
-            labelInvestor="Инвесторам ещё"
+            investor={remainingInvestorProfitOnly}
+            labelOwner="Ваша прибыль ещё"
+            labelInvestor="Их прибыль ещё"
             variant="dark"
           />
         </div>

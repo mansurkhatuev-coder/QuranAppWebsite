@@ -35,6 +35,13 @@ export function PaymentConfirmModal({
       setError("Укажите дату и сумму оплаты");
       return;
     }
+    const expected = Number(schedule.amount);
+    if (num + 0.009 < expected) {
+      const ok = window.confirm(
+        `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Платёж останется открытым.`
+      );
+      if (!ok) return;
+    }
     setLoading(true);
     setError(null);
     try {
@@ -46,7 +53,14 @@ export function PaymentConfirmModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      role="presentation"
+    >
       <form
         onSubmit={submit}
         className="card w-full max-w-md space-y-4 shadow-xl"

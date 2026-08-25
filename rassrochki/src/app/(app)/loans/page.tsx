@@ -6,7 +6,7 @@ import { formatDateShort, formatMoney } from "@/lib/utils";
 export default async function LoansPage() {
   const { organization } = await getSessionProfile();
   const supabase = await createClient();
-  const { data: loans } = await supabase
+  const { data: loans, error } = await supabase
     .from("loans")
     .select("*, clients(full_name), investors(name)")
     .eq("organization_id", organization!.id)
@@ -24,9 +24,15 @@ export default async function LoansPage() {
         </Link>
       </div>
 
-      {(loans ?? []).length === 0 ? (
+      {error && (
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Не удалось загрузить рассрочки. Обновите страницу.
+        </div>
+      )}
+
+      {!error && (loans ?? []).length === 0 ? (
         <EmptyState title="Рассрочек пока нет" description="Создайте первую рассрочку." />
-      ) : (
+      ) : !error ? (
         <>
           <div className="hidden md:block card overflow-x-auto p-0">
             <table className="min-w-full text-sm">
@@ -71,7 +77,7 @@ export default async function LoansPage() {
                   <div>
                     <p className="font-semibold">{loan.clients?.full_name}</p>
                     <p className="text-sm text-[var(--muted)]">
-                      {formatMoney(Number(loan.monthly_payment))} / мес
+                      {formatMoney(Number(loan.principal))} · {formatMoney(Number(loan.monthly_payment))} / мес
                     </p>
                     <p className="text-xs text-[var(--muted)]">
                       с {formatDateShort(loan.start_date)}
@@ -83,7 +89,7 @@ export default async function LoansPage() {
             ))}
           </div>
         </>
-      )}
+      ) : null}
     </div>
   );
 }
