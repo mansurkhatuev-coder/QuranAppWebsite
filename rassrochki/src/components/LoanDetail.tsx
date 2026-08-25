@@ -25,6 +25,11 @@ import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
+import {
+  allocatePaymentToSchedules,
+  scheduleDueRemaining,
+  sumSchedulePaid,
+} from "@/lib/schedule-payments";
 
 export function LoanDetail({
   loan,
@@ -42,15 +47,12 @@ export function LoanDetail({
   const router = useRouter();
   const [pendingSchedule, setPendingSchedule] = useState<PaymentSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [openingReceipt, setOpeningReceipt] = useState<string | null>(null);
 
   const downPayment = Number(loan.down_payment ?? 0);
   const financed = calcFinancedAmount(Number(loan.principal), downPayment);
-  const paidTotal = schedules.reduce((sum, s) => {
-    if (s.status === "paid") return sum + Number(s.paid_amount ?? s.amount);
-    if (s.paid_amount != null && Number(s.paid_amount) > 0) return sum + Number(s.paid_amount);
-    return sum;
-  }, 0);
+  const paidTotal = sumSchedulePaid(schedules);
   const remaining = financed - paidTotal;
   const projection = projectedRemaining(loan, paidTotal);
   const shares = resolveProfitShares(loan);
@@ -73,6 +75,7 @@ export function LoanDetail({
     if (!pendingSchedule) return;
     const schedule = pendingSchedule;
     setError(null);
+    setInfo(null);
     const supabase = createClient();
     const paidAtIso = new Date(`${values.paid_at}T12:00:00`).toISOString();
     const amount = Number(values.amount);
@@ -112,42 +115,45 @@ export function LoanDetail({
 
     if (paymentError) throw new Error("Не удалось сохранить оплату");
 
-    const expected = Number(schedule.amount);
-    const fullyCovered = amount + 0.009 >= expected;
-    const nextStatus = fullyCovered
-      ? "paid"
-      : schedule.status === "overdue"
-        ? "overdue"
-        : "pending";
+    const { updates, surplus } = allocatePaymentToSchedules(
+      schedules,
+      schedule.id,
+      amount,
+      paidAtIso,
+      receiptPath
+    );
 
-    const { error: scheduleError } = await supabase
-      .from("payment_schedules")
-      .update({
-        status: nextStatus,
-        paid_at: paidAtIso,
-        paid_amount: amount,
-        receipt_path: receiptPath,
-      })
-      .eq("id", schedule.id);
+    if (updates.length === 0) {
+      throw new Error("Не удалось распределить оплату по графику");
+    }
 
-    if (scheduleError) throw new Error("Не удалось сохранить оплату");
+    for (const row of updates) {
+      const { error: scheduleError } = await supabase
+        .from("payment_schedules")
+        .update({
+          status: row.status,
+          paid_at: row.paid_at,
+          paid_amount: row.paid_amount,
+          receipt_path: row.receipt_path,
+        })
+        .eq("id", row.id);
 
-    if (fullyCovered) {
-      const paidTotalAfter =
-        schedules
-          .filter((s) => s.id !== schedule.id && s.status === "paid")
-          .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0) + amount;
+      if (scheduleError) throw new Error("Не удалось сохранить оплату");
+    }
 
-      const allRowsPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
-      if (allRowsPaid && paidTotalAfter + 0.009 >= financed) {
-        const { error: closeError } = await supabase
-          .from("loans")
-          .update({ status: "closed" })
-          .eq("id", loan.id);
-        if (closeError) {
-          setError("Оплата сохранена, но не удалось закрыть рассрочку — обновите страницу");
-        }
+    const paidTotalAfter = paidTotal + amount;
+    if (paidTotalAfter + 0.009 >= financed) {
+      const { error: closeError } = await supabase
+        .from("loans")
+        .update({ status: "closed" })
+        .eq("id", loan.id);
+      if (closeError) {
+        setError("Оплата сохранена, но не удалось закрыть рассрочку — обновите страницу");
       }
+    } else if (surplus > 0.009) {
+      setInfo(`Зачислено с переплатой: ${formatMoney(surplus)} сверх суммы по графику`);
+    } else if (updates.length > 1) {
+      setInfo("Переплата зачтена на следующие платежи по графику");
     }
 
     setPendingSchedule(null);
@@ -256,6 +262,9 @@ export function LoanDetail({
       </div>
 
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {info && !error && (
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{info}</p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
@@ -371,7 +380,11 @@ export function LoanDetail({
       <div className="card">
         <h2 className="mb-3 font-semibold">График платежей</h2>
         <div className="space-y-2">
-          {schedules.map((schedule) => (
+          {schedules.map((schedule) => {
+            const dueLeft = scheduleDueRemaining(schedule);
+            const paid = Number(schedule.paid_amount ?? 0);
+            const expected = Number(schedule.amount);
+            return (
             <div
               key={schedule.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3"
@@ -384,16 +397,22 @@ export function LoanDetail({
                     ? ` · оплачен ${formatDateShort(schedule.paid_at.slice(0, 10))}`
                     : ""}
                 </p>
-                {schedule.status === "paid" && schedule.paid_amount != null && (
-                  <p className="text-sm font-medium">
-                    получено {formatMoney(Number(schedule.paid_amount))}
+                {schedule.status === "paid" && paid > 0 && (
+                  <p className="text-sm font-medium text-teal-800">
+                    получено {formatMoney(paid)}
+                    {paid > expected + 0.009 ? ` · переплата ${formatMoney(paid - expected)}` : ""}
+                  </p>
+                )}
+                {schedule.status !== "paid" && paid > 0 && (
+                  <p className="text-sm font-medium text-amber-800">
+                    внесено {formatMoney(paid)} · осталось {formatMoney(dueLeft)}
                   </p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">{formatMoney(Number(schedule.amount))}</span>
+                <span className="font-semibold">{formatMoney(expected)}</span>
                 <StatusBadge status={schedule.status} />
-                {schedule.status === "paid" && schedule.receipt_path && (
+                {schedule.receipt_path && (
                   <button
                     type="button"
                     className="btn-secondary text-xs"
@@ -414,7 +433,8 @@ export function LoanDetail({
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

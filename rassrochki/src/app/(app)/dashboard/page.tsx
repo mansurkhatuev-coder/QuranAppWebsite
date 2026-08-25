@@ -12,6 +12,7 @@ import {
   resolveProfitShares,
   type LoanFinanceInput,
 } from "@/lib/finance";
+import { sumSchedulePaid } from "@/lib/schedule-payments";
 
 function ShareBar({
   owner,
@@ -199,18 +200,14 @@ export default async function DashboardPage() {
   const monthPayments = monthPaymentsRes.data ?? [];
 
   const paidByLoan = new Map<string, number>();
+  const schedulesByLoan = new Map<string, typeof schedules>();
   for (const s of schedules) {
-    if (s.status === "paid") {
-      paidByLoan.set(
-        s.loan_id,
-        (paidByLoan.get(s.loan_id) ?? 0) + Number(s.paid_amount ?? s.amount)
-      );
-    } else if (s.paid_amount != null && Number(s.paid_amount) > 0) {
-      paidByLoan.set(
-        s.loan_id,
-        (paidByLoan.get(s.loan_id) ?? 0) + Number(s.paid_amount)
-      );
-    }
+    const list = schedulesByLoan.get(s.loan_id) ?? [];
+    list.push(s);
+    schedulesByLoan.set(s.loan_id, list);
+  }
+  for (const [loanId, rows] of schedulesByLoan) {
+    paidByLoan.set(loanId, sumSchedulePaid(rows));
   }
 
   // active = не закрыта (на случай старых/пустых статусов)
