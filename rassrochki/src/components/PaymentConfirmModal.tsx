@@ -38,7 +38,12 @@ export function PaymentConfirmModal({
     const expected = Number(schedule.amount);
     if (num + 0.009 < expected) {
       const ok = window.confirm(
-        `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Платёж останется открытым.`
+        `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Остаток останется по этому платежу.`
+      );
+      if (!ok) return;
+    } else if (num > expected + 0.009) {
+      const ok = window.confirm(
+        `Сумма больше платежа по графику (${formatMoney(expected)}). Лишнее автоматически зачтётся на следующие платежи. Продолжить?`
       );
       if (!ok) return;
     }
