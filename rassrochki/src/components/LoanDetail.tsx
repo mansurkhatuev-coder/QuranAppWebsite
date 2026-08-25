@@ -24,6 +24,7 @@ import {
 import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
+import { friendlyError, statusLabelRu } from "@/lib/friendly";
 
 export function LoanDetail({
   loan,
@@ -82,7 +83,7 @@ export function LoanDetail({
       const { error: uploadError } = await supabase.storage
         .from("payment-receipts")
         .upload(receiptPath, values.file, { upsert: false, contentType: values.file.type });
-      if (uploadError) throw new Error(uploadError.message);
+      if (uploadError) throw new Error("Не удалось загрузить чек");
     }
 
     const { error: paymentError } = await supabase.from("payments").insert({
@@ -96,7 +97,7 @@ export function LoanDetail({
       receipt_path: receiptPath,
     });
 
-    if (paymentError) throw new Error(paymentError.message);
+    if (paymentError) throw new Error("Не удалось сохранить оплату");
 
     const { error: scheduleError } = await supabase
       .from("payment_schedules")
@@ -108,7 +109,7 @@ export function LoanDetail({
       })
       .eq("id", schedule.id);
 
-    if (scheduleError) throw new Error(scheduleError.message);
+    if (scheduleError) throw new Error("Не удалось сохранить оплату");
 
     const allPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
     if (allPaid) {
@@ -128,7 +129,7 @@ export function LoanDetail({
       .createSignedUrl(path, 60 * 10);
     setOpeningReceipt(null);
     if (signError || !data?.signedUrl) {
-      setError(signError?.message ?? "Не удалось открыть чек");
+      setError(friendlyError("Не удалось открыть чек", signError));
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
@@ -142,7 +143,7 @@ export function LoanDetail({
         loan.title ?? "",
         formatDateShort(s.due_date),
         String(s.amount),
-        s.status,
+        statusLabelRu(s.status),
         s.paid_amount != null ? String(s.paid_amount) : "",
         s.receipt_path ? "да" : "",
       ]),
@@ -212,10 +213,10 @@ export function LoanDetail({
             />
           ) : null}
           <button type="button" className="btn-secondary" onClick={exportSchedule}>
-            Экспорт CSV
+            Скачать график
           </button>
           <button type="button" className="btn-primary" onClick={printContract}>
-            Договор PDF
+            Скачать договор
           </button>
         </div>
       </div>

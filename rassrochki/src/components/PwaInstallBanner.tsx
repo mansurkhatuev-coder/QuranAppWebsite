@@ -60,7 +60,7 @@ export function PwaInstallBanner() {
           <p className="font-semibold">Установить «Рассрочки»</p>
           <p className="mt-0.5 text-xs text-teal-800/90">
             {isIos
-              ? "В Safari: Поделиться → На экран «Домой»"
+              ? "На iPhone: «Поделиться» → «На экран Домой»"
               : "Добавьте на экран телефона — как обычное приложение"}
           </p>
         </div>

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/friendly";
 
 export default function OnboardingPage() {
   const router = useRouter();
@@ -22,7 +23,7 @@ export default function OnboardingPage() {
     });
     setLoading(false);
     if (orgError) {
-      setError(orgError.message);
+      setError(friendlyError("Не удалось создать организацию. Попробуйте ещё раз", orgError));
       return;
     }
     router.push("/dashboard");
@@ -34,7 +35,7 @@ export default function OnboardingPage() {
       <form onSubmit={onSubmit} className="card w-full max-w-md space-y-4">
         <h1 className="text-2xl font-bold">Создайте организацию</h1>
         <p className="text-sm text-[var(--muted)]">
-          Аккаунт есть, но организация ещё не привязана.
+          Аккаунт есть — укажите название вашей организации.
         </p>
         {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
         <div>

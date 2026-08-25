@@ -62,7 +62,7 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
                   <div className="flex flex-wrap items-center gap-2">
                     <span>{client.phone ?? "—"}</span>
                     {client.phone ? (
-                      <WhatsAppButton phone={client.phone} label="WA" />
+                      <WhatsAppButton phone={client.phone} label="WhatsApp" />
                     ) : null}
                   </div>
                 </td>

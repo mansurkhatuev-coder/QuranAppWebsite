@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/friendly";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export default function LoginPage() {
     });
     setLoading(false);
     if (authError) {
-      setError(authError.message);
+      setError(friendlyError("Не удалось войти. Проверьте email и пароль", authError));
       return;
     }
     router.push("/dashboard");

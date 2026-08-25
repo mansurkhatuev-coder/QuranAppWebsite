@@ -250,9 +250,8 @@ export default async function DashboardPage() {
       <BackupReminder />
 
       {queryError && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 break-words">
-          Не все данные загрузились: {queryError}. Если недавно добавляли функции — выполните
-          миграции SQL в Supabase (002–005).
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Не удалось загрузить часть данных. Обновите страницу или зайдите позже.
         </div>
       )}
 
@@ -294,14 +293,14 @@ export default async function DashboardPage() {
           hint={
             closedCount > 0
               ? `всего ${loans.length}, закрыто ${closedCount}`
-              : `всего в базе: ${loans.length}`
+              : `всего: ${loans.length}`
           }
           tone="accent"
         />
         <StatCard
           label="Просрочено"
           value={String(overdue.length)}
-          hint={overdueAmount > 0 ? formatMoney(overdueAmount) : "сумм нет"}
+          hint={overdueAmount > 0 ? formatMoney(overdueAmount) : "нет сумм"}
           tone={overdue.length > 0 ? "danger" : "default"}
         />
         <StatCard
@@ -313,7 +312,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Касса в этом месяце"
           value={formatMoney(cashThisMonth)}
-          hint="фактические оплаты"
+          hint="получено за месяц"
         />
       </div>
 
@@ -388,7 +387,7 @@ export default async function DashboardPage() {
                     {phone ? (
                       <WhatsAppButton
                         phone={phone}
-                        label="WA"
+                        label="Написать"
                         text={defaultPaymentReminderText({
                           clientName,
                           productName: loan?.title,
@@ -440,7 +439,7 @@ export default async function DashboardPage() {
                     {phone ? (
                       <WhatsAppButton
                         phone={phone}
-                        label="WA"
+                        label="Написать"
                         text={defaultPaymentReminderText({
                           clientName,
                           productName: loan?.title,
