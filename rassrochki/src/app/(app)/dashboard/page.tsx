@@ -2,7 +2,7 @@ import Link from "next/link";
 import { addDays, format } from "date-fns";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { getSessionProfile, createClient } from "@/lib/supabase/server";
-import { formatDateShort, formatMoney, splitIncome } from "@/lib/utils";
+import { formatDateShort, formatMoney, profitFromPaid, splitIncome } from "@/lib/utils";
 
 export default async function DashboardPage() {
   const { organization, settings } = await getSessionProfile();
@@ -37,12 +37,33 @@ export default async function DashboardPage() {
       supabase.from("loans").select("id, status").eq("organization_id", orgId),
       supabase
         .from("payments")
-        .select("amount, paid_at")
+        .select("amount, paid_at, loans(markup_percent, cost_amount, principal)")
         .eq("organization_id", orgId)
         .gte("paid_at", format(addDays(new Date(), -30), "yyyy-MM-dd'T00:00:00")),
     ]);
 
-  const income30d = (recentPayments ?? []).reduce((sum, p) => sum + Number(p.amount), 0);
+  const income30d = (recentPayments ?? []).reduce((sum, p) => {
+    const raw = p.loans as
+      | {
+          markup_percent: number | null;
+          cost_amount: number | null;
+          principal: number | null;
+        }
+      | {
+          markup_percent: number | null;
+          cost_amount: number | null;
+          principal: number | null;
+        }[]
+      | null;
+    const loan = Array.isArray(raw) ? raw[0] : raw;
+    const profit = profitFromPaid(
+      Number(p.amount),
+      Number(loan?.markup_percent ?? settings?.default_markup_percent ?? 30),
+      loan?.cost_amount,
+      loan?.principal
+    );
+    return sum + profit;
+  }, 0);
   const split = splitIncome(
     income30d,
     Number(settings?.income_share_manager ?? 30),
@@ -73,11 +94,11 @@ export default async function DashboardPage() {
           <p className="mt-1 text-2xl font-bold text-red-600">{(overdue ?? []).length}</p>
         </div>
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">Доход за 30 дней</p>
+          <p className="text-sm text-[var(--muted)]">Прибыль за 30 дней</p>
           <p className="mt-1 text-2xl font-bold">{formatMoney(income30d)}</p>
         </div>
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">30% / 70% (30 дней)</p>
+          <p className="text-sm text-[var(--muted)]">Прибыль: вы / инвестор</p>
           <p className="mt-1 text-sm font-semibold">
             {formatMoney(split.manager)} / {formatMoney(split.investor)}
           </p>

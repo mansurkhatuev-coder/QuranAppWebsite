@@ -15,6 +15,7 @@ export type Organization = {
 export type OrganizationSettings = {
   organization_id: string;
   default_term_months: number;
+  default_markup_percent: number;
   income_share_manager: number;
   income_share_investor: number;
   overdue_days: number;
@@ -38,6 +39,8 @@ export type Client = {
   full_name: string;
   phone: string | null;
   notes: string | null;
+  is_blacklisted: boolean;
+  blacklist_note: string | null;
   created_at: string;
 };
 
@@ -47,11 +50,18 @@ export type Loan = {
   client_id: string;
   investor_id: string | null;
   title: string | null;
+  /** Цена товара без наценки */
+  cost_amount: number | null;
+  /** Наценка % сверху */
+  markup_percent: number;
+  /** Сумма к возврату клиентом (= cost + наценка) */
   principal: number;
   term_months: number;
   start_date: string;
   monthly_payment: number;
+  /** Доля владельца в прибыли */
   income_share_manager: number;
+  /** Доля инвестора в прибыли */
   income_share_investor: number;
   status: "active" | "closed";
   notes: string | null;

@@ -49,6 +49,7 @@ export default function NewClientPage() {
       phone: value.phone.trim() || null,
       notes: value.notes.trim() || null,
       organization_id: profile.organization_id,
+      is_blacklisted: false,
     });
 
     setLoading(false);

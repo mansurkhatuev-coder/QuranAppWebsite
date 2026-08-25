@@ -10,6 +10,7 @@ import { downloadCsv } from "@/lib/utils";
 type SettingsDraft = {
   orgName: string;
   default_term_months: string;
+  default_markup_percent: string;
   income_share_manager: string;
   income_share_investor: string;
   overdue_days: string;
@@ -23,9 +24,10 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
-  const { value, setValue, status } = useDraft<SettingsDraft>("draft:settings", {
+  const { value, setValue, status } = useDraft<SettingsDraft>("draft:settings-v2", {
     orgName: "",
     default_term_months: "12",
+    default_markup_percent: "30",
     income_share_manager: "30",
     income_share_investor: "70",
     overdue_days: "3",
@@ -61,6 +63,7 @@ export default function SettingsPage() {
         setValue({
           orgName: org.name,
           default_term_months: String(settings.default_term_months),
+          default_markup_percent: String(settings.default_markup_percent ?? 30),
           income_share_manager: String(settings.income_share_manager),
           income_share_investor: String(settings.income_share_investor),
           overdue_days: String(settings.overdue_days),
@@ -86,6 +89,7 @@ export default function SettingsPage() {
         .from("organization_settings")
         .update({
           default_term_months: Number(value.default_term_months),
+          default_markup_percent: Number(value.default_markup_percent),
           income_share_manager: Number(value.income_share_manager),
           income_share_investor: Number(value.income_share_investor),
           overdue_days: Number(value.overdue_days),
@@ -181,19 +185,29 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="label">Просрочка через, дней</label>
+              <label className="label">Наценка по умолчанию, %</label>
               <input
                 className="input"
                 type="number"
                 min="0"
-                value={value.overdue_days}
-                onChange={(e) => setValue({ ...value, overdue_days: e.target.value })}
+                value={value.default_markup_percent}
+                onChange={(e) => setValue({ ...value, default_markup_percent: e.target.value })}
               />
             </div>
           </div>
+          <div>
+            <label className="label">Просрочка через, дней</label>
+            <input
+              className="input"
+              type="number"
+              min="0"
+              value={value.overdue_days}
+              onChange={(e) => setValue({ ...value, overdue_days: e.target.value })}
+            />
+          </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
-              <label className="label">Доля менеджера, %</label>
+              <label className="label">Доля владельца в прибыли, %</label>
               <input
                 className="input"
                 type="number"
@@ -202,7 +216,7 @@ export default function SettingsPage() {
               />
             </div>
             <div>
-              <label className="label">Доля инвестора, %</label>
+              <label className="label">Доля инвестора в прибыли, %</label>
               <input
                 className="input"
                 type="number"
@@ -211,6 +225,9 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+          <p className="text-xs text-[var(--muted)]">
+            Наценка — прибыль с товара. Доли 30/70 делят именно прибыль между вами и инвестором.
+          </p>
           <button className="btn-primary" type="submit" disabled={loading}>
             {loading ? "Сохраняем…" : "Сохранить настройки"}
           </button>

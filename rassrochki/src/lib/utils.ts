@@ -21,6 +21,35 @@ export function calcMonthlyPayment(principal: number, termMonths: number) {
   return Math.round((principal / termMonths) * 100) / 100;
 }
 
+/** Сумма к возврату: цена товара + наценка % */
+export function calcTotalWithMarkup(costAmount: number, markupPercent: number) {
+  return Math.round(costAmount * (1 + markupPercent / 100) * 100) / 100;
+}
+
+export function calcProfit(costAmount: number, markupPercent: number) {
+  return Math.round(costAmount * (markupPercent / 100) * 100) / 100;
+}
+
+/**
+ * Прибыль в уже оплаченной сумме.
+ * Пример: товар 10000 + 30% → к возврату 13000; из 1300 оплаты прибыль ≈ 300.
+ */
+export function profitFromPaid(
+  paidAmount: number,
+  markupPercent: number,
+  costAmount?: number | null,
+  principal?: number | null
+) {
+  if (costAmount != null && principal != null && principal > 0) {
+    const profit = Math.max(Number(principal) - Number(costAmount), 0);
+    return Math.round(((paidAmount * profit) / Number(principal)) * 100) / 100;
+  }
+  if (!markupPercent || markupPercent <= 0) return 0;
+  return Math.round(((paidAmount * markupPercent) / (100 + markupPercent)) * 100) / 100;
+}
+
+export const MARKUP_PRESETS = [20, 25, 30, 35, 40, 50] as const;
+
 export function buildSchedule(
   principal: number,
   termMonths: number,

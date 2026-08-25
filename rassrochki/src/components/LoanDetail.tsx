@@ -10,6 +10,7 @@ import {
   downloadCsv,
   formatDateShort,
   formatMoney,
+  profitFromPaid,
   splitIncome,
 } from "@/lib/utils";
 
@@ -32,11 +33,27 @@ export function LoanDetail({
     .filter((s) => s.status === "paid")
     .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0);
   const remaining = Number(loan.principal) - paidTotal;
-  const split = splitIncome(
+  const totalProfit =
+    loan.cost_amount != null
+      ? Math.max(Number(loan.principal) - Number(loan.cost_amount), 0)
+      : profitFromPaid(
+          Number(loan.principal),
+          Number(loan.markup_percent ?? 0),
+          loan.cost_amount,
+          loan.principal
+        );
+  const earnedProfit = profitFromPaid(
     paidTotal,
+    Number(loan.markup_percent ?? 0),
+    loan.cost_amount,
+    loan.principal
+  );
+  const split = splitIncome(
+    earnedProfit,
     Number(loan.income_share_manager),
     Number(loan.income_share_investor)
   );
+  const hasInvestor = Boolean(loan.investor_id && Number(loan.income_share_investor) > 0);
 
   async function markPaid(schedule: PaymentSchedule) {
     setLoadingId(schedule.id);
@@ -144,22 +161,37 @@ export function LoanDetail({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">Сумма</p>
+          <p className="text-sm text-[var(--muted)]">К возврату</p>
           <p className="text-xl font-bold">{formatMoney(Number(loan.principal))}</p>
+          {loan.cost_amount != null && (
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              товар {formatMoney(Number(loan.cost_amount))} + {loan.markup_percent}%
+            </p>
+          )}
         </div>
         <div className="card">
           <p className="text-sm text-[var(--muted)]">Остаток</p>
           <p className="text-xl font-bold">{formatMoney(Math.max(remaining, 0))}</p>
         </div>
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">Платёж / мес</p>
-          <p className="text-xl font-bold">{formatMoney(Number(loan.monthly_payment))}</p>
+          <p className="text-sm text-[var(--muted)]">Прибыль по сделке</p>
+          <p className="text-xl font-bold">{formatMoney(totalProfit)}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            из оплат: {formatMoney(earnedProfit)}
+          </p>
         </div>
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">30/70 от оплат</p>
-          <p className="text-sm font-semibold">
-            {formatMoney(split.manager)} / {formatMoney(split.investor)}
+          <p className="text-sm text-[var(--muted)]">
+            {hasInvestor ? "Прибыль: вы / инвестор" : "Прибыль вам"}
           </p>
+          <p className="text-sm font-semibold">
+            {hasInvestor
+              ? `${formatMoney(split.manager)} / ${formatMoney(split.investor)}`
+              : formatMoney(earnedProfit)}
+          </p>
+          {hasInvestor && loan.investors?.name && (
+            <p className="mt-1 text-xs text-[var(--muted)]">{loan.investors.name}</p>
+          )}
         </div>
       </div>
 
