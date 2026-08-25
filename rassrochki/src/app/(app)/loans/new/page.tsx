@@ -11,6 +11,7 @@ import {
   TERM_PRESETS,
   buildSchedule,
   calcFinancedAmount,
+  calcInvestorShareByCapital,
   calcMonthlyPayment,
   calcProfit,
   calcTotalWithMarkup,
@@ -53,6 +54,7 @@ export default function NewLoanPage() {
   const [guarantors, setGuarantors] = useState<
     { full_name: string; phone: string; notes: string }[]
   >([]);
+  const [shareManual, setShareManual] = useState(false);
 
   const initial: LoanDraft = {
     client_id: "",
@@ -129,21 +131,49 @@ export default function NewLoanPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const hasInvestors = investors.length > 0;
   const selectedClient = clients.find((c) => c.id === value.client_id);
-  const withInvestor = Boolean(value.investor_id);
-
+  const hasInvestors = investors.length > 0;
   const cost = Number(value.cost_amount) || 0;
   const markup = Number(value.markup_percent) || 0;
   const downPayment = Number(value.down_payment) || 0;
   const principal = cost > 0 ? calcTotalWithMarkup(cost, markup) : 0;
   const financed = principal > 0 ? calcFinancedAmount(principal, downPayment) : 0;
   const profit = cost > 0 ? calcProfit(cost, markup) : 0;
-  const profitSplit = splitIncome(
-    profit,
-    withInvestor ? Number(value.income_share_manager) : 100,
-    withInvestor ? Number(value.income_share_investor) : 0
-  );
+  const withInvestor = Boolean(value.investor_id);
+  const invested = Number(value.investor_amount) || 0;
+
+  const autoInvestorShare =
+    withInvestor && cost > 0 && invested > 0
+      ? calcInvestorShareByCapital(invested, cost)
+      : 0;
+  const investorSharePct = withInvestor
+    ? shareManual
+      ? Number(value.income_share_investor) || 0
+      : autoInvestorShare
+    : 0;
+  const managerSharePct = withInvestor ? Math.round((100 - investorSharePct) * 100) / 100 : 100;
+
+  const profitSplit = splitIncome(profit, managerSharePct, investorSharePct);
+  const investorExpectedTotal = invested + profitSplit.investor;
+
+  useEffect(() => {
+    if (!withInvestor || shareManual) return;
+    if (!(cost > 0 && invested >= 0)) return;
+    const nextInv = String(autoInvestorShare);
+    const nextMgr = String(Math.round((100 - autoInvestorShare) * 100) / 100);
+    if (
+      value.income_share_investor === nextInv &&
+      value.income_share_manager === nextMgr
+    ) {
+      return;
+    }
+    setValue({
+      ...value,
+      income_share_investor: nextInv,
+      income_share_manager: nextMgr,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [value.cost_amount, value.investor_amount, value.investor_id, shareManual, autoInvestorShare]);
 
   const previewSchedule = useMemo(() => {
     const term = Number(value.term_months);
@@ -272,12 +302,10 @@ export default function NewLoanPage() {
     );
 
     const useInvestor = Boolean(value.investor_id);
-    const managerShare = useInvestor ? Number(value.income_share_manager) : 100;
-    const investorShare = useInvestor ? Number(value.income_share_investor) : 0;
     const investorAmount =
-      useInvestor && value.investor_amount
-        ? Number(value.investor_amount)
-        : null;
+      useInvestor && value.investor_amount ? Number(value.investor_amount) : null;
+    const managerShare = useInvestor ? managerSharePct : 100;
+    const investorShare = useInvestor ? investorSharePct : 0;
 
     const { data: loan, error: loanError } = await supabase
       .from("loans")
@@ -707,58 +735,95 @@ export default function NewLoanPage() {
                   min="0"
                   step="0.01"
                   value={value.investor_amount}
-                  onChange={(e) => setValue({ ...value, investor_amount: e.target.value })}
-                  placeholder="Например: 10000"
+                  onChange={(e) => {
+                    setShareManual(false);
+                    setValue({ ...value, investor_amount: e.target.value });
+                  }}
+                  placeholder="Например: 80000"
                 />
                 <p className="mt-1 text-xs text-[var(--muted)]">
-                  Учёт кассы: сколько денег инвестор дал на эту сделку
+                  Доля прибыли считается по вкладу: вложил / цена товара.
+                  {cost > 0 && invested > 0
+                    ? ` Сейчас ${autoInvestorShare}% ( ${formatMoney(invested)} из ${formatMoney(cost)} ).`
+                    : " Укажите цену товара и сумму вложений."}
                 </p>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="label">Доля владельца от прибыли, %</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={value.income_share_manager}
-                    onChange={(e) => {
-                      const manager = Number(e.target.value);
-                      setValue({
-                        ...value,
-                        income_share_manager: e.target.value,
-                        income_share_investor: String(Math.max(0, 100 - manager)),
-                      });
-                    }}
-                  />
+
+              <div className="rounded-xl border border-teal-200 bg-teal-50/50 p-3 text-sm space-y-1">
+                <p className="font-semibold text-teal-900">Предполагаемый доход по сделке</p>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--muted)]">Прибыль всего</span>
+                  <span className="font-medium">{formatMoney(profit)}</span>
                 </div>
-                <div>
-                  <label className="label">Доля инвестора от прибыли, %</label>
-                  <input
-                    className="input"
-                    type="number"
-                    min="0"
-                    max="100"
-                    value={value.income_share_investor}
-                    onChange={(e) => {
-                      const investorShare = Number(e.target.value);
-                      setValue({
-                        ...value,
-                        income_share_investor: e.target.value,
-                        income_share_manager: String(Math.max(0, 100 - investorShare)),
-                      });
-                    }}
-                  />
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--muted)]">Вам (прибыль)</span>
+                  <span className="font-medium">{formatMoney(profitSplit.manager)}</span>
+                </div>
+                <div className="flex justify-between gap-2">
+                  <span className="text-[var(--muted)]">Инвестору прибыль</span>
+                  <span className="font-medium">{formatMoney(profitSplit.investor)}</span>
+                </div>
+                <div className="flex justify-between gap-2 border-t border-teal-200 pt-1">
+                  <span className="text-[var(--muted)]">Инвестору всего (вложения + прибыль)</span>
+                  <span className="font-semibold text-teal-900">
+                    {formatMoney(investorExpectedTotal)}
+                  </span>
                 </div>
               </div>
-              {profit > 0 && (
+
+              <label className="flex items-center gap-2 text-sm text-slate-600">
+                <input
+                  type="checkbox"
+                  checked={shareManual}
+                  onChange={(e) => setShareManual(e.target.checked)}
+                />
+                Задать долю вручную (не по вкладу)
+              </label>
+
+              {shareManual && (
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <div>
+                    <label className="label">Доля владельца от прибыли, %</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={value.income_share_manager}
+                      onChange={(e) => {
+                        const manager = Number(e.target.value);
+                        setValue({
+                          ...value,
+                          income_share_manager: e.target.value,
+                          income_share_investor: String(Math.max(0, 100 - manager)),
+                        });
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Доля инвестора от прибыли, %</label>
+                    <input
+                      className="input"
+                      type="number"
+                      min="0"
+                      max="100"
+                      value={value.income_share_investor}
+                      onChange={(e) => {
+                        const invShare = Number(e.target.value);
+                        setValue({
+                          ...value,
+                          income_share_investor: e.target.value,
+                          income_share_manager: String(Math.max(0, 100 - invShare)),
+                        });
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {!shareManual && withInvestor && (
                 <p className="text-sm text-[var(--muted)]">
-                  Из прибыли {formatMoney(profit)}: вам {formatMoney(profitSplit.manager)},
-                  инвестору {formatMoney(profitSplit.investor)}
-                  {value.investor_amount
-                    ? ` · вложено ${formatMoney(Number(value.investor_amount))}`
-                    : ""}
+                  Доли: вам {managerSharePct}% / инвестору {investorSharePct}% от прибыли
                 </p>
               )}
             </>

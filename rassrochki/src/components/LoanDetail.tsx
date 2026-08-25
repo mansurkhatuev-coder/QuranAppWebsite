@@ -20,9 +20,8 @@ import {
   downloadCsv,
   formatDateShort,
   formatMoney,
-  profitFromPaid,
-  splitIncome,
 } from "@/lib/utils";
+import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
 
 export function LoanDetail({
   loan,
@@ -48,27 +47,11 @@ export function LoanDetail({
     .filter((s) => s.status === "paid")
     .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0);
   const remaining = financed - paidTotal;
-  const totalProfit =
-    loan.cost_amount != null
-      ? Math.max(Number(loan.principal) - Number(loan.cost_amount), 0)
-      : profitFromPaid(
-          Number(loan.principal),
-          Number(loan.markup_percent ?? 0),
-          loan.cost_amount,
-          loan.principal
-        );
-  const earnedProfit = profitFromPaid(
-    paidTotal,
-    Number(loan.markup_percent ?? 0),
-    loan.cost_amount,
-    loan.principal
+  const projection = projectedRemaining(loan, paidTotal);
+  const shares = resolveProfitShares(loan);
+  const hasInvestor = Boolean(
+    loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
   );
-  const split = splitIncome(
-    earnedProfit,
-    Number(loan.income_share_manager),
-    Number(loan.income_share_investor)
-  );
-  const hasInvestor = Boolean(loan.investor_id && Number(loan.income_share_investor) > 0);
 
   async function confirmPayment(values: PaymentConfirmValues) {
     if (!pendingSchedule) return;
@@ -241,30 +224,69 @@ export function LoanDetail({
         </div>
         <div className="card">
           <p className="text-sm text-[var(--muted)]">Прибыль по сделке</p>
-          <p className="text-xl font-bold">{formatMoney(totalProfit)}</p>
+          <p className="text-xl font-bold">{formatMoney(projection.profit)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            из оплат графика: {formatMoney(earnedProfit)}
+            собрано прибыли: {formatMoney(projection.earnedProfit)} ·{" "}
+            {Math.round(projection.progress * 100)}%
           </p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2">
-        <div className="card">
-          <p className="text-sm text-[var(--muted)]">
-            {hasInvestor ? "Прибыль: вы / инвестор" : "Прибыль вам"}
-          </p>
+        <div className="card space-y-2">
+          <p className="text-sm font-semibold">Вам (предполагаемо)</p>
+          <div className="flex justify-between text-sm">
+            <span className="text-[var(--muted)]">Прибыль всего</span>
+            <span className="font-medium">{formatMoney(projection.ownerProfit)}</span>
+          </div>
+          <div className="flex justify-between text-sm">
+            <span className="text-[var(--muted)]">Уже «заработано»</span>
+            <span>{formatMoney(projection.earnedOwnerProfit)}</span>
+          </div>
+          <div className="flex justify-between text-sm border-t border-[var(--border)] pt-2">
+            <span className="text-[var(--muted)]">Ещё ожидать</span>
+            <span className="font-semibold text-teal-800">
+              {formatMoney(projection.ownerStillToReceive)}
+            </span>
+          </div>
+        </div>
+
+        <div className="card space-y-2">
           <p className="text-sm font-semibold">
-            {hasInvestor
-              ? `${formatMoney(split.manager)} / ${formatMoney(split.investor)}`
-              : formatMoney(earnedProfit)}
+            {hasInvestor ? `Инвестор${loan.investors?.name ? `: ${loan.investors.name}` : ""}` : "Инвестор"}
           </p>
-          {hasInvestor && loan.investors?.name && (
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              {loan.investors.name}
-              {loan.investor_amount != null
-                ? ` · вложил ${formatMoney(Number(loan.investor_amount))}`
-                : ""}
-            </p>
+          {hasInvestor ? (
+            <>
+              <p className="text-xs text-[var(--muted)]">
+                Доля {shares.investor}% от прибыли
+                {shares.mode === "by_capital" ? " (по вкладу)" : ""}
+                {projection.investorCapital > 0
+                  ? ` · вложил ${formatMoney(projection.investorCapital)}`
+                  : ""}
+              </p>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Вернуть капитал</span>
+                <span>{formatMoney(projection.investorCapital)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Его прибыль</span>
+                <span>{formatMoney(projection.investorProfit)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Всего ожидает</span>
+                <span className="font-medium">
+                  {formatMoney(projection.investorExpectedTotal)}
+                </span>
+              </div>
+              <div className="flex justify-between text-sm border-t border-[var(--border)] pt-2">
+                <span className="text-[var(--muted)]">Ещё получить</span>
+                <span className="font-semibold text-teal-800">
+                  {formatMoney(projection.investorStillToReceive)}
+                </span>
+              </div>
+            </>
+          ) : (
+            <p className="text-sm text-[var(--muted)]">Без инвестора — вся прибыль вам</p>
           )}
         </div>
       </div>

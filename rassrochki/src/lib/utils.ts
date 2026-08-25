@@ -37,6 +37,13 @@ export function calcFinancedAmount(totalWithMarkup: number, downPayment: number)
   return Math.max(0, financed);
 }
 
+/** Вариант А: доля инвестора в прибыли = вложения / цена товара * 100 */
+export function calcInvestorShareByCapital(investorAmount: number, costAmount: number) {
+  if (!costAmount || costAmount <= 0) return 0;
+  const raw = (Number(investorAmount) / Number(costAmount)) * 100;
+  return Math.round(Math.min(100, Math.max(0, raw)) * 100) / 100;
+}
+
 /**
  * Прибыль в уже оплаченной сумме.
  * Пример: товар 10000 + 30% → к возврату 13000; из 1300 оплаты прибыль ≈ 300.
