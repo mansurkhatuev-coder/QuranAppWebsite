@@ -34,7 +34,8 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/clients") ||
     path.startsWith("/loans") ||
     path.startsWith("/settings") ||
-    path.startsWith("/onboarding");
+    path.startsWith("/onboarding") ||
+    path.startsWith("/platform");
 
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
@@ -51,13 +52,19 @@ export async function updateSession(request: NextRequest) {
   if (user && isProtected && path !== "/onboarding") {
     const { data: profile } = await supabase
       .from("profiles")
-      .select("id")
+      .select("id, is_platform_admin")
       .eq("id", user.id)
       .maybeSingle();
 
     if (!profile) {
       const url = request.nextUrl.clone();
       url.pathname = "/onboarding";
+      return NextResponse.redirect(url);
+    }
+
+    if (path.startsWith("/platform") && !profile.is_platform_admin) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/dashboard";
       return NextResponse.redirect(url);
     }
   }

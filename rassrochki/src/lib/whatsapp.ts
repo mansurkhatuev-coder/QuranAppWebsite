@@ -25,6 +25,16 @@ export function buildWhatsAppUrl(phone: string | null | undefined, text?: string
   return `${base}?text=${encodeURIComponent(text.trim())}`;
 }
 
+/** Номер владельца сервиса из env (NEXT_PUBLIC_WHATSAPP_PHONE) */
+export function getWhatsAppPhone() {
+  return normalizePhoneForWhatsApp(process.env.NEXT_PUBLIC_WHATSAPP_PHONE || "");
+}
+
+export function buildWhatsAppExtendUrl(orgName: string) {
+  const text = `Здравствуйте! Хочу продлить доступ к Рассрочкам.\nОрганизация: ${orgName}`;
+  return buildWhatsAppUrl(getWhatsAppPhone(), text) ?? `https://wa.me/?text=${encodeURIComponent(text)}`;
+}
+
 export function defaultPaymentReminderText(opts: {
   clientName?: string | null;
   productName?: string | null;

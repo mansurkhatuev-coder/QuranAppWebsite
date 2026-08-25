@@ -1,8 +1,11 @@
+export type SubscriptionStatus = "trial" | "active" | "expired" | "disabled";
+
 export type Profile = {
   id: string;
   organization_id: string;
   full_name: string | null;
   role: "admin";
+  is_platform_admin: boolean;
   created_at: string;
 };
 
@@ -10,6 +13,23 @@ export type Organization = {
   id: string;
   name: string;
   created_at: string;
+  is_active: boolean;
+  subscription_status: SubscriptionStatus;
+  trial_ends_at: string | null;
+  paid_until: string | null;
+  access_note: string | null;
+};
+
+export type PlatformOrganization = {
+  id: string;
+  name: string;
+  created_at: string;
+  is_active: boolean;
+  subscription_status: string;
+  trial_ends_at: string | null;
+  paid_until: string | null;
+  access_note: string | null;
+  has_access: boolean;
 };
 
 export type OrganizationSettings = {

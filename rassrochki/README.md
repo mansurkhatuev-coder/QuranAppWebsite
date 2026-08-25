@@ -8,6 +8,7 @@ MVP веб-приложения для учёта рассрочек: клиен
 
 - Мульти-организации: у каждого бизнеса свои данные (RLS)
 - Роль: только админ
+- Пробный период 30 дней + ручное продление (WhatsApp) и деактивация
 - Клиенты и рассрочки с месячным графиком
 - Первоначальный взнос — график от оставшейся суммы
 - Наценка % на товар (прибыль) + доли владельца/инвестора
@@ -32,10 +33,19 @@ MVP веб-приложения для учёта рассрочек: клиен
    - `supabase/migrations/003_receipts_investor_amount.sql`
    - `supabase/migrations/004_guarantors.sql`
    - `supabase/migrations/005_down_payment.sql`
+   - `supabase/migrations/006_rls_parent_org_checks.sql`
+   - `supabase/migrations/007_subscription_trial.sql`
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
+5. Назначьте себя владельцем продукта (platform-admin) в SQL Editor:
 
-Если проект уже создан — выполните недостающие миграции по порядку (`002`…`005`).
+```sql
+update public.profiles
+set is_platform_admin = true
+where id = (select id from auth.users where email = 'YOUR_EMAIL');
+```
+
+Если проект уже создан — выполните недостающие миграции по порядку (`002`…`007`).
 
 ### Бэкапы
 
@@ -52,7 +62,8 @@ MVP веб-приложения для учёта рассрочек: клиен
 ```bash
 cd rassrochki
 cp .env.example .env.local
-# заполните NEXT_PUBLIC_SUPABASE_URL и NEXT_PUBLIC_SUPABASE_ANON_KEY
+# заполните NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY,
+# NEXT_PUBLIC_WHATSAPP_PHONE (ваш WhatsApp для кнопки «Продлить»)
 npm install
 npm run dev
 ```
@@ -66,7 +77,11 @@ npm run dev
 3. Environment Variables:
    - `NEXT_PUBLIC_SUPABASE_URL`
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY`
+   - `NEXT_PUBLIC_WHATSAPP_PHONE` (например `79001234567`)
 4. Deploy
+
+После деплоя: SQL `007_subscription_trial.sql` + `is_platform_admin = true` для вашего email.
+Страница управления: `/platform` (продлить / trial / отключить).
 
 ## Структура
 

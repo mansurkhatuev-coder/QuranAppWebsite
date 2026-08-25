@@ -14,9 +14,15 @@ const links = [
 
 export function AppShell({
   orgName,
+  accessLabel,
+  showTrialWarning,
+  isPlatformAdmin,
   children,
 }: {
   orgName: string;
+  accessLabel?: string | null;
+  showTrialWarning?: boolean;
+  isPlatformAdmin?: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -56,10 +62,26 @@ export function AppShell({
             <p className="max-w-[14rem] truncate font-semibold sm:max-w-xs md:max-w-md" title={orgName}>
               {orgName}
             </p>
+            {accessLabel && (
+              <p
+                className={`mt-0.5 text-xs ${
+                  showTrialWarning ? "font-medium text-amber-700" : "text-[var(--muted)]"
+                }`}
+              >
+                {accessLabel}
+              </p>
+            )}
           </div>
-          <button type="button" onClick={logout} className="btn-secondary text-xs">
-            Выйти
-          </button>
+          <div className="flex items-center gap-2">
+            {isPlatformAdmin && (
+              <Link href="/platform" className="btn-secondary text-xs">
+                Организации
+              </Link>
+            )}
+            <button type="button" onClick={logout} className="btn-secondary text-xs">
+              Выйти
+            </button>
+          </div>
         </div>
         <nav className="mx-auto flex max-w-6xl gap-1 overflow-x-auto px-2 pb-2 md:px-4">
           {links.map((link) => {
