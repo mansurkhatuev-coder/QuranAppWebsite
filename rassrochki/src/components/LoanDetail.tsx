@@ -16,6 +16,7 @@ import {
 } from "@/components/PaymentConfirmModal";
 import { StatusBadge } from "@/components/ui";
 import {
+  calcFinancedAmount,
   downloadCsv,
   formatDateShort,
   formatMoney,
@@ -41,10 +42,12 @@ export function LoanDetail({
   const [error, setError] = useState<string | null>(null);
   const [openingReceipt, setOpeningReceipt] = useState<string | null>(null);
 
+  const downPayment = Number(loan.down_payment ?? 0);
+  const financed = calcFinancedAmount(Number(loan.principal), downPayment);
   const paidTotal = schedules
     .filter((s) => s.status === "paid")
     .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0);
-  const remaining = Number(loan.principal) - paidTotal;
+  const remaining = financed - paidTotal;
   const totalProfit =
     loan.cost_amount != null
       ? Math.max(Number(loan.principal) - Number(loan.cost_amount), 0)
@@ -175,6 +178,8 @@ export function LoanDetail({
       client: loan.clients?.full_name ?? "",
       phone: loan.clients?.phone ?? "",
       amount: String(loan.principal),
+      down_payment: String(loan.down_payment ?? 0),
+      financed: String(financed),
       term_months: String(loan.term_months),
       monthly_payment: String(loan.monthly_payment),
       start_date: formatDateShort(loan.start_date),
@@ -212,7 +217,7 @@ export function LoanDetail({
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">К возврату</p>
+          <p className="text-sm text-[var(--muted)]">К возврату всего</p>
           <p className="text-xl font-bold">{formatMoney(Number(loan.principal))}</p>
           {loan.cost_amount != null && (
             <p className="mt-1 text-xs text-[var(--muted)]">
@@ -221,16 +226,29 @@ export function LoanDetail({
           )}
         </div>
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">Остаток</p>
+          <p className="text-sm text-[var(--muted)]">Взнос</p>
+          <p className="text-xl font-bold">{formatMoney(downPayment)}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            в рассрочку {formatMoney(financed)}
+          </p>
+        </div>
+        <div className="card">
+          <p className="text-sm text-[var(--muted)]">Остаток по графику</p>
           <p className="text-xl font-bold">{formatMoney(Math.max(remaining, 0))}</p>
+          <p className="mt-1 text-xs text-[var(--muted)]">
+            платёж / мес {formatMoney(Number(loan.monthly_payment))}
+          </p>
         </div>
         <div className="card">
           <p className="text-sm text-[var(--muted)]">Прибыль по сделке</p>
           <p className="text-xl font-bold">{formatMoney(totalProfit)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            из оплат: {formatMoney(earnedProfit)}
+            из оплат графика: {formatMoney(earnedProfit)}
           </p>
         </div>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-2">
         <div className="card">
           <p className="text-sm text-[var(--muted)]">
             {hasInvestor ? "Прибыль: вы / инвестор" : "Прибыль вам"}

@@ -54,8 +54,10 @@ export type Loan = {
   cost_amount: number | null;
   /** Наценка % сверху */
   markup_percent: number;
-  /** Сумма к возврату клиентом (= cost + наценка) */
+  /** Сумма к возврату клиентом (= cost + наценка), до вычета взноса */
   principal: number;
+  /** Первоначальный взнос; график считается от (principal - down_payment) */
+  down_payment: number;
   term_months: number;
   start_date: string;
   monthly_payment: number;

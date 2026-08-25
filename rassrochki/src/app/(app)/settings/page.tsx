@@ -274,7 +274,8 @@ export default function SettingsPage() {
         <div className="card space-y-3">
           <h2 className="font-semibold">Шаблон договора</h2>
           <p className="text-xs text-[var(--muted)]">
-            Переменные: {"{organization}"}, {"{client}"}, {"{phone}"}, {"{amount}"}, {"{term_months}"},
+            Переменные: {"{organization}"}, {"{client}"}, {"{phone}"}, {"{amount}"},
+            {" {down_payment}"}, {"{financed}"}, {"{term_months}"},
             {" {monthly_payment}"}, {"{start_date}"}, {"{schedule}"}, {"{manager_share}"},
             {" {investor_share}"}, {"{investor}"}, {"{guarantors}"}
           </p>

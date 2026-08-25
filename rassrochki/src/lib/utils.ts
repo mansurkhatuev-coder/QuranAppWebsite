@@ -30,6 +30,13 @@ export function calcProfit(costAmount: number, markupPercent: number) {
   return Math.round(costAmount * (markupPercent / 100) * 100) / 100;
 }
 
+/** Сумма в рассрочку после взноса */
+export function calcFinancedAmount(totalWithMarkup: number, downPayment: number) {
+  const down = Math.max(0, Number(downPayment) || 0);
+  const financed = Math.round((totalWithMarkup - down) * 100) / 100;
+  return Math.max(0, financed);
+}
+
 /**
  * Прибыль в уже оплаченной сумме.
  * Пример: товар 10000 + 30% → к возврату 13000; из 1300 оплаты прибыль ≈ 300.
