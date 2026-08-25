@@ -25,6 +25,24 @@ export function AppShell({
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    try {
+      const keys = Object.keys(localStorage);
+      for (const key of keys) {
+        if (
+          key.startsWith("draft:") ||
+          key.startsWith("rassrochki:") ||
+          key.includes("backup")
+        ) {
+          localStorage.removeItem(key);
+        }
+      }
+      if ("caches" in window) {
+        const names = await caches.keys();
+        await Promise.all(names.filter((n) => n.startsWith("rassrochki")).map((n) => caches.delete(n)));
+      }
+    } catch {
+      // ignore storage cleanup errors
+    }
     router.push("/login");
     router.refresh();
   }

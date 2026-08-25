@@ -46,9 +46,11 @@ export function LoanDetail({
 
   const downPayment = Number(loan.down_payment ?? 0);
   const financed = calcFinancedAmount(Number(loan.principal), downPayment);
-  const paidTotal = schedules
-    .filter((s) => s.status === "paid")
-    .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0);
+  const paidTotal = schedules.reduce((sum, s) => {
+    if (s.status === "paid") return sum + Number(s.paid_amount ?? s.amount);
+    if (s.paid_amount != null && Number(s.paid_amount) > 0) return sum + Number(s.paid_amount);
+    return sum;
+  }, 0);
   const remaining = financed - paidTotal;
   const projection = projectedRemaining(loan, paidTotal);
   const shares = resolveProfitShares(loan);
@@ -79,10 +81,21 @@ export function LoanDetail({
     if (values.file) {
       const ext = values.file.name.split(".").pop()?.toLowerCase() || "jpg";
       const safeExt = ["jpg", "jpeg", "png", "webp", "heic", "pdf"].includes(ext) ? ext : "jpg";
+      if (values.file.size > 8 * 1024 * 1024) {
+        throw new Error("Чек слишком большой (макс. 8 МБ)");
+      }
+      const mime =
+        values.file.type && values.file.type.startsWith("image/")
+          ? values.file.type
+          : values.file.type === "application/pdf"
+            ? "application/pdf"
+            : safeExt === "pdf"
+              ? "application/pdf"
+              : "image/jpeg";
       receiptPath = `${loan.organization_id}/${loan.id}/${schedule.id}-${Date.now()}.${safeExt}`;
       const { error: uploadError } = await supabase.storage
         .from("payment-receipts")
-        .upload(receiptPath, values.file, { upsert: false, contentType: values.file.type });
+        .upload(receiptPath, values.file, { upsert: false, contentType: mime });
       if (uploadError) throw new Error("Не удалось загрузить чек");
     }
 
@@ -99,10 +112,18 @@ export function LoanDetail({
 
     if (paymentError) throw new Error("Не удалось сохранить оплату");
 
+    const expected = Number(schedule.amount);
+    const fullyCovered = amount + 0.009 >= expected;
+    const nextStatus = fullyCovered
+      ? "paid"
+      : schedule.status === "overdue"
+        ? "overdue"
+        : "pending";
+
     const { error: scheduleError } = await supabase
       .from("payment_schedules")
       .update({
-        status: "paid",
+        status: nextStatus,
         paid_at: paidAtIso,
         paid_amount: amount,
         receipt_path: receiptPath,
@@ -111,9 +132,22 @@ export function LoanDetail({
 
     if (scheduleError) throw new Error("Не удалось сохранить оплату");
 
-    const allPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
-    if (allPaid) {
-      await supabase.from("loans").update({ status: "closed" }).eq("id", loan.id);
+    if (fullyCovered) {
+      const paidTotalAfter =
+        schedules
+          .filter((s) => s.id !== schedule.id && s.status === "paid")
+          .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0) + amount;
+
+      const allRowsPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
+      if (allRowsPaid && paidTotalAfter + 0.009 >= financed) {
+        const { error: closeError } = await supabase
+          .from("loans")
+          .update({ status: "closed" })
+          .eq("id", loan.id);
+        if (closeError) {
+          setError("Оплата сохранена, но не удалось закрыть рассрочку — обновите страницу");
+        }
+      }
     }
 
     setPendingSchedule(null);
@@ -174,15 +208,15 @@ export function LoanDetail({
       organization: orgName,
       client: loan.clients?.full_name ?? "",
       phone: loan.clients?.phone ?? "",
-      amount: String(loan.principal),
-      down_payment: String(loan.down_payment ?? 0),
-      financed: String(financed),
+      amount: formatMoney(Number(loan.principal)),
+      down_payment: formatMoney(Number(loan.down_payment ?? 0)),
+      financed: formatMoney(financed),
       term_months: String(loan.term_months),
-      monthly_payment: String(loan.monthly_payment),
+      monthly_payment: formatMoney(Number(loan.monthly_payment)),
       start_date: formatDateShort(loan.start_date),
       schedule: scheduleText,
-      manager_share: String(loan.income_share_manager),
-      investor_share: String(loan.income_share_investor),
+      manager_share: String(shares.manager),
+      investor_share: String(shares.investor),
       investor: loan.investors?.name ?? "—",
       guarantors: guarantorsText,
     });
@@ -216,7 +250,7 @@ export function LoanDetail({
             Скачать график
           </button>
           <button type="button" className="btn-primary" onClick={printContract}>
-            Скачать договор
+            Печать договора
           </button>
         </div>
       </div>

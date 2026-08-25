@@ -21,9 +21,9 @@ export function WhatsAppButton({
     return (
       <span
         className="inline-flex cursor-not-allowed items-center rounded-xl border border-[var(--border)] px-3 py-2 text-xs text-slate-400"
-        title={disabledReason || "Укажите телефон клиента"}
+        title={disabledReason || "Укажите корректный телефон"}
       >
-        WhatsApp
+        {disabledReason || "Нет телефона"}
       </span>
     );
   }

@@ -17,13 +17,36 @@ export type LoanFinanceInput = {
   status?: string;
 };
 
+function shareOrNull(v: number | null | undefined): number | null {
+  if (v == null || Number.isNaN(Number(v))) return null;
+  return Number(v);
+}
+
 /**
- * Вариант А: доля от прибыли = вложения / цена товара.
- * Если вложений нет — вся прибыль владельцу.
+ * Доли прибыли: сохранённые на рассрочке `income_share_*` — источник истины
+ * (в т.ч. ручной ввод). Если долей нет — считаем по вложениям / цене товара.
  */
 export function resolveProfitShares(loan: LoanFinanceInput) {
   const cost = Number(loan.cost_amount) || 0;
   const invested = Number(loan.investor_amount) || 0;
+  const storedInvestor = shareOrNull(loan.income_share_investor);
+  const storedManager = shareOrNull(loan.income_share_manager);
+
+  if (storedInvestor != null || storedManager != null) {
+    const investor = storedInvestor ?? 0;
+    const manager =
+      storedManager != null
+        ? storedManager
+        : investor > 0
+          ? Math.max(0, 100 - investor)
+          : 100;
+
+    return {
+      manager,
+      investor,
+      mode: "manual" as const,
+    };
+  }
 
   if (invested > 0 && cost > 0) {
     const investor = calcInvestorShareByCapital(invested, cost);
@@ -34,15 +57,7 @@ export function resolveProfitShares(loan: LoanFinanceInput) {
     };
   }
 
-  const investor = Number(loan.income_share_investor) || 0;
-  const manager =
-    Number(loan.income_share_manager) || (investor > 0 ? Math.max(0, 100 - investor) : 100);
-
-  return {
-    manager,
-    investor: invested > 0 ? investor : 0,
-    mode: "manual" as const,
-  };
+  return { manager: 100, investor: 0, mode: "manual" as const };
 }
 
 export function dealTotals(loan: LoanFinanceInput) {
@@ -50,7 +65,13 @@ export function dealTotals(loan: LoanFinanceInput) {
   const markup = Number(loan.markup_percent) || 0;
   const principal = Number(loan.principal) || 0;
   const down = Number(loan.down_payment) || 0;
-  const profit = cost > 0 ? calcProfit(cost, markup) : Math.max(principal - cost, 0);
+  // Одна база прибыли: principal − cost (как в profitFromPaid), до копеек
+  const profit =
+    cost > 0 && principal > 0
+      ? Math.round(Math.max(principal - cost, 0) * 100) / 100
+      : cost > 0
+        ? calcProfit(cost, markup)
+        : 0;
   const financed = calcFinancedAmount(principal || cost + profit, down);
   const shares = resolveProfitShares(loan);
   const profitSplit = splitIncome(profit, shares.manager, shares.investor);

@@ -103,8 +103,15 @@ export function buildSchedule(
 }
 
 export function splitIncome(amount: number, managerShare: number, investorShare: number) {
-  const total = managerShare + investorShare || 100;
-  const manager = Math.round(((amount * managerShare) / total) * 100) / 100;
+  const managerW = Number(managerShare) || 0;
+  const investorW = Number(investorShare) || 0;
+  // Оба нуля → вся сумма владельцу (не инвестору через остаток)
+  if (managerW <= 0 && investorW <= 0) {
+    const manager = Math.round(amount * 100) / 100;
+    return { manager, investor: 0 };
+  }
+  const total = managerW + investorW;
+  const manager = Math.round(((amount * managerW) / total) * 100) / 100;
   const investor = Math.round((amount - manager) * 100) / 100;
   return { manager, investor };
 }

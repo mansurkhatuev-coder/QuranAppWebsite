@@ -349,6 +349,8 @@ export default function NewLoanPage() {
 
     setLoading(false);
     if (scheduleError) {
+      await supabase.from("loans").delete().eq("id", loan.id);
+      setLoading(false);
       setError(friendlyError("Не удалось сохранить график платежей", scheduleError));
       return;
     }
@@ -368,6 +370,9 @@ export default function NewLoanPage() {
         .from("loan_guarantors")
         .insert(guarantorRows);
       if (guarantorError) {
+        await supabase.from("payment_schedules").delete().eq("loan_id", loan.id);
+        await supabase.from("loans").delete().eq("id", loan.id);
+        setLoading(false);
         setError(friendlyError("Не удалось сохранить поручителей", guarantorError));
         return;
       }
@@ -488,6 +493,9 @@ export default function NewLoanPage() {
                 onChange={(e) => setValue({ ...value, start_date: e.target.value })}
                 required
               />
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Первый платёж — через месяц после этой даты
+              </p>
             </div>
           </div>
 
