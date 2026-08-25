@@ -8,6 +8,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Client, Investor, OrganizationSettings } from "@/types/database";
 import {
   MARKUP_PRESETS,
+  TERM_PRESETS,
   buildSchedule,
   calcMonthlyPayment,
   calcProfit,
@@ -42,6 +43,7 @@ export default function NewLoanPage() {
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClient, setNewClient] = useState({ full_name: "", phone: "" });
   const [savingClient, setSavingClient] = useState(false);
+  const [customTerm, setCustomTerm] = useState(false);
 
   const initial: LoanDraft = {
     client_id: "",
@@ -96,9 +98,12 @@ export default function NewLoanPage() {
       setInvestors(investorRows ?? []);
       if (settingsRow) {
         setSettings(settingsRow);
+        const defaultTerm = String(settingsRow.default_term_months ?? 12);
+        const isPreset = TERM_PRESETS.some((t) => String(t.months) === defaultTerm);
+        if (!isPreset && defaultTerm) setCustomTerm(true);
         setValue({
           ...value,
-          term_months: value.term_months || String(settingsRow.default_term_months),
+          term_months: value.term_months || defaultTerm,
           markup_percent:
             value.markup_percent ||
             String(settingsRow.default_markup_percent ?? 30),
@@ -357,16 +362,71 @@ export default function NewLoanPage() {
               />
             </div>
             <div>
-              <label className="label">Срок, мес</label>
+              <label className="label">Дата начала</label>
               <input
                 className="input"
-                type="number"
-                min="1"
-                value={value.term_months}
-                onChange={(e) => setValue({ ...value, term_months: e.target.value })}
+                type="date"
+                value={value.start_date}
+                onChange={(e) => setValue({ ...value, start_date: e.target.value })}
                 required
               />
             </div>
+          </div>
+
+          <div>
+            <label className="label">Срок рассрочки</label>
+            <div className="mb-2 flex flex-wrap gap-2">
+              {TERM_PRESETS.map((t) => (
+                <button
+                  key={t.months}
+                  type="button"
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                    !customTerm && Number(value.term_months) === t.months
+                      ? "bg-teal-700 text-white"
+                      : "border border-[var(--border)] bg-white text-slate-700"
+                  }`}
+                  onClick={() => {
+                    setCustomTerm(false);
+                    setValue({ ...value, term_months: String(t.months), monthly_payment: "" });
+                  }}
+                >
+                  {t.label}
+                </button>
+              ))}
+              <button
+                type="button"
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                  customTerm
+                    ? "bg-teal-700 text-white"
+                    : "border border-[var(--border)] bg-white text-slate-700"
+                }`}
+                onClick={() => setCustomTerm(true)}
+              >
+                Свой срок
+              </button>
+            </div>
+            {customTerm && (
+              <div className="flex items-center gap-2">
+                <input
+                  className="input"
+                  type="number"
+                  min="1"
+                  max="120"
+                  value={value.term_months}
+                  onChange={(e) =>
+                    setValue({ ...value, term_months: e.target.value, monthly_payment: "" })
+                  }
+                  required
+                  placeholder="Число месяцев"
+                />
+                <span className="shrink-0 text-sm text-[var(--muted)]">мес.</span>
+              </div>
+            )}
+            {!customTerm && (
+              <p className="text-xs text-[var(--muted)]">
+                Выбрано: {value.term_months} мес.
+              </p>
+            )}
           </div>
 
           <div>
@@ -401,29 +461,17 @@ export default function NewLoanPage() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <label className="label">Дата начала</label>
-              <input
-                className="input"
-                type="date"
-                value={value.start_date}
-                onChange={(e) => setValue({ ...value, start_date: e.target.value })}
-                required
-              />
-            </div>
-            <div>
-              <label className="label">Платёж в месяц</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                step="0.01"
-                value={value.monthly_payment}
-                onChange={(e) => setValue({ ...value, monthly_payment: e.target.value })}
-                placeholder="Авто"
-              />
-            </div>
+          <div>
+            <label className="label">Платёж в месяц</label>
+            <input
+              className="input"
+              type="number"
+              min="1"
+              step="0.01"
+              value={value.monthly_payment}
+              onChange={(e) => setValue({ ...value, monthly_payment: e.target.value })}
+              placeholder="Авто"
+            />
           </div>
         </div>
 

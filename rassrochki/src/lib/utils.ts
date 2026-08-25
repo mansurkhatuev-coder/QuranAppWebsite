@@ -50,6 +50,14 @@ export function profitFromPaid(
 
 export const MARKUP_PRESETS = [20, 25, 30, 35, 40, 50] as const;
 
+/** Частые сроки рассрочки (мес). 12 = 1 год */
+export const TERM_PRESETS = [
+  { months: 3, label: "3 мес" },
+  { months: 6, label: "6 мес" },
+  { months: 8, label: "8 мес" },
+  { months: 12, label: "1 год" },
+] as const;
+
 export function buildSchedule(
   principal: number,
   termMonths: number,
