@@ -22,6 +22,8 @@ import {
   formatMoney,
 } from "@/lib/utils";
 import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { defaultPaymentReminderText } from "@/lib/whatsapp";
 
 export function LoanDetail({
   loan,
@@ -52,6 +54,17 @@ export function LoanDetail({
   const hasInvestor = Boolean(
     loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
   );
+  const nextUnpaid = [...schedules]
+    .filter((s) => s.status !== "paid")
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  const whatsappReminder = nextUnpaid
+    ? defaultPaymentReminderText({
+        clientName: loan.clients?.full_name,
+        productName: loan.title,
+        amount: Number(nextUnpaid.amount),
+        dueDate: formatDateShort(nextUnpaid.due_date),
+      })
+    : undefined;
 
   async function confirmPayment(values: PaymentConfirmValues) {
     if (!pendingSchedule) return;
@@ -182,11 +195,22 @@ export function LoanDetail({
         <div>
           <h1 className="text-2xl font-bold">{loan.clients?.full_name}</h1>
           <p className="text-sm text-[var(--muted)]">{loan.title ?? "Рассрочка"}</p>
+          {loan.clients?.phone ? (
+            <p className="mt-1 text-sm text-[var(--muted)]">{loan.clients.phone}</p>
+          ) : null}
           <div className="mt-2">
             <StatusBadge status={loan.status} />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {loan.clients?.phone ? (
+            <WhatsAppButton
+              phone={loan.clients.phone}
+              text={whatsappReminder}
+              label="Написать в WhatsApp"
+              className="btn-secondary"
+            />
+          ) : null}
           <button type="button" className="btn-secondary" onClick={exportSchedule}>
             Экспорт CSV
           </button>
