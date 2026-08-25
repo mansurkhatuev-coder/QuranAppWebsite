@@ -4,6 +4,8 @@ import { BackupReminder } from "@/components/BackupReminder";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { getSessionProfile, createClient } from "@/lib/supabase/server";
 import { formatDateShort, formatMoney, splitIncome } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import {
   projectedRemaining,
   profitFromPaymentForLoan,
@@ -140,7 +142,7 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase
       .from("payment_schedules")
-      .select("*, loans(title, clients(full_name))")
+      .select("*, loans(title, clients(full_name, phone))")
       .eq("organization_id", orgId)
       .in("status", ["pending", "overdue"])
       .gte("due_date", today)
@@ -148,7 +150,7 @@ export default async function DashboardPage() {
       .order("due_date"),
     supabase
       .from("payment_schedules")
-      .select("*, loans(title, clients(full_name))")
+      .select("*, loans(title, clients(full_name, phone))")
       .eq("organization_id", orgId)
       .eq("status", "overdue")
       .order("due_date"),
@@ -248,9 +250,8 @@ export default async function DashboardPage() {
       <BackupReminder />
 
       {queryError && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950 break-words">
-          Не все данные загрузились: {queryError}. Если недавно добавляли функции — выполните
-          миграции SQL в Supabase (002–005).
+        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
+          Не удалось загрузить часть данных. Обновите страницу или зайдите позже.
         </div>
       )}
 
@@ -292,14 +293,14 @@ export default async function DashboardPage() {
           hint={
             closedCount > 0
               ? `всего ${loans.length}, закрыто ${closedCount}`
-              : `всего в базе: ${loans.length}`
+              : `всего: ${loans.length}`
           }
           tone="accent"
         />
         <StatCard
           label="Просрочено"
           value={String(overdue.length)}
-          hint={overdueAmount > 0 ? formatMoney(overdueAmount) : "сумм нет"}
+          hint={overdueAmount > 0 ? formatMoney(overdueAmount) : "нет сумм"}
           tone={overdue.length > 0 ? "danger" : "default"}
         />
         <StatCard
@@ -311,7 +312,7 @@ export default async function DashboardPage() {
         <StatCard
           label="Касса в этом месяце"
           value={formatMoney(cashThisMonth)}
-          hint="фактические оплаты"
+          hint="получено за месяц"
         />
       </div>
 
@@ -363,24 +364,40 @@ export default async function DashboardPage() {
             {overdue.map((item) => {
               const loan = item.loans as {
                 title: string | null;
-                clients: { full_name: string } | { full_name: string }[] | null;
+                clients:
+                  | { full_name: string; phone: string | null }
+                  | { full_name: string; phone: string | null }[]
+                  | null;
               } | null;
               const clients = loan?.clients;
-              const clientName = Array.isArray(clients)
-                ? clients[0]?.full_name
-                : clients?.full_name;
+              const client = Array.isArray(clients) ? clients[0] : clients;
+              const clientName = client?.full_name;
+              const phone = client?.phone;
               return (
-                <Link
+                <div
                   key={item.id}
-                  href={`/loans/${item.loan_id}`}
                   className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-white p-3"
                 >
-                  <div className="min-w-0">
+                  <Link href={`/loans/${item.loan_id}`} className="min-w-0 flex-1">
                     <p className="font-medium break-words">{clientName}</p>
                     <p className="text-sm text-red-700">{formatDateShort(item.due_date)}</p>
+                  </Link>
+                  <div className="flex shrink-0 items-center gap-2">
+                    <span className="font-semibold">{formatMoney(Number(item.amount))}</span>
+                    {phone ? (
+                      <WhatsAppButton
+                        phone={phone}
+                        label="Написать"
+                        text={defaultPaymentReminderText({
+                          clientName,
+                          productName: loan?.title,
+                          amount: Number(item.amount),
+                          dueDate: formatDateShort(item.due_date),
+                        })}
+                      />
+                    ) : null}
                   </div>
-                  <span className="shrink-0 font-semibold">{formatMoney(Number(item.amount))}</span>
-                </Link>
+                </div>
               );
             })}
           </div>
@@ -396,29 +413,43 @@ export default async function DashboardPage() {
             {dueSoon.slice(0, 12).map((item) => {
               const loan = item.loans as {
                 title: string | null;
-                clients: { full_name: string } | { full_name: string }[] | null;
+                clients:
+                  | { full_name: string; phone: string | null }
+                  | { full_name: string; phone: string | null }[]
+                  | null;
               } | null;
               const clients = loan?.clients;
-              const clientName = Array.isArray(clients)
-                ? clients[0]?.full_name
-                : clients?.full_name;
+              const client = Array.isArray(clients) ? clients[0] : clients;
+              const clientName = client?.full_name;
+              const phone = client?.phone;
               return (
-                <Link
+                <div
                   key={item.id}
-                  href={`/loans/${item.loan_id}`}
                   className="flex min-w-0 flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3 hover:bg-slate-50"
                 >
-                  <div className="min-w-0">
+                  <Link href={`/loans/${item.loan_id}`} className="min-w-0 flex-1">
                     <p className="font-medium break-words">
                       {clientName ?? "Клиент"} — {loan?.title ?? "Рассрочка"}
                     </p>
                     <p className="text-sm text-[var(--muted)]">{formatDateShort(item.due_date)}</p>
-                  </div>
+                  </Link>
                   <div className="flex shrink-0 items-center gap-2">
                     <span className="font-semibold">{formatMoney(Number(item.amount))}</span>
                     <StatusBadge status={item.status} />
+                    {phone ? (
+                      <WhatsAppButton
+                        phone={phone}
+                        label="Написать"
+                        text={defaultPaymentReminderText({
+                          clientName,
+                          productName: loan?.title,
+                          amount: Number(item.amount),
+                          dueDate: formatDateShort(item.due_date),
+                        })}
+                      />
+                    ) : null}
                   </div>
-                </Link>
+                </div>
               );
             })}
           </div>

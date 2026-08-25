@@ -6,6 +6,7 @@ import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import type { Investor, Organization, OrganizationSettings } from "@/types/database";
 import { downloadCsv } from "@/lib/utils";
+import { friendlyError, statusLabelRu } from "@/lib/friendly";
 import {
   buildFullOrgBackup,
   daysSinceBackup,
@@ -36,11 +37,11 @@ export default function SettingsPage() {
   useEffect(() => {
     const days = daysSinceBackup();
     if (days === null) {
-      setBackupHint("Полный бэкап ещё не скачивали с этого устройства");
+      setBackupHint("Копию данных с этого устройства ещё не скачивали");
     } else if (needsBackupReminder()) {
-      setBackupHint(`Последний бэкап ${days} дн. назад — лучше скачать снова`);
+      setBackupHint(`Последняя копия ${days} дн. назад — лучше скачать снова`);
     } else {
-      setBackupHint(`Последний бэкап ${days} дн. назад`);
+      setBackupHint(`Последняя копия ${days} дн. назад`);
     }
   }, []);
 
@@ -121,7 +122,7 @@ export default function SettingsPage() {
 
     setLoading(false);
     if (orgError || settingsError) {
-      setMessage(orgError?.message ?? settingsError?.message ?? "Ошибка");
+      setMessage(friendlyError("Не удалось сохранить настройки", orgError || settingsError));
       return;
     }
     setMessage("Настройки сохранены");
@@ -141,7 +142,7 @@ export default function SettingsPage() {
       .select("*")
       .single();
     if (error) {
-      setMessage(error.message);
+      setMessage(friendlyError("Не удалось добавить инвестора", error));
       return;
     }
     setInvestors((prev) => [...prev, data]);
@@ -155,12 +156,12 @@ export default function SettingsPage() {
     try {
       const data = await buildFullOrgBackup(orgId);
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadJson(`rassrochki-backup-${stamp}.json`, data);
+      downloadJson(`rassrochki-kopiya-${stamp}.json`, data);
       markBackupDone();
-      setBackupHint("Бэкап только что скачан — сохрани файл на компьютер");
-      setMessage("Полный бэкап JSON скачан");
+      setBackupHint("Копия только что скачана — сохраните файл на компьютер");
+      setMessage("Полная копия скачана");
     } catch (err) {
-      setMessage(err instanceof Error ? err.message : "Ошибка бэкапа");
+      setMessage(friendlyError("Не удалось скачать копию данных", err));
     } finally {
       setBackupBusy(false);
     }
@@ -182,7 +183,7 @@ export default function SettingsPage() {
         String(loan.principal),
         String(loan.term_months),
         String(loan.monthly_payment),
-        loan.status,
+        statusLabelRu(loan.status),
         loan.investors?.name ?? "",
       ]),
     ]);
@@ -196,7 +197,15 @@ export default function SettingsPage() {
       </div>
 
       {message && (
-        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{message}</p>
+        <p
+          className={`rounded-xl px-3 py-2 text-sm ${
+            message.startsWith("Не удалось")
+              ? "bg-red-50 text-red-700"
+              : "bg-emerald-50 text-emerald-800"
+          }`}
+        >
+          {message}
+        </p>
       )}
 
       <form onSubmit={saveSettings} className="grid gap-4 lg:grid-cols-2">
@@ -274,13 +283,11 @@ export default function SettingsPage() {
         <div className="card space-y-3">
           <h2 className="font-semibold">Шаблон договора</h2>
           <p className="text-xs text-[var(--muted)]">
-            Переменные: {"{organization}"}, {"{client}"}, {"{phone}"}, {"{amount}"},
-            {" {down_payment}"}, {"{financed}"}, {"{term_months}"},
-            {" {monthly_payment}"}, {"{start_date}"}, {"{schedule}"}, {"{manager_share}"},
-            {" {investor_share}"}, {"{investor}"}, {"{guarantors}"}
+            Текст договора. При скачивании подставятся данные клиента, суммы, график и
+            поручители. Можно отредактировать под себя.
           </p>
           <textarea
-            className="input min-h-64 font-mono text-xs"
+            className="input min-h-64 text-sm"
             value={value.contract_template}
             onChange={(e) => setValue({ ...value, contract_template: e.target.value })}
           />
@@ -288,7 +295,7 @@ export default function SettingsPage() {
       </form>
 
       <div className="card space-y-4">
-        <h2 className="font-semibold">Инвесторы (справочник)</h2>
+        <h2 className="font-semibold">Инвесторы</h2>
         <form onSubmit={addInvestor} className="flex flex-wrap gap-2">
           <input
             className="input max-w-xs"
@@ -323,11 +330,11 @@ export default function SettingsPage() {
       </div>
 
       <div className="card space-y-3">
-        <h2 className="mb-1 font-semibold">Бэкапы</h2>
+        <h2 className="mb-1 font-semibold">Копия данных</h2>
         <p className="text-sm text-[var(--muted)]">{backupHint}</p>
         <p className="text-sm text-[var(--muted)]">
-          Полный JSON — все клиенты, рассрочки, платежи, поручители. CSV — краткая таблица
-          займов. Раз в неделю скачивай JSON на компьютер.
+          Полная копия — все клиенты, рассрочки и платежи. Таблица — краткий список
+          рассрочек. Раз в неделю скачивайте полную копию на компьютер.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -336,18 +343,12 @@ export default function SettingsPage() {
             disabled={backupBusy}
             onClick={exportFullBackup}
           >
-            {backupBusy ? "Готовим…" : "Скачать полный бэкап (JSON)"}
+            {backupBusy ? "Готовим…" : "Скачать полную копию"}
           </button>
           <button type="button" className="btn-secondary" onClick={exportAll}>
-            Скачать CSV
+            Скачать таблицу
           </button>
         </div>
-        <p className="text-xs text-[var(--muted)]">
-          Автобэкап в GitHub: Actions → «Rassrochki DB backup» (артефакты, не в публичные файлы
-          сайта). Нужны секреты RASSROCHKI_SUPABASE_URL и RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY.
-          Для постоянного хранения — отдельный <strong>приватный</strong> репозиторий
-          (секреты RASSROCHKI_BACKUP_REPO + RASSROCHKI_BACKUP_TOKEN).
-        </p>
       </div>
     </div>
   );

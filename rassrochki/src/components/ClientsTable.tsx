@@ -5,6 +5,7 @@ import { useState } from "react";
 import type { Client } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateShort } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 export function ClientsTable({ clients: initial }: { clients: Client[] }) {
   const router = useRouter();
@@ -57,7 +58,14 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
                 }`}
               >
                 <td className="px-4 py-3 font-medium">{client.full_name}</td>
-                <td className="px-4 py-3">{client.phone ?? "—"}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{client.phone ?? "—"}</span>
+                    {client.phone ? (
+                      <WhatsAppButton phone={client.phone} label="WhatsApp" />
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   {client.is_blacklisted ? (
                     <span className="badge-red">Чёрный список</span>
@@ -108,9 +116,12 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold">{client.full_name}</p>
-                <p className="text-sm text-[var(--muted)]">
-                  {client.phone ?? "Телефон не указан"}
-                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+                  <span>{client.phone ?? "Телефон не указан"}</span>
+                  {client.phone ? (
+                    <WhatsAppButton phone={client.phone} label="WhatsApp" />
+                  ) : null}
+                </div>
                 {client.is_blacklisted && (
                   <p className="mt-1 text-sm text-red-700">
                     Чёрный список

@@ -15,9 +15,9 @@ export function BackupReminder() {
 
   return (
     <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-      Пора сделать бэкап (раз в неделю).{" "}
+      Пора сохранить копию данных (раз в неделю).{" "}
       <Link href="/settings" className="font-semibold underline">
-        Настройки → полный JSON
+        Перейти в настройки
       </Link>
     </div>
   );

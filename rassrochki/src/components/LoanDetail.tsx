@@ -22,6 +22,9 @@ import {
   formatMoney,
 } from "@/lib/utils";
 import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { defaultPaymentReminderText } from "@/lib/whatsapp";
+import { friendlyError, statusLabelRu } from "@/lib/friendly";
 
 export function LoanDetail({
   loan,
@@ -52,6 +55,17 @@ export function LoanDetail({
   const hasInvestor = Boolean(
     loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
   );
+  const nextUnpaid = [...schedules]
+    .filter((s) => s.status !== "paid")
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  const whatsappReminder = nextUnpaid
+    ? defaultPaymentReminderText({
+        clientName: loan.clients?.full_name,
+        productName: loan.title,
+        amount: Number(nextUnpaid.amount),
+        dueDate: formatDateShort(nextUnpaid.due_date),
+      })
+    : undefined;
 
   async function confirmPayment(values: PaymentConfirmValues) {
     if (!pendingSchedule) return;
@@ -69,7 +83,7 @@ export function LoanDetail({
       const { error: uploadError } = await supabase.storage
         .from("payment-receipts")
         .upload(receiptPath, values.file, { upsert: false, contentType: values.file.type });
-      if (uploadError) throw new Error(uploadError.message);
+      if (uploadError) throw new Error("Не удалось загрузить чек");
     }
 
     const { error: paymentError } = await supabase.from("payments").insert({
@@ -83,7 +97,7 @@ export function LoanDetail({
       receipt_path: receiptPath,
     });
 
-    if (paymentError) throw new Error(paymentError.message);
+    if (paymentError) throw new Error("Не удалось сохранить оплату");
 
     const { error: scheduleError } = await supabase
       .from("payment_schedules")
@@ -95,7 +109,7 @@ export function LoanDetail({
       })
       .eq("id", schedule.id);
 
-    if (scheduleError) throw new Error(scheduleError.message);
+    if (scheduleError) throw new Error("Не удалось сохранить оплату");
 
     const allPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
     if (allPaid) {
@@ -115,7 +129,7 @@ export function LoanDetail({
       .createSignedUrl(path, 60 * 10);
     setOpeningReceipt(null);
     if (signError || !data?.signedUrl) {
-      setError(signError?.message ?? "Не удалось открыть чек");
+      setError(friendlyError("Не удалось открыть чек", signError));
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
@@ -129,7 +143,7 @@ export function LoanDetail({
         loan.title ?? "",
         formatDateShort(s.due_date),
         String(s.amount),
-        s.status,
+        statusLabelRu(s.status),
         s.paid_amount != null ? String(s.paid_amount) : "",
         s.receipt_path ? "да" : "",
       ]),
@@ -182,16 +196,27 @@ export function LoanDetail({
         <div>
           <h1 className="text-2xl font-bold">{loan.clients?.full_name}</h1>
           <p className="text-sm text-[var(--muted)]">{loan.title ?? "Рассрочка"}</p>
+          {loan.clients?.phone ? (
+            <p className="mt-1 text-sm text-[var(--muted)]">{loan.clients.phone}</p>
+          ) : null}
           <div className="mt-2">
             <StatusBadge status={loan.status} />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {loan.clients?.phone ? (
+            <WhatsAppButton
+              phone={loan.clients.phone}
+              text={whatsappReminder}
+              label="Написать в WhatsApp"
+              className="btn-secondary"
+            />
+          ) : null}
           <button type="button" className="btn-secondary" onClick={exportSchedule}>
-            Экспорт CSV
+            Скачать график
           </button>
           <button type="button" className="btn-primary" onClick={printContract}>
-            Договор PDF
+            Скачать договор
           </button>
         </div>
       </div>

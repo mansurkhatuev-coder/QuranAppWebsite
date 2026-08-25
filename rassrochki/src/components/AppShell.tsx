@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 const links = [
   { href: "/dashboard", label: "Главная" },
@@ -61,7 +62,10 @@ export function AppShell({
           })}
         </nav>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-4 md:py-6">{children}</main>
+      <main className="mx-auto max-w-6xl space-y-3 px-4 py-4 md:py-6">
+        <PwaInstallBanner />
+        {children}
+      </main>
     </div>
   );
 }
