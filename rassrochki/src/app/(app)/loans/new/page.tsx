@@ -21,6 +21,7 @@ import {
 type LoanDraft = {
   client_id: string;
   investor_id: string;
+  investor_amount: string;
   title: string;
   cost_amount: string;
   markup_percent: string;
@@ -44,10 +45,14 @@ export default function NewLoanPage() {
   const [newClient, setNewClient] = useState({ full_name: "", phone: "" });
   const [savingClient, setSavingClient] = useState(false);
   const [customTerm, setCustomTerm] = useState(false);
+  const [showNewInvestor, setShowNewInvestor] = useState(false);
+  const [newInvestor, setNewInvestor] = useState({ name: "", share_percent: "70" });
+  const [savingInvestor, setSavingInvestor] = useState(false);
 
   const initial: LoanDraft = {
     client_id: "",
     investor_id: "",
+    investor_amount: "",
     title: "",
     cost_amount: "",
     markup_percent: "30",
@@ -60,7 +65,7 @@ export default function NewLoanPage() {
   };
 
   const { value, setValue, status, clearDraft } = useDraft<LoanDraft>(
-    "draft:new-loan-v2",
+    "draft:new-loan-v3",
     initial
   );
 
@@ -120,6 +125,7 @@ export default function NewLoanPage() {
 
   const hasInvestors = investors.length > 0;
   const selectedClient = clients.find((c) => c.id === value.client_id);
+  const withInvestor = Boolean(value.investor_id);
 
   const cost = Number(value.cost_amount) || 0;
   const markup = Number(value.markup_percent) || 0;
@@ -127,8 +133,8 @@ export default function NewLoanPage() {
   const profit = cost > 0 ? calcProfit(cost, markup) : 0;
   const profitSplit = splitIncome(
     profit,
-    hasInvestors ? Number(value.income_share_manager) : 100,
-    hasInvestors ? Number(value.income_share_investor) : 0
+    withInvestor ? Number(value.income_share_manager) : 100,
+    withInvestor ? Number(value.income_share_investor) : 0
   );
 
   const previewSchedule = useMemo(() => {
@@ -138,6 +144,38 @@ export default function NewLoanPage() {
       Number(value.monthly_payment) || calcMonthlyPayment(principal, term);
     return buildSchedule(principal, term, value.start_date, monthly);
   }, [principal, value.term_months, value.start_date, value.monthly_payment]);
+
+  async function addInvestorInline(e: FormEvent) {
+    e.preventDefault();
+    if (!orgId || !newInvestor.name.trim()) return;
+    setSavingInvestor(true);
+    setError(null);
+    const share = Number(newInvestor.share_percent) || 70;
+    const supabase = createClient();
+    const { data, error: insertError } = await supabase
+      .from("investors")
+      .insert({
+        organization_id: orgId,
+        name: newInvestor.name.trim(),
+        share_percent: share,
+      })
+      .select("*")
+      .single();
+    setSavingInvestor(false);
+    if (insertError || !data) {
+      setError(insertError?.message ?? "Не удалось добавить инвестора");
+      return;
+    }
+    setInvestors((prev) => [...prev, data]);
+    setValue({
+      ...value,
+      investor_id: data.id,
+      income_share_investor: String(share),
+      income_share_manager: String(100 - share),
+    });
+    setNewInvestor({ name: "", share_percent: "70" });
+    setShowNewInvestor(false);
+  }
 
   async function addClientInline(e: FormEvent) {
     e.preventDefault();
@@ -208,9 +246,13 @@ export default function NewLoanPage() {
       Number(value.monthly_payment) || calcMonthlyPayment(total, termMonths);
     const schedule = buildSchedule(total, termMonths, value.start_date, monthlyPayment);
 
-    const useInvestor = hasInvestors && value.investor_id;
+    const useInvestor = Boolean(value.investor_id);
     const managerShare = useInvestor ? Number(value.income_share_manager) : 100;
     const investorShare = useInvestor ? Number(value.income_share_investor) : 0;
+    const investorAmount =
+      useInvestor && value.investor_amount
+        ? Number(value.investor_amount)
+        : null;
 
     const { data: loan, error: loanError } = await supabase
       .from("loans")
@@ -218,6 +260,7 @@ export default function NewLoanPage() {
         organization_id: profile.organization_id,
         client_id: value.client_id,
         investor_id: useInvestor ? value.investor_id : null,
+        investor_amount: investorAmount,
         title: value.title.trim() || null,
         cost_amount: cost,
         markup_percent: markup,
@@ -502,80 +545,149 @@ export default function NewLoanPage() {
             )}
           </div>
 
-          {hasInvestors ? (
+          <div>
+            <div className="mb-1 flex items-center justify-between gap-2">
+              <label className="label mb-0">Инвестор по сделке</label>
+              <button
+                type="button"
+                className="text-sm font-medium text-teal-700"
+                onClick={() => setShowNewInvestor((v) => !v)}
+              >
+                {showNewInvestor ? "Отмена" : "+ Добавить инвестора"}
+              </button>
+            </div>
+            <p className="mb-2 text-xs text-[var(--muted)]">
+              Инвестор вкладывает деньги в товар, а долю получает от прибыли (наценки), не
+              от всей суммы к возврату.
+            </p>
+
+            {showNewInvestor ? (
+              <div className="space-y-2 rounded-xl border border-dashed border-teal-300 bg-teal-50/40 p-3">
+                <input
+                  className="input"
+                  placeholder="Имя инвестора"
+                  value={newInvestor.name}
+                  onChange={(e) => setNewInvestor({ ...newInvestor, name: e.target.value })}
+                />
+                <input
+                  className="input"
+                  type="number"
+                  min="0"
+                  max="100"
+                  placeholder="Доля от прибыли, %"
+                  value={newInvestor.share_percent}
+                  onChange={(e) =>
+                    setNewInvestor({ ...newInvestor, share_percent: e.target.value })
+                  }
+                />
+                <button
+                  type="button"
+                  className="btn-primary w-full"
+                  disabled={savingInvestor || !newInvestor.name.trim()}
+                  onClick={addInvestorInline}
+                >
+                  {savingInvestor ? "Добавляем…" : "Добавить и выбрать"}
+                </button>
+              </div>
+            ) : (
+              <select
+                className="input"
+                value={value.investor_id}
+                onChange={(e) => {
+                  const inv = investors.find((i) => i.id === e.target.value);
+                  setValue({
+                    ...value,
+                    investor_id: e.target.value,
+                    income_share_investor: inv
+                      ? String(inv.share_percent)
+                      : value.income_share_investor,
+                    income_share_manager: inv
+                      ? String(Math.max(0, 100 - Number(inv.share_percent)))
+                      : "100",
+                    investor_amount: e.target.value ? value.investor_amount : "",
+                  });
+                }}
+              >
+                <option value="">Без инвестора (вся прибыль вам)</option>
+                {investors.map((inv) => (
+                  <option key={inv.id} value={inv.id}>
+                    {inv.name} (доля по умолч. {inv.share_percent}%)
+                  </option>
+                ))}
+              </select>
+            )}
+            {!hasInvestors && !showNewInvestor && (
+              <p className="mt-2 text-xs text-[var(--muted)]">
+                Список пуст — нажмите «+ Добавить инвестора»
+              </p>
+            )}
+          </div>
+
+          {withInvestor && (
             <>
               <div>
-                <label className="label">Инвестор</label>
-                <select
+                <label className="label">Сколько вложил инвестор, ₽</label>
+                <input
                   className="input"
-                  value={value.investor_id}
-                  onChange={(e) => {
-                    const inv = investors.find((i) => i.id === e.target.value);
-                    setValue({
-                      ...value,
-                      investor_id: e.target.value,
-                      income_share_investor: inv
-                        ? String(inv.share_percent)
-                        : value.income_share_investor,
-                      income_share_manager: inv
-                        ? String(100 - Number(inv.share_percent))
-                        : value.income_share_manager,
-                    });
-                  }}
-                >
-                  <option value="">Без инвестора (вся прибыль вам)</option>
-                  {investors.map((inv) => (
-                    <option key={inv.id} value={inv.id}>
-                      {inv.name} ({inv.share_percent}%)
-                    </option>
-                  ))}
-                </select>
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={value.investor_amount}
+                  onChange={(e) => setValue({ ...value, investor_amount: e.target.value })}
+                  placeholder="Например: 10000"
+                />
+                <p className="mt-1 text-xs text-[var(--muted)]">
+                  Учёт кассы: сколько денег инвестор дал на эту сделку
+                </p>
               </div>
-
-              {value.investor_id && (
-                <>
-                  <div className="grid gap-3 sm:grid-cols-2">
-                    <div>
-                      <label className="label">Доля владельца, %</label>
-                      <input
-                        className="input"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={value.income_share_manager}
-                        onChange={(e) =>
-                          setValue({ ...value, income_share_manager: e.target.value })
-                        }
-                      />
-                    </div>
-                    <div>
-                      <label className="label">Доля инвестора, %</label>
-                      <input
-                        className="input"
-                        type="number"
-                        min="0"
-                        max="100"
-                        value={value.income_share_investor}
-                        onChange={(e) =>
-                          setValue({ ...value, income_share_investor: e.target.value })
-                        }
-                      />
-                    </div>
-                  </div>
-                  {profit > 0 && (
-                    <p className="text-sm text-[var(--muted)]">
-                      Из прибыли {formatMoney(profit)}: вам {formatMoney(profitSplit.manager)},
-                      инвестору {formatMoney(profitSplit.investor)}
-                    </p>
-                  )}
-                </>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="label">Доля владельца от прибыли, %</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={value.income_share_manager}
+                    onChange={(e) => {
+                      const manager = Number(e.target.value);
+                      setValue({
+                        ...value,
+                        income_share_manager: e.target.value,
+                        income_share_investor: String(Math.max(0, 100 - manager)),
+                      });
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="label">Доля инвестора от прибыли, %</label>
+                  <input
+                    className="input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    value={value.income_share_investor}
+                    onChange={(e) => {
+                      const investorShare = Number(e.target.value);
+                      setValue({
+                        ...value,
+                        income_share_investor: e.target.value,
+                        income_share_manager: String(Math.max(0, 100 - investorShare)),
+                      });
+                    }}
+                  />
+                </div>
+              </div>
+              {profit > 0 && (
+                <p className="text-sm text-[var(--muted)]">
+                  Из прибыли {formatMoney(profit)}: вам {formatMoney(profitSplit.manager)},
+                  инвестору {formatMoney(profitSplit.investor)}
+                  {value.investor_amount
+                    ? ` · вложено ${formatMoney(Number(value.investor_amount))}`
+                    : ""}
+                </p>
               )}
             </>
-          ) : (
-            <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-[var(--muted)]">
-              Инвесторов пока нет — поля инвестора скрыты. Вся прибыль идёт вам. Добавить
-              инвесторов можно в «Настройки».
-            </p>
           )}
 
           <div>

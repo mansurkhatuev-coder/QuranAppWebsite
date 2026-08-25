@@ -5,6 +5,10 @@ import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { LoanWithRelations, OrganizationSettings, PaymentSchedule } from "@/types/database";
 import { fillContractTemplate, generateContractPdf } from "@/lib/contract";
+import {
+  PaymentConfirmModal,
+  type PaymentConfirmValues,
+} from "@/components/PaymentConfirmModal";
 import { StatusBadge } from "@/components/ui";
 import {
   downloadCsv,
@@ -26,8 +30,9 @@ export function LoanDetail({
   orgName: string;
 }) {
   const router = useRouter();
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [pendingSchedule, setPendingSchedule] = useState<PaymentSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [openingReceipt, setOpeningReceipt] = useState<string | null>(null);
 
   const paidTotal = schedules
     .filter((s) => s.status === "paid")
@@ -55,59 +60,85 @@ export function LoanDetail({
   );
   const hasInvestor = Boolean(loan.investor_id && Number(loan.income_share_investor) > 0);
 
-  async function markPaid(schedule: PaymentSchedule) {
-    setLoadingId(schedule.id);
+  async function confirmPayment(values: PaymentConfirmValues) {
+    if (!pendingSchedule) return;
+    const schedule = pendingSchedule;
     setError(null);
     const supabase = createClient();
-    const now = new Date().toISOString();
+    const paidAtIso = new Date(`${values.paid_at}T12:00:00`).toISOString();
+    const amount = Number(values.amount);
+
+    let receiptPath: string | null = null;
+    if (values.file) {
+      const ext = values.file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const safeExt = ["jpg", "jpeg", "png", "webp", "heic", "pdf"].includes(ext) ? ext : "jpg";
+      receiptPath = `${loan.organization_id}/${loan.id}/${schedule.id}-${Date.now()}.${safeExt}`;
+      const { error: uploadError } = await supabase.storage
+        .from("payment-receipts")
+        .upload(receiptPath, values.file, { upsert: false, contentType: values.file.type });
+      if (uploadError) throw new Error(uploadError.message);
+    }
 
     const { error: paymentError } = await supabase.from("payments").insert({
       loan_id: loan.id,
       organization_id: loan.organization_id,
       schedule_id: schedule.id,
-      amount: schedule.amount,
-      paid_at: now,
-      method: "cash",
+      amount,
+      paid_at: paidAtIso,
+      method: values.file ? "transfer_with_receipt" : "manual",
+      notes: values.notes.trim() || null,
+      receipt_path: receiptPath,
     });
 
-    if (paymentError) {
-      setError(paymentError.message);
-      setLoadingId(null);
-      return;
-    }
+    if (paymentError) throw new Error(paymentError.message);
 
     const { error: scheduleError } = await supabase
       .from("payment_schedules")
       .update({
         status: "paid",
-        paid_at: now,
-        paid_amount: schedule.amount,
+        paid_at: paidAtIso,
+        paid_amount: amount,
+        receipt_path: receiptPath,
       })
       .eq("id", schedule.id);
 
-    setLoadingId(null);
-    if (scheduleError) {
-      setError(scheduleError.message);
-      return;
-    }
+    if (scheduleError) throw new Error(scheduleError.message);
 
     const allPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
     if (allPaid) {
       await supabase.from("loans").update({ status: "closed" }).eq("id", loan.id);
     }
 
+    setPendingSchedule(null);
     router.refresh();
+  }
+
+  async function openReceipt(path: string) {
+    setOpeningReceipt(path);
+    setError(null);
+    const supabase = createClient();
+    const { data, error: signError } = await supabase.storage
+      .from("payment-receipts")
+      .createSignedUrl(path, 60 * 10);
+    setOpeningReceipt(null);
+    if (signError || !data?.signedUrl) {
+      setError(signError?.message ?? "Не удалось открыть чек");
+      return;
+    }
+    window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
   function exportSchedule() {
     downloadCsv(`rassrochka_${loan.id.slice(0, 8)}.csv`, [
-      ["Клиент", "Рассрочка", "Дата", "Сумма", "Статус"],
+      ["Клиент", "Рассрочка", "Дата", "Сумма", "Статус", "Оплачено", "Чек"],
       ...schedules.map((s) => [
         loan.clients?.full_name ?? "",
         loan.title ?? "",
         formatDateShort(s.due_date),
         String(s.amount),
         s.status,
+        s.paid_amount != null ? String(s.paid_amount) : "",
+        s.receipt_path ? "да" : "",
       ]),
     ]);
   }
@@ -190,7 +221,12 @@ export function LoanDetail({
               : formatMoney(earnedProfit)}
           </p>
           {hasInvestor && loan.investors?.name && (
-            <p className="mt-1 text-xs text-[var(--muted)]">{loan.investors.name}</p>
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              {loan.investors.name}
+              {loan.investor_amount != null
+                ? ` · вложил ${formatMoney(Number(loan.investor_amount))}`
+                : ""}
+            </p>
           )}
         </div>
       </div>
@@ -205,19 +241,38 @@ export function LoanDetail({
             >
               <div>
                 <p className="font-medium">Платёж #{schedule.sequence_number}</p>
-                <p className="text-sm text-[var(--muted)]">{formatDateShort(schedule.due_date)}</p>
+                <p className="text-sm text-[var(--muted)]">
+                  по графику {formatDateShort(schedule.due_date)}
+                  {schedule.status === "paid" && schedule.paid_at
+                    ? ` · оплачен ${formatDateShort(schedule.paid_at.slice(0, 10))}`
+                    : ""}
+                </p>
+                {schedule.status === "paid" && schedule.paid_amount != null && (
+                  <p className="text-sm font-medium">
+                    получено {formatMoney(Number(schedule.paid_amount))}
+                  </p>
+                )}
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold">{formatMoney(Number(schedule.amount))}</span>
                 <StatusBadge status={schedule.status} />
+                {schedule.status === "paid" && schedule.receipt_path && (
+                  <button
+                    type="button"
+                    className="btn-secondary text-xs"
+                    disabled={openingReceipt === schedule.receipt_path}
+                    onClick={() => openReceipt(schedule.receipt_path!)}
+                  >
+                    {openingReceipt === schedule.receipt_path ? "…" : "Чек"}
+                  </button>
+                )}
                 {schedule.status !== "paid" && (
                   <button
                     type="button"
                     className="btn-primary text-xs"
-                    disabled={loadingId === schedule.id}
-                    onClick={() => markPaid(schedule)}
+                    onClick={() => setPendingSchedule(schedule)}
                   >
-                    {loadingId === schedule.id ? "…" : "Оплачен"}
+                    Внести оплату
                   </button>
                 )}
               </div>
@@ -225,6 +280,14 @@ export function LoanDetail({
           ))}
         </div>
       </div>
+
+      {pendingSchedule && (
+        <PaymentConfirmModal
+          schedule={pendingSchedule}
+          onClose={() => setPendingSchedule(null)}
+          onConfirm={confirmPayment}
+        />
+      )}
     </div>
   );
 }

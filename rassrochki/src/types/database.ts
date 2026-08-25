@@ -63,6 +63,8 @@ export type Loan = {
   income_share_manager: number;
   /** Доля инвестора в прибыли */
   income_share_investor: number;
+  /** Сколько вложил инвестор в эту сделку */
+  investor_amount: number | null;
   status: "active" | "closed";
   notes: string | null;
   created_at: string;
@@ -78,6 +80,7 @@ export type PaymentSchedule = {
   status: "pending" | "paid" | "overdue";
   paid_at: string | null;
   paid_amount: number | null;
+  receipt_path: string | null;
 };
 
 export type Payment = {
@@ -89,6 +92,7 @@ export type Payment = {
   paid_at: string;
   method: string | null;
   notes: string | null;
+  receipt_path: string | null;
 };
 
 export type LoanWithRelations = Loan & {

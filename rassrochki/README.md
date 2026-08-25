@@ -27,10 +27,11 @@ MVP веб-приложения для учёта рассрочек: клиен
 2. SQL Editor → выполните по порядку:
    - `supabase/migrations/001_initial.sql`
    - `supabase/migrations/002_markup_blacklist.sql`
+   - `supabase/migrations/003_receipts_investor_amount.sql`
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
 
-Если проект уже создан и `001` выполнен — достаточно выполнить только **`002_markup_blacklist.sql`**.
+Если проект уже создан и `001`/`002` выполнены — достаточно выполнить **`003_receipts_investor_amount.sql`**.
 
 ### 2. Локально
 
