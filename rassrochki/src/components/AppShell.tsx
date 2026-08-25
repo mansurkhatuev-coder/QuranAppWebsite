@@ -34,7 +34,9 @@ export function AppShell({
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <div>
             <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Рассрочки</p>
-            <p className="font-semibold">{orgName}</p>
+            <p className="max-w-[14rem] truncate font-semibold sm:max-w-xs md:max-w-md" title={orgName}>
+              {orgName}
+            </p>
           </div>
           <button type="button" onClick={logout} className="btn-secondary text-xs">
             Выйти
