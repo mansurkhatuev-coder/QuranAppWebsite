@@ -248,7 +248,7 @@ grant execute on function public.current_organization_has_access() to authentica
 grant execute on function public.platform_list_organizations() to authenticated;
 grant execute on function public.platform_set_organization_access(uuid, text, int, text) to authenticated;
 
--- RLS: данные org только при активном доступе
+-- RLS: данные org только при активном доступе (+ проверки родителя из 006)
 drop policy if exists "settings_select" on public.organization_settings;
 drop policy if exists "settings_update" on public.organization_settings;
 drop policy if exists "investors_all" on public.investors;
@@ -298,6 +298,8 @@ create policy "loans_all" on public.loans
   with check (
     organization_id = public.user_organization_id()
     and public.organization_has_access(organization_id)
+    and public.client_belongs_to_org(client_id, organization_id)
+    and public.investor_belongs_to_org(investor_id, organization_id)
   );
 
 create policy "schedules_all" on public.payment_schedules
@@ -308,6 +310,7 @@ create policy "schedules_all" on public.payment_schedules
   with check (
     organization_id = public.user_organization_id()
     and public.organization_has_access(organization_id)
+    and public.loan_belongs_to_org(loan_id, organization_id)
   );
 
 create policy "payments_all" on public.payments
@@ -318,6 +321,8 @@ create policy "payments_all" on public.payments
   with check (
     organization_id = public.user_organization_id()
     and public.organization_has_access(organization_id)
+    and public.loan_belongs_to_org(loan_id, organization_id)
+    and public.schedule_belongs_to_org(schedule_id, organization_id)
   );
 
 create policy "guarantors_all" on public.loan_guarantors
@@ -328,6 +333,7 @@ create policy "guarantors_all" on public.loan_guarantors
   with check (
     organization_id = public.user_organization_id()
     and public.organization_has_access(organization_id)
+    and public.loan_belongs_to_org(loan_id, organization_id)
   );
 
 -- Чеки: тоже только при доступе

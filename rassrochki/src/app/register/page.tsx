@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/friendly";
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -29,7 +30,7 @@ export default function RegisterPage() {
 
     if (signUpError) {
       setLoading(false);
-      setError(signUpError.message);
+      setError(friendlyError("Не удалось создать аккаунт", signUpError));
       return;
     }
 
@@ -46,7 +47,7 @@ export default function RegisterPage() {
 
     setLoading(false);
     if (orgError) {
-      setError(orgError.message);
+      setError(friendlyError("Не удалось создать организацию", orgError));
       return;
     }
 

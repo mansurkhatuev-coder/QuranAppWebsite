@@ -5,20 +5,30 @@ import { useState } from "react";
 import type { Client } from "@/types/database";
 import { createClient } from "@/lib/supabase/client";
 import { formatDateShort } from "@/lib/utils";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 export function ClientsTable({ clients: initial }: { clients: Client[] }) {
   const router = useRouter();
   const [clients, setClients] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
+  const [error, setError] = useState<string | null>(null);
 
   async function toggleBlacklist(client: Client) {
-    setBusyId(client.id);
-    const supabase = createClient();
     const next = !client.is_blacklisted;
+    if (next) {
+      const ok = window.confirm(
+        `Добавить «${client.full_name}» в чёрный список? Новые рассрочки на него будут запрещены.`
+      );
+      if (!ok) return;
+    }
+
+    setBusyId(client.id);
+    setError(null);
+    const supabase = createClient();
     const note = next ? (noteDraft[client.id] ?? client.blacklist_note ?? "").trim() || null : null;
 
-    const { data, error } = await supabase
+    const { data, error: updateError } = await supabase
       .from("clients")
       .update({
         is_blacklisted: next,
@@ -29,7 +39,14 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
       .single();
 
     setBusyId(null);
-    if (error || !data) return;
+    if (updateError || !data) {
+      setError(
+        next
+          ? "Не удалось добавить в чёрный список"
+          : "Не удалось убрать из чёрного списка"
+      );
+      return;
+    }
 
     setClients((prev) => prev.map((c) => (c.id === client.id ? data : c)));
     router.refresh();
@@ -37,6 +54,9 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
 
   return (
     <>
+      {error && (
+        <p className="mb-3 rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
+      )}
       <div className="hidden md:block card overflow-x-auto p-0">
         <table className="min-w-full text-sm">
           <thead className="border-b border-[var(--border)] bg-slate-50 text-left">
@@ -57,7 +77,14 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
                 }`}
               >
                 <td className="px-4 py-3 font-medium">{client.full_name}</td>
-                <td className="px-4 py-3">{client.phone ?? "—"}</td>
+                <td className="px-4 py-3">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span>{client.phone ?? "—"}</span>
+                    {client.phone ? (
+                      <WhatsAppButton phone={client.phone} label="WhatsApp" />
+                    ) : null}
+                  </div>
+                </td>
                 <td className="px-4 py-3">
                   {client.is_blacklisted ? (
                     <span className="badge-red">Чёрный список</span>
@@ -108,9 +135,12 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="font-semibold">{client.full_name}</p>
-                <p className="text-sm text-[var(--muted)]">
-                  {client.phone ?? "Телефон не указан"}
-                </p>
+                <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-[var(--muted)]">
+                  <span>{client.phone ?? "Телефон не указан"}</span>
+                  {client.phone ? (
+                    <WhatsAppButton phone={client.phone} label="WhatsApp" />
+                  ) : null}
+                </div>
                 {client.is_blacklisted && (
                   <p className="mt-1 text-sm text-red-700">
                     Чёрный список

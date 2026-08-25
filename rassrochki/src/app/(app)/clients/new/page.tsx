@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/friendly";
 
 type ClientDraft = {
   full_name: string;
@@ -29,7 +30,7 @@ export default function NewClientPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setError("Нужно войти");
+      setError("Войдите в аккаунт");
       setLoading(false);
       return;
     }
@@ -39,7 +40,7 @@ export default function NewClientPage() {
       .eq("id", user.id)
       .single();
     if (!profile) {
-      setError("Организация не найдена");
+      setError("Не удалось продолжить. Выйдите и войдите снова");
       setLoading(false);
       return;
     }
@@ -54,7 +55,7 @@ export default function NewClientPage() {
 
     setLoading(false);
     if (insertError) {
-      setError(insertError.message);
+      setError(friendlyError("Не удалось сохранить клиента", insertError));
       return;
     }
     clearDraft();

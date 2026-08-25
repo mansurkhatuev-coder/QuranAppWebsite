@@ -5,6 +5,7 @@ import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
+import { friendlyError } from "@/lib/friendly";
 import type { Client, Investor, OrganizationSettings } from "@/types/database";
 import {
   MARKUP_PRESETS,
@@ -201,7 +202,7 @@ export default function NewLoanPage() {
       .single();
     setSavingInvestor(false);
     if (insertError || !data) {
-      setError(insertError?.message ?? "Не удалось добавить инвестора");
+      setError(friendlyError("Не удалось добавить инвестора", insertError));
       return;
     }
     setInvestors((prev) => [...prev, data]);
@@ -232,7 +233,7 @@ export default function NewLoanPage() {
       .single();
     setSavingClient(false);
     if (insertError || !data) {
-      setError(insertError?.message ?? "Не удалось добавить клиента");
+      setError(friendlyError("Не удалось добавить клиента", insertError));
       return;
     }
     setClients((prev) => [...prev, data].sort((a, b) => a.full_name.localeCompare(b.full_name, "ru")));
@@ -263,7 +264,7 @@ export default function NewLoanPage() {
       data: { user },
     } = await supabase.auth.getUser();
     if (!user) {
-      setError("Нужно войти");
+      setError("Войдите в аккаунт");
       setLoading(false);
       return;
     }
@@ -273,7 +274,7 @@ export default function NewLoanPage() {
       .eq("id", user.id)
       .single();
     if (!profile) {
-      setError("Организация не найдена");
+      setError("Не удалось продолжить. Выйдите и войдите снова");
       setLoading(false);
       return;
     }
@@ -331,7 +332,7 @@ export default function NewLoanPage() {
 
     if (loanError || !loan) {
       setLoading(false);
-      setError(loanError?.message ?? "Не удалось создать рассрочку");
+      setError(friendlyError("Не удалось создать рассрочку", loanError));
       return;
     }
 
@@ -348,7 +349,9 @@ export default function NewLoanPage() {
 
     setLoading(false);
     if (scheduleError) {
-      setError(scheduleError.message);
+      await supabase.from("loans").delete().eq("id", loan.id);
+      setLoading(false);
+      setError(friendlyError("Не удалось сохранить график платежей", scheduleError));
       return;
     }
 
@@ -367,7 +370,10 @@ export default function NewLoanPage() {
         .from("loan_guarantors")
         .insert(guarantorRows);
       if (guarantorError) {
-        setError(guarantorError.message);
+        await supabase.from("payment_schedules").delete().eq("loan_id", loan.id);
+        await supabase.from("loans").delete().eq("id", loan.id);
+        setLoading(false);
+        setError(friendlyError("Не удалось сохранить поручителей", guarantorError));
         return;
       }
     }
@@ -487,6 +493,9 @@ export default function NewLoanPage() {
                 onChange={(e) => setValue({ ...value, start_date: e.target.value })}
                 required
               />
+              <p className="mt-1 text-xs text-[var(--muted)]">
+                Первый платёж — через месяц после этой даты
+              </p>
             </div>
           </div>
 

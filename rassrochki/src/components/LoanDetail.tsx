@@ -22,6 +22,14 @@ import {
   formatMoney,
 } from "@/lib/utils";
 import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
+import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { defaultPaymentReminderText } from "@/lib/whatsapp";
+import { friendlyError, statusLabelRu } from "@/lib/friendly";
+import {
+  allocatePaymentToSchedules,
+  scheduleDueRemaining,
+  sumSchedulePaid,
+} from "@/lib/schedule-payments";
 
 export function LoanDetail({
   loan,
@@ -39,24 +47,35 @@ export function LoanDetail({
   const router = useRouter();
   const [pendingSchedule, setPendingSchedule] = useState<PaymentSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [openingReceipt, setOpeningReceipt] = useState<string | null>(null);
 
   const downPayment = Number(loan.down_payment ?? 0);
   const financed = calcFinancedAmount(Number(loan.principal), downPayment);
-  const paidTotal = schedules
-    .filter((s) => s.status === "paid")
-    .reduce((sum, s) => sum + Number(s.paid_amount ?? s.amount), 0);
+  const paidTotal = sumSchedulePaid(schedules);
   const remaining = financed - paidTotal;
   const projection = projectedRemaining(loan, paidTotal);
   const shares = resolveProfitShares(loan);
   const hasInvestor = Boolean(
     loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
   );
+  const nextUnpaid = [...schedules]
+    .filter((s) => s.status !== "paid")
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  const whatsappReminder = nextUnpaid
+    ? defaultPaymentReminderText({
+        clientName: loan.clients?.full_name,
+        productName: loan.title,
+        amount: Number(nextUnpaid.amount),
+        dueDate: formatDateShort(nextUnpaid.due_date),
+      })
+    : undefined;
 
   async function confirmPayment(values: PaymentConfirmValues) {
     if (!pendingSchedule) return;
     const schedule = pendingSchedule;
     setError(null);
+    setInfo(null);
     const supabase = createClient();
     const paidAtIso = new Date(`${values.paid_at}T12:00:00`).toISOString();
     const amount = Number(values.amount);
@@ -65,11 +84,22 @@ export function LoanDetail({
     if (values.file) {
       const ext = values.file.name.split(".").pop()?.toLowerCase() || "jpg";
       const safeExt = ["jpg", "jpeg", "png", "webp", "heic", "pdf"].includes(ext) ? ext : "jpg";
+      if (values.file.size > 8 * 1024 * 1024) {
+        throw new Error("Чек слишком большой (макс. 8 МБ)");
+      }
+      const mime =
+        values.file.type && values.file.type.startsWith("image/")
+          ? values.file.type
+          : values.file.type === "application/pdf"
+            ? "application/pdf"
+            : safeExt === "pdf"
+              ? "application/pdf"
+              : "image/jpeg";
       receiptPath = `${loan.organization_id}/${loan.id}/${schedule.id}-${Date.now()}.${safeExt}`;
       const { error: uploadError } = await supabase.storage
         .from("payment-receipts")
-        .upload(receiptPath, values.file, { upsert: false, contentType: values.file.type });
-      if (uploadError) throw new Error(uploadError.message);
+        .upload(receiptPath, values.file, { upsert: false, contentType: mime });
+      if (uploadError) throw new Error("Не удалось загрузить чек");
     }
 
     const { error: paymentError } = await supabase.from("payments").insert({
@@ -83,23 +113,47 @@ export function LoanDetail({
       receipt_path: receiptPath,
     });
 
-    if (paymentError) throw new Error(paymentError.message);
+    if (paymentError) throw new Error("Не удалось сохранить оплату");
 
-    const { error: scheduleError } = await supabase
-      .from("payment_schedules")
-      .update({
-        status: "paid",
-        paid_at: paidAtIso,
-        paid_amount: amount,
-        receipt_path: receiptPath,
-      })
-      .eq("id", schedule.id);
+    const { updates, surplus } = allocatePaymentToSchedules(
+      schedules,
+      schedule.id,
+      amount,
+      paidAtIso,
+      receiptPath
+    );
 
-    if (scheduleError) throw new Error(scheduleError.message);
+    if (updates.length === 0) {
+      throw new Error("Не удалось распределить оплату по графику");
+    }
 
-    const allPaid = schedules.every((s) => s.id === schedule.id || s.status === "paid");
-    if (allPaid) {
-      await supabase.from("loans").update({ status: "closed" }).eq("id", loan.id);
+    for (const row of updates) {
+      const { error: scheduleError } = await supabase
+        .from("payment_schedules")
+        .update({
+          status: row.status,
+          paid_at: row.paid_at,
+          paid_amount: row.paid_amount,
+          receipt_path: row.receipt_path,
+        })
+        .eq("id", row.id);
+
+      if (scheduleError) throw new Error("Не удалось сохранить оплату");
+    }
+
+    const paidTotalAfter = paidTotal + amount;
+    if (paidTotalAfter + 0.009 >= financed) {
+      const { error: closeError } = await supabase
+        .from("loans")
+        .update({ status: "closed" })
+        .eq("id", loan.id);
+      if (closeError) {
+        setError("Оплата сохранена, но не удалось закрыть рассрочку — обновите страницу");
+      }
+    } else if (surplus > 0.009) {
+      setInfo(`Зачислено с переплатой: ${formatMoney(surplus)} сверх суммы по графику`);
+    } else if (updates.length > 1) {
+      setInfo("Переплата зачтена на следующие платежи по графику");
     }
 
     setPendingSchedule(null);
@@ -115,7 +169,7 @@ export function LoanDetail({
       .createSignedUrl(path, 60 * 10);
     setOpeningReceipt(null);
     if (signError || !data?.signedUrl) {
-      setError(signError?.message ?? "Не удалось открыть чек");
+      setError(friendlyError("Не удалось открыть чек", signError));
       return;
     }
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
@@ -129,7 +183,7 @@ export function LoanDetail({
         loan.title ?? "",
         formatDateShort(s.due_date),
         String(s.amount),
-        s.status,
+        statusLabelRu(s.status),
         s.paid_amount != null ? String(s.paid_amount) : "",
         s.receipt_path ? "да" : "",
       ]),
@@ -160,15 +214,15 @@ export function LoanDetail({
       organization: orgName,
       client: loan.clients?.full_name ?? "",
       phone: loan.clients?.phone ?? "",
-      amount: String(loan.principal),
-      down_payment: String(loan.down_payment ?? 0),
-      financed: String(financed),
+      amount: formatMoney(Number(loan.principal)),
+      down_payment: formatMoney(Number(loan.down_payment ?? 0)),
+      financed: formatMoney(financed),
       term_months: String(loan.term_months),
-      monthly_payment: String(loan.monthly_payment),
+      monthly_payment: formatMoney(Number(loan.monthly_payment)),
       start_date: formatDateShort(loan.start_date),
       schedule: scheduleText,
-      manager_share: String(loan.income_share_manager),
-      investor_share: String(loan.income_share_investor),
+      manager_share: String(shares.manager),
+      investor_share: String(shares.investor),
       investor: loan.investors?.name ?? "—",
       guarantors: guarantorsText,
     });
@@ -182,21 +236,35 @@ export function LoanDetail({
         <div>
           <h1 className="text-2xl font-bold">{loan.clients?.full_name}</h1>
           <p className="text-sm text-[var(--muted)]">{loan.title ?? "Рассрочка"}</p>
+          {loan.clients?.phone ? (
+            <p className="mt-1 text-sm text-[var(--muted)]">{loan.clients.phone}</p>
+          ) : null}
           <div className="mt-2">
             <StatusBadge status={loan.status} />
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          {loan.clients?.phone ? (
+            <WhatsAppButton
+              phone={loan.clients.phone}
+              text={whatsappReminder}
+              label="Написать в WhatsApp"
+              className="btn-secondary"
+            />
+          ) : null}
           <button type="button" className="btn-secondary" onClick={exportSchedule}>
-            Экспорт CSV
+            Скачать график
           </button>
           <button type="button" className="btn-primary" onClick={printContract}>
-            Договор PDF
+            Печать договора
           </button>
         </div>
       </div>
 
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
+      {info && !error && (
+        <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{info}</p>
+      )}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
@@ -312,7 +380,11 @@ export function LoanDetail({
       <div className="card">
         <h2 className="mb-3 font-semibold">График платежей</h2>
         <div className="space-y-2">
-          {schedules.map((schedule) => (
+          {schedules.map((schedule) => {
+            const dueLeft = scheduleDueRemaining(schedule);
+            const paid = Number(schedule.paid_amount ?? 0);
+            const expected = Number(schedule.amount);
+            return (
             <div
               key={schedule.id}
               className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3"
@@ -325,16 +397,22 @@ export function LoanDetail({
                     ? ` · оплачен ${formatDateShort(schedule.paid_at.slice(0, 10))}`
                     : ""}
                 </p>
-                {schedule.status === "paid" && schedule.paid_amount != null && (
-                  <p className="text-sm font-medium">
-                    получено {formatMoney(Number(schedule.paid_amount))}
+                {schedule.status === "paid" && paid > 0 && (
+                  <p className="text-sm font-medium text-teal-800">
+                    получено {formatMoney(paid)}
+                    {paid > expected + 0.009 ? ` · переплата ${formatMoney(paid - expected)}` : ""}
+                  </p>
+                )}
+                {schedule.status !== "paid" && paid > 0 && (
+                  <p className="text-sm font-medium text-amber-800">
+                    внесено {formatMoney(paid)} · осталось {formatMoney(dueLeft)}
                   </p>
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">{formatMoney(Number(schedule.amount))}</span>
+                <span className="font-semibold">{formatMoney(expected)}</span>
                 <StatusBadge status={schedule.status} />
-                {schedule.status === "paid" && schedule.receipt_path && (
+                {schedule.receipt_path && (
                   <button
                     type="button"
                     className="btn-secondary text-xs"
@@ -355,7 +433,8 @@ export function LoanDetail({
                 )}
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

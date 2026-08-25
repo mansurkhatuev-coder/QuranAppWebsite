@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import type { PaymentSchedule } from "@/types/database";
 import { formatMoney } from "@/lib/utils";
+import { friendlyError } from "@/lib/friendly";
 
 export type PaymentConfirmValues = {
   paid_at: string;
@@ -34,18 +35,37 @@ export function PaymentConfirmModal({
       setError("Укажите дату и сумму оплаты");
       return;
     }
+    const expected = Number(schedule.amount);
+    if (num + 0.009 < expected) {
+      const ok = window.confirm(
+        `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Остаток останется по этому платежу.`
+      );
+      if (!ok) return;
+    } else if (num > expected + 0.009) {
+      const ok = window.confirm(
+        `Сумма больше платежа по графику (${formatMoney(expected)}). Лишнее автоматически зачтётся на следующие платежи. Продолжить?`
+      );
+      if (!ok) return;
+    }
     setLoading(true);
     setError(null);
     try {
       await onConfirm({ paid_at: paidAt, amount: String(num), file, notes });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Ошибка сохранения");
+      setError(friendlyError("Не удалось сохранить оплату", err));
       setLoading(false);
     }
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center">
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      onClick={onClose}
+      onKeyDown={(e) => {
+        if (e.key === "Escape") onClose();
+      }}
+      role="presentation"
+    >
       <form
         onSubmit={submit}
         className="card w-full max-w-md space-y-4 shadow-xl"
@@ -54,7 +74,7 @@ export function PaymentConfirmModal({
         <div>
           <h2 className="text-lg font-bold">Подтверждение оплаты</h2>
           <p className="text-sm text-[var(--muted)]">
-            Платёж #{schedule.sequence_number} · по графику {formatMoney(Number(schedule.amount))}
+            Платёж {schedule.sequence_number} · по графику {formatMoney(Number(schedule.amount))}
           </p>
         </div>
 
@@ -85,7 +105,7 @@ export function PaymentConfirmModal({
         </div>
 
         <div>
-          <label className="label">Чек (фото / PDF) — необязательно</label>
+          <label className="label">Чек (фото или файл) — по желанию</label>
           <input
             className="input file:mr-3 file:rounded-lg file:border-0 file:bg-teal-50 file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-teal-800"
             type="file"
@@ -93,7 +113,7 @@ export function PaymentConfirmModal({
             onChange={(e) => setFile(e.target.files?.[0] ?? null)}
           />
           <p className="mt-1 text-xs text-[var(--muted)]">
-            Чек из Сбера, Тинькофф и т.п. — удобно при споре
+            Можно приложить скрин перевода из банка
           </p>
         </div>
 

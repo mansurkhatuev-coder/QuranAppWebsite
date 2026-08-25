@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 const links = [
   { href: "/dashboard", label: "Главная" },
@@ -30,6 +31,24 @@ export function AppShell({
   async function logout() {
     const supabase = createClient();
     await supabase.auth.signOut();
+    try {
+      const keys = Object.keys(localStorage);
+      for (const key of keys) {
+        if (
+          key.startsWith("draft:") ||
+          key.startsWith("rassrochki:") ||
+          key.includes("backup")
+        ) {
+          localStorage.removeItem(key);
+        }
+      }
+      if ("caches" in window) {
+        const names = await caches.keys();
+        await Promise.all(names.filter((n) => n.startsWith("rassrochki")).map((n) => caches.delete(n)));
+      }
+    } catch {
+      // ignore storage cleanup errors
+    }
     router.push("/login");
     router.refresh();
   }
@@ -83,7 +102,10 @@ export function AppShell({
           })}
         </nav>
       </header>
-      <main className="mx-auto max-w-6xl px-4 py-4 md:py-6">{children}</main>
+      <main className="mx-auto max-w-6xl space-y-3 px-4 py-4 md:py-6">
+        <PwaInstallBanner />
+        {children}
+      </main>
     </div>
   );
 }
