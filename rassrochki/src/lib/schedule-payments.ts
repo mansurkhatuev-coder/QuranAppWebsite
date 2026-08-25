@@ -8,8 +8,10 @@ export function scheduleDueRemaining(schedule: PaymentSchedule): number {
   return Math.max(0, Number(schedule.amount) - paid);
 }
 
+export type SchedulePaidRow = Pick<PaymentSchedule, "status" | "amount" | "paid_amount">;
+
 /** Сумма уже зачтённая по графику (включая частичные и переплаты). */
-export function sumSchedulePaid(schedules: PaymentSchedule[]): number {
+export function sumSchedulePaid(schedules: SchedulePaidRow[]): number {
   return schedules.reduce((sum, s) => {
     if (s.status === "paid") return sum + Number(s.paid_amount ?? s.amount);
     return sum + Number(s.paid_amount ?? 0);
