@@ -26,7 +26,9 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
 import {
+  assertPaymentWithinLoanRemaining,
   assertStartScheduleCanAcceptPayment,
+  loanScheduleRemaining,
   scheduleDueRemaining,
   sumSchedulePaid,
 } from "@/lib/schedule-payments";
@@ -53,7 +55,8 @@ export function LoanDetail({
   const downPayment = Number(loan.down_payment ?? 0);
   const financed = calcFinancedAmount(Number(loan.principal), downPayment);
   const paidTotal = sumSchedulePaid(schedules);
-  const remaining = financed - paidTotal;
+  const remaining = Math.max(0, Math.round((financed - paidTotal) * 100) / 100);
+  const loanRemaining = loanScheduleRemaining(schedules);
   const projection = projectedRemaining(loan, paidTotal);
   const shares = resolveProfitShares(loan);
   const hasInvestor = Boolean(
@@ -75,11 +78,12 @@ export function LoanDetail({
     if (!pendingSchedule) return;
     const schedule = pendingSchedule;
     assertStartScheduleCanAcceptPayment(schedule);
+    const amount = Number(values.amount);
+    assertPaymentWithinLoanRemaining(amount, loanRemaining);
     setError(null);
     setInfo(null);
     const supabase = createClient();
     const paidAtIso = new Date(`${values.paid_at}T12:00:00`).toISOString();
-    const amount = Number(values.amount);
 
     let receiptPath: string | null = null;
     if (values.file) {
@@ -116,12 +120,10 @@ export function LoanDetail({
     const rpc = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
     if (!rpc) throw new Error("Не удалось зарегистрировать оплату");
 
-    if (Number(rpc.surplus ?? 0) > 0.009) {
-      setInfo(`Зачислено с переплатой: ${formatMoney(Number(rpc.surplus))} сверх суммы по графику`);
-    } else if (Number(rpc.applied_total ?? 0) > scheduleDueRemaining(schedule) + 0.009) {
-      setInfo("Переплата зачтена на следующие платежи по графику");
-    } else if (rpc.idempotent_replay) {
+    if (rpc.idempotent_replay) {
       setInfo("Повторный запрос распознан: платёж уже был зарегистрирован ранее");
+    } else if (Number(rpc.applied_total ?? amount) > scheduleDueRemaining(schedule) + 0.009) {
+      setInfo("Сумма зачтена на несколько платежей по графику");
     }
 
     setPendingSchedule(null);
@@ -262,8 +264,8 @@ export function LoanDetail({
           <p className="text-sm text-[var(--muted)]">Прибыль по сделке</p>
           <p className="text-xl font-bold">{formatMoney(projection.profit)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            собрано прибыли: {formatMoney(projection.earnedProfit)} ·{" "}
-            {Math.round(projection.progress * 100)}%
+            собрано прибыли: {formatMoney(projection.earnedProfit)} · получено{" "}
+            {formatMoney(projection.collected)} · {Math.round(projection.progress * 100)}%
           </p>
         </div>
       </div>
@@ -301,12 +303,24 @@ export function LoanDetail({
                   : ""}
               </p>
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Вернуть капитал</span>
+                <span className="text-[var(--muted)]">Капитал вложен</span>
                 <span>{formatMoney(projection.investorCapital)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Его прибыль</span>
+                <span className="text-[var(--muted)]">Капитал возвращён</span>
+                <span>{formatMoney(projection.capitalReturned)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Капитал осталось</span>
+                <span>{formatMoney(projection.capitalLeft)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Его прибыль всего</span>
                 <span>{formatMoney(projection.investorProfit)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Прибыль заработана</span>
+                <span>{formatMoney(projection.earnedInvestorProfit)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--muted)]">Всего ожидает</span>
@@ -411,6 +425,7 @@ export function LoanDetail({
       {pendingSchedule && (
         <PaymentConfirmModal
           schedule={pendingSchedule}
+          loanRemaining={loanRemaining}
           onClose={() => setPendingSchedule(null)}
           onConfirm={confirmPayment}
         />

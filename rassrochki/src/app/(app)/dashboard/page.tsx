@@ -243,7 +243,14 @@ export default async function DashboardPage() {
     investorProfit30d += parts.investor;
   }
 
-  const cashThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
+  const cashPaymentsThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
+  // Взнос не пишется в payments — учитываем loans.down_payment один раз по start_date месяца.
+  const cashDownThisMonth = (loansRes.data ?? []).reduce((sum, row) => {
+    const start = String((row as { start_date?: string }).start_date ?? "");
+    if (!start || start < monthStart || start > monthEndDate) return sum;
+    return sum + (Number((row as { down_payment?: number | null }).down_payment ?? 0) || 0);
+  }, 0);
+  const cashThisMonth = Math.round((cashPaymentsThisMonth + cashDownThisMonth) * 100) / 100;
   const dueSoonAmount = dueSoon.reduce((s, p) => s + scheduleDueRemaining(p), 0);
   const overdueAmount = overdue.reduce((s, p) => s + scheduleDueRemaining(p), 0);
 
@@ -318,7 +325,11 @@ export default async function DashboardPage() {
         <StatCard
           label="Касса в этом месяце"
           value={formatMoney(cashThisMonth)}
-          hint="получено за месяц"
+          hint={
+            cashDownThisMonth > 0
+              ? `платежи ${formatMoney(cashPaymentsThisMonth)} + взносы ${formatMoney(cashDownThisMonth)}`
+              : "платежи и первоначальные взносы"
+          }
         />
       </div>
 

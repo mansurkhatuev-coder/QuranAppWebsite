@@ -17,9 +17,15 @@ export type LoanFinanceInput = {
   status?: string;
 };
 
+const EPS = 0.009;
+
 function shareOrNull(v: number | null | undefined): number | null {
   if (v == null || Number.isNaN(Number(v))) return null;
   return Number(v);
+}
+
+function money(n: number) {
+  return Math.round(n * 100) / 100;
 }
 
 /**
@@ -68,7 +74,7 @@ export function dealTotals(loan: LoanFinanceInput) {
   // Одна база прибыли: principal − cost (как в profitFromPaid), до копеек
   const profit =
     cost > 0 && principal > 0
-      ? Math.round(Math.max(principal - cost, 0) * 100) / 100
+      ? money(Math.max(principal - cost, 0))
       : cost > 0
         ? calcProfit(cost, markup)
         : 0;
@@ -80,6 +86,7 @@ export function dealTotals(loan: LoanFinanceInput) {
   return {
     cost,
     profit,
+    profitTotal: profit,
     principal: principal || cost + profit,
     down,
     financed,
@@ -93,8 +100,15 @@ export function dealTotals(loan: LoanFinanceInput) {
   };
 }
 
+/** Получено от клиента: взнос + оплаты по графику. */
+export function collectedAmount(loan: LoanFinanceInput, paidScheduleTotal: number) {
+  const down = Number(loan.down_payment) || 0;
+  return money(Math.max(0, down) + Math.max(0, paidScheduleTotal));
+}
+
 /**
  * Прогресс сбора полной суммы (взнос + платежи по графику) / principal.
+ * Используется для признания заработанной прибыли.
  */
 export function collectionProgress(
   loan: LoanFinanceInput,
@@ -102,37 +116,68 @@ export function collectionProgress(
 ) {
   const principal = Number(loan.principal) || 0;
   if (principal <= 0) return 0;
-  const down = Number(loan.down_payment) || 0;
-  const collected = down + paidScheduleTotal;
+  const collected = collectedAmount(loan, paidScheduleTotal);
   return Math.min(1, Math.max(0, collected / principal));
+}
+
+/**
+ * Прогресс возврата капитала инвестора.
+ * Считается ТОЛЬКО по оплатам графика; down_payment не входит.
+ */
+export function capitalProgress(
+  loan: LoanFinanceInput,
+  paidScheduleTotal: number
+) {
+  const totals = dealTotals(loan);
+  if (totals.financed <= EPS) return 0;
+  return Math.min(1, Math.max(0, paidScheduleTotal / totals.financed));
+}
+
+/** Фактически полученные деньги: взнос + сумма payments (без двойного учёта взноса). */
+export function cashReceived(loan: LoanFinanceInput, paymentsSum: number) {
+  const down = Number(loan.down_payment) || 0;
+  return money(Math.max(0, down) + Math.max(0, paymentsSum));
 }
 
 export function projectedRemaining(loan: LoanFinanceInput, paidScheduleTotal: number) {
   const totals = dealTotals(loan);
   const progress = collectionProgress(loan, paidScheduleTotal);
-  const earnedProfit = Math.round(totals.profit * progress * 100) / 100;
+  const progressCapital = capitalProgress(loan, paidScheduleTotal);
+  const collected = collectedAmount(loan, paidScheduleTotal);
+
+  const earnedProfit = Math.min(
+    totals.profit,
+    money(totals.profit * progress)
+  );
   const earnedSplit = splitIncome(
     earnedProfit,
     totals.shares.manager,
     totals.shares.investor
   );
-  const capitalReturned = Math.round(totals.investorCapital * progress * 100) / 100;
+
+  const capitalReturned = Math.min(
+    totals.investorCapital,
+    money(totals.investorCapital * progressCapital)
+  );
+  const capitalLeft = money(Math.max(0, totals.investorCapital - capitalReturned));
 
   return {
     ...totals,
+    collected,
     progress,
+    progressCapital,
     earnedProfit,
     earnedOwnerProfit: earnedSplit.manager,
     earnedInvestorProfit: earnedSplit.investor,
-    remainingOwnerProfit: Math.max(0, totals.ownerProfit - earnedSplit.manager),
-    remainingInvestorProfit: Math.max(0, totals.investorProfit - earnedSplit.investor),
+    remainingOwnerProfit: Math.max(0, money(totals.ownerProfit - earnedSplit.manager)),
+    remainingInvestorProfit: Math.max(0, money(totals.investorProfit - earnedSplit.investor)),
     capitalReturned,
-    capitalLeft: Math.max(0, totals.investorCapital - capitalReturned),
+    capitalLeft,
     /** Ещё получить инвестору ≈ оставшийся капитал + оставшаяся прибыль */
-    investorStillToReceive:
-      Math.max(0, totals.investorCapital - capitalReturned) +
-      Math.max(0, totals.investorProfit - earnedSplit.investor),
-    ownerStillToReceive: Math.max(0, totals.ownerProfit - earnedSplit.manager),
+    investorStillToReceive: money(
+      capitalLeft + Math.max(0, totals.investorProfit - earnedSplit.investor)
+    ),
+    ownerStillToReceive: Math.max(0, money(totals.ownerProfit - earnedSplit.manager)),
   };
 }
 

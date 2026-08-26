@@ -17,14 +17,18 @@ export type PaymentConfirmValues = {
 
 export function PaymentConfirmModal({
   schedule,
+  loanRemaining,
   onClose,
   onConfirm,
 }: {
   schedule: PaymentSchedule;
+  /** Общий остаток всей рассрочки (не только текущей строки). */
+  loanRemaining: number;
   onClose: () => void;
   onConfirm: (values: PaymentConfirmValues) => Promise<void>;
 }) {
   const dueRemaining = scheduleDueRemaining(schedule);
+  const maxAllowed = Math.round(Math.max(0, loanRemaining) * 100) / 100;
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
   const [amount, setAmount] = useState(String(dueRemaining));
   const [file, setFile] = useState<File | null>(null);
@@ -35,20 +39,27 @@ export function PaymentConfirmModal({
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (loading) return;
     const num = Number(amount);
     if (!paidAt || !num || num <= 0) {
       setError("Укажите дату и сумму оплаты");
       return;
     }
+    if (num > maxAllowed + 0.009) {
+      setError(
+        `Сумма превышает остаток рассрочки. Максимум: ${formatMoney(maxAllowed)}`
+      );
+      return;
+    }
     const expected = dueRemaining;
     if (num + 0.009 < expected) {
       const ok = window.confirm(
-        `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Остаток останется по этому платежу.`
+        `Сумма меньше остатка по этому платежу (${formatMoney(expected)}). Сохранить частичную оплату?`
       );
       if (!ok) return;
     } else if (num > expected + 0.009) {
       const ok = window.confirm(
-        `Сумма больше платежа по графику (${formatMoney(expected)}). Лишнее автоматически зачтётся на следующие платежи. Продолжить?`
+        `Сумма больше текущего платежа (${formatMoney(expected)}). Лишнее будет зачтено на следующие платежи графика (не больше общего остатка ${formatMoney(maxAllowed)}). Продолжить?`
       );
       if (!ok) return;
     }
@@ -85,7 +96,10 @@ export function PaymentConfirmModal({
         <div>
           <h2 className="text-lg font-bold">Подтверждение оплаты</h2>
           <p className="text-sm text-[var(--muted)]">
-            Платёж {schedule.sequence_number} · остаток к оплате {formatMoney(dueRemaining)}
+            Платёж {schedule.sequence_number} · по строке {formatMoney(dueRemaining)}
+          </p>
+          <p className="text-xs text-[var(--muted)]">
+            Остаток всей рассрочки: {formatMoney(maxAllowed)}
           </p>
         </div>
 
@@ -108,6 +122,7 @@ export function PaymentConfirmModal({
             className="input"
             type="number"
             min="0.01"
+            max={maxAllowed || undefined}
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
