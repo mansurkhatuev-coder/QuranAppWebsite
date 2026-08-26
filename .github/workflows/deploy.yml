@@ -6,6 +6,9 @@ on:
       - main
       - master
   workflow_dispatch:
+  # Safety net: some merges/pushes skip the push trigger (site stays stale).
+  schedule:
+    - cron: '*/10 * * * *'
 
 permissions:
   contents: read
