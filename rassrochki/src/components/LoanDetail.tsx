@@ -9,7 +9,7 @@ import type {
   OrganizationSettings,
   PaymentSchedule,
 } from "@/types/database";
-import { fillContractTemplate, generateContractPdf } from "@/lib/contract";
+import { fillContractTemplate, formatScheduleForContract, generateContractPdf } from "@/lib/contract";
 import {
   PaymentConfirmModal,
   type PaymentConfirmValues,
@@ -17,6 +17,7 @@ import {
 import { StatusBadge } from "@/components/ui";
 import {
   calcFinancedAmount,
+  calcSchedulePrincipal,
   downloadCsv,
   formatDateShort,
   formatMoney,
@@ -51,7 +52,13 @@ export function LoanDetail({
   const [openingReceipt, setOpeningReceipt] = useState<string | null>(null);
 
   const downPayment = Number(loan.down_payment ?? 0);
-  const financed = calcFinancedAmount(Number(loan.principal), downPayment);
+  const scheduleOnFull = Boolean(loan.schedule_on_full_amount);
+  const financed = calcSchedulePrincipal(
+    Number(loan.principal),
+    downPayment,
+    scheduleOnFull
+  );
+  const remainingAfterDown = calcFinancedAmount(Number(loan.principal), downPayment);
   const paidTotal = sumSchedulePaid(schedules);
   const remaining = financed - paidTotal;
   const projection = projectedRemaining(loan, paidTotal);
@@ -191,12 +198,11 @@ export function LoanDetail({
   }
 
   function printContract() {
-    const scheduleText = schedules
-      .map(
-        (s) =>
-          `${s.sequence_number}. ${formatDateShort(s.due_date)} — ${formatMoney(Number(s.amount))}`
-      )
-      .join("\n");
+    const scheduleText = formatScheduleForContract(
+      schedules,
+      formatDateShort,
+      formatMoney
+    );
 
     const guarantorsText =
       guarantors.length === 0
@@ -210,6 +216,7 @@ export function LoanDetail({
             )
             .join("\n");
 
+    const paidCount = schedules.filter((s) => s.status === "paid").length;
     const body = fillContractTemplate(settings.contract_template, {
       organization: orgName,
       client: loan.clients?.full_name ?? "",
@@ -221,6 +228,7 @@ export function LoanDetail({
       monthly_payment: formatMoney(Number(loan.monthly_payment)),
       start_date: formatDateShort(loan.start_date),
       schedule: scheduleText,
+      paid_months: String(paidCount),
       manager_share: String(shares.manager),
       investor_share: String(shares.investor),
       investor: loan.investors?.name ?? "—",
@@ -280,11 +288,15 @@ export function LoanDetail({
           <p className="text-sm text-[var(--muted)]">Взнос</p>
           <p className="text-xl font-bold">{formatMoney(downPayment)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            в рассрочку {formatMoney(financed)}
+            {scheduleOnFull
+              ? "график на полную сумму"
+              : `в рассрочку ${formatMoney(remainingAfterDown)}`}
           </p>
         </div>
         <div className="card">
-          <p className="text-sm text-[var(--muted)]">Остаток по графику</p>
+          <p className="text-sm text-[var(--muted)]">
+            {scheduleOnFull ? "По графику (полная сумма)" : "Остаток по графику"}
+          </p>
           <p className="text-xl font-bold">{formatMoney(Math.max(remaining, 0))}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
             платёж / мес {formatMoney(Number(loan.monthly_payment))}

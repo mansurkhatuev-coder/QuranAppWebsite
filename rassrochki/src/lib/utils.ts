@@ -37,11 +37,34 @@ export function calcFinancedAmount(totalWithMarkup: number, downPayment: number)
   return Math.max(0, financed);
 }
 
-/** Вариант А: доля инвестора в прибыли = вложения / цена товара * 100 */
-export function calcInvestorShareByCapital(investorAmount: number, costAmount: number) {
-  if (!costAmount || costAmount <= 0) return 0;
-  const raw = (Number(investorAmount) / Number(costAmount)) * 100;
+/**
+ * База капитала для доли инвестора: цена товара минус взнос клиента.
+ * Пример: товар 20 000, взнос 5 000 → 100% при вложении 15 000 (не 20 000).
+ */
+export function calcInvestorCapitalBase(costAmount: number, downPayment = 0) {
+  const cost = Math.max(0, Number(costAmount) || 0);
+  const down = Math.max(0, Number(downPayment) || 0);
+  return Math.max(0, Math.round((cost - Math.min(down, cost)) * 100) / 100);
+}
+
+/** Вариант А: доля инвестора в прибыли = вложения / база капитала * 100 */
+export function calcInvestorShareByCapital(investorAmount: number, capitalBase: number) {
+  if (!capitalBase || capitalBase <= 0) return 0;
+  const raw = (Number(investorAmount) / Number(capitalBase)) * 100;
   return Math.round(Math.min(100, Math.max(0, raw)) * 100) / 100;
+}
+
+/**
+ * Сумма, от которой строится график платежей.
+ * scheduleOnFullAmount: график на всю сумму к возврату; иначе — после взноса.
+ */
+export function calcSchedulePrincipal(
+  totalWithMarkup: number,
+  downPayment: number,
+  scheduleOnFullAmount: boolean
+) {
+  if (scheduleOnFullAmount) return Math.max(0, Number(totalWithMarkup) || 0);
+  return calcFinancedAmount(totalWithMarkup, downPayment);
 }
 
 /**
