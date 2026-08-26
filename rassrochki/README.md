@@ -36,6 +36,7 @@ MVP веб-приложения для учёта рассрочек: клиен
    - `supabase/migrations/006_rls_parent_org_checks.sql`
    - `supabase/migrations/007_subscription_trial.sql`
    - `supabase/migrations/008_schedule_on_full_amount.sql`
+   - `supabase/migrations/012_platform_revenue_delete.sql`
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
 5. Назначьте себя владельцем продукта (platform-admin) в SQL Editor:
@@ -46,7 +47,7 @@ set is_platform_admin = true
 where id = (select id from auth.users where email = 'YOUR_EMAIL');
 ```
 
-Если проект уже создан — выполните недостающие миграции по порядку (`002`…`008`).
+Если проект уже создан — выполните недостающие миграции по порядку (`002`…`012`).
 
 ### Бэкапы
 
@@ -81,8 +82,8 @@ npm run dev
    - `NEXT_PUBLIC_WHATSAPP_PHONE` (например `79001234567`)
 4. Deploy
 
-После деплоя: SQL `007_subscription_trial.sql` + `is_platform_admin = true` для вашего email.
-Страница управления: `/platform` (продлить / trial / отключить).
+После деплоя: SQL `007`…`012` (недостающие) + `is_platform_admin = true` для вашего email.
+Страница управления: `/platform` (продлить / trial / отключить / удалить).
 
 ## Структура
 

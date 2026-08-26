@@ -18,6 +18,7 @@ export type Organization = {
   trial_ends_at: string | null;
   paid_until: string | null;
   access_note: string | null;
+  platform_revenue: number;
 };
 
 export type PlatformOrganization = {
@@ -29,6 +30,7 @@ export type PlatformOrganization = {
   trial_ends_at: string | null;
   paid_until: string | null;
   access_note: string | null;
+  platform_revenue: number;
   has_access: boolean;
 };
 

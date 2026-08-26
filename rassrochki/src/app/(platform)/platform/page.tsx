@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { PlatformOrganization } from "@/types/database";
-import { formatDate, formatDateShort } from "@/lib/utils";
+import { formatDateShort, formatMoney } from "@/lib/utils";
 import { ListPageSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
+
+type Action = "extend" | "deactivate" | "activate_trial";
 
 export default function PlatformPage() {
   const [orgs, setOrgs] = useState<PlatformOrganization[]>([]);
@@ -14,6 +16,10 @@ export default function PlatformPage() {
   const [error, setError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [monthsByOrg, setMonthsByOrg] = useState<Record<string, string>>({});
+  const [payByOrg, setPayByOrg] = useState<Record<string, string>>({});
+  const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [deleteName, setDeleteName] = useState("");
+  const [deleteAck, setDeleteAck] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -33,26 +39,69 @@ export default function PlatformPage() {
     void load();
   }, [load]);
 
-  async function runAction(
-    orgId: string,
-    action: "extend" | "deactivate" | "activate_trial"
-  ) {
+  const totalRevenue = useMemo(
+    () => orgs.reduce((sum, o) => sum + Number(o.platform_revenue || 0), 0),
+    [orgs]
+  );
+
+  async function runAction(orgId: string, action: Action) {
     setBusyId(orgId);
     setError(null);
     const supabase = createClient();
     const months = Number(monthsByOrg[orgId] || "1") || 1;
+    const paymentRaw = payByOrg[orgId];
+    const payment =
+      paymentRaw === undefined || paymentRaw === "" ? 0 : Number(paymentRaw);
+
     const { error: rpcError } = await supabase.rpc("platform_set_organization_access", {
       p_org_id: orgId,
       p_action: action,
       p_months: months,
       p_note: null,
+      p_payment_amount: payment,
     });
     setBusyId(null);
     if (rpcError) {
       setError(rpcError.message);
       return;
     }
+    if (action === "extend") {
+      setPayByOrg((prev) => ({ ...prev, [orgId]: "" }));
+    }
     await load();
+  }
+
+  async function deleteOrg(org: PlatformOrganization) {
+    if (deleteName.trim() !== org.name || !deleteAck) return;
+    setBusyId(org.id);
+    setError(null);
+    const supabase = createClient();
+    const { error: rpcError } = await supabase.rpc("platform_delete_organization", {
+      p_org_id: org.id,
+      p_confirm_name: deleteName.trim(),
+    });
+    setBusyId(null);
+    if (rpcError) {
+      setError(rpcError.message);
+      return;
+    }
+    setDeleteId(null);
+    setDeleteName("");
+    setDeleteAck(false);
+    await load();
+  }
+
+  function openDelete(orgId: string) {
+    setDeleteId(orgId);
+    setDeleteName("");
+    setDeleteAck(false);
+    setError(null);
+  }
+
+  function closeDelete() {
+    setDeleteId(null);
+    setDeleteName("");
+    setDeleteAck(false);
   }
 
   return (
@@ -70,10 +119,12 @@ export default function PlatformPage() {
       </header>
 
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
-        <p className="text-sm text-[var(--muted)]">
-          Продление, пробный период и отключение доступа. Клиент пишет в WhatsApp — вы
-          подтверждаете здесь.
-        </p>
+        {!loading && orgs.length > 0 && (
+          <p className="text-sm text-[var(--muted)]">
+            Всего доход:{" "}
+            <span className="font-semibold text-slate-800">{formatMoney(totalRevenue)}</span>
+          </p>
+        )}
 
         {error && (
           <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>
@@ -87,82 +138,162 @@ export default function PlatformPage() {
           <div className="space-y-3">
             {orgs.map((org) => {
               const busy = busyId === org.id;
+              const disabled = !org.is_active || org.subscription_status === "disabled";
+              const showTrial = !org.has_access || org.subscription_status === "trial";
+              const showDeactivate = !disabled;
+              const deleting = deleteId === org.id;
+              const until = org.has_access
+                ? org.subscription_status === "trial" && org.trial_ends_at
+                  ? `Пробный до ${formatDateShort(org.trial_ends_at.slice(0, 10))}`
+                  : org.paid_until
+                    ? `Оплачено до ${formatDateShort(org.paid_until)}`
+                    : "Доступ есть"
+                : disabled
+                  ? "Отключена"
+                  : "Нет доступа";
+
               return (
                 <article key={org.id} className="card space-y-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
-                    <div>
+                    <div className="min-w-0">
                       <h2 className="font-semibold">{org.name}</h2>
-                      <p className="text-xs text-[var(--muted)]">
-                        Создана {formatDate(org.created_at)}
-                      </p>
+                      <p className="mt-0.5 text-sm text-[var(--muted)]">{until}</p>
                     </div>
-                    <StatusBadge org={org} />
+                    <StatusBadge org={org} disabled={disabled} />
                   </div>
 
-                  <dl className="grid gap-2 text-sm sm:grid-cols-3">
-                    <div>
-                      <dt className="text-[var(--muted)]">Статус</dt>
-                      <dd className="font-medium">{org.subscription_status}</dd>
-                    </div>
-                    <div>
-                      <dt className="text-[var(--muted)]">Пробный до</dt>
-                      <dd className="font-medium">
-                        {org.trial_ends_at
-                          ? formatDateShort(org.trial_ends_at.slice(0, 10))
-                          : "—"}
-                      </dd>
-                    </div>
-                    <div>
-                      <dt className="text-[var(--muted)]">Оплачено до</dt>
-                      <dd className="font-medium">
-                        {org.paid_until ? formatDateShort(org.paid_until) : "—"}
-                      </dd>
-                    </div>
-                  </dl>
+                  <p className="text-sm">
+                    <span className="text-[var(--muted)]">Доход: </span>
+                    <span className="font-semibold">
+                      {formatMoney(Number(org.platform_revenue || 0))}
+                    </span>
+                  </p>
 
-                  {org.access_note && (
-                    <p className="text-sm text-slate-600">Заметка: {org.access_note}</p>
+                  {!deleting && (
+                    <div className="flex flex-wrap items-end gap-2">
+                      <label className="text-sm">
+                        <span className="mb-1 block text-[var(--muted)]">Мес.</span>
+                        <input
+                          className="input w-16 py-1.5"
+                          type="number"
+                          min={1}
+                          max={36}
+                          value={monthsByOrg[org.id] ?? "1"}
+                          onChange={(e) =>
+                            setMonthsByOrg((prev) => ({ ...prev, [org.id]: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <label className="text-sm">
+                        <span className="mb-1 block text-[var(--muted)]">Оплата ₽</span>
+                        <input
+                          className="input w-28 py-1.5"
+                          type="number"
+                          min={0}
+                          step="1"
+                          placeholder="0"
+                          value={payByOrg[org.id] ?? ""}
+                          onChange={(e) =>
+                            setPayByOrg((prev) => ({ ...prev, [org.id]: e.target.value }))
+                          }
+                        />
+                      </label>
+                      <button
+                        type="button"
+                        className="btn-primary text-sm"
+                        disabled={busy}
+                        onClick={() => void runAction(org.id, "extend")}
+                      >
+                        {busy ? <Spinner className="h-4 w-4" /> : "Продлить"}
+                      </button>
+                      {showTrial && (
+                        <button
+                          type="button"
+                          className="btn-secondary text-sm"
+                          disabled={busy}
+                          onClick={() => void runAction(org.id, "activate_trial")}
+                        >
+                          +30 дн. trial
+                        </button>
+                      )}
+                      {showDeactivate && (
+                        <button
+                          type="button"
+                          className="btn-secondary text-sm text-red-700"
+                          disabled={busy}
+                          onClick={() => {
+                            if (
+                              window.confirm(
+                                `Отключить «${org.name}»? Доступ закроется сразу.`
+                              )
+                            ) {
+                              void runAction(org.id, "deactivate");
+                            }
+                          }}
+                        >
+                          Отключить
+                        </button>
+                      )}
+                      {disabled && (
+                        <button
+                          type="button"
+                          className="btn-danger text-sm"
+                          disabled={busy}
+                          onClick={() => openDelete(org.id)}
+                        >
+                          Удалить
+                        </button>
+                      )}
+                    </div>
                   )}
 
-                  <div className="flex flex-wrap items-center gap-2">
-                    <label className="flex items-center gap-2 text-sm">
-                      <span className="text-[var(--muted)]">Мес.</span>
+                  {deleting && (
+                    <div className="space-y-3 rounded-xl border border-red-200 bg-red-50/60 p-3">
+                      <p className="text-sm font-medium text-red-800">
+                        Удаление навсегда: клиенты, рассрочки и оплаты этой организации
+                        пропадут.
+                      </p>
+                      <p className="text-sm text-red-700">
+                        Сначала введите точное название: <strong>{org.name}</strong>
+                      </p>
                       <input
-                        className="input w-16 py-1.5"
-                        type="number"
-                        min={1}
-                        max={36}
-                        value={monthsByOrg[org.id] ?? "1"}
-                        onChange={(e) =>
-                          setMonthsByOrg((prev) => ({ ...prev, [org.id]: e.target.value }))
-                        }
+                        className="input"
+                        value={deleteName}
+                        onChange={(e) => setDeleteName(e.target.value)}
+                        placeholder="Название организации"
+                        autoComplete="off"
                       />
-                    </label>
-                    <button
-                      type="button"
-                      className="btn-primary text-sm"
-                      disabled={busy}
-                      onClick={() => void runAction(org.id, "extend")}
-                    >
-                      Продлить
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-secondary text-sm"
-                      disabled={busy}
-                      onClick={() => void runAction(org.id, "activate_trial")}
-                    >
-                      Ещё 30 дней trial
-                    </button>
-                    <button
-                      type="button"
-                      className="btn-danger text-sm"
-                      disabled={busy}
-                      onClick={() => void runAction(org.id, "deactivate")}
-                    >
-                      Отключить
-                    </button>
-                  </div>
+                      <label className="flex items-start gap-2 text-sm text-red-800">
+                        <input
+                          type="checkbox"
+                          className="mt-1"
+                          checked={deleteAck}
+                          onChange={(e) => setDeleteAck(e.target.checked)}
+                        />
+                        <span>Понимаю: откатить удаление нельзя</span>
+                      </label>
+                      <div className="flex flex-wrap gap-2">
+                        <button
+                          type="button"
+                          className="btn-danger text-sm"
+                          disabled={
+                            busy || deleteName.trim() !== org.name || !deleteAck
+                          }
+                          onClick={() => void deleteOrg(org)}
+                        >
+                          {busy ? <Spinner className="h-4 w-4" /> : "Удалить навсегда"}
+                        </button>
+                        <button
+                          type="button"
+                          className="btn-secondary text-sm"
+                          disabled={busy}
+                          onClick={closeDelete}
+                        >
+                          Отмена
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </article>
               );
             })}
@@ -173,12 +304,14 @@ export default function PlatformPage() {
   );
 }
 
-function StatusBadge({ org }: { org: PlatformOrganization }) {
-  if (!org.is_active || org.subscription_status === "disabled") {
-    return <span className="badge-red">Отключена</span>;
-  }
-  if (org.has_access) {
-    return <span className="badge-green">Доступ есть</span>;
-  }
+function StatusBadge({
+  org,
+  disabled,
+}: {
+  org: PlatformOrganization;
+  disabled: boolean;
+}) {
+  if (disabled) return <span className="badge-red">Отключена</span>;
+  if (org.has_access) return <span className="badge-green">Доступ есть</span>;
   return <span className="badge-yellow">Нет доступа</span>;
 }
