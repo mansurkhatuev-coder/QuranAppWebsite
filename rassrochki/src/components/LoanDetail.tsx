@@ -26,6 +26,7 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
 import {
+  assertIsEarliestUnpaidSchedule,
   assertPaymentWithinLoanRemaining,
   assertStartScheduleCanAcceptPayment,
   loanScheduleRemaining,
@@ -78,6 +79,7 @@ export function LoanDetail({
     if (!pendingSchedule) return;
     const schedule = pendingSchedule;
     assertStartScheduleCanAcceptPayment(schedule);
+    assertIsEarliestUnpaidSchedule(schedules, schedule.id);
     const amount = Number(values.amount);
     assertPaymentWithinLoanRemaining(amount, loanRemaining);
     setError(null);
@@ -406,7 +408,7 @@ export function LoanDetail({
                     {openingReceipt === schedule.receipt_path ? "…" : "Чек"}
                   </button>
                 )}
-                {schedule.status !== "paid" && (
+                {schedule.status !== "paid" && nextUnpaid?.id === schedule.id && (
                   <button
                     type="button"
                     className="btn-primary text-xs"
@@ -414,6 +416,9 @@ export function LoanDetail({
                   >
                     Внести оплату
                   </button>
+                )}
+                {schedule.status !== "paid" && nextUnpaid?.id !== schedule.id && (
+                  <span className="text-xs text-[var(--muted)]">Сначала ранний платёж</span>
                 )}
               </div>
             </div>

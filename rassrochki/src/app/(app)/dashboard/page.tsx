@@ -230,12 +230,30 @@ export default async function DashboardPage() {
   let profit30d = 0;
   let ownerProfit30d = 0;
   let investorProfit30d = 0;
+  const since30Date = format(addDays(new Date(), -30), "yyyy-MM-dd");
+
   for (const p of recentPayments) {
     const raw = p.loans as Record<string, unknown> | Record<string, unknown>[] | null;
     const row = Array.isArray(raw) ? raw[0] : raw;
     if (!row) continue;
     const loan = normalizeLoanRow(row);
     const profit = profitFromPaymentForLoan(Number(p.amount), loan);
+    const shares = resolveProfitShares(loan);
+    const parts = splitIncome(profit, shares.manager, shares.investor);
+    profit30d += profit;
+    ownerProfit30d += parts.manager;
+    investorProfit30d += parts.investor;
+  }
+
+  // Прибыль от первоначального взноса (взнос не пишется в payments).
+  // Берём loans со start_date за последние 30 дней — без двойного учёта.
+  for (const row of loansRes.data ?? []) {
+    const start = String((row as { start_date?: string }).start_date ?? "");
+    const down = Number((row as { down_payment?: number | null }).down_payment ?? 0) || 0;
+    if (!start || start < since30Date || down <= 0) continue;
+    const loan = normalizeLoanRow(row as Record<string, unknown>);
+    const profit = profitFromPaymentForLoan(down, loan);
+    if (profit <= 0) continue;
     const shares = resolveProfitShares(loan);
     const parts = splitIncome(profit, shares.manager, shares.investor);
     profit30d += profit;
@@ -339,7 +357,7 @@ export default async function DashboardPage() {
           <p className="break-words text-2xl font-bold">{formatMoney(profit30d)}</p>
           <ShareBar owner={ownerProfit30d} investor={investorProfit30d} />
           <p className="text-xs leading-relaxed text-[var(--muted)]">
-            Доля инвестора = вложил / цена товара, если указаны вложения.
+            Учитываются платежи по графику и первоначальные взносы за 30 дней.
           </p>
         </section>
 

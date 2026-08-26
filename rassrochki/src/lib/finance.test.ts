@@ -258,6 +258,20 @@ describe("Платежи: allocate / лимит остатка", () => {
     );
   });
 
+  it("H1: оплата не с самой ранней неоплаченной строки отклоняется", () => {
+    expect(() => allocatePaymentToSchedules(base, "2", 20_000, "t", null)).toThrow(
+      /более ранний платёж/
+    );
+  });
+
+  it("H1: после закрытия #1 можно платить #2", () => {
+    const afterFirst = base.map((s) =>
+      s.id === "1" ? { ...s, status: "paid" as const, paid_amount: 20_000 } : s
+    );
+    const r = allocatePaymentToSchedules(afterFirst, "2", 20_000, "t", null);
+    expect(r.updates[0]).toMatchObject({ id: "2", status: "paid", paid_amount: 20_000 });
+  });
+
   it("14. двойной параллельный снимок не увеличивает paid_amount выше amount", () => {
     const a = allocatePaymentToSchedules(base, "1", 20_000, "t", null);
     const b = allocatePaymentToSchedules(base, "1", 20_000, "t", null);
