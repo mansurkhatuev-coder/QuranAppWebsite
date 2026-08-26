@@ -301,16 +301,18 @@ export default async function DashboardPage() {
       </section>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <StatCard
-          label="Активных рассрочек"
-          value={String(activeLoans.length)}
-          hint={
-            closedCount > 0
-              ? `всего ${loans.length}, закрыто ${closedCount}`
-              : `всего: ${loans.length}`
-          }
-          tone="accent"
-        />
+        <Link href="/loans" className="block min-w-0 transition hover:opacity-95">
+          <StatCard
+            label="Активных рассрочек"
+            value={String(activeLoans.length)}
+            hint={
+              closedCount > 0
+                ? `всего ${loans.length}, закрыто ${closedCount} · открыть список`
+                : `всего: ${loans.length} · открыть список`
+            }
+            tone="accent"
+          />
+        </Link>
         <StatCard
           label="Просрочено"
           value={String(overdue.length)}
@@ -475,7 +477,19 @@ export default async function DashboardPage() {
       </section>
 
       <section className="card min-w-0">
-        <h2 className="mb-3 font-semibold">Активные сделки — кратко</h2>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <h2 className="font-semibold">
+            Активные сделки
+            {activeLoans.length > 0 ? (
+              <span className="ml-1 font-normal text-[var(--muted)]">· {activeLoans.length}</span>
+            ) : null}
+          </h2>
+          {activeLoans.length > 0 ? (
+            <Link href="/loans" className="text-sm text-teal-700 underline">
+              Все рассрочки
+            </Link>
+          ) : null}
+        </div>
         {activeLoans.length === 0 ? (
           <EmptyState
             title="Активных рассрочек нет"

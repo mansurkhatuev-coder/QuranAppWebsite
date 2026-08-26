@@ -17,6 +17,13 @@ export function formatDateShort(value: string) {
   return format(parseISO(value), "dd.MM.yyyy");
 }
 
+/** Дата последнего платежа по графику: start + termMonths (как в buildSchedule). */
+export function loanEndDate(startDate: string, termMonths: number) {
+  const months = Math.max(0, Number(termMonths) || 0);
+  if (!startDate || months <= 0) return null;
+  return format(addMonths(parseISO(startDate), months), "yyyy-MM-dd");
+}
+
 export function calcMonthlyPayment(principal: number, termMonths: number) {
   return Math.round((principal / termMonths) * 100) / 100;
 }
