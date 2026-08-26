@@ -1,5 +1,5 @@
 /* Рассрочки PWA — только статика. HTML/данные приложения не кэшируем. */
-const CACHE = "rassrochki-shell-v3";
+const CACHE = "rassrochki-shell-v4";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
