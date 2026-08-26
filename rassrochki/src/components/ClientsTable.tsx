@@ -157,7 +157,7 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
                   <div className="flex flex-wrap items-center justify-end gap-1.5">
                     {!client.is_blacklisted && (
                       <input
-                        className="input max-w-[9rem] px-2 py-1 text-xs"
+                        className="input max-w-[9rem] px-2 py-1.5"
                         placeholder="Причина ЧС"
                         value={noteDraft[client.id] ?? ""}
                         onChange={(e) =>
