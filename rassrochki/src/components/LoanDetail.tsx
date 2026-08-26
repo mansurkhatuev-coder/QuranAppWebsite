@@ -27,7 +27,9 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
 import {
-  allocatePaymentToSchedules,
+  assertPaymentWithinLoanRemaining,
+  assertStartScheduleCanAcceptPayment,
+  loanScheduleRemaining,
   scheduleDueRemaining,
   sumSchedulePaid,
 } from "@/lib/schedule-payments";
@@ -60,20 +62,21 @@ export function LoanDetail({
   );
   const remainingAfterDown = calcFinancedAmount(Number(loan.principal), downPayment);
   const paidTotal = sumSchedulePaid(schedules);
-  const remaining = financed - paidTotal;
+  const remaining = Math.max(0, Math.round((financed - paidTotal) * 100) / 100);
+  const loanRemaining = loanScheduleRemaining(schedules);
   const projection = projectedRemaining(loan, paidTotal);
   const shares = resolveProfitShares(loan);
   const hasInvestor = Boolean(
     loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
   );
   const nextUnpaid = [...schedules]
-    .filter((s) => s.status !== "paid")
+    .filter((s) => s.status !== "paid" && scheduleDueRemaining(s) > 0.009)
     .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
   const whatsappReminder = nextUnpaid
     ? defaultPaymentReminderText({
         clientName: loan.clients?.full_name,
         productName: loan.title,
-        amount: Number(nextUnpaid.amount),
+        amount: scheduleDueRemaining(nextUnpaid),
         dueDate: formatDateShort(nextUnpaid.due_date),
       })
     : undefined;
@@ -81,11 +84,13 @@ export function LoanDetail({
   async function confirmPayment(values: PaymentConfirmValues) {
     if (!pendingSchedule) return;
     const schedule = pendingSchedule;
+    assertStartScheduleCanAcceptPayment(schedule);
+    const amount = Number(values.amount);
+    assertPaymentWithinLoanRemaining(amount, loanRemaining);
     setError(null);
     setInfo(null);
     const supabase = createClient();
     const paidAtIso = new Date(`${values.paid_at}T12:00:00`).toISOString();
-    const amount = Number(values.amount);
 
     let receiptPath: string | null = null;
     if (values.file) {
@@ -109,58 +114,23 @@ export function LoanDetail({
       if (uploadError) throw new Error("Не удалось загрузить чек");
     }
 
-    const { error: paymentError } = await supabase.from("payments").insert({
-      loan_id: loan.id,
-      organization_id: loan.organization_id,
-      schedule_id: schedule.id,
-      amount,
-      paid_at: paidAtIso,
-      method: values.file ? "transfer_with_receipt" : "manual",
-      notes: values.notes.trim() || null,
-      receipt_path: receiptPath,
+    const { data: rpcRows, error: rpcError } = await supabase.rpc("record_payment", {
+      p_schedule_id: schedule.id,
+      p_amount: amount,
+      p_paid_at: paidAtIso,
+      p_method: values.file ? "transfer_with_receipt" : "manual",
+      p_notes: values.notes.trim() || null,
+      p_receipt_path: receiptPath,
+      p_idempotency_key: values.idempotency_key,
     });
+    if (rpcError) throw rpcError;
+    const rpc = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
+    if (!rpc) throw new Error("Не удалось зарегистрировать оплату");
 
-    if (paymentError) throw new Error("Не удалось сохранить оплату");
-
-    const { updates, surplus } = allocatePaymentToSchedules(
-      schedules,
-      schedule.id,
-      amount,
-      paidAtIso,
-      receiptPath
-    );
-
-    if (updates.length === 0) {
-      throw new Error("Не удалось распределить оплату по графику");
-    }
-
-    for (const row of updates) {
-      const { error: scheduleError } = await supabase
-        .from("payment_schedules")
-        .update({
-          status: row.status,
-          paid_at: row.paid_at,
-          paid_amount: row.paid_amount,
-          receipt_path: row.receipt_path,
-        })
-        .eq("id", row.id);
-
-      if (scheduleError) throw new Error("Не удалось сохранить оплату");
-    }
-
-    const paidTotalAfter = paidTotal + amount;
-    if (paidTotalAfter + 0.009 >= financed) {
-      const { error: closeError } = await supabase
-        .from("loans")
-        .update({ status: "closed" })
-        .eq("id", loan.id);
-      if (closeError) {
-        setError("Оплата сохранена, но не удалось закрыть рассрочку — обновите страницу");
-      }
-    } else if (surplus > 0.009) {
-      setInfo(`Зачислено с переплатой: ${formatMoney(surplus)} сверх суммы по графику`);
-    } else if (updates.length > 1) {
-      setInfo("Переплата зачтена на следующие платежи по графику");
+    if (rpc.idempotent_replay) {
+      setInfo("Повторный запрос распознан: платёж уже был зарегистрирован ранее");
+    } else if (Number(rpc.applied_total ?? amount) > scheduleDueRemaining(schedule) + 0.009) {
+      setInfo("Сумма зачтена на несколько платежей по графику");
     }
 
     setPendingSchedule(null);
@@ -306,8 +276,8 @@ export function LoanDetail({
           <p className="text-sm text-[var(--muted)]">Прибыль по сделке</p>
           <p className="text-xl font-bold">{formatMoney(projection.profit)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            собрано прибыли: {formatMoney(projection.earnedProfit)} ·{" "}
-            {Math.round(projection.progress * 100)}%
+            собрано прибыли: {formatMoney(projection.earnedProfit)} · получено{" "}
+            {formatMoney(projection.collected)} · {Math.round(projection.progress * 100)}%
           </p>
         </div>
       </div>
@@ -345,12 +315,24 @@ export function LoanDetail({
                   : ""}
               </p>
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Вернуть капитал</span>
+                <span className="text-[var(--muted)]">Капитал вложен</span>
                 <span>{formatMoney(projection.investorCapital)}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-[var(--muted)]">Его прибыль</span>
+                <span className="text-[var(--muted)]">Капитал возвращён</span>
+                <span>{formatMoney(projection.capitalReturned)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Капитал осталось</span>
+                <span>{formatMoney(projection.capitalLeft)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Его прибыль всего</span>
                 <span>{formatMoney(projection.investorProfit)}</span>
+              </div>
+              <div className="flex justify-between text-sm">
+                <span className="text-[var(--muted)]">Прибыль заработана</span>
+                <span>{formatMoney(projection.earnedInvestorProfit)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--muted)]">Всего ожидает</span>
@@ -422,7 +404,9 @@ export function LoanDetail({
                 )}
               </div>
               <div className="flex flex-wrap items-center gap-2">
-                <span className="font-semibold">{formatMoney(expected)}</span>
+                <span className="font-semibold">
+                  {formatMoney(schedule.status === "paid" ? expected : dueLeft)}
+                </span>
                 <StatusBadge status={schedule.status} />
                 {schedule.receipt_path && (
                   <button
@@ -453,6 +437,7 @@ export function LoanDetail({
       {pendingSchedule && (
         <PaymentConfirmModal
           schedule={pendingSchedule}
+          loanRemaining={loanRemaining}
           onClose={() => setPendingSchedule(null)}
           onConfirm={confirmPayment}
         />

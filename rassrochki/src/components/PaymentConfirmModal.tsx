@@ -5,53 +5,74 @@ import type { PaymentSchedule } from "@/types/database";
 import { formatMoney } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendly";
 import { Spinner } from "@/components/Spinner";
+import { scheduleDueRemaining } from "@/lib/schedule-payments";
 
 export type PaymentConfirmValues = {
   paid_at: string;
   amount: string;
   file: File | null;
   notes: string;
+  idempotency_key: string;
 };
 
 export function PaymentConfirmModal({
   schedule,
+  loanRemaining,
   onClose,
   onConfirm,
 }: {
   schedule: PaymentSchedule;
+  /** Общий остаток всей рассрочки (не только текущей строки). */
+  loanRemaining: number;
   onClose: () => void;
   onConfirm: (values: PaymentConfirmValues) => Promise<void>;
 }) {
+  const dueRemaining = scheduleDueRemaining(schedule);
+  const maxAllowed = Math.round(Math.max(0, loanRemaining) * 100) / 100;
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
-  const [amount, setAmount] = useState(String(schedule.amount));
+  const [amount, setAmount] = useState(String(dueRemaining));
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   async function submit(e: FormEvent) {
     e.preventDefault();
+    if (loading) return;
     const num = Number(amount);
     if (!paidAt || !num || num <= 0) {
       setError("Укажите дату и сумму оплаты");
       return;
     }
-    const expected = Number(schedule.amount);
+    if (num > maxAllowed + 0.009) {
+      setError(
+        `Сумма превышает остаток рассрочки. Максимум: ${formatMoney(maxAllowed)}`
+      );
+      return;
+    }
+    const expected = dueRemaining;
     if (num + 0.009 < expected) {
       const ok = window.confirm(
-        `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Остаток останется по этому платежу.`
+        `Сумма меньше остатка по этому платежу (${formatMoney(expected)}). Сохранить частичную оплату?`
       );
       if (!ok) return;
     } else if (num > expected + 0.009) {
       const ok = window.confirm(
-        `Сумма больше платежа по графику (${formatMoney(expected)}). Лишнее автоматически зачтётся на следующие платежи. Продолжить?`
+        `Сумма больше текущего платежа (${formatMoney(expected)}). Лишнее будет зачтено на следующие платежи графика (не больше общего остатка ${formatMoney(maxAllowed)}). Продолжить?`
       );
       if (!ok) return;
     }
     setLoading(true);
     setError(null);
     try {
-      await onConfirm({ paid_at: paidAt, amount: String(num), file, notes });
+      await onConfirm({
+        paid_at: paidAt,
+        amount: String(num),
+        file,
+        notes,
+        idempotency_key: idempotencyKey,
+      });
     } catch (err) {
       setError(friendlyError("Не удалось сохранить оплату", err));
       setLoading(false);
@@ -75,7 +96,10 @@ export function PaymentConfirmModal({
         <div>
           <h2 className="text-lg font-bold">Подтверждение оплаты</h2>
           <p className="text-sm text-[var(--muted)]">
-            Платёж {schedule.sequence_number} · по графику {formatMoney(Number(schedule.amount))}
+            Платёж {schedule.sequence_number} · по строке {formatMoney(dueRemaining)}
+          </p>
+          <p className="text-xs text-[var(--muted)]">
+            Остаток всей рассрочки: {formatMoney(maxAllowed)}
           </p>
         </div>
 
@@ -98,6 +122,7 @@ export function PaymentConfirmModal({
             className="input"
             type="number"
             min="0.01"
+            max={maxAllowed || undefined}
             step="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}

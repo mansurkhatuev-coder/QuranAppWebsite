@@ -1,11 +1,15 @@
 import { notFound } from "next/navigation";
 import { LoanDetail } from "@/components/LoanDetail";
 import { createClient, getSessionProfile } from "@/lib/supabase/server";
+import { syncOverdueSchedules } from "@/lib/overdue";
 
 export default async function LoanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const { organization, settings } = await getSessionProfile();
   const supabase = await createClient();
+  if (organization && settings) {
+    await syncOverdueSchedules(supabase, organization.id, settings.overdue_days, new Date());
+  }
 
   const [{ data: loan }, { data: schedules }, { data: guarantors }] = await Promise.all([
     supabase

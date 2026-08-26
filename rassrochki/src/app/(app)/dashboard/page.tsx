@@ -12,7 +12,8 @@ import {
   resolveProfitShares,
   type LoanFinanceInput,
 } from "@/lib/finance";
-import { sumSchedulePaid } from "@/lib/schedule-payments";
+import { scheduleDueRemaining, sumSchedulePaid } from "@/lib/schedule-payments";
+import { syncOverdueSchedules } from "@/lib/overdue";
 
 function ShareBar({
   owner,
@@ -124,18 +125,11 @@ export default async function DashboardPage() {
   const orgId = organization!.id;
   const today = format(new Date(), "yyyy-MM-dd");
   const overdueGrace = Math.max(0, Number(settings?.overdue_days ?? 0));
-  // pending → overdue, если дата платежа раньше (сегодня − дней из настроек)
-  const overdueCutoff = format(addDays(new Date(), -overdueGrace), "yyyy-MM-dd");
   const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
   const monthEndDate = format(endOfMonth(new Date()), "yyyy-MM-dd");
   const next30 = format(addDays(new Date(), 30), "yyyy-MM-dd");
 
-  await supabase
-    .from("payment_schedules")
-    .update({ status: "overdue" })
-    .eq("organization_id", orgId)
-    .eq("status", "pending")
-    .lt("due_date", overdueCutoff);
+  await syncOverdueSchedules(supabase, orgId, overdueGrace, new Date());
 
   const [
     dueSoonRes,
@@ -250,9 +244,16 @@ export default async function DashboardPage() {
     investorProfit30d += parts.investor;
   }
 
-  const cashThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
-  const dueSoonAmount = dueSoon.reduce((s, p) => s + Number(p.amount), 0);
-  const overdueAmount = overdue.reduce((s, p) => s + Number(p.amount), 0);
+  const cashPaymentsThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
+  // Взнос не пишется в payments — учитываем loans.down_payment один раз по start_date месяца.
+  const cashDownThisMonth = (loansRes.data ?? []).reduce((sum, row) => {
+    const start = String((row as { start_date?: string }).start_date ?? "");
+    if (!start || start < monthStart || start > monthEndDate) return sum;
+    return sum + (Number((row as { down_payment?: number | null }).down_payment ?? 0) || 0);
+  }, 0);
+  const cashThisMonth = Math.round((cashPaymentsThisMonth + cashDownThisMonth) * 100) / 100;
+  const dueSoonAmount = dueSoon.reduce((s, p) => s + scheduleDueRemaining(p), 0);
+  const overdueAmount = overdue.reduce((s, p) => s + scheduleDueRemaining(p), 0);
 
   return (
     <div className="space-y-4 overflow-x-hidden">
@@ -325,7 +326,11 @@ export default async function DashboardPage() {
         <StatCard
           label="Касса в этом месяце"
           value={formatMoney(cashThisMonth)}
-          hint="получено за месяц"
+          hint={
+            cashDownThisMonth > 0
+              ? `платежи ${formatMoney(cashPaymentsThisMonth)} + взносы ${formatMoney(cashDownThisMonth)}`
+              : "платежи и первоначальные взносы"
+          }
         />
       </div>
 
@@ -396,7 +401,7 @@ export default async function DashboardPage() {
                     <p className="text-sm text-red-700">{formatDateShort(item.due_date)}</p>
                   </Link>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="font-semibold">{formatMoney(Number(item.amount))}</span>
+                    <span className="font-semibold">{formatMoney(scheduleDueRemaining(item))}</span>
                     {phone ? (
                       <WhatsAppButton
                         phone={phone}
@@ -404,7 +409,7 @@ export default async function DashboardPage() {
                         text={defaultPaymentReminderText({
                           clientName,
                           productName: loan?.title,
-                          amount: Number(item.amount),
+                          amount: scheduleDueRemaining(item),
                           dueDate: formatDateShort(item.due_date),
                         })}
                       />
@@ -447,7 +452,7 @@ export default async function DashboardPage() {
                     <p className="text-sm text-[var(--muted)]">{formatDateShort(item.due_date)}</p>
                   </Link>
                   <div className="flex shrink-0 items-center gap-2">
-                    <span className="font-semibold">{formatMoney(Number(item.amount))}</span>
+                    <span className="font-semibold">{formatMoney(scheduleDueRemaining(item))}</span>
                     <StatusBadge status={item.status} />
                     {phone ? (
                       <WhatsAppButton
@@ -456,7 +461,7 @@ export default async function DashboardPage() {
                         text={defaultPaymentReminderText({
                           clientName,
                           productName: loan?.title,
-                          amount: Number(item.amount),
+                          amount: scheduleDueRemaining(item),
                           dueDate: formatDateShort(item.due_date),
                         })}
                       />

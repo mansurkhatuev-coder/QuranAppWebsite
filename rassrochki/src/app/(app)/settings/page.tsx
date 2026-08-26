@@ -338,7 +338,9 @@ export default function SettingsPage() {
             </div>
           </div>
           <div>
-            <label className="label">Просрочка через, дней</label>
+            <label className="label">
+              Через сколько полных дней после даты платежа считать просрочкой
+            </label>
             <input
               className="input"
               type="number"
@@ -346,6 +348,9 @@ export default function SettingsPage() {
               value={value.overdue_days}
               onChange={(e) => setValue({ ...value, overdue_days: e.target.value })}
             />
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Например, при 3 днях платёж от 25 числа станет просроченным 29 числа.
+            </p>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
