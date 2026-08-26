@@ -1,7 +1,9 @@
 import {
   calcFinancedAmount,
+  calcInvestorCapitalBase,
   calcInvestorShareByCapital,
   calcProfit,
+  calcSchedulePrincipal,
   profitFromPaid,
   splitIncome,
 } from "@/lib/utils";
@@ -14,6 +16,7 @@ export type LoanFinanceInput = {
   investor_amount?: number | null;
   income_share_manager?: number | null;
   income_share_investor?: number | null;
+  schedule_on_full_amount?: boolean | null;
   status?: string;
 };
 
@@ -49,7 +52,9 @@ export function resolveProfitShares(loan: LoanFinanceInput) {
   }
 
   if (invested > 0 && cost > 0) {
-    const investor = calcInvestorShareByCapital(invested, cost);
+    const down = Number(loan.down_payment) || 0;
+    const capitalBase = calcInvestorCapitalBase(cost, down);
+    const investor = calcInvestorShareByCapital(invested, capitalBase || cost);
     return {
       manager: Math.round((100 - investor) * 100) / 100,
       investor,
@@ -72,7 +77,12 @@ export function dealTotals(loan: LoanFinanceInput) {
       : cost > 0
         ? calcProfit(cost, markup)
         : 0;
-  const financed = calcFinancedAmount(principal || cost + profit, down);
+  const scheduleOnFull = Boolean(loan.schedule_on_full_amount);
+  const financed = calcSchedulePrincipal(
+    principal || cost + profit,
+    down,
+    scheduleOnFull
+  );
   const shares = resolveProfitShares(loan);
   const profitSplit = splitIncome(profit, shares.manager, shares.investor);
   const invested = Number(loan.investor_amount) || 0;

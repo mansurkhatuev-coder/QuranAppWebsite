@@ -14,9 +14,11 @@ import {
   TERM_PRESETS,
   buildSchedule,
   calcFinancedAmount,
+  calcInvestorCapitalBase,
   calcInvestorShareByCapital,
   calcMonthlyPayment,
   calcProfit,
+  calcSchedulePrincipal,
   calcTotalWithMarkup,
   formatDateShort,
   formatMoney,
@@ -31,6 +33,7 @@ type LoanDraft = {
   cost_amount: string;
   markup_percent: string;
   down_payment: string;
+  schedule_on_full_amount: boolean;
   term_months: string;
   start_date: string;
   monthly_payment: string;
@@ -68,6 +71,7 @@ export default function NewLoanPage() {
     cost_amount: "",
     markup_percent: "30",
     down_payment: "",
+    schedule_on_full_amount: false,
     term_months: "12",
     start_date: new Date().toISOString().slice(0, 10),
     monthly_payment: "",
@@ -77,7 +81,7 @@ export default function NewLoanPage() {
   };
 
   const { value, setValue, status, clearDraft } = useDraft<LoanDraft>(
-    "draft:new-loan-v4",
+    "draft:new-loan-v5",
     initial
   );
 
@@ -145,14 +149,18 @@ export default function NewLoanPage() {
   const markup = Number(value.markup_percent) || 0;
   const downPayment = Number(value.down_payment) || 0;
   const principal = cost > 0 ? calcTotalWithMarkup(cost, markup) : 0;
-  const financed = principal > 0 ? calcFinancedAmount(principal, downPayment) : 0;
+  const scheduleOnFull = Boolean(value.schedule_on_full_amount);
+  const schedulePrincipal =
+    principal > 0 ? calcSchedulePrincipal(principal, downPayment, scheduleOnFull) : 0;
+  const remainingAfterDown = principal > 0 ? calcFinancedAmount(principal, downPayment) : 0;
   const profit = cost > 0 ? calcProfit(cost, markup) : 0;
   const withInvestor = Boolean(value.investor_id);
   const invested = Number(value.investor_amount) || 0;
+  const capitalBase = calcInvestorCapitalBase(cost, downPayment);
 
   const autoInvestorShare =
-    withInvestor && cost > 0 && invested > 0
-      ? calcInvestorShareByCapital(invested, cost)
+    withInvestor && capitalBase > 0 && invested > 0
+      ? calcInvestorShareByCapital(invested, capitalBase)
       : 0;
   const investorSharePct = withInvestor
     ? shareManual
@@ -166,7 +174,7 @@ export default function NewLoanPage() {
 
   useEffect(() => {
     if (!withInvestor || shareManual) return;
-    if (!(cost > 0 && invested >= 0)) return;
+    if (!(capitalBase > 0 && invested >= 0)) return;
     const nextInv = String(autoInvestorShare);
     const nextMgr = String(Math.round((100 - autoInvestorShare) * 100) / 100);
     if (
@@ -181,15 +189,23 @@ export default function NewLoanPage() {
       income_share_manager: nextMgr,
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [value.cost_amount, value.investor_amount, value.investor_id, shareManual, autoInvestorShare]);
+  }, [
+    value.cost_amount,
+    value.down_payment,
+    value.investor_amount,
+    value.investor_id,
+    shareManual,
+    autoInvestorShare,
+    capitalBase,
+  ]);
 
   const previewSchedule = useMemo(() => {
     const term = Number(value.term_months);
-    if (!financed || !term || !value.start_date) return [];
+    if (!schedulePrincipal || !term || !value.start_date) return [];
     const monthly =
-      Number(value.monthly_payment) || calcMonthlyPayment(financed, term);
-    return buildSchedule(financed, term, value.start_date, monthly);
-  }, [financed, value.term_months, value.start_date, value.monthly_payment]);
+      Number(value.monthly_payment) || calcMonthlyPayment(schedulePrincipal, term);
+    return buildSchedule(schedulePrincipal, term, value.start_date, monthly);
+  }, [schedulePrincipal, value.term_months, value.start_date, value.monthly_payment]);
 
   async function addInvestorInline(e: FormEvent) {
     e.preventDefault();
@@ -289,21 +305,26 @@ export default function NewLoanPage() {
     const termMonths = Number(value.term_months);
     const total = calcTotalWithMarkup(cost, markup);
     const down = Number(value.down_payment) || 0;
+    const onFull = Boolean(value.schedule_on_full_amount);
     if (down > total) {
       setError("Взнос не может быть больше суммы к возврату");
       setLoading(false);
       return;
     }
-    const financedAmount = calcFinancedAmount(total, down);
-    if (financedAmount <= 0) {
-      setError("После взноса нечего разбивать на платежи — уменьшите взнос");
+    const scheduleAmount = calcSchedulePrincipal(total, down, onFull);
+    if (scheduleAmount <= 0) {
+      setError(
+        onFull
+          ? "Нечего разбивать на платежи — проверьте сумму"
+          : "После взноса нечего разбивать на платежи — уменьшите взнос или включите график на полную сумму"
+      );
       setLoading(false);
       return;
     }
     const monthlyPayment =
-      Number(value.monthly_payment) || calcMonthlyPayment(financedAmount, termMonths);
+      Number(value.monthly_payment) || calcMonthlyPayment(scheduleAmount, termMonths);
     const schedule = buildSchedule(
-      financedAmount,
+      scheduleAmount,
       termMonths,
       value.start_date,
       monthlyPayment
@@ -327,6 +348,7 @@ export default function NewLoanPage() {
         markup_percent: markup,
         principal: total,
         down_payment: down,
+        schedule_on_full_amount: onFull,
         term_months: termMonths,
         start_date: value.start_date,
         monthly_payment: monthlyPayment,
@@ -611,9 +633,27 @@ export default function NewLoanPage() {
               }
               placeholder="0 — без взноса"
             />
-            <p className="mt-1 text-xs text-[var(--muted)]">
-              График платежей считается от оставшейся суммы после взноса
-            </p>
+            <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">
+              <input
+                type="checkbox"
+                className="mt-1"
+                checked={Boolean(value.schedule_on_full_amount)}
+                onChange={(e) =>
+                  setValue({
+                    ...value,
+                    schedule_on_full_amount: e.target.checked,
+                    monthly_payment: "",
+                  })
+                }
+              />
+              <span>
+                График на полную сумму к возврату
+                <span className="mt-0.5 block text-xs text-[var(--muted)]">
+                  Если выключено — платежи только с остатка после взноса. Если включено —
+                  взнос есть, но месяцы считаются от всей суммы.
+                </span>
+              </span>
+            </label>
           </div>
 
           <div>
@@ -645,22 +685,30 @@ export default function NewLoanPage() {
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-[var(--muted)]">В рассрочку</span>
+              <span className="text-[var(--muted)]">
+                {scheduleOnFull ? "По графику (полная)" : "В рассрочку"}
+              </span>
               <span className="font-semibold text-teal-800">
-                {financed ? formatMoney(financed) : "—"}
+                {schedulePrincipal ? formatMoney(schedulePrincipal) : "—"}
               </span>
             </div>
+            {!scheduleOnFull && downPayment > 0 && (
+              <div className="flex justify-between gap-2 text-xs">
+                <span className="text-[var(--muted)]">остаток после взноса</span>
+                <span>{remainingAfterDown ? formatMoney(remainingAfterDown) : "—"}</span>
+              </div>
+            )}
             <div className="flex justify-between gap-2">
               <span className="text-[var(--muted)]">Прибыль</span>
               <span className="font-semibold">{profit ? formatMoney(profit) : "—"}</span>
             </div>
-            {financed > 0 && Number(value.term_months) > 0 && (
+            {schedulePrincipal > 0 && Number(value.term_months) > 0 && (
               <div className="flex justify-between gap-2">
                 <span className="text-[var(--muted)]">≈ платёж / мес</span>
                 <span className="font-semibold">
                   {formatMoney(
                     Number(value.monthly_payment) ||
-                      calcMonthlyPayment(financed, Number(value.term_months))
+                      calcMonthlyPayment(schedulePrincipal, Number(value.term_months))
                   )}
                 </span>
               </div>
@@ -761,9 +809,9 @@ export default function NewLoanPage() {
                   placeholder="Например: 80000"
                 />
                 <p className="mt-1 text-xs text-[var(--muted)]">
-                  Доля прибыли считается по вкладу: вложил / цена товара.
-                  {cost > 0 && invested > 0
-                    ? ` Сейчас ${autoInvestorShare}% ( ${formatMoney(invested)} из ${formatMoney(cost)} ).`
+                  Доля прибыли считается по вкладу: вложил / (цена товара − взнос).
+                  {capitalBase > 0 && invested > 0
+                    ? ` Сейчас ${autoInvestorShare}% ( ${formatMoney(invested)} из ${formatMoney(capitalBase)} ).`
                     : " Укажите цену товара и сумму вложений."}
                 </p>
               </div>
