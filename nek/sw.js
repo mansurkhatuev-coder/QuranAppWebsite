@@ -1,11 +1,11 @@
 /* Некъ PWA — network-first shell for offline reopen. */
-const CACHE = 'waydean-nek-v2';
+const CACHE = 'waydean-nek-v3';
 const PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './nek.css?v=4',
-  './nek.js?v=4',
+  './nek.css?v=5',
+  './nek.js?v=5',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
