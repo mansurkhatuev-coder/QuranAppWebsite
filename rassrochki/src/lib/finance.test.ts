@@ -18,9 +18,11 @@ import {
 } from "@/lib/finance";
 import {
   allocatePaymentToSchedules,
+  assertStartScheduleCanAcceptPayment,
   scheduleDueRemaining,
   sumSchedulePaid,
 } from "@/lib/schedule-payments";
+import { calculateOverdueCutoff, calculateOverdueStatus } from "@/lib/overdue";
 import type { PaymentSchedule } from "@/types/database";
 
 const EPS = 0.009;
@@ -193,13 +195,13 @@ describe("Тест 5–8: частичная / полная / переплата
     expect(fakePaymentsTotal).not.toBe(schedulePaid);
   });
 
-  it("Тест 8b: оплата уже закрытой строки со stale-состоянием переносит сумму на СЛЕДУЮЩИЙ платёж", () => {
+  it("Тест 3: стартовая строка paid должна быть отклонена до регистрации", () => {
     const paidFirst = base.map((s) =>
       s.id === "1" ? { ...s, status: "paid" as const, paid_amount: 20_000 } : s
     );
-    const r = allocatePaymentToSchedules(paidFirst, "1", 20_000, "t", null);
-    expect(r.updates[0]?.id).toBe("2");
-    expect(r.updates[0]?.status).toBe("paid");
+    expect(() => assertStartScheduleCanAcceptPayment(paidFirst[0])).toThrow(
+      "Стартовый платёж уже полностью оплачен"
+    );
   });
 
   it("сверх всех строк → surplus сохраняется (деньги в payments, не в графике)", () => {
@@ -218,28 +220,58 @@ describe("Тест 5–8: частичная / полная / переплата
 });
 
 describe("Тест 9: просрочка — семантика cutoff (как на dashboard)", () => {
-  function isOverdue(dueDate: string, today: string, graceDays: number) {
-    // dashboard: .lt("due_date", format(addDays(today, -grace)))
-    const t = new Date(`${today}T12:00:00Z`);
-    const cutoff = new Date(t);
-    cutoff.setUTCDate(cutoff.getUTCDate() - graceDays);
-    const cutoffStr = cutoff.toISOString().slice(0, 10);
-    return dueDate < cutoffStr;
-  }
-
   it("grace=3: на 3-й день после due ещё НЕ overdue; на 4-й — да", () => {
-    // due 2024-06-12, today 2024-06-15 → days past = 3
-    expect(isOverdue("2024-06-12", "2024-06-15", 3)).toBe(false);
-    expect(isOverdue("2024-06-11", "2024-06-15", 3)).toBe(true);
+    expect(
+      calculateOverdueStatus({
+        dueDate: "2024-06-12",
+        paidAmount: 0,
+        amount: 20_000,
+        overdueDays: 3,
+        currentDate: new Date("2024-06-15T12:00:00Z"),
+      })
+    ).toBe("pending");
+    expect(
+      calculateOverdueStatus({
+        dueDate: "2024-06-11",
+        paidAmount: 0,
+        amount: 20_000,
+        overdueDays: 3,
+        currentDate: new Date("2024-06-15T12:00:00Z"),
+      })
+    ).toBe("overdue");
   });
 
-  it.each([0, 1, 2, 3, 4])("grace=%s: due == cutoff не overdue (строгое <)", (grace) => {
-    const due = "2024-06-10";
-    const todayDate = new Date(`${due}T12:00:00Z`);
-    todayDate.setUTCDate(todayDate.getUTCDate() + grace);
-    const today = todayDate.toISOString().slice(0, 10);
-    expect(isOverdue(due, today, grace)).toBe(false);
-  });
+  it.each([
+    { overdueDays: 0, currentDate: "2024-06-10T12:00:00Z", cutoff: "2024-06-10", overdueFrom: "2024-06-09" },
+    { overdueDays: 1, currentDate: "2024-06-10T12:00:00Z", cutoff: "2024-06-09", overdueFrom: "2024-06-08" },
+    { overdueDays: 2, currentDate: "2024-06-10T12:00:00Z", cutoff: "2024-06-08", overdueFrom: "2024-06-07" },
+    { overdueDays: 3, currentDate: "2024-06-10T12:00:00Z", cutoff: "2024-06-07", overdueFrom: "2024-06-06" },
+    { overdueDays: 4, currentDate: "2024-06-10T12:00:00Z", cutoff: "2024-06-06", overdueFrom: "2024-06-05" },
+  ])(
+    "overdueDays=$overdueDays: cutoff=$cutoff",
+    ({ overdueDays, currentDate, cutoff, overdueFrom }) => {
+      const now = new Date(currentDate);
+      expect(calculateOverdueCutoff(overdueDays, now)).toBe(cutoff);
+      expect(
+        calculateOverdueStatus({
+          dueDate: cutoff,
+          paidAmount: 0,
+          amount: 20_000,
+          overdueDays,
+          currentDate: now,
+        })
+      ).toBe("pending");
+      expect(
+        calculateOverdueStatus({
+          dueDate: overdueFrom,
+          paidAmount: 0,
+          amount: 20_000,
+          overdueDays,
+          currentDate: now,
+        })
+      ).toBe("overdue");
+    }
+  );
 });
 
 describe("Тест 10–12: инвестор 70% / 100% / 0%", () => {

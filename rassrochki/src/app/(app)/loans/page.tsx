@@ -2,10 +2,14 @@ import Link from "next/link";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { createClient, getSessionProfile } from "@/lib/supabase/server";
 import { formatDateShort, formatMoney } from "@/lib/utils";
+import { syncOverdueSchedules } from "@/lib/overdue";
 
 export default async function LoansPage() {
-  const { organization } = await getSessionProfile();
+  const { organization, settings } = await getSessionProfile();
   const supabase = await createClient();
+  if (organization && settings) {
+    await syncOverdueSchedules(supabase, organization.id, settings.overdue_days, new Date());
+  }
   const { data: loans, error } = await supabase
     .from("loans")
     .select("*, clients(full_name), investors(name)")

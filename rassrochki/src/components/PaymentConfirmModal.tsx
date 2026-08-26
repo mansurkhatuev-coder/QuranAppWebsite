@@ -5,12 +5,14 @@ import type { PaymentSchedule } from "@/types/database";
 import { formatMoney } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendly";
 import { Spinner } from "@/components/Spinner";
+import { scheduleDueRemaining } from "@/lib/schedule-payments";
 
 export type PaymentConfirmValues = {
   paid_at: string;
   amount: string;
   file: File | null;
   notes: string;
+  idempotency_key: string;
 };
 
 export function PaymentConfirmModal({
@@ -22,12 +24,14 @@ export function PaymentConfirmModal({
   onClose: () => void;
   onConfirm: (values: PaymentConfirmValues) => Promise<void>;
 }) {
+  const dueRemaining = scheduleDueRemaining(schedule);
   const [paidAt, setPaidAt] = useState(new Date().toISOString().slice(0, 10));
-  const [amount, setAmount] = useState(String(schedule.amount));
+  const [amount, setAmount] = useState(String(dueRemaining));
   const [file, setFile] = useState<File | null>(null);
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -36,7 +40,7 @@ export function PaymentConfirmModal({
       setError("Укажите дату и сумму оплаты");
       return;
     }
-    const expected = Number(schedule.amount);
+    const expected = dueRemaining;
     if (num + 0.009 < expected) {
       const ok = window.confirm(
         `Сумма меньше платежа по графику (${formatMoney(expected)}). Сохранить частичную оплату? Остаток останется по этому платежу.`
@@ -51,7 +55,13 @@ export function PaymentConfirmModal({
     setLoading(true);
     setError(null);
     try {
-      await onConfirm({ paid_at: paidAt, amount: String(num), file, notes });
+      await onConfirm({
+        paid_at: paidAt,
+        amount: String(num),
+        file,
+        notes,
+        idempotency_key: idempotencyKey,
+      });
     } catch (err) {
       setError(friendlyError("Не удалось сохранить оплату", err));
       setLoading(false);
@@ -75,7 +85,7 @@ export function PaymentConfirmModal({
         <div>
           <h2 className="text-lg font-bold">Подтверждение оплаты</h2>
           <p className="text-sm text-[var(--muted)]">
-            Платёж {schedule.sequence_number} · по графику {formatMoney(Number(schedule.amount))}
+            Платёж {schedule.sequence_number} · остаток к оплате {formatMoney(dueRemaining)}
           </p>
         </div>
 

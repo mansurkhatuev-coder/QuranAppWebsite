@@ -8,6 +8,19 @@ export function scheduleDueRemaining(schedule: PaymentSchedule): number {
   return Math.max(0, Number(schedule.amount) - paid);
 }
 
+export function isScheduleFullyPaid(schedule: Pick<PaymentSchedule, "status" | "amount" | "paid_amount">): boolean {
+  if (schedule.status === "paid") return true;
+  return Number(schedule.paid_amount ?? 0) + EPS >= Number(schedule.amount);
+}
+
+export function assertStartScheduleCanAcceptPayment(
+  schedule: Pick<PaymentSchedule, "status" | "amount" | "paid_amount">
+) {
+  if (isScheduleFullyPaid(schedule)) {
+    throw new Error("Стартовый платёж уже полностью оплачен");
+  }
+}
+
 export type SchedulePaidRow = Pick<PaymentSchedule, "status" | "amount" | "paid_amount">;
 
 /** Сумма уже зачтённая по графику (включая частичные и переплаты). */

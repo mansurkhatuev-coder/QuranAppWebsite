@@ -115,6 +115,7 @@ export type Payment = {
   method: string | null;
   notes: string | null;
   receipt_path: string | null;
+  idempotency_key?: string | null;
 };
 
 export type LoanGuarantor = {
