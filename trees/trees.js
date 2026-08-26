@@ -8,18 +8,24 @@
       dir: 'drewo',
       title: 'Хьоти некъ',
       path: '/drewo/',
+      invitePath: '/t/hoti',
+      code: 'hoti',
       accent: 'moss',
     },
     {
       dir: 'drewo-dada-yurt',
       title: 'Дади-Юрт',
       path: '/drewo-dada-yurt/',
+      invitePath: '/t/dada',
+      code: 'dada',
       accent: 'amber',
     },
     {
       dir: 'drewo-reklama',
       title: 'Демо (реклама)',
       path: '/drewo-reklama/',
+      invitePath: '/t/demo',
+      code: 'demo',
       accent: 'quiet',
     },
   ];
@@ -234,11 +240,13 @@
 
   function metaFromRemote(remote) {
     const dir = remote.treeDir || remote.dir;
+    const code = remote.code || '';
     return {
       dir,
       title: remote.title || dir,
       path: remote.path || `/${dir}/`,
-      code: remote.code || '',
+      invitePath: remote.invitePath || (code ? `/t/${code}` : ''),
+      code,
       ownership: remote.ownership === 'customer' ? 'customer' : 'mine',
       note: remote.note || '',
       accent: remote.ownership === 'customer' ? 'amber' : 'moss',
@@ -394,6 +402,7 @@
         const codeText = row.meta.code ? `код ${escapeHtml(row.meta.code)}` : '';
         const noteText = row.meta.note ? escapeHtml(row.meta.note) : '';
         const href = openHref(row.meta.path);
+        const invitePath = row.meta.invitePath || (row.meta.code ? `/t/${row.meta.code}` : row.meta.path);
 
         const accent = escapeHtml(row.meta.accent || 'moss');
         return `
@@ -403,7 +412,7 @@
               <div class="tree-card-head">
                 <div>
                   <h2>${escapeHtml(row.meta.title)}</h2>
-                  <p class="tree-slug">${escapeHtml(row.meta.path)}${codeText ? ` · ${codeText}` : ''}</p>
+                  <p class="tree-slug">${escapeHtml(invitePath)}${codeText ? ` · ${codeText}` : ''}</p>
                 </div>
                 ${badgeHtml(row)}
               </div>
@@ -437,7 +446,7 @@
             </div>
             <div class="tree-actions">
               <a class="btn btn-primary" href="${href}">Открыть древо</a>
-              <button type="button" class="btn btn-quiet" data-copy="${escapeHtml(row.meta.path)}">Копировать ссылку</button>
+              <button type="button" class="btn btn-quiet" data-copy="${escapeHtml(invitePath)}">Копировать ссылку</button>
             </div>
           </article>
         `;
@@ -721,7 +730,7 @@
       .trim()
       .toLowerCase()
       .replace(/_/g, '-');
-    preview.textContent = code ? `/drewo-${code}/` : '/drewo-…/';
+    preview.textContent = code ? `/t/${code}` : '/t/…';
   }
 
   async function handleCreateTree(event) {
@@ -753,7 +762,7 @@
       await refresh();
       const status = $('#status-line');
       if (status) {
-        status.textContent = `Создано: ${created.path || ''} · код ${created.code || ''}. Откройте и добавьте людей.`;
+        status.textContent = `Создано: ${created.inviteUrl || created.invitePath || created.path || ''} · код ${created.code || ''}. Откройте и добавьте людей.`;
       }
       if (created.path) {
         window.setTimeout(() => {

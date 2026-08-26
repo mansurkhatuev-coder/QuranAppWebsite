@@ -7,10 +7,12 @@ import {
   REGISTRY_PATH,
   TEMPLATE_DIR,
   assertCreatableTreeDir,
+  buildInviteStubHtml,
   buildManifest,
   buildReadme,
   buildRootTreeJson,
   customizeTemplateHtml,
+  invitePathForCode,
   isValidTreeCode,
   normalizeTreeCode,
   parseRegistry,
@@ -894,6 +896,26 @@ Deno.serve(async (request) => {
     const registry = await loadRegistry(githubToken, githubRepo);
     const allowedDirs = knownTreeDirs(registry);
 
+    /** Public invite resolver: one code → one tree. Does not list other trees. */
+    if (action === 'resolve-invite') {
+      const code = normalizeTreeCode(body.code);
+      if (!isValidTreeCode(code)) {
+        return jsonResponse({ error: 'Нет такого древа' }, 404);
+      }
+      const hit = registry.trees.find((item) => item.code === code) || null;
+      if (!hit) {
+        return jsonResponse({ error: 'Нет такого древа' }, 404);
+      }
+      return jsonResponse({
+        ok: true,
+        code: hit.code,
+        title: hit.title,
+        treeDir: hit.treeDir,
+        path: `/${hit.treeDir}/`,
+        invitePath: invitePathForCode(hit.code),
+      });
+    }
+
     /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
     if (action === 'hub-overview') {
       const trees = await Promise.all(
@@ -937,6 +959,7 @@ Deno.serve(async (request) => {
             ownership: meta.ownership,
             note: meta.note,
             path: `/${dir}/`,
+            invitePath: invitePathForCode(meta.code),
             locked: access.locked,
             lockedReason: access.lockedReason,
             superConfigured: Boolean(superPasswordValue(dir)),
@@ -1074,6 +1097,10 @@ Deno.serve(async (request) => {
           },
           { path: `${treeDir}/manifest.webmanifest`, content: buildManifest(title) },
           { path: `${treeDir}/README.md`, content: buildReadme(title, treeDir, code) },
+          {
+            path: `t/${code}/index.html`,
+            content: buildInviteStubHtml({ title, treeDir }),
+          },
           { path: REGISTRY_PATH, content: serializeRegistry(nextRegistry) },
         ],
       });
@@ -1086,7 +1113,8 @@ Deno.serve(async (request) => {
         ownership: entry.ownership,
         note: entry.note,
         path: `/${treeDir}/`,
-        inviteUrl: `https://waydean.ru/${treeDir}/`,
+        invitePath: invitePathForCode(code),
+        inviteUrl: `https://waydean.ru${invitePathForCode(code)}`,
         createdAt: entry.createdAt,
       });
     }

@@ -1,0 +1,125 @@
+:root {
+  --bg: #0f1c16;
+  --elev: rgba(24, 42, 33, 0.9);
+  --text: #eef4ef;
+  --muted: #9bb0a3;
+  --amber: #c9a46a;
+  --danger: #d9897a;
+  --line: rgba(238, 244, 239, 0.1);
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Figtree', 'Segoe UI', system-ui, sans-serif;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font-family: var(--font-body);
+  color: var(--text);
+  background: var(--bg);
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+}
+
+.bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(ellipse 50% 40% at 20% 10%, rgba(95, 154, 114, 0.28), transparent 55%),
+    radial-gradient(ellipse 45% 35% at 90% 20%, rgba(201, 164, 106, 0.12), transparent 50%),
+    linear-gradient(165deg, #0c1712, #122018 50%, #0f1c16);
+}
+
+.card {
+  width: min(100%, 400px);
+  padding: 1.6rem 1.4rem 1.4rem;
+  border-radius: 22px;
+  background: var(--elev);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.35);
+}
+
+.brand {
+  margin: 0 0 0.55rem;
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+
+h1 {
+  margin: 0 0 0.4rem;
+  font-family: var(--font-display);
+  font-size: 1.55rem;
+  font-weight: 560;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.45;
+}
+
+.error {
+  margin: 0.9rem 0 0;
+  color: var(--danger);
+  font-size: 0.95rem;
+}
+
+.manual {
+  display: grid;
+  gap: 0.75rem;
+  margin-top: 1.1rem;
+}
+
+.manual label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.manual input {
+  width: 100%;
+  padding: 0.75rem 0.85rem;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: rgba(8, 16, 12, 0.55);
+  color: var(--text);
+  font: inherit;
+}
+
+.btn {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 0.8rem 1.1rem;
+  font: inherit;
+  font-weight: 650;
+  cursor: pointer;
+  background: linear-gradient(135deg, #6eae82, #4f8f66);
+  color: #06110c;
+}
+
+.hint {
+  margin: 1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.hint code {
+  color: var(--amber);
+}
+
+[hidden] {
+  display: none !important;
+}
