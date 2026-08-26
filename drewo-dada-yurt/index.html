@@ -5322,25 +5322,13 @@
         }
         updateWhoamiUi();
         if (options.focus !== false) {
-          if (preferReducedWhoamiMotion()) {
-            whoamiFocusAfterReveal = false;
-            goToPerson(myPersonId);
-            armWhoamiReveal();
-            redrawLinks();
-            startWhoamiReveal();
-          } else {
-            whoamiFocusAfterReveal = true;
-            prepareWhoamiPathView(myPersonId);
-            armWhoamiReveal();
-            redrawLinks();
-            startWhoamiReveal();
-          }
+          whoamiFocusAfterReveal = false;
+          finishWhoamiReveal();
+          goToPerson(myPersonId);
         } else {
           whoamiFocusAfterReveal = false;
+          finishWhoamiReveal();
           render(false);
-          armWhoamiReveal();
-          redrawLinks();
-          startWhoamiReveal();
         }
         if (!options.silent) {
           showToast('Это вы: ' + (node.name || ''), 'success');
@@ -9405,19 +9393,10 @@
           if (myPersonId && TreeModel.findById(tree, myPersonId)) {
             rebuildLineSets();
             updateWhoamiUi();
-            if (preferReducedWhoamiMotion()) {
-              whoamiFocusAfterReveal = false;
-              goToPerson(myPersonId);
-              armWhoamiReveal();
-              redrawLinks();
-              startWhoamiReveal();
-            } else {
-              whoamiFocusAfterReveal = true;
-              prepareWhoamiPathView(myPersonId);
-              armWhoamiReveal();
-              redrawLinks();
-              startWhoamiReveal();
-            }
+            // No floating path draw on open — expand-all overview froze large trees.
+            whoamiFocusAfterReveal = false;
+            finishWhoamiReveal();
+            goToPerson(myPersonId);
           } else {
             render(true);
             maybeAskWhoami();
