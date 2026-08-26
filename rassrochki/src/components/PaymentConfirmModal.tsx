@@ -4,6 +4,7 @@ import { FormEvent, useState } from "react";
 import type { PaymentSchedule } from "@/types/database";
 import { formatMoney } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendly";
+import { Spinner } from "@/components/Spinner";
 
 export type PaymentConfirmValues = {
   paid_at: string;
@@ -132,7 +133,7 @@ export function PaymentConfirmModal({
             Отмена
           </button>
           <button type="submit" className="btn-primary flex-1" disabled={loading}>
-            {loading ? "Сохраняем…" : "Подтвердить оплату"}
+            {loading ? <Spinner label="Сохраняем…" /> : "Подтвердить оплату"}
           </button>
         </div>
       </form>

@@ -5,6 +5,7 @@ import { FormEvent, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
+import { Spinner } from "@/components/Spinner";
 import { friendlyError } from "@/lib/friendly";
 
 type ClientDraft = {
@@ -98,7 +99,7 @@ export default function NewClientPage() {
         </div>
       </div>
       <button className="btn-primary w-full md:w-auto" type="submit" disabled={loading}>
-        {loading ? "Сохраняем…" : "Сохранить"}
+        {loading ? <Spinner label="Сохраняем…" /> : "Сохранить"}
       </button>
     </form>
   );

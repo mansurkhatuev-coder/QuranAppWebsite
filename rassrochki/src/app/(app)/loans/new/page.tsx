@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
+import { FormSkeleton } from "@/components/Skeleton";
+import { Spinner } from "@/components/Spinner";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/friendly";
@@ -45,6 +47,7 @@ export default function NewLoanPage() {
   const [settings, setSettings] = useState<OrganizationSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [booting, setBooting] = useState(true);
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClient, setNewClient] = useState({ full_name: "", phone: "" });
   const [savingClient, setSavingClient] = useState(false);
@@ -80,52 +83,56 @@ export default function NewLoanPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
-      if (!profile) return;
-      setOrgId(profile.organization_id);
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("organization_id")
+          .eq("id", user.id)
+          .single();
+        if (!profile) return;
+        setOrgId(profile.organization_id);
 
-      const [{ data: clientRows }, { data: investorRows }, { data: settingsRow }] =
-        await Promise.all([
-          supabase
-            .from("clients")
-            .select("*")
-            .eq("organization_id", profile.organization_id)
-            .order("full_name"),
-          supabase.from("investors").select("*").eq("organization_id", profile.organization_id),
-          supabase
-            .from("organization_settings")
-            .select("*")
-            .eq("organization_id", profile.organization_id)
-            .single(),
-        ]);
+        const [{ data: clientRows }, { data: investorRows }, { data: settingsRow }] =
+          await Promise.all([
+            supabase
+              .from("clients")
+              .select("*")
+              .eq("organization_id", profile.organization_id)
+              .order("full_name"),
+            supabase.from("investors").select("*").eq("organization_id", profile.organization_id),
+            supabase
+              .from("organization_settings")
+              .select("*")
+              .eq("organization_id", profile.organization_id)
+              .single(),
+          ]);
 
-      setClients(clientRows ?? []);
-      setInvestors(investorRows ?? []);
-      if (settingsRow) {
-        setSettings(settingsRow);
-        const defaultTerm = String(settingsRow.default_term_months ?? 12);
-        const isPreset = TERM_PRESETS.some((t) => String(t.months) === defaultTerm);
-        if (!isPreset && defaultTerm) setCustomTerm(true);
-        setValue({
-          ...value,
-          term_months: value.term_months || defaultTerm,
-          markup_percent:
-            value.markup_percent ||
-            String(settingsRow.default_markup_percent ?? 30),
-          income_share_manager:
-            value.income_share_manager || String(settingsRow.income_share_manager),
-          income_share_investor:
-            value.income_share_investor || String(settingsRow.income_share_investor),
-        });
+        setClients(clientRows ?? []);
+        setInvestors(investorRows ?? []);
+        if (settingsRow) {
+          setSettings(settingsRow);
+          const defaultTerm = String(settingsRow.default_term_months ?? 12);
+          const isPreset = TERM_PRESETS.some((t) => String(t.months) === defaultTerm);
+          if (!isPreset && defaultTerm) setCustomTerm(true);
+          setValue({
+            ...value,
+            term_months: value.term_months || defaultTerm,
+            markup_percent:
+              value.markup_percent ||
+              String(settingsRow.default_markup_percent ?? 30),
+            income_share_manager:
+              value.income_share_manager || String(settingsRow.income_share_manager),
+            income_share_investor:
+              value.income_share_investor || String(settingsRow.income_share_investor),
+          });
+        }
+      } finally {
+        setBooting(false);
       }
     }
     load();
@@ -383,6 +390,10 @@ export default function NewLoanPage() {
     router.refresh();
   }
 
+  if (booting) {
+    return <FormSkeleton />;
+  }
+
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
@@ -432,7 +443,7 @@ export default function NewLoanPage() {
                   disabled={savingClient || !newClient.full_name.trim()}
                   onClick={addClientInline}
                 >
-                  {savingClient ? "Добавляем…" : "Добавить и выбрать"}
+                  {savingClient ? <Spinner label="Добавляем…" /> : "Добавить и выбрать"}
                 </button>
               </div>
             ) : (
@@ -697,7 +708,7 @@ export default function NewLoanPage() {
                   disabled={savingInvestor || !newInvestor.name.trim()}
                   onClick={addInvestorInline}
                 >
-                  {savingInvestor ? "Добавляем…" : "Добавить и выбрать"}
+                  {savingInvestor ? <Spinner label="Добавляем…" /> : "Добавить и выбрать"}
                 </button>
               </div>
             ) : (
@@ -949,7 +960,7 @@ export default function NewLoanPage() {
         type="submit"
         disabled={loading || selectedClient?.is_blacklisted}
       >
-        {loading ? "Создаём…" : "Создать рассрочку"}
+        {loading ? <Spinner label="Создаём…" /> : "Создать рассрочку"}
       </button>
     </form>
   );

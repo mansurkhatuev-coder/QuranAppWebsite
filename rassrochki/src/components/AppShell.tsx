@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
+import { PageFade } from "@/components/PageFade";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
 
 const links = [
@@ -104,7 +105,7 @@ export function AppShell({
       </header>
       <main className="mx-auto max-w-6xl space-y-3 px-4 py-4 md:py-6">
         <PwaInstallBanner />
-        {children}
+        <PageFade>{children}</PageFade>
       </main>
     </div>
   );

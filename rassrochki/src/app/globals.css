@@ -63,4 +63,58 @@ body {
   .badge-red {
     @apply badge bg-red-100 text-red-800;
   }
+
+  .skeleton {
+    @apply relative overflow-hidden rounded-lg bg-slate-200/80;
+  }
+
+  .skeleton::after {
+    content: "";
+    @apply absolute inset-0 -translate-x-full;
+    background: linear-gradient(
+      90deg,
+      transparent,
+      rgba(255, 255, 255, 0.55),
+      transparent
+    );
+    animation: skeleton-shimmer 1.35s ease-in-out infinite;
+  }
+
+  .page-enter {
+    animation: page-enter 280ms ease-out both;
+  }
+
+  .btn:disabled {
+    @apply cursor-not-allowed opacity-70;
+  }
+}
+
+@keyframes skeleton-shimmer {
+  100% {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after,
+  .page-enter,
+  .animate-spin {
+    animation: none !important;
+  }
+
+  .page-enter {
+    opacity: 1;
+    transform: none;
+  }
 }

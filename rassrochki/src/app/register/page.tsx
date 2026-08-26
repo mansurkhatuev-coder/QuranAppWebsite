@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Spinner } from "@/components/Spinner";
 import { friendlyError } from "@/lib/friendly";
 
 export default function RegisterPage() {
@@ -104,7 +105,7 @@ export default function RegisterPage() {
           />
         </div>
         <button className="btn-primary w-full" type="submit" disabled={loading}>
-          {loading ? "Создаём…" : "Создать аккаунт"}
+          {loading ? <Spinner label="Создаём…" /> : "Создать аккаунт"}
         </button>
         <p className="text-center text-sm text-[var(--muted)]">
           Уже есть аккаунт?{" "}

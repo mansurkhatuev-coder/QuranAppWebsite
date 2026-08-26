@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Spinner } from "@/components/Spinner";
 import { friendlyError } from "@/lib/friendly";
 
 export default function LoginPage() {
@@ -66,7 +67,7 @@ export default function LoginPage() {
           />
         </div>
         <button className="btn-primary w-full" type="submit" disabled={loading}>
-          {loading ? "Входим…" : "Войти"}
+          {loading ? <Spinner label="Входим…" /> : "Войти"}
         </button>
         <p className="text-center text-sm text-[var(--muted)]">
           Нет аккаунта?{" "}

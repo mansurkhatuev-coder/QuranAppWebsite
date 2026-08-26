@@ -2,6 +2,8 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
+import { FormSkeleton } from "@/components/Skeleton";
+import { Spinner } from "@/components/Spinner";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import type { Investor, Organization, OrganizationSettings } from "@/types/database";
@@ -33,6 +35,7 @@ export default function SettingsPage() {
   const [loading, setLoading] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
   const [backupHint, setBackupHint] = useState<string>("");
+  const [booting, setBooting] = useState(true);
 
   useEffect(() => {
     const days = daysSinceBackup();
@@ -57,41 +60,45 @@ export default function SettingsPage() {
 
   useEffect(() => {
     async function load() {
-      const supabase = createClient();
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) return;
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("organization_id")
-        .eq("id", user.id)
-        .single();
-      if (!profile) return;
-      setOrgId(profile.organization_id);
+      try {
+        const supabase = createClient();
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+        if (!user) return;
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("organization_id")
+          .eq("id", user.id)
+          .single();
+        if (!profile) return;
+        setOrgId(profile.organization_id);
 
-      const [{ data: org }, { data: settings }, { data: investorRows }] = await Promise.all([
-        supabase.from("organizations").select("*").eq("id", profile.organization_id).single(),
-        supabase
-          .from("organization_settings")
-          .select("*")
-          .eq("organization_id", profile.organization_id)
-          .single(),
-        supabase.from("investors").select("*").eq("organization_id", profile.organization_id),
-      ]);
+        const [{ data: org }, { data: settings }, { data: investorRows }] = await Promise.all([
+          supabase.from("organizations").select("*").eq("id", profile.organization_id).single(),
+          supabase
+            .from("organization_settings")
+            .select("*")
+            .eq("organization_id", profile.organization_id)
+            .single(),
+          supabase.from("investors").select("*").eq("organization_id", profile.organization_id),
+        ]);
 
-      if (org && settings) {
-        setValue({
-          orgName: org.name,
-          default_term_months: String(settings.default_term_months),
-          default_markup_percent: String(settings.default_markup_percent ?? 30),
-          income_share_manager: String(settings.income_share_manager),
-          income_share_investor: String(settings.income_share_investor),
-          overdue_days: String(settings.overdue_days),
-          contract_template: settings.contract_template,
-        });
+        if (org && settings) {
+          setValue({
+            orgName: org.name,
+            default_term_months: String(settings.default_term_months),
+            default_markup_percent: String(settings.default_markup_percent ?? 30),
+            income_share_manager: String(settings.income_share_manager),
+            income_share_investor: String(settings.income_share_investor),
+            overdue_days: String(settings.overdue_days),
+            contract_template: settings.contract_template,
+          });
+        }
+        setInvestors(investorRows ?? []);
+      } finally {
+        setBooting(false);
       }
-      setInvestors(investorRows ?? []);
     }
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -189,6 +196,10 @@ export default function SettingsPage() {
     ]);
   }
 
+  if (booting) {
+    return <FormSkeleton />;
+  }
+
   return (
     <div className="space-y-4">
       <div>
@@ -276,7 +287,7 @@ export default function SettingsPage() {
             Наценка — прибыль с товара. Доли 30/70 делят именно прибыль между вами и инвестором.
           </p>
           <button className="btn-primary" type="submit" disabled={loading}>
-            {loading ? "Сохраняем…" : "Сохранить настройки"}
+            {loading ? <Spinner label="Сохраняем…" /> : "Сохранить настройки"}
           </button>
         </div>
 
@@ -343,7 +354,7 @@ export default function SettingsPage() {
             disabled={backupBusy}
             onClick={exportFullBackup}
           >
-            {backupBusy ? "Готовим…" : "Скачать полную копию"}
+            {backupBusy ? <Spinner label="Готовим…" /> : "Скачать полную копию"}
           </button>
           <button type="button" className="btn-secondary" onClick={exportAll}>
             Скачать таблицу
