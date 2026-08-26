@@ -387,7 +387,7 @@ export default function SettingsPage() {
             поручители. Можно отредактировать под себя.
           </p>
           <textarea
-            className="input min-h-64 text-sm"
+            className="input min-h-64"
             value={value.contract_template}
             onChange={(e) => setValue({ ...value, contract_template: e.target.value })}
           />

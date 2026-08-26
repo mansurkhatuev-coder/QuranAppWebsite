@@ -40,8 +40,9 @@ body {
     @apply btn bg-red-600 text-white hover:bg-red-700;
   }
 
+  /* text-base (16px): на iPhone Safari шрифт <16px в input вызывает авто-зум клавиатуры */
   .input {
-    @apply w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-sm outline-none ring-teal-600 focus:ring-2;
+    @apply w-full rounded-xl border border-[var(--border)] bg-white px-3 py-2.5 text-base outline-none ring-teal-600 focus:ring-2;
   }
 
   .label {
