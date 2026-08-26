@@ -177,22 +177,106 @@ export default function SettingsPage() {
   async function exportAll() {
     if (!orgId) return;
     const supabase = createClient();
-    const { data: loans } = await supabase
-      .from("loans")
-      .select("*, clients(full_name), investors(name)")
-      .eq("organization_id", orgId);
+    const [{ data: loans, error: loansError }, { data: schedules, error: schedulesError }] =
+      await Promise.all([
+        supabase
+          .from("loans")
+          .select("*, clients(full_name, phone), investors(name)")
+          .eq("organization_id", orgId),
+        supabase
+          .from("payment_schedules")
+          .select("loan_id, due_date, amount, status, paid_amount")
+          .eq("organization_id", orgId),
+      ]);
+
+    if (loansError || schedulesError) {
+      setMessage(friendlyError("Не удалось собрать CSV-выгрузку", loansError || schedulesError));
+      return;
+    }
+
+    const today = new Date().toISOString().slice(0, 10);
+    const scheduleByLoan = new Map<
+      string,
+      { due_date: string; amount: number; status: string; paid_amount: number | null }[]
+    >();
+
+    for (const row of schedules ?? []) {
+      const list = scheduleByLoan.get(row.loan_id) ?? [];
+      list.push(row);
+      scheduleByLoan.set(row.loan_id, list);
+    }
 
     downloadCsv("rassrochki_export.csv", [
-      ["Клиент", "Рассрочка", "Сумма", "Срок", "Платёж/мес", "Статус", "Инвестор"],
-      ...(loans ?? []).map((loan) => [
-        loan.clients?.full_name ?? "",
-        loan.title ?? "",
-        String(loan.principal),
-        String(loan.term_months),
-        String(loan.monthly_payment),
-        statusLabelRu(loan.status),
-        loan.investors?.name ?? "",
-      ]),
+      [
+        "Клиент",
+        "Телефон",
+        "Рассрочка",
+        "Статус",
+        "Инвестор",
+        "Цена товара",
+        "Наценка, %",
+        "Сумма к возврату",
+        "Взнос",
+        "Режим графика",
+        "Срок, мес",
+        "Платёж/мес",
+        "Дата старта",
+        "Оплачено по графику",
+        "Остаток по графику",
+        "Просрочено (сумма)",
+        "Ближайший платёж",
+        "Кол-во оплаченных месяцев",
+        "Кол-во месяцев в просрочке",
+        "Доля владельца, %",
+        "Доля инвестора, %",
+        "Вложение инвестора",
+      ],
+      ...(loans ?? []).map((loan) => {
+        const rows = [...(scheduleByLoan.get(loan.id) ?? [])].sort((a, b) =>
+          a.due_date.localeCompare(b.due_date)
+        );
+
+        const paidBySchedule = rows.reduce((sum, s) => {
+          if (s.status === "paid") return sum + Number(s.paid_amount ?? s.amount);
+          return sum + Number(s.paid_amount ?? 0);
+        }, 0);
+        const scheduledTotal = rows.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+        const remainingBySchedule = Math.max(0, scheduledTotal - paidBySchedule);
+        const overdueRows = rows.filter((s) => s.status === "overdue");
+        const overdueAmount = overdueRows.reduce((sum, s) => {
+          const paid = Number(s.paid_amount ?? 0);
+          return sum + Math.max(0, Number(s.amount) - paid);
+        }, 0);
+        const nextPending = rows.find(
+          (s) => (s.status === "pending" || s.status === "overdue") && s.due_date >= today
+        );
+        const paidMonths = rows.filter((s) => s.status === "paid").length;
+
+        return [
+          loan.clients?.full_name ?? "",
+          loan.clients?.phone ?? "",
+          loan.title ?? "",
+          statusLabelRu(loan.status),
+          loan.investors?.name ?? "",
+          String(loan.cost_amount ?? ""),
+          String(loan.markup_percent ?? ""),
+          String(loan.principal ?? ""),
+          String(loan.down_payment ?? ""),
+          loan.schedule_on_full_amount ? "Полная сумма" : "После взноса",
+          String(loan.term_months ?? ""),
+          String(loan.monthly_payment ?? ""),
+          loan.start_date ?? "",
+          String(Math.round(paidBySchedule * 100) / 100),
+          String(Math.round(remainingBySchedule * 100) / 100),
+          String(Math.round(overdueAmount * 100) / 100),
+          nextPending?.due_date ?? "",
+          String(paidMonths),
+          String(overdueRows.length),
+          String(loan.income_share_manager ?? ""),
+          String(loan.income_share_investor ?? ""),
+          String(loan.investor_amount ?? ""),
+        ];
+      }),
     ]);
   }
 
