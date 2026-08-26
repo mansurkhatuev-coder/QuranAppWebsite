@@ -13,6 +13,19 @@ export function friendlyError(
   const lower = raw.toLowerCase();
   if (!raw) return fallback;
 
+  // Понятные финансовые ошибки RPC/валидации — показываем как есть.
+  if (
+    raw.includes("Сначала оплатите более ранний") ||
+    raw.includes("Оплата только с ближайшего платежа") ||
+    raw.includes("Сначала внесите") ||
+    raw.includes("превышает остаток рассрочки") ||
+    raw.includes("уже полностью оплачен") ||
+    raw.includes("Нечего оплачивать") ||
+    raw.includes("Не удалось распределить")
+  ) {
+    return raw;
+  }
+
   if (lower.includes("invalid login") || lower.includes("invalid credentials")) {
     return "Неверный email или пароль";
   }

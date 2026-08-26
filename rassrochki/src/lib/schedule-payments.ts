@@ -18,6 +18,8 @@ export function isScheduleFullyPaid(
   return Number(schedule.paid_amount ?? 0) + EPS >= Number(schedule.amount);
 }
 
+export type SchedulePaidRow = Pick<PaymentSchedule, "status" | "amount" | "paid_amount">;
+
 export function assertStartScheduleCanAcceptPayment(
   schedule: Pick<PaymentSchedule, "status" | "amount" | "paid_amount">
 ) {
@@ -26,7 +28,28 @@ export function assertStartScheduleCanAcceptPayment(
   }
 }
 
-export type SchedulePaidRow = Pick<PaymentSchedule, "status" | "amount" | "paid_amount">;
+/** Самая ранняя строка графика с ненулевым остатком. */
+export function earliestUnpaidSchedule<T extends SchedulePaidRow & { id: string; sequence_number: number }>(
+  schedules: T[]
+): T | null {
+  const sorted = [...schedules].sort((a, b) => a.sequence_number - b.sequence_number);
+  return sorted.find((s) => scheduleDueRemaining(s) > EPS) ?? null;
+}
+
+export function assertIsEarliestUnpaidSchedule(
+  schedules: Array<SchedulePaidRow & { id: string; sequence_number: number }>,
+  startScheduleId: string
+) {
+  const earliest = earliestUnpaidSchedule(schedules);
+  if (!earliest) {
+    throw new Error("Нечего оплачивать по графику");
+  }
+  if (earliest.id !== startScheduleId) {
+    throw new Error(
+      `Оплата только с ближайшего платежа #${earliest.sequence_number}. Сначала внесите его.`
+    );
+  }
+}
 
 /** Сумма уже зачтённая по графику (включая частичные). */
 export function sumSchedulePaid(schedules: SchedulePaidRow[]): number {
@@ -82,6 +105,7 @@ export function allocatePaymentToSchedules(
 
   const start = sorted[startIdx];
   assertStartScheduleCanAcceptPayment(start);
+  assertIsEarliestUnpaidSchedule(sorted, startScheduleId);
 
   const loanRemaining = loanScheduleRemaining(sorted);
   assertPaymentWithinLoanRemaining(totalAmount, loanRemaining);

@@ -27,8 +27,10 @@ import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
 import {
+  assertIsEarliestUnpaidSchedule,
   assertPaymentWithinLoanRemaining,
   assertStartScheduleCanAcceptPayment,
+  earliestUnpaidSchedule,
   loanScheduleRemaining,
   scheduleDueRemaining,
   sumSchedulePaid,
@@ -69,9 +71,7 @@ export function LoanDetail({
   const hasInvestor = Boolean(
     loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
   );
-  const nextUnpaid = [...schedules]
-    .filter((s) => s.status !== "paid" && scheduleDueRemaining(s) > 0.009)
-    .sort((a, b) => a.due_date.localeCompare(b.due_date))[0];
+  const nextUnpaid = earliestUnpaidSchedule(schedules);
   const whatsappReminder = nextUnpaid
     ? defaultPaymentReminderText({
         clientName: loan.clients?.full_name,
@@ -85,6 +85,7 @@ export function LoanDetail({
     if (!pendingSchedule) return;
     const schedule = pendingSchedule;
     assertStartScheduleCanAcceptPayment(schedule);
+    assertIsEarliestUnpaidSchedule(schedules, schedule.id);
     const amount = Number(values.amount);
     assertPaymentWithinLoanRemaining(amount, loanRemaining);
     setError(null);
@@ -372,16 +373,31 @@ export function LoanDetail({
       )}
 
       <div className="card">
-        <h2 className="mb-3 font-semibold">График платежей</h2>
+        <h2 className="mb-1 font-semibold">График платежей</h2>
+        {nextUnpaid ? (
+          <p className="mb-3 text-sm text-[var(--muted)]">
+            Сейчас можно оплатить только платёж #{nextUnpaid.sequence_number}
+            {" · "}
+            {formatMoney(scheduleDueRemaining(nextUnpaid))}
+            {" · "}
+            до {formatDateShort(nextUnpaid.due_date)}. Поздние строки откроются после него.
+          </p>
+        ) : (
+          <p className="mb-3 text-sm text-[var(--muted)]">Все платежи по графику закрыты.</p>
+        )}
         <div className="space-y-2">
           {schedules.map((schedule) => {
             const dueLeft = scheduleDueRemaining(schedule);
             const paid = Number(schedule.paid_amount ?? 0);
             const expected = Number(schedule.amount);
+            const isPayable = nextUnpaid?.id === schedule.id;
+            const isLaterUnpaid = schedule.status !== "paid" && !isPayable;
             return (
             <div
               key={schedule.id}
-              className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3"
+              className={`flex flex-wrap items-center justify-between gap-2 rounded-xl border border-[var(--border)] p-3${
+                isLaterUnpaid ? " opacity-70" : ""
+              }`}
             >
               <div>
                 <p className="font-medium">Платёж #{schedule.sequence_number}</p>
@@ -402,6 +418,11 @@ export function LoanDetail({
                     внесено {formatMoney(paid)} · осталось {formatMoney(dueLeft)}
                   </p>
                 )}
+                {isLaterUnpaid && nextUnpaid ? (
+                  <p className="text-xs text-[var(--muted)]">
+                    Сначала внесите платёж #{nextUnpaid.sequence_number}
+                  </p>
+                ) : null}
               </div>
               <div className="flex flex-wrap items-center gap-2">
                 <span className="font-semibold">
@@ -418,7 +439,7 @@ export function LoanDetail({
                     {openingReceipt === schedule.receipt_path ? "…" : "Чек"}
                   </button>
                 )}
-                {schedule.status !== "paid" && (
+                {isPayable ? (
                   <button
                     type="button"
                     className="btn-primary text-xs"
@@ -426,7 +447,7 @@ export function LoanDetail({
                   >
                     Внести оплату
                   </button>
-                )}
+                ) : null}
               </div>
             </div>
             );
