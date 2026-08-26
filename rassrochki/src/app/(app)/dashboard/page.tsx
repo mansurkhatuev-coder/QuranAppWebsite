@@ -107,6 +107,7 @@ function normalizeLoanRow(loan: Record<string, unknown>): LoanFinanceInput & {
     markup_percent: loan.markup_percent == null ? null : Number(loan.markup_percent),
     principal: Number(loan.principal) || 0,
     down_payment: Number(loan.down_payment ?? 0),
+    schedule_on_full_amount: Boolean(loan.schedule_on_full_amount),
     investor_amount: loan.investor_amount == null ? null : Number(loan.investor_amount),
     income_share_manager:
       loan.income_share_manager == null ? null : Number(loan.income_share_manager),
