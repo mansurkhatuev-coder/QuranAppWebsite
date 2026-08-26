@@ -139,16 +139,28 @@ export function splitIncome(amount: number, managerShare: number, investorShare:
   return { manager, investor };
 }
 
-export function downloadCsv(filename: string, rows: string[][]) {
-  const bom = "\uFEFF";
-  const content =
-    bom +
-    rows
-      .map((row) =>
-        row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(";")
-      )
-      .join("\n");
+/**
+ * RFC 4180-style CSV field: quote when value has comma, quote, CR/LF;
+ * escape " as "". Numbers/dates without specials stay unquoted.
+ */
+export function escapeCsvField(value: unknown): string {
+  const raw = value == null ? "" : String(value);
+  if (/[",\r\n]/.test(raw)) {
+    return `"${raw.replace(/"/g, '""')}"`;
+  }
+  return raw;
+}
 
+/** UTF-8 CSV body with BOM once at the start (Excel-friendly). */
+export function buildCsvContent(rows: unknown[][]): string {
+  const body = rows
+    .map((row) => row.map((cell) => escapeCsvField(cell)).join(","))
+    .join("\r\n");
+  return `\uFEFF${body}`;
+}
+
+export function downloadCsv(filename: string, rows: unknown[][]) {
+  const content = buildCsvContent(rows);
   const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
