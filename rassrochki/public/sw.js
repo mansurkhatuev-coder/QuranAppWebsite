@@ -1,10 +1,11 @@
 /* Рассрочки PWA — только статика. HTML/данные приложения не кэшируем. */
-const CACHE = "rassrochki-shell-v2";
+const CACHE = "rassrochki-shell-v3";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
+  "/icons/favicon-32.png",
 ];
 
 self.addEventListener("install", (event) => {

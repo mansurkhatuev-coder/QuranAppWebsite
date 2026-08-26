@@ -8,7 +8,9 @@
   "orientation": "portrait-primary",
   "background_color": "#1b3d2a",
   "theme_color": "#1b3d2a",
+  "display_override": ["standalone", "minimal-ui"],
   "lang": "ru",
+  "categories": ["finance", "business"],
   "icons": [
     {
       "src": "/icons/icon-192.png",
