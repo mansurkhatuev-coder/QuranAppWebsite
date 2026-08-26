@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { Spinner } from "@/components/Spinner";
 import { friendlyError } from "@/lib/friendly";
 
 export default function OnboardingPage() {
@@ -47,7 +48,7 @@ export default function OnboardingPage() {
           <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
         </div>
         <button className="btn-primary w-full" type="submit" disabled={loading}>
-          {loading ? "Сохраняем…" : "Продолжить"}
+          {loading ? <Spinner label="Сохраняем…" /> : "Продолжить"}
         </button>
       </form>
     </div>

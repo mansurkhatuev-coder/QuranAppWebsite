@@ -5,6 +5,8 @@ import { useCallback, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { PlatformOrganization } from "@/types/database";
 import { formatDate, formatDateShort } from "@/lib/utils";
+import { ListPageSkeleton } from "@/components/Skeleton";
+import { Spinner } from "@/components/Spinner";
 
 export default function PlatformPage() {
   const [orgs, setOrgs] = useState<PlatformOrganization[]>([]);
@@ -78,7 +80,7 @@ export default function PlatformPage() {
         )}
 
         {loading ? (
-          <p className="text-sm text-[var(--muted)]">Загрузка…</p>
+          <ListPageSkeleton titleWidth="w-40" />
         ) : orgs.length === 0 ? (
           <p className="card text-sm text-[var(--muted)]">Пока нет организаций.</p>
         ) : (

@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import { NavigationProgressHost } from "@/components/NavigationProgressHost";
 import { PwaRegister } from "@/components/PwaRegister";
 import "./globals.css";
 
@@ -51,6 +52,7 @@ export default function RootLayout({
     <html lang="ru">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <PwaRegister />
+        <NavigationProgressHost />
         {children}
       </body>
     </html>
