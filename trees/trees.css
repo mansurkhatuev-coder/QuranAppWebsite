@@ -275,12 +275,27 @@ select {
 }
 
 .login-tagline {
-  margin: 0 0 1.6rem;
+  margin: 0 0 0.55rem;
   max-width: 28ch;
   color: var(--ink-soft);
   font-size: 1.05rem;
   line-height: 1.45;
   animation: rise 0.85s var(--ease) 0.08s both;
+}
+
+.login-public {
+  margin: 0 0 1.35rem;
+  max-width: 32ch;
+  color: var(--ink-soft);
+  font-size: 0.92rem;
+  line-height: 1.4;
+  animation: rise 0.85s var(--ease) 0.1s both;
+}
+
+.login-public a {
+  color: var(--moss);
+  font-weight: 600;
+  border-bottom: 1px solid color-mix(in srgb, var(--moss) 35%, transparent);
 }
 
 .login-form {

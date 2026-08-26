@@ -19,7 +19,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./trees.css?v=5" />
+    <link rel="stylesheet" href="./trees.css?v=6" />
   </head>
   <body>
     <div class="bg-stage" aria-hidden="true">
@@ -53,6 +53,10 @@
       <div class="login-stage">
         <p class="brand-word brand-hero">Trees</p>
         <p class="login-tagline">Пульт семейных древ — онлайн, визиты и состав. Ссылки родственников не меняются.</p>
+        <p class="login-public">
+          Родственникам — публичный вход
+          <a href="/nek/">Некъ</a>
+        </p>
         <form id="login-form" class="login-form" method="post" action="/trees/" autocomplete="on">
           <label>
             Почта
@@ -90,6 +94,7 @@
           <p class="muted" id="updated-at">Обновление…</p>
         </div>
         <div class="topbar-actions">
+          <a class="btn btn-ghost" href="/nek/" title="Публичный вход Некъ">Некъ</a>
           <button type="button" class="btn btn-primary" id="create-tree-btn">Создать древо</button>
           <button type="button" class="icon-btn" id="refresh-btn" title="Обновить" aria-label="Обновить">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
