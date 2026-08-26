@@ -1,6 +1,7 @@
 "use client";
 
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { createPortal } from "react-dom";
 import type { PaymentSchedule } from "@/types/database";
 import { formatMoney } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendly";
@@ -36,6 +37,28 @@ export function PaymentConfirmModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [idempotencyKey] = useState(() => crypto.randomUUID());
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Блокируем скролл страницы под оверлеем (иначе «кривой» скролл при открытии).
+  useEffect(() => {
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") onClose();
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
 
   async function submit(e: FormEvent) {
     e.preventDefault();
@@ -79,22 +102,26 @@ export function PaymentConfirmModal({
     }
   }
 
-  return (
+  if (!mounted) return null;
+
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-end justify-center bg-black/40 p-4 sm:items-center"
+      className="fixed inset-0 z-[80] flex items-center justify-center overflow-y-auto overscroll-contain bg-black/40 p-4"
       onClick={onClose}
-      onKeyDown={(e) => {
-        if (e.key === "Escape") onClose();
-      }}
       role="presentation"
     >
       <form
         onSubmit={submit}
-        className="card w-full max-w-md space-y-4 shadow-xl"
+        className="card my-auto w-full max-w-md shrink-0 space-y-4 shadow-xl"
         onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="payment-confirm-title"
       >
         <div>
-          <h2 className="text-lg font-bold">Подтверждение оплаты</h2>
+          <h2 id="payment-confirm-title" className="text-lg font-bold">
+            Подтверждение оплаты
+          </h2>
           <p className="text-sm text-[var(--muted)]">
             Платёж {schedule.sequence_number} · по строке {formatMoney(dueRemaining)}
           </p>
@@ -162,6 +189,7 @@ export function PaymentConfirmModal({
           </button>
         </div>
       </form>
-    </div>
+    </div>,
+    document.body
   );
 }
