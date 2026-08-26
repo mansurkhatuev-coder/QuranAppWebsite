@@ -107,6 +107,19 @@
       if (subtitleEl) subtitleEl.textContent = 'Переходим к входу…';
       const target = String(data.path || '').trim() || `/${data.treeDir}/`;
       const url = new URL(target, window.location.origin);
+      try {
+        localStorage.setItem(
+          'nek:lastTree',
+          JSON.stringify({
+            path: url.pathname,
+            title: String(data.title || ''),
+            code: normalized,
+            at: Date.now(),
+          })
+        );
+      } catch (err) {
+        /* private mode */
+      }
       window.location.replace(url.pathname + url.search);
     } catch (error) {
       showError(error instanceof Error ? error.message : 'Нет такого древа');
