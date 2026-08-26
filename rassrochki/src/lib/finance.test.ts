@@ -7,6 +7,7 @@ import {
   calcProfit,
   calcTotalWithMarkup,
   formatMoney,
+  loanEndDate,
   profitFromPaid,
   splitIncome,
 } from "@/lib/utils";
@@ -390,6 +391,12 @@ describe("даты графика", () => {
       "2024-03-25",
       "2024-04-25",
     ]);
+  });
+
+  it("loanEndDate = дата последнего платежа", () => {
+    expect(loanEndDate("2024-01-25", 3)).toBe("2024-04-25");
+    const s = buildSchedule(3_000, 12, "2024-01-15");
+    expect(loanEndDate("2024-01-15", 12)).toBe(s[s.length - 1].due_date);
   });
 });
 
