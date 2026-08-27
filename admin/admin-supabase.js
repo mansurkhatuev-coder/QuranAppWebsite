@@ -303,9 +303,19 @@
   }
 
   /**
-   * True all-time unique installs from the whole DB — not the last 5000 events window.
-   * Prefers RPC after backfill migration; falls back to paged distinct scan.
+   * Server-side product dashboard (full tables, not last-5000 events).
+   * Requires admin/supabase-migration-analytics-dashboard.sql
    */
+  async function loadAnalyticsDashboard(days = 7) {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const { data, error } = await client.rpc('analytics_dashboard', {
+      p_days: Number(days) || 0,
+    });
+    if (error) throw error;
+    return data && typeof data === 'object' ? data : null;
+  }
+
   async function loadAnalyticsAllTimeInstallCount() {
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
@@ -466,6 +476,7 @@
     loadAcademyCourseFeedback,
     loadAnalyticsEvents,
     loadAnalyticsInstallations,
+    loadAnalyticsDashboard,
     loadAnalyticsAllTimeInstallCount,
     loadRuStoreVersion,
     syncAppRelease,
