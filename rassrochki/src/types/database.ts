@@ -32,6 +32,9 @@ export type PlatformOrganization = {
   access_note: string | null;
   platform_revenue: number;
   has_access: boolean;
+  last_sign_in_at: string | null;
+  loans_count: number;
+  active_loans_count: number;
 };
 
 export type OrganizationSettings = {

@@ -7,6 +7,8 @@ import type { PlatformOrganization } from "@/types/database";
 import { formatDateShort, formatMoney } from "@/lib/utils";
 import { ListPageSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
+import { formatDistanceToNow } from "date-fns";
+import { ru } from "date-fns/locale";
 
 type Action = "extend" | "deactivate" | "activate_trial";
 
@@ -162,9 +164,20 @@ export default function PlatformPage() {
                     <StatusBadge org={org} disabled={disabled} />
                   </div>
 
-                  <p className="text-sm">
-                    <span className="text-[var(--muted)]">Доход: </span>
-                    <span className="font-semibold">
+                  <p className="text-sm text-[var(--muted)]">
+                    Заходил:{" "}
+                    <span className="font-medium text-slate-800">
+                      {formatLastSignIn(org.last_sign_in_at)}
+                    </span>
+                    {" · "}
+                    Рассрочек:{" "}
+                    <span className="font-medium text-slate-800">
+                      {Number(org.active_loans_count || 0)} акт. /{" "}
+                      {Number(org.loans_count || 0)} всего
+                    </span>
+                    {" · "}
+                    Доход:{" "}
+                    <span className="font-semibold text-slate-800">
                       {formatMoney(Number(org.platform_revenue || 0))}
                     </span>
                   </p>
@@ -314,4 +327,13 @@ function StatusBadge({
   if (disabled) return <span className="badge-red">Отключена</span>;
   if (org.has_access) return <span className="badge-green">Доступ есть</span>;
   return <span className="badge-yellow">Нет доступа</span>;
+}
+
+function formatLastSignIn(value: string | null | undefined) {
+  if (!value) return "никогда";
+  try {
+    return formatDistanceToNow(new Date(value), { addSuffix: true, locale: ru });
+  } catch {
+    return formatDateShort(value.slice(0, 10));
+  }
 }
