@@ -504,7 +504,7 @@
   }
 
   function looksLikeStoreTable(text) {
-    return /дата|date|установ|install|скач|download/i.test(String(text || ''));
+    return /дата|date|период|period|timeperiod|всего|total|установ|install|скач|download/i.test(String(text || ''));
   }
 
   function decodeStoreCsv(buffer) {
@@ -532,7 +532,7 @@
       ? storeBusyHint || 'Читаю CSV и отправляю на сервер…'
       : rustore && rustore.fetchedAt
         ? `CSV загружен. Последний день в файле: ${rustore.lastDay || '—'}.`
-        : 'В консоли откройте статистику приложения → таблица → экспорт CSV. Подойдёт и помесячный файл с колонками timePeriod и Всего.';
+        : 'В консоли: статистика → таблица → экспорт CSV. Подойдёт файл с колонками «Период» и «Всего» (например 05.2026).';
     const button = rustoreBusy ? 'Загружаю CSV…' : 'Загрузить CSV';
     return `
       <div class="admin-store-progress ${rustoreBusy ? 'is-busy' : ''}" aria-live="polite">

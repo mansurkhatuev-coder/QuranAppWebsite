@@ -32,7 +32,8 @@ function headerKind(value: string): 'date' | 'downloads' | 'updates' | 'type' | 
   const h = normalizeHeader(value);
   if (!h) return 'other';
   if (/конверси|просмотр|view|conversion/.test(h)) return 'other';
-  if (/^timeperiod$|^time[_\s-]*period$/.test(h)) return 'date';
+  // RuStore: "Период" / "timePeriod" — monthly buckets, not a calendar "date" label.
+  if (/^timeperiod$|^time[_\s-]*period$|^период$|^period$/.test(h)) return 'date';
   if (/период/.test(h) && !/дата/.test(h)) return 'other';
   if (/^(date|дата|day|день)$/i.test(h) || /(^| )(date|дата)($| )/.test(h) || /дата начала/.test(h)) return 'date';
   if (/download type|тип.*скач|тип.*загруз/.test(h) || h === 'type') return 'type';
@@ -62,6 +63,19 @@ function parseDay(raw: string): string | null {
   if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
   const yearMonth = /^(\d{4})-(\d{2})$/.exec(value);
   if (yearMonth) return lastDayOfMonth(Number(yearMonth[1]), Number(yearMonth[2]));
+  // RuStore monthly export: 05.2026 / 05-2026 / 2026.05
+  const monthYear = /^(\d{1,2})[./-](\d{4})$/.exec(value);
+  if (monthYear) {
+    const month = Number(monthYear[1]);
+    const year = Number(monthYear[2]);
+    if (month >= 1 && month <= 12) return lastDayOfMonth(year, month);
+  }
+  const yearMonthDot = /^(\d{4})[./](\d{1,2})$/.exec(value);
+  if (yearMonthDot) {
+    const year = Number(yearMonthDot[1]);
+    const month = Number(yearMonthDot[2]);
+    if (month >= 1 && month <= 12) return lastDayOfMonth(year, month);
+  }
   const dotted = /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(value);
   if (dotted) {
     const day = dotted[1].padStart(2, '0');
@@ -104,10 +118,12 @@ export function formatParseError(reason: string): string {
   if (reason === 'empty') return 'Файл пустой.';
   if (reason === 'no-rows') return 'В файле нет строк с цифрами.';
   if (reason === 'no-date-column') {
-    return 'Нет колонки с датой. Нужен CSV статистики (timePeriod / Дата), не отзывы.';
+    return 'Нет колонки с датой/периодом. Нужен CSV статистики (Период / timePeriod / Дата), не отзывы.';
   }
   if (reason === 'no-downloads-column') return 'Нет колонки установок / скачиваний.';
-  if (reason === 'no-valid-rows') return 'Даты в файле не разобрал. Нужен CSV из «Статистика по приложению».';
+  if (reason === 'no-valid-rows') {
+    return 'Даты/периоды в файле не разобрал. Подойдёт помесячный CSV RuStore (05.2026) или дневной.';
+  }
   return `CSV: ${reason}`;
 }
 
