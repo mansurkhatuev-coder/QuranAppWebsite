@@ -94,6 +94,15 @@
 2. Затем `website/admin/supabase-migration-analytics-all-time-count.sql` — backfill реестра + RPC точного count
 3. Обновите аналитику в админке (полный count больше не берётся из окна 5000 событий)
 
+### Продуктовый дашборд (рекомендуется)
+
+Для упорядоченных KPI как у нормального продукта (активные, новые установки, азкары, тренд 30 дней):
+
+1. **SQL Editor** → выполните `website/admin/supabase-migration-analytics-dashboard.sql`
+2. Обновите вкладку **Аналитика** в админке
+
+Миграция: trigger на события → реестр установок, таблица `analytics_daily`, RPC `analytics_dashboard(p_days)`.
+
 ---
 
 ## Часть 3. Создать пользователя админки

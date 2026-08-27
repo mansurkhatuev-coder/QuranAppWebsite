@@ -26,6 +26,8 @@
   let installationsTotal = null;
   let allTimeInstallCount = null;
   let eventsWindowLimited = false;
+  let dashboard = null;
+  let dashboardError = '';
   let storeSnapshot = null;
   let storeError = '';
   let storeBusy = false;
@@ -34,6 +36,9 @@
 
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
+    if (/analytics_dashboard/i.test(message) && /function|schema|does not exist/i.test(message)) {
+      return 'Нужна SQL-миграция analytics-dashboard на сервере. Пока показаны приблизительные цифры.';
+    }
     if (/analytics_events/i.test(message) && /does not exist|relation/i.test(message)) {
       return 'Раздел аналитики ещё не подключён на сервере. Обратитесь к разработчику.';
     }
@@ -48,6 +53,55 @@
     if (days === 1) return '1 день';
     if (days === 365) return '1 год';
     return `${days} дн.`;
+  }
+
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function formatDelta(curr, prev) {
+    if (prev == null || !Number.isFinite(Number(prev))) return '';
+    const d = (Number(curr) || 0) - (Number(prev) || 0);
+    if (!d) return '';
+    const cls = d > 0 ? 'is-up' : 'is-down';
+    const text = d > 0 ? `+${d}` : String(d);
+    return `<span class="admin-store-delta ${cls}" title="к прошлому периоду">${text}</span>`;
+  }
+
+  function metricCard(label, value, opts = {}) {
+    const hero = opts.hero ? ' admin-analytics-card--hero' : '';
+    const delta = opts.prev != null ? formatDelta(value, opts.prev) : '';
+    const note = opts.note ? `<p class="admin-muted admin-analytics-note">${escapeHtml(opts.note)}</p>` : '';
+    return `
+      <article class="admin-analytics-card${hero}">
+        <p class="admin-muted">${escapeHtml(label)}</p>
+        <p class="admin-analytics-value admin-store-value">
+          <span>${Number(value) || 0}</span>
+          ${delta}
+        </p>
+        ${note}
+      </article>`;
+  }
+
+  function renderSparkline(series, key) {
+    const rows = Array.isArray(series) ? series : [];
+    if (!rows.length) {
+      return '<p class="admin-muted">Нет дневных данных. Выполните SQL analytics-dashboard.</p>';
+    }
+    const values = rows.map((row) => Number(row[key]) || 0);
+    const max = Math.max(...values, 1);
+    const bars = rows
+      .map((row) => {
+        const v = Number(row[key]) || 0;
+        const h = Math.max(4, Math.round((v / max) * 100));
+        return `<span style="height:${h}%" title="${escapeHtml(row.day)}: ${v}"></span>`;
+      })
+      .join('');
+    return `<div class="admin-analytics-spark" aria-hidden="true">${bars}</div>`;
   }
 
   function filteredRows() {
@@ -123,40 +177,90 @@
 
   function renderMetricCards(container, rows) {
     if (!container) return;
-    const activeSelected = countActiveInstalls(rangeDays);
-    const active1 = countActiveInstalls(1);
-    const active7 = countActiveInstalls(7);
-    const active30 = countActiveInstalls(30);
-    const active365 = countActiveInstalls(365);
-    const totalKnown = countActiveInstalls(0);
+    const period = dashboard?.period || null;
+    const previous = dashboard?.previous || null;
+    const series = dashboard?.series || [];
+    const platforms = dashboard?.platforms || [];
+    const reliable = Boolean(period);
+    const warn = dashboardError
+      ? `<p class="admin-error">${escapeHtml(dashboardError)}</p>`
+      : '';
+
+    // Fallback to client window if SQL dashboard is missing.
+    const active = reliable ? period.active : countActiveInstalls(rangeDays);
+    const allTime = reliable
+      ? Number(dashboard.all_time_installs) || 0
+      : countActiveInstalls(0);
+    const events = reliable ? period.events : rows.length;
+    const azkar = reliable ? period.azkar : countBy(rows, (r) => r.event).find(([k]) => k === 'azkar_item_completed')?.[1] || 0;
     const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
-    const allTimeReady = typeof allTimeInstallCount === 'number';
-    const allTimeLabel = 'Всего за всё время';
-    const sourceNote = allTimeReady
-      ? '«Активные» — устройства с событиями за период. «Всего за всё время» — уникальные установки по всей базе (не окно последних событий). Удаление приложения эту цифру не уменьшает.'
-      : hasInstallationRegistry()
-        ? '«Активные» — устройства с событиями за период. Полный «за всё время» ещё досчитывается…'
-        : installationsAvailable
-          ? 'Реестр установок пуст или неполный — полный «за всё время» досчитывается по всем событиям в базе.'
-          : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
+    const lessons = reliable ? period.lessons : byEvent.academy_lesson_completed || 0;
+    const opens = reliable ? period.app_open : byEvent.app_open || 0;
+    const tasbih = reliable ? period.tasbih : byEvent.tasbih_milestone || 0;
+    const newInstalls = reliable ? period.new_installs : 0;
+    const azkarUsers = reliable ? period.azkar_users : 0;
+    const lessonUsers = reliable ? period.lesson_users : 0;
+    const label = rangeLabel(rangeDays);
+    const source = reliable
+      ? 'Цифры с сервера по всей базе. +N — сравнение с прошлым таким же периодом.'
+      : eventsWindowLimited
+        ? 'SQL-дашборд ещё не подключён — показаны приблизительные цифры из последних событий.'
+        : 'SQL-дашборд ещё не подключён — показаны цифры из загруженных событий.';
+
+    const platformList = platforms.length
+      ? `<ul class="admin-analytics-list">${platforms
+          .map((p) => `<li><span>${escapeHtml(p.platform)}</span><strong>${Number(p.count) || 0}</strong></li>`)
+          .join('')}</ul>`
+      : '<p class="admin-muted">Пока нет данных по платформам.</p>';
 
     container.innerHTML = `
-      <div class="admin-analytics-grid">
-        <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">Активные · ${rangeLabel(rangeDays)}</p>
-          <p class="admin-analytics-value">${activeSelected}</p>
-        </article>
-        <article class="admin-analytics-card"><p class="admin-muted">Активные · 24ч</p><p class="admin-analytics-value">${active1}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Активные · 7 дн.</p><p class="admin-analytics-value">${active7}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Активные · 30 дн.</p><p class="admin-analytics-value">${active30}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Активные · 1 год</p><p class="admin-analytics-value">${active365}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">${allTimeLabel}</p><p class="admin-analytics-value">${totalKnown}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Событий · период</p><p class="admin-analytics-value">${rows.length}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Азкары</p><p class="admin-analytics-value">${byEvent.azkar_item_completed || 0}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Уроки</p><p class="admin-analytics-value">${byEvent.academy_lesson_completed || 0}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Тасбих</p><p class="admin-analytics-value">${byEvent.tasbih_milestone || 0}</p></article>
-      </div>
-      <p class="admin-muted admin-analytics-note">${sourceNote}</p>
+      ${warn}
+      <section class="admin-analytics-section">
+        <div class="admin-analytics-social-head">
+          <h3>Обзор · ${escapeHtml(label)}</h3>
+          <p class="admin-muted">${escapeHtml(source)}</p>
+        </div>
+        <div class="admin-analytics-grid">
+          ${metricCard(`Активные · ${label}`, active, { hero: true, prev: previous?.active })}
+          ${metricCard('Новые установки', newInstalls, { hero: true, prev: previous?.new_installs, note: 'first_seen за период' })}
+          ${metricCard('Всего установок', allTime, { note: 'за всё время, не падает от удаления' })}
+          ${metricCard('События', events, { prev: previous?.events })}
+        </div>
+      </section>
+
+      <section class="admin-analytics-section">
+        <div class="admin-analytics-social-head">
+          <h3>Активность</h3>
+          <p class="admin-muted">Открытия, азкары, уроки, тасбих за выбранный период.</p>
+        </div>
+        <div class="admin-analytics-grid">
+          ${metricCard('Открытия приложения', opens, { prev: previous?.app_open })}
+          ${metricCard('Азкары завершены', azkar, { hero: true, prev: previous?.azkar })}
+          ${metricCard('Уники · азкары', azkarUsers, { note: 'устройства с ≥1 азкаром' })}
+          ${metricCard('Уроки завершены', lessons, { hero: true, prev: previous?.lessons })}
+          ${metricCard('Уники · уроки', lessonUsers, { note: 'устройства с ≥1 уроком' })}
+          ${metricCard('Тасбих · вехи', tasbih, { prev: previous?.tasbih })}
+        </div>
+      </section>
+
+      <section class="admin-analytics-section">
+        <div class="admin-analytics-social-head">
+          <h3>Тренд · 30 дней</h3>
+          <p class="admin-muted">Активные устройства по дням (серверный rollup).</p>
+        </div>
+        ${renderSparkline(series, 'active_installs')}
+        <div class="admin-analytics-spark-legend">
+          <span>Азкары</span>
+        </div>
+        ${renderSparkline(series, 'azkar')}
+      </section>
+
+      <section class="admin-analytics-section">
+        <div class="admin-analytics-social-head">
+          <h3>Платформы · активные за период</h3>
+        </div>
+        ${platformList}
+      </section>
     `;
   }
 
@@ -452,14 +556,6 @@
     }, 0);
   }
 
-  function escapeHtml(value) {
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;');
-  }
-
   function defaultAppleSteps() {
     return [
       { label: 'Ключ App Store Connect', done: false, detail: 'Сначала секреты в Supabase, потом эта кнопка.' },
@@ -635,10 +731,15 @@
     const breakdown = document.querySelector('#analytics-breakdown');
     const stats = document.querySelector('#analytics-stats');
     const rows = filteredRows();
+    const period = dashboard?.period;
 
     if (stats) {
-      const active = countActiveInstalls(rangeDays);
-      stats.textContent = `Активных · ${rangeLabel(rangeDays)}: ${active} · событий: ${rows.length}`;
+      if (period) {
+        stats.textContent = `Активные · ${rangeLabel(rangeDays)}: ${period.active || 0} · события: ${period.events || 0} · азкары: ${period.azkar || 0} · всего установок: ${dashboard.all_time_installs || 0}`;
+      } else {
+        const active = countActiveInstalls(rangeDays);
+        stats.textContent = `Активных · ${rangeLabel(rangeDays)}: ${active} · событий: ${rows.length}`;
+      }
     }
     renderMetricCards(metrics, rows);
     renderStoreDownloads(document.querySelector('#analytics-stores'));
@@ -646,6 +747,10 @@
 
     if (!breakdown) return;
     breakdown.innerHTML = '';
+    const detailHead = document.createElement('div');
+    detailHead.className = 'admin-analytics-social-head';
+    detailHead.innerHTML = '<h3>Детализация</h3><p class="admin-muted">Воронки и разбивки (по загруженным событиям).</p>';
+    breakdown.appendChild(detailHead);
     renderCourseFunnel(breakdown);
     renderPlatformBreakdown(breakdown);
     renderVersionBreakdown(breakdown);
@@ -688,6 +793,26 @@
     );
   }
 
+  async function loadDashboardForRange() {
+    dashboard = null;
+    dashboardError = '';
+    if (typeof global.AdminSupabase.loadAnalyticsDashboard !== 'function') return;
+    try {
+      dashboard = await global.AdminSupabase.loadAnalyticsDashboard(rangeDays);
+      if (dashboard?.all_time_installs != null) {
+        allTimeInstallCount = Number(dashboard.all_time_installs) || 0;
+      }
+    } catch (error) {
+      dashboard = null;
+      const msg = error instanceof Error ? error.message : String(error);
+      if (/function|schema|does not exist|analytics_dashboard/i.test(msg)) {
+        dashboardError = 'SQL analytics-dashboard ещё не выполнен в Supabase — KPI приблизительные.';
+      } else {
+        dashboardError = msg;
+      }
+    }
+  }
+
   async function loadAndRender() {
     const metrics = document.querySelector('#analytics-metrics');
     const breakdown = document.querySelector('#analytics-breakdown');
@@ -703,12 +828,14 @@
     if (stats) stats.textContent = 'Загрузка…';
 
     try {
+      await loadDashboardForRange();
+
       const eventsPayload = await global.AdminSupabase.loadAnalyticsEvents();
       allRows = Array.isArray(eventsPayload) ? eventsPayload : (eventsPayload?.rows || []);
       eventsWindowLimited = Boolean(eventsPayload && !Array.isArray(eventsPayload) && eventsPayload.truncated);
       installations = [];
       installationsTotal = null;
-      allTimeInstallCount = null;
+      if (allTimeInstallCount == null) allTimeInstallCount = null;
       installationsAvailable = false;
       if (typeof global.AdminSupabase.loadAnalyticsInstallations === 'function') {
         try {
@@ -731,7 +858,7 @@
       }
       renderAll();
 
-      if (typeof global.AdminSupabase.loadAnalyticsAllTimeInstallCount === 'function') {
+      if (allTimeInstallCount == null && typeof global.AdminSupabase.loadAnalyticsAllTimeInstallCount === 'function') {
         try {
           allTimeInstallCount = await global.AdminSupabase.loadAnalyticsAllTimeInstallCount();
           renderAll();
@@ -756,6 +883,7 @@
       allTimeInstallCount = null;
       installationsAvailable = false;
       eventsWindowLimited = false;
+      dashboard = null;
       if (stats) stats.textContent = 'Не удалось загрузить';
       metrics.innerHTML = `<p class="admin-error">${formatError(error)}</p>`;
     }
@@ -766,7 +894,7 @@
     if (range) {
       range.addEventListener('change', () => {
         rangeDays = Number(range.value) || 0;
-        renderAll();
+        void loadDashboardForRange().then(() => renderAll());
       });
     }
     const refresh = $('#analytics-refresh');
