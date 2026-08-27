@@ -75,7 +75,6 @@
   function metricCard(label, value, opts = {}) {
     const hero = opts.hero ? ' admin-analytics-card--hero' : '';
     const delta = opts.prev != null ? formatDelta(value, opts.prev) : '';
-    const note = opts.note ? `<p class="admin-muted admin-analytics-note">${escapeHtml(opts.note)}</p>` : '';
     return `
       <article class="admin-analytics-card${hero}">
         <p class="admin-muted">${escapeHtml(label)}</p>
@@ -83,15 +82,12 @@
           <span>${Number(value) || 0}</span>
           ${delta}
         </p>
-        ${note}
       </article>`;
   }
 
   function renderSparkline(series, key) {
     const rows = Array.isArray(series) ? series : [];
-    if (!rows.length) {
-      return '<p class="admin-muted">Нет дневных данных. Выполните SQL analytics-dashboard.</p>';
-    }
+    if (!rows.length) return '';
     const values = rows.map((row) => Number(row[key]) || 0);
     const max = Math.max(...values, 1);
     const bars = rows
@@ -182,85 +178,70 @@
     const series = dashboard?.series || [];
     const platforms = dashboard?.platforms || [];
     const reliable = Boolean(period);
-    const warn = dashboardError
-      ? `<p class="admin-error">${escapeHtml(dashboardError)}</p>`
-      : '';
+    const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
 
-    // Fallback to client window if SQL dashboard is missing.
     const active = reliable ? period.active : countActiveInstalls(rangeDays);
     const allTime = reliable
       ? Number(dashboard.all_time_installs) || 0
       : countActiveInstalls(0);
     const events = reliable ? period.events : rows.length;
-    const azkar = reliable ? period.azkar : countBy(rows, (r) => r.event).find(([k]) => k === 'azkar_item_completed')?.[1] || 0;
-    const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
+    const azkar = reliable ? period.azkar : byEvent.azkar_item_completed || 0;
     const lessons = reliable ? period.lessons : byEvent.academy_lesson_completed || 0;
     const opens = reliable ? period.app_open : byEvent.app_open || 0;
     const tasbih = reliable ? period.tasbih : byEvent.tasbih_milestone || 0;
     const newInstalls = reliable ? period.new_installs : 0;
-    const azkarUsers = reliable ? period.azkar_users : 0;
-    const lessonUsers = reliable ? period.lesson_users : 0;
     const label = rangeLabel(rangeDays);
-    const source = reliable
-      ? 'Цифры с сервера по всей базе. +N — сравнение с прошлым таким же периодом.'
-      : eventsWindowLimited
-        ? 'SQL-дашборд ещё не подключён — показаны приблизительные цифры из последних событий.'
-        : 'SQL-дашборд ещё не подключён — показаны цифры из загруженных событий.';
+
+    const activeSpark = renderSparkline(series, 'active_installs');
+    const azkarSpark = renderSparkline(series, 'azkar');
+    const trendBlock = activeSpark || azkarSpark
+      ? `
+      <section class="admin-analytics-section">
+        <div class="admin-analytics-social-head"><h3>За 30 дней</h3></div>
+        ${activeSpark ? `<p class="admin-analytics-spark-legend">Кто заходил</p>${activeSpark}` : ''}
+        ${azkarSpark ? `<p class="admin-analytics-spark-legend">Азкары</p>${azkarSpark}` : ''}
+      </section>`
+      : '';
 
     const platformList = platforms.length
       ? `<ul class="admin-analytics-list">${platforms
-          .map((p) => `<li><span>${escapeHtml(p.platform)}</span><strong>${Number(p.count) || 0}</strong></li>`)
+          .map((p) => {
+            const name = String(p.platform || '—')
+              .replace(/^android$/i, 'Android')
+              .replace(/^ios$/i, 'iOS');
+            return `<li><span>${escapeHtml(name)}</span><strong>${Number(p.count) || 0}</strong></li>`;
+          })
           .join('')}</ul>`
-      : '<p class="admin-muted">Пока нет данных по платформам.</p>';
+      : '';
 
     container.innerHTML = `
-      ${warn}
       <section class="admin-analytics-section">
-        <div class="admin-analytics-social-head">
-          <h3>Обзор · ${escapeHtml(label)}</h3>
-          <p class="admin-muted">${escapeHtml(source)}</p>
-        </div>
+        <div class="admin-analytics-social-head"><h3>Установки · ${escapeHtml(label)}</h3></div>
         <div class="admin-analytics-grid">
-          ${metricCard(`Активные · ${label}`, active, { hero: true, prev: previous?.active })}
-          ${metricCard('Новые установки', newInstalls, { hero: true, prev: previous?.new_installs, note: 'first_seen за период' })}
-          ${metricCard('Всего установок', allTime, { note: 'за всё время, не падает от удаления' })}
+          ${metricCard('Сейчас активны', active, { hero: true, prev: previous?.active })}
+          ${metricCard('Новые', newInstalls, { hero: true, prev: previous?.new_installs })}
+          ${metricCard('Всего', allTime)}
           ${metricCard('События', events, { prev: previous?.events })}
         </div>
       </section>
 
       <section class="admin-analytics-section">
-        <div class="admin-analytics-social-head">
-          <h3>Активность</h3>
-          <p class="admin-muted">Открытия, азкары, уроки, тасбих за выбранный период.</p>
-        </div>
+        <div class="admin-analytics-social-head"><h3>В приложении · ${escapeHtml(label)}</h3></div>
         <div class="admin-analytics-grid">
-          ${metricCard('Открытия приложения', opens, { prev: previous?.app_open })}
-          ${metricCard('Азкары завершены', azkar, { hero: true, prev: previous?.azkar })}
-          ${metricCard('Уники · азкары', azkarUsers, { note: 'устройства с ≥1 азкаром' })}
-          ${metricCard('Уроки завершены', lessons, { hero: true, prev: previous?.lessons })}
-          ${metricCard('Уники · уроки', lessonUsers, { note: 'устройства с ≥1 уроком' })}
-          ${metricCard('Тасбих · вехи', tasbih, { prev: previous?.tasbih })}
+          ${metricCard('Азкары', azkar, { hero: true, prev: previous?.azkar })}
+          ${metricCard('Уроки', lessons, { hero: true, prev: previous?.lessons })}
+          ${metricCard('Открытия', opens, { prev: previous?.app_open })}
+          ${metricCard('Тасбих', tasbih, { prev: previous?.tasbih })}
         </div>
       </section>
 
-      <section class="admin-analytics-section">
-        <div class="admin-analytics-social-head">
-          <h3>Тренд · 30 дней</h3>
-          <p class="admin-muted">Активные устройства по дням (серверный rollup).</p>
-        </div>
-        ${renderSparkline(series, 'active_installs')}
-        <div class="admin-analytics-spark-legend">
-          <span>Азкары</span>
-        </div>
-        ${renderSparkline(series, 'azkar')}
-      </section>
+      ${trendBlock}
 
+      ${platformList ? `
       <section class="admin-analytics-section">
-        <div class="admin-analytics-social-head">
-          <h3>Платформы · активные за период</h3>
-        </div>
+        <div class="admin-analytics-social-head"><h3>Телефоны</h3></div>
         ${platformList}
-      </section>
+      </section>` : ''}
     `;
   }
 
@@ -453,20 +434,14 @@
     const head = document.createElement('div');
     head.className = 'admin-analytics-social-head';
     head.innerHTML = `
-      <h3>Курсы · прошли и забросили</h3>
-      <p class="admin-muted">
-        По уникальным устройствам за выбранный период.
-        Прошли — набрали все уроки курса.
-        Забросили — начали, но не закончили и молчат больше ${ABANDON_IDLE_DAYS} дн.
-        Учатся — продолжают.
-      </p>
+      <h3>Курсы</h3>
     `;
     block.appendChild(head);
 
     if (!funnel.length) {
       const empty = document.createElement('p');
       empty.className = 'admin-muted';
-      empty.textContent = 'Пока нет данных по урокам Академии за период.';
+      empty.textContent = 'Пока нет уроков за период.';
       block.appendChild(empty);
       container.appendChild(block);
       return;
@@ -480,17 +455,14 @@
       const finishPct = item.started ? Math.round((item.finished / item.started) * 100) : 0;
       const abandonPct = item.started ? Math.round((item.abandoned / item.started) * 100) : 0;
       const studyingPct = Math.max(0, 100 - finishPct - abandonPct);
-      const totalHint = item.totalLessons
-        ? `полный курс = ${item.totalLessons} ур.`
-        : 'порог завершения неизвестен';
       row.innerHTML = `
         <div class="admin-analytics-funnel-title">
           <strong>${courseLabel(item.courseId)}</strong>
-          <span class="admin-muted">${totalHint} · начали: ${item.started}</span>
+          <span class="admin-muted">начали ${item.started}</span>
         </div>
         <div class="admin-analytics-funnel-metrics">
           <div><span class="admin-muted">Прошли</span><strong>${item.finished}</strong><em>${finishPct}%</em></div>
-          <div><span class="admin-muted">Забросили</span><strong>${item.abandoned}</strong><em>${abandonPct}%</em></div>
+          <div><span class="admin-muted">Бросили</span><strong>${item.abandoned}</strong><em>${abandonPct}%</em></div>
           <div><span class="admin-muted">Учатся</span><strong>${item.studying}</strong></div>
         </div>
         <div class="admin-analytics-funnel-bar" aria-hidden="true">
@@ -568,32 +540,34 @@
   function renderAppleProgress(apple) {
     const appleBusy = storeBusyKind === 'apple';
     const progress = apple && apple.progress;
-    const steps = progress && Array.isArray(progress.steps) && progress.steps.length
-      ? progress.steps
-      : defaultAppleSteps();
     const percent = Number(progress && progress.percent) || 0;
-    const hint = appleBusy
-      ? storeBusyHint || 'Спрашиваю Apple… обычно до минуты. Не закрывайте вкладку.'
-      : (progress && progress.hint) || 'Нажмите кнопку — закажем отчёт у Apple. Готовые файлы приходят не сразу, обычно сутки–двое.';
+    const numbersDone = percent >= 100 || (apple && Number(apple.days) > 0);
     const button = appleBusy
-      ? 'Спрашиваю Apple…'
-      : (progress && progress.button) || 'Проверить App Store';
-    const stepList = `<ol class="admin-store-steps">${steps.map((step) => `
-          <li class="${step.done ? 'is-done' : ''}">
-            <strong>${escapeHtml(step.label)}</strong>
-            <span>${escapeHtml(step.detail)}</span>
-          </li>`).join('')}</ol>`;
+      ? 'Обновляю…'
+      : numbersDone
+        ? 'Обновить App Store'
+        : 'Проверить App Store';
+    if (numbersDone && !appleBusy) {
+      return `
+        <div class="admin-store-progress" aria-live="polite">
+          <div class="admin-store-progress-head">
+            <strong>App Store</strong>
+            <span>готово</span>
+          </div>
+          <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+            ${escapeHtml(button)}
+          </button>
+        </div>`;
+    }
     return `
       <div class="admin-store-progress ${appleBusy ? 'is-busy' : ''}" aria-live="polite">
         <div class="admin-store-progress-head">
-          <strong>App Store · прогресс</strong>
-          <span>${appleBusy ? 'идёт запрос' : `${percent}%`}</span>
+          <strong>App Store</strong>
+          <span>${appleBusy ? 'запрос…' : `${percent}%`}</span>
         </div>
         <div class="admin-store-bar" aria-hidden="true">
           <span style="width:${appleBusy ? Math.max(percent, 15) : percent}%"></span>
         </div>
-        ${stepList}
-        <p class="admin-muted admin-analytics-note">${escapeHtml(hint)}</p>
         <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
           ${escapeHtml(button)}
         </button>
@@ -626,25 +600,16 @@
 
   function renderRustoreUpload(rustore) {
     const rustoreBusy = storeBusyKind === 'rustore';
-    const hint = rustoreBusy
-      ? storeBusyHint || 'Читаю CSV и отправляю на сервер…'
-      : rustore && rustore.fetchedAt
-        ? `CSV загружен. Последний день в файле: ${rustore.lastDay || '—'}.`
-        : 'В консоли: статистика → таблица → экспорт CSV. Подойдёт файл с колонками «Период» и «Всего» (например 05.2026).';
-    const button = rustoreBusy ? 'Загружаю CSV…' : 'Загрузить CSV';
+    const button = rustoreBusy ? 'Загружаю…' : 'Загрузить CSV RuStore';
     return `
       <div class="admin-store-progress ${rustoreBusy ? 'is-busy' : ''}" aria-live="polite">
         <div class="admin-store-progress-head">
-          <strong>RuStore · CSV</strong>
-          <a class="admin-store-link" href="${RUSTORE_APP_URL}" target="_blank" rel="noopener noreferrer">Страница в RuStore</a>
+          <strong>RuStore</strong>
+          <a class="admin-store-link" href="${RUSTORE_CONSOLE_URL}" target="_blank" rel="noopener noreferrer">Консоль</a>
         </div>
-        <p class="admin-muted admin-analytics-note">${escapeHtml(hint)}</p>
-        <p class="admin-store-links">
-          <a class="admin-store-link" href="${RUSTORE_CONSOLE_URL}" target="_blank" rel="noopener noreferrer">Консоль RuStore · статистика</a>
-        </p>
         <div class="admin-toolbar" style="margin-top:8px;gap:10px;flex-wrap:wrap;align-items:center">
           <label class="admin-inline-field">
-            Файл CSV
+            CSV
             <input type="file" id="analytics-rustore-csv" accept=".csv,.txt,.tsv,text/csv,text/plain" ${storeBusy ? 'disabled' : ''} />
           </label>
           <button type="button" id="analytics-rustore-upload" class="admin-button" ${storeBusy ? 'disabled' : ''}>
@@ -697,7 +662,7 @@
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
-        <h3>Сторы · скачивания</h3>
+        <h3>Скачивания в сторах</h3>
       </div>
       ${errorLine}
       <div class="admin-analytics-grid" id="analytics-stores-alltime">
@@ -735,62 +700,42 @@
 
     if (stats) {
       if (period) {
-        stats.textContent = `Активные · ${rangeLabel(rangeDays)}: ${period.active || 0} · события: ${period.events || 0} · азкары: ${period.azkar || 0} · всего установок: ${dashboard.all_time_installs || 0}`;
+        stats.textContent = `${rangeLabel(rangeDays)} · активны ${period.active || 0} · азкары ${period.azkar || 0}`;
       } else {
-        const active = countActiveInstalls(rangeDays);
-        stats.textContent = `Активных · ${rangeLabel(rangeDays)}: ${active} · событий: ${rows.length}`;
+        stats.textContent = rangeLabel(rangeDays);
       }
     }
     renderMetricCards(metrics, rows);
     renderStoreDownloads(document.querySelector('#analytics-stores'));
-    renderSocialLearning(social);
+
+    // Hide noisy duplicate blocks (today academy / raw event dumps).
+    if (social) social.innerHTML = '';
 
     if (!breakdown) return;
     breakdown.innerHTML = '';
-    const detailHead = document.createElement('div');
-    detailHead.className = 'admin-analytics-social-head';
-    detailHead.innerHTML = '<h3>Детализация</h3><p class="admin-muted">Воронки и разбивки (по загруженным событиям).</p>';
-    breakdown.appendChild(detailHead);
+
+    const azkarCats = countBy(
+      rows.filter((r) => r.event === 'azkar_item_completed'),
+      (r) => (r.props && r.props.category) || '—'
+    );
+    const courses = countBy(
+      rows.filter((r) => r.event === 'academy_lesson_completed'),
+      (r) => (r.props && r.props.course_id) || '—'
+    );
+
+    if (azkarCats.length || courses.length) {
+      const head = document.createElement('div');
+      head.className = 'admin-analytics-social-head';
+      head.innerHTML = '<h3>Подробнее</h3>';
+      breakdown.appendChild(head);
+    }
+    if (azkarCats.length) {
+      renderBreakdown(breakdown, 'Азкары по темам', azkarCats, (key) => String(key));
+    }
+    if (courses.length) {
+      renderBreakdown(breakdown, 'Уроки по курсам', courses, (key) => courseLabel(key));
+    }
     renderCourseFunnel(breakdown);
-    renderPlatformBreakdown(breakdown);
-    renderVersionBreakdown(breakdown);
-    renderBreakdown(
-      breakdown,
-      'По типу события',
-      countBy(rows, (r) => r.event),
-      (key) => EVENT_LABELS[key] || key
-    );
-    renderBreakdown(
-      breakdown,
-      'Азкары · категории',
-      countBy(
-        rows.filter((r) => r.event === 'azkar_item_completed'),
-        (r) => (r.props && r.props.category) || '—'
-      ),
-      (key) => String(key)
-    );
-    renderBreakdown(
-      breakdown,
-      'Академия · курсы',
-      countBy(
-        rows.filter((r) => r.event === 'academy_lesson_completed'),
-        (r) => (r.props && r.props.course_id) || '—'
-      ),
-      (key) => courseLabel(key)
-    );
-    renderBreakdown(
-      breakdown,
-      'Академия · уроки (топ)',
-      countBy(
-        rows.filter((r) => r.event === 'academy_lesson_completed'),
-        (r) => {
-          const course = (r.props && r.props.course_id) || '?';
-          const lesson = (r.props && r.props.lesson_id) || '?';
-          return `${course} / ${lesson}`;
-        }
-      ),
-      (key) => String(key)
-    );
   }
 
   async function loadDashboardForRange() {
@@ -804,12 +749,8 @@
       }
     } catch (error) {
       dashboard = null;
-      const msg = error instanceof Error ? error.message : String(error);
-      if (/function|schema|does not exist|analytics_dashboard/i.test(msg)) {
-        dashboardError = 'SQL analytics-dashboard ещё не выполнен в Supabase — KPI приблизительные.';
-      } else {
-        dashboardError = msg;
-      }
+      // Keep silent — fallback metrics still render without tech error banners.
+      console.warn('analytics dashboard', error);
     }
   }
 
