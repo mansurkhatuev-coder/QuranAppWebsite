@@ -23,6 +23,8 @@
   let installations = [];
   let rangeDays = 7;
   let installationsAvailable = false;
+  let installationsTotal = null;
+  let eventsWindowLimited = false;
   let storeSnapshot = null;
   let storeError = '';
   let storeBusy = false;
@@ -80,7 +82,13 @@
     // unique installation_id from events — otherwise "all time" incorrectly shows 0
     // while period cards still show event-based counts.
     if (!withinDays) {
-      if (hasInstallationRegistry()) return installations.length;
+      if (hasInstallationRegistry()) {
+        // Exact DB count when available — list may be capped; uninstalls do not delete rows.
+        if (typeof installationsTotal === 'number' && installationsTotal >= installations.length) {
+          return installationsTotal;
+        }
+        return installations.length;
+      }
       return countUniqueInstallationsFromEvents(0);
     }
     if (hasInstallationRegistry()) {
@@ -119,10 +127,15 @@
     const active365 = countActiveInstalls(365);
     const totalKnown = countActiveInstalls(0);
     const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
+    const allTimeLabel = hasInstallationRegistry()
+      ? 'Всего установок'
+      : eventsWindowLimited
+        ? 'Уник. в последних событиях'
+        : 'Всего за всё время';
     const sourceNote = hasInstallationRegistry()
-      ? 'Активные — уникальные установки (installation_id), которые присылали события. Платформа = ОС (android/ios), не магазин (RuStore / APK / App Store). Без аналитики или офлайн устройство не видно.'
+      ? '«Активные» — устройства, которые присылали события за период. «Всего установок» не падает от удаления приложения: запись в реестре остаётся.'
       : installationsAvailable
-        ? 'Реестр установок пуст — считаем по событиям. «Всё время» = уникальные installation_id из загруженных событий.'
+        ? 'Реестр установок пуст — считаем по загруженным событиям. Цифра «за всё время» может падать: подтягиваются только последние события, не удаление приложения.'
         : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
 
     container.innerHTML = `
@@ -135,7 +148,7 @@
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 7 дн.</p><p class="admin-analytics-value">${active7}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 30 дн.</p><p class="admin-analytics-value">${active30}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Активные · 1 год</p><p class="admin-analytics-value">${active365}</p></article>
-        <article class="admin-analytics-card"><p class="admin-muted">Всего за всё время</p><p class="admin-analytics-value">${totalKnown}</p></article>
+        <article class="admin-analytics-card"><p class="admin-muted">${allTimeLabel}</p><p class="admin-analytics-value">${totalKnown}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Событий · период</p><p class="admin-analytics-value">${rows.length}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Азкары</p><p class="admin-analytics-value">${byEvent.azkar_item_completed || 0}</p></article>
         <article class="admin-analytics-card"><p class="admin-muted">Уроки</p><p class="admin-analytics-value">${byEvent.academy_lesson_completed || 0}</p></article>
@@ -688,12 +701,23 @@
     if (stats) stats.textContent = 'Загрузка…';
 
     try {
-      allRows = await global.AdminSupabase.loadAnalyticsEvents();
+      const eventsPayload = await global.AdminSupabase.loadAnalyticsEvents();
+      allRows = Array.isArray(eventsPayload) ? eventsPayload : (eventsPayload?.rows || []);
+      eventsWindowLimited = Boolean(eventsPayload && !Array.isArray(eventsPayload) && eventsPayload.truncated);
       installations = [];
+      installationsTotal = null;
       installationsAvailable = false;
       if (typeof global.AdminSupabase.loadAnalyticsInstallations === 'function') {
         try {
-          installations = await global.AdminSupabase.loadAnalyticsInstallations();
+          const installPayload = await global.AdminSupabase.loadAnalyticsInstallations();
+          if (Array.isArray(installPayload)) {
+            installations = installPayload;
+            installationsTotal = installPayload.length;
+          } else {
+            installations = installPayload?.rows || [];
+            installationsTotal =
+              typeof installPayload?.total === 'number' ? installPayload.total : installations.length;
+          }
           installationsAvailable = true;
         } catch (installError) {
           const msg = installError instanceof Error ? installError.message : String(installError);
@@ -715,7 +739,9 @@
     } catch (error) {
       allRows = [];
       installations = [];
+      installationsTotal = null;
       installationsAvailable = false;
+      eventsWindowLimited = false;
       if (stats) stats.textContent = 'Не удалось загрузить';
       metrics.innerHTML = `<p class="admin-error">${formatError(error)}</p>`;
     }

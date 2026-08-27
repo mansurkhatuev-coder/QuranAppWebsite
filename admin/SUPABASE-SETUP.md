@@ -69,9 +69,11 @@
 2. Выполните по очереди:
    - `website/admin/supabase-migration-academy-feedback.sql`
    - `website/admin/supabase-migration-academy-feedback-v2.sql`
+   - при дублях в админке: `website/admin/supabase-migration-academy-feedback-dedupe.sql`
 3. **Table Editor** → должна появиться таблица `academy_course_feedback`.
 
 Без этих миграций вкладка «Отзывы Академии» покажет ошибку или пустой список.
+Уникальность: один отзыв на `(course_id, client_id)`. Если приложение шлёт insert без upsert/`client_id` — копятся дубли; админка их схлопывает, SQL выше чистит базу.
 
 Если нужен розыгрыш итогового экзамена таджвида:
 

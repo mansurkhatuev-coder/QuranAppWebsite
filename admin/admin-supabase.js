@@ -246,7 +246,7 @@
     if (!client) throw new Error('Supabase не настроен');
 
     const fullSelect =
-      'id,course_id,lesson_id,rating,comment,display_name,locale,app_version,platform,created_at,updated_at';
+      'id,course_id,lesson_id,rating,comment,display_name,client_id,locale,app_version,platform,created_at,updated_at';
     const legacySelect = 'id,course_id,lesson_id,rating,comment,locale,app_version,platform,created_at';
 
     let result = await client
@@ -270,25 +270,36 @@
   async function loadAnalyticsEvents() {
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
+    const EVENT_LIMIT = 5000;
     const result = await client
       .from('analytics_events')
       .select('id,event,props,installation_id,app_version,platform,locale,created_at')
       .order('created_at', { ascending: false })
-      .limit(5000);
+      .limit(EVENT_LIMIT);
     if (result.error) throw result.error;
-    return result.data ?? [];
+    const rows = result.data ?? [];
+    return { rows, limit: EVENT_LIMIT, truncated: rows.length >= EVENT_LIMIT };
   }
 
   async function loadAnalyticsInstallations() {
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
-    const result = await client
-      .from('analytics_installations')
-      .select('installation_id,first_seen_at,last_seen_at,platform,app_version,locale')
-      .order('last_seen_at', { ascending: false })
-      .limit(20000);
-    if (result.error) throw result.error;
-    return result.data ?? [];
+    const LIST_LIMIT = 20000;
+    const [listResult, countResult] = await Promise.all([
+      client
+        .from('analytics_installations')
+        .select('installation_id,first_seen_at,last_seen_at,platform,app_version,locale')
+        .order('last_seen_at', { ascending: false })
+        .limit(LIST_LIMIT),
+      client
+        .from('analytics_installations')
+        .select('installation_id', { count: 'exact', head: true }),
+    ]);
+    if (listResult.error) throw listResult.error;
+    if (countResult.error) throw countResult.error;
+    const rows = listResult.data ?? [];
+    const total = typeof countResult.count === 'number' ? countResult.count : rows.length;
+    return { rows, total };
   }
 
   async function loadRuStoreVersion() {
