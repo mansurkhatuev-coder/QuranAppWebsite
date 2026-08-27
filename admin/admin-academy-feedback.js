@@ -5,6 +5,7 @@
   };
 
   let allRows = [];
+  let rawCount = 0;
   let courseFilter = 'all';
 
   function formatDate(value) {
@@ -35,12 +36,62 @@
     return message;
   }
 
+  /**
+   * App should upsert by (course_id, client_id). Older builds / empty client_id
+   * insert a new row each time — collapse to the newest per device+course.
+   */
+  function dedupeFeedbackRows(rows) {
+    const byClient = new Map();
+    const noClient = [];
+    for (const row of rows) {
+      const clientId = typeof row.client_id === 'string' ? row.client_id.trim() : '';
+      if (!clientId) {
+        noClient.push(row);
+        continue;
+      }
+      const key = `${row.course_id || ''}::${clientId}`;
+      const prev = byClient.get(key);
+      if (!prev) {
+        byClient.set(key, row);
+        continue;
+      }
+      const prevTs = Date.parse(prev.updated_at || prev.created_at || 0) || 0;
+      const nextTs = Date.parse(row.updated_at || row.created_at || 0) || 0;
+      if (nextTs >= prevTs) byClient.set(key, row);
+    }
+
+    // Rows without client_id: keep one per course + rating + comment + name.
+    const byFingerprint = new Map();
+    for (const row of noClient) {
+      const fp = [
+        row.course_id || '',
+        String(row.rating || ''),
+        String(row.comment || '').trim().toLowerCase(),
+        String(row.display_name || '').trim().toLowerCase(),
+      ].join('::');
+      const prev = byFingerprint.get(fp);
+      if (!prev) {
+        byFingerprint.set(fp, row);
+        continue;
+      }
+      const prevTs = Date.parse(prev.created_at || 0) || 0;
+      const nextTs = Date.parse(row.created_at || 0) || 0;
+      if (nextTs >= prevTs) byFingerprint.set(fp, row);
+    }
+
+    return [...byClient.values(), ...byFingerprint.values()].sort((a, b) => {
+      const ta = Date.parse(a.created_at || 0) || 0;
+      const tb = Date.parse(b.created_at || 0) || 0;
+      return tb - ta;
+    });
+  }
+
   function filteredRows() {
     if (courseFilter === 'all') return allRows;
     return allRows.filter((row) => row.course_id === courseFilter);
   }
 
-  function renderStats(container, rows) {
+  function renderStats(container, rows, rawCount) {
     if (!container) return;
     if (!rows.length) {
       container.textContent = 'Отзывов пока нет';
@@ -49,7 +100,9 @@
     const sum = rows.reduce((acc, row) => acc + (Number(row.rating) || 0), 0);
     const avg = (sum / rows.length).toFixed(1);
     const withComment = rows.filter((row) => row.comment?.trim()).length;
-    container.textContent = `${rows.length} отзыв(ов) · средняя ${avg} ★ · с комментарием: ${withComment}`;
+    const hidden = Math.max(0, (Number(rawCount) || rows.length) - rows.length);
+    const dupNote = hidden > 0 ? ` · скрыто дублей: ${hidden}` : '';
+    container.textContent = `${rows.length} отзыв(ов) · средняя ${avg} ★ · с комментарием: ${withComment}${dupNote}`;
   }
 
   function renderList(container, rows) {
@@ -96,7 +149,7 @@
     const list = document.querySelector('#academy-feedback-list');
     const stats = document.querySelector('#academy-feedback-stats');
     const rows = filteredRows();
-    renderStats(stats, rows);
+    renderStats(stats, rows, courseFilter === 'all' ? rawCount : undefined);
     renderList(list, rows);
   }
 
@@ -109,10 +162,13 @@
     if (stats) stats.textContent = 'Загрузка…';
 
     try {
-      allRows = await global.AdminSupabase.loadAcademyCourseFeedback();
+      const loaded = await global.AdminSupabase.loadAcademyCourseFeedback();
+      rawCount = loaded.length;
+      allRows = dedupeFeedbackRows(loaded);
       renderAll();
     } catch (error) {
       allRows = [];
+      rawCount = 0;
       if (stats) stats.textContent = 'Не удалось загрузить';
       container.innerHTML = `<p class="admin-error">${formatError(error)}</p>`;
     }
