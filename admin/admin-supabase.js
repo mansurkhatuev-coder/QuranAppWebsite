@@ -302,6 +302,52 @@
     return { rows, total };
   }
 
+  /**
+   * True all-time unique installs from the whole DB — not the last 5000 events window.
+   * Prefers RPC after backfill migration; falls back to paged distinct scan.
+   */
+  async function loadAnalyticsAllTimeInstallCount() {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+
+    const rpc = await client.rpc('analytics_all_time_install_count');
+    if (!rpc.error && rpc.data != null) {
+      const n = Number(rpc.data);
+      if (Number.isFinite(n) && n >= 0) return Math.round(n);
+    }
+
+    let registryCount = 0;
+    try {
+      const counted = await client
+        .from('analytics_installations')
+        .select('installation_id', { count: 'exact', head: true });
+      if (!counted.error && typeof counted.count === 'number') registryCount = counted.count;
+    } catch {
+      // table may be missing
+    }
+
+    const ids = new Set();
+    const page = 1000;
+    for (let from = 0; from < 300000; from += page) {
+      const { data, error } = await client
+        .from('analytics_events')
+        .select('installation_id')
+        .order('created_at', { ascending: true })
+        .range(from, from + page - 1);
+      if (error) {
+        if (/does not exist|relation/i.test(error.message)) break;
+        throw error;
+      }
+      if (!data?.length) break;
+      for (const row of data) {
+        if (row.installation_id) ids.add(row.installation_id);
+      }
+      if (data.length < page) break;
+    }
+
+    return Math.max(registryCount, ids.size);
+  }
+
   async function loadRuStoreVersion() {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
@@ -420,6 +466,7 @@
     loadAcademyCourseFeedback,
     loadAnalyticsEvents,
     loadAnalyticsInstallations,
+    loadAnalyticsAllTimeInstallCount,
     loadRuStoreVersion,
     syncAppRelease,
     loadStoreDownloads,

@@ -24,6 +24,7 @@
   let rangeDays = 7;
   let installationsAvailable = false;
   let installationsTotal = null;
+  let allTimeInstallCount = null;
   let eventsWindowLimited = false;
   let storeSnapshot = null;
   let storeError = '';
@@ -82,8 +83,10 @@
     // unique installation_id from events — otherwise "all time" incorrectly shows 0
     // while period cards still show event-based counts.
     if (!withinDays) {
+      if (typeof allTimeInstallCount === 'number' && allTimeInstallCount >= 0) {
+        return allTimeInstallCount;
+      }
       if (hasInstallationRegistry()) {
-        // Exact DB count when available — list may be capped; uninstalls do not delete rows.
         if (typeof installationsTotal === 'number' && installationsTotal >= installations.length) {
           return installationsTotal;
         }
@@ -127,16 +130,15 @@
     const active365 = countActiveInstalls(365);
     const totalKnown = countActiveInstalls(0);
     const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
-    const allTimeLabel = hasInstallationRegistry()
-      ? 'Всего установок'
-      : eventsWindowLimited
-        ? 'Уник. в последних событиях'
-        : 'Всего за всё время';
-    const sourceNote = hasInstallationRegistry()
-      ? '«Активные» — устройства, которые присылали события за период. «Всего установок» не падает от удаления приложения: запись в реестре остаётся.'
-      : installationsAvailable
-        ? 'Реестр установок пуст — считаем по загруженным событиям. Цифра «за всё время» может падать: подтягиваются только последние события, не удаление приложения.'
-        : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
+    const allTimeReady = typeof allTimeInstallCount === 'number';
+    const allTimeLabel = 'Всего за всё время';
+    const sourceNote = allTimeReady
+      ? '«Активные» — устройства с событиями за период. «Всего за всё время» — уникальные установки по всей базе (не окно последних событий). Удаление приложения эту цифру не уменьшает.'
+      : hasInstallationRegistry()
+        ? '«Активные» — устройства с событиями за период. Полный «за всё время» ещё досчитывается…'
+        : installationsAvailable
+          ? 'Реестр установок пуст или неполный — полный «за всё время» досчитывается по всем событиям в базе.'
+          : 'Активные считаются по событиям. Полный учёт установок появится после обновления сервера.';
 
     container.innerHTML = `
       <div class="admin-analytics-grid">
@@ -706,6 +708,7 @@
       eventsWindowLimited = Boolean(eventsPayload && !Array.isArray(eventsPayload) && eventsPayload.truncated);
       installations = [];
       installationsTotal = null;
+      allTimeInstallCount = null;
       installationsAvailable = false;
       if (typeof global.AdminSupabase.loadAnalyticsInstallations === 'function') {
         try {
@@ -727,6 +730,16 @@
         }
       }
       renderAll();
+
+      if (typeof global.AdminSupabase.loadAnalyticsAllTimeInstallCount === 'function') {
+        try {
+          allTimeInstallCount = await global.AdminSupabase.loadAnalyticsAllTimeInstallCount();
+          renderAll();
+        } catch (allTimeError) {
+          console.warn('all-time install count failed', allTimeError);
+        }
+      }
+
       if (typeof global.AdminSupabase.loadStoreDownloads === 'function') {
         try {
           const snap = await global.AdminSupabase.loadStoreDownloads();
@@ -740,6 +753,7 @@
       allRows = [];
       installations = [];
       installationsTotal = null;
+      allTimeInstallCount = null;
       installationsAvailable = false;
       eventsWindowLimited = false;
       if (stats) stats.textContent = 'Не удалось загрузить';

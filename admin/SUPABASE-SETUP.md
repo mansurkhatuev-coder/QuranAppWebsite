@@ -88,6 +88,12 @@
 2. Задеплойте Edge Function: `supabase functions deploy store-downloads --no-verify-jwt`
 3. Секреты App Store Connect: `APP_STORE_ISSUER_ID`, `APP_STORE_KEY_ID`, `APP_STORE_PRIVATE_KEY` (текст `.p8`). RuStore CSV работает и без них.
 
+Если «Всего за всё время» занижено / падает:
+
+1. **SQL Editor** → выполните `website/admin/supabase-migration-analytics-installations.sql` (если ещё не было)
+2. Затем `website/admin/supabase-migration-analytics-all-time-count.sql` — backfill реестра + RPC точного count
+3. Обновите аналитику в админке (полный count больше не берётся из окна 5000 событий)
+
 ---
 
 ## Часть 3. Создать пользователя админки
