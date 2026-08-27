@@ -201,7 +201,6 @@ select public.refresh_analytics_daily_range(
 create or replace function public.analytics_dashboard(p_days integer default 7)
 returns jsonb
 language plpgsql
-stable
 security invoker
 set search_path = public
 as $$
