@@ -549,6 +549,24 @@
   color: rgba(255, 255, 255, 0.45);
 }
 
+.admin-analytics-sub {
+  margin-left: 0.35rem;
+  font-size: 0.82rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.admin-analytics-compare {
+  margin: 0.65rem 0 0;
+  font-size: 0.88rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.admin-analytics-compare strong {
+  color: rgba(255, 255, 255, 0.85);
+  font-weight: 650;
+}
+
 .admin-analytics-card {
   border: 1px solid rgba(201, 162, 77, 0.22);
   border-radius: 14px;

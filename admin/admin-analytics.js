@@ -75,14 +75,33 @@
   function metricCard(label, value, opts = {}) {
     const hero = opts.hero ? ' admin-analytics-card--hero' : '';
     const delta = opts.prev != null ? formatDelta(value, opts.prev) : '';
+    const sub = opts.sub ? `<span class="admin-analytics-sub">${escapeHtml(opts.sub)}</span>` : '';
     return `
       <article class="admin-analytics-card${hero}">
         <p class="admin-muted">${escapeHtml(label)}</p>
         <p class="admin-analytics-value admin-store-value">
           <span>${Number(value) || 0}</span>
+          ${sub}
           ${delta}
         </p>
       </article>`;
+  }
+
+  function countEventUsers(rows, event) {
+    const ids = new Set();
+    for (const row of rows) {
+      if (row.event !== event || !row.installation_id) continue;
+      ids.add(row.installation_id);
+    }
+    return ids.size;
+  }
+
+  function storePeriodDownloads() {
+    if (!storeSnapshot) return null;
+    const deltaDays = storeDeltaDays();
+    const rustore = storeSnapshot.rustore?.rows || [];
+    const apple = storeSnapshot.apple?.rows || [];
+    return sumStoreRows(rustore, deltaDays) + sumStoreRows(apple, deltaDays);
   }
 
   function renderSparkline(series, key) {
@@ -190,18 +209,30 @@
     const opens = reliable ? period.app_open : byEvent.app_open || 0;
     const tasbih = reliable ? period.tasbih : byEvent.tasbih_milestone || 0;
     const newInstalls = reliable ? period.new_installs : 0;
+    const azkarUsers = reliable ? period.azkar_users : countEventUsers(rows, 'azkar_item_completed');
+    const lessonUsers = reliable ? period.lesson_users : countEventUsers(rows, 'academy_lesson_completed');
     const label = rangeLabel(rangeDays);
+    const storeNew = storePeriodDownloads();
 
     const activeSpark = renderSparkline(series, 'active_installs');
+    const newSpark = renderSparkline(series, 'new_installs');
     const azkarSpark = renderSparkline(series, 'azkar');
-    const trendBlock = activeSpark || azkarSpark
+    const trendBlock = activeSpark || newSpark || azkarSpark
       ? `
       <section class="admin-analytics-section">
         <div class="admin-analytics-social-head"><h3>За 30 дней</h3></div>
+        ${newSpark ? `<p class="admin-analytics-spark-legend">Новые установки</p>${newSpark}` : ''}
         ${activeSpark ? `<p class="admin-analytics-spark-legend">Кто заходил</p>${activeSpark}` : ''}
         ${azkarSpark ? `<p class="admin-analytics-spark-legend">Азкары</p>${azkarSpark}` : ''}
       </section>`
       : '';
+
+    const compareBlock =
+      rangeDays > 0 && (newInstalls > 0 || (storeNew != null && storeNew > 0))
+        ? `<p class="admin-analytics-compare">За период: в приложении <strong>${newInstalls}</strong> новых${
+            storeNew != null ? ` · в сторах <strong>${storeNew}</strong>` : ''
+          }</p>`
+        : '';
 
     const platformList = platforms.length
       ? `<ul class="admin-analytics-list">${platforms
@@ -223,13 +254,22 @@
           ${metricCard('Всего', allTime)}
           ${metricCard('События', events, { prev: previous?.events })}
         </div>
+        ${compareBlock}
       </section>
 
       <section class="admin-analytics-section">
         <div class="admin-analytics-social-head"><h3>В приложении · ${escapeHtml(label)}</h3></div>
         <div class="admin-analytics-grid">
-          ${metricCard('Азкары', azkar, { hero: true, prev: previous?.azkar })}
-          ${metricCard('Уроки', lessons, { hero: true, prev: previous?.lessons })}
+          ${metricCard('Азкары', azkar, {
+            hero: true,
+            prev: previous?.azkar,
+            sub: azkarUsers ? `${azkarUsers} чел.` : '',
+          })}
+          ${metricCard('Уроки', lessons, {
+            hero: true,
+            prev: previous?.lessons,
+            sub: lessonUsers ? `${lessonUsers} чел.` : '',
+          })}
           ${metricCard('Открытия', opens, { prev: previous?.app_open })}
           ${metricCard('Тасбих', tasbih, { prev: previous?.tasbih })}
         </div>
