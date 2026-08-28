@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Spinner } from "@/components/Spinner";
+import { PersonNameInput } from "@/components/PersonNameInput";
 import { friendlyError } from "@/lib/friendly";
 
 export default function RegisterPage() {
@@ -77,10 +78,9 @@ export default function RegisterPage() {
         </div>
         <div>
           <label className="label">Ваше имя</label>
-          <input
-            className="input"
+          <PersonNameInput
             value={form.fullName}
-            onChange={(e) => setForm({ ...form, fullName: e.target.value })}
+            onChange={(fullName) => setForm({ ...form, fullName })}
           />
         </div>
         <div>

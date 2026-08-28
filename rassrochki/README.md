@@ -37,6 +37,7 @@ MVP веб-приложения для учёта рассрочек: клиен
    - `supabase/migrations/007_subscription_trial.sql`
    - `supabase/migrations/008_schedule_on_full_amount.sql`
    - `supabase/migrations/012_platform_revenue_delete.sql`
+   - `supabase/migrations/013_platform_activity_stats.sql`
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
 5. Назначьте себя владельцем продукта (platform-admin) в SQL Editor:

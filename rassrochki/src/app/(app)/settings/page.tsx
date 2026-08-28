@@ -2,6 +2,7 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
+import { NumericInput } from "@/components/NumericInput";
 import { FormSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { useDraft } from "@/hooks/useDraft";
@@ -318,22 +319,22 @@ export default function SettingsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Срок по умолчанию, мес</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
+              <NumericInput
+                mode="integer"
                 value={value.default_term_months}
-                onChange={(e) => setValue({ ...value, default_term_months: e.target.value })}
+                onChange={(default_term_months) =>
+                  setValue({ ...value, default_term_months })
+                }
               />
             </div>
             <div>
               <label className="label">Наценка по умолчанию, %</label>
-              <input
-                className="input"
-                type="number"
-                min="0"
+              <NumericInput
+                mode="decimal"
                 value={value.default_markup_percent}
-                onChange={(e) => setValue({ ...value, default_markup_percent: e.target.value })}
+                onChange={(default_markup_percent) =>
+                  setValue({ ...value, default_markup_percent })
+                }
               />
             </div>
           </div>
@@ -341,12 +342,10 @@ export default function SettingsPage() {
             <label className="label">
               Через сколько полных дней после даты платежа считать просрочкой
             </label>
-            <input
-              className="input"
-              type="number"
-              min="0"
+            <NumericInput
+              mode="integer"
               value={value.overdue_days}
-              onChange={(e) => setValue({ ...value, overdue_days: e.target.value })}
+              onChange={(overdue_days) => setValue({ ...value, overdue_days })}
             />
             <p className="mt-1 text-xs text-[var(--muted)]">
               Например, при 3 днях платёж от 25 числа станет просроченным 29 числа.
@@ -355,20 +354,22 @@ export default function SettingsPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Доля владельца в прибыли, %</label>
-              <input
-                className="input"
-                type="number"
+              <NumericInput
+                mode="decimal"
                 value={value.income_share_manager}
-                onChange={(e) => setValue({ ...value, income_share_manager: e.target.value })}
+                onChange={(income_share_manager) =>
+                  setValue({ ...value, income_share_manager })
+                }
               />
             </div>
             <div>
               <label className="label">Доля инвестора в прибыли, %</label>
-              <input
-                className="input"
-                type="number"
+              <NumericInput
+                mode="decimal"
                 value={value.income_share_investor}
-                onChange={(e) => setValue({ ...value, income_share_investor: e.target.value })}
+                onChange={(income_share_investor) =>
+                  setValue({ ...value, income_share_investor })
+                }
               />
             </div>
           </div>
@@ -404,13 +405,11 @@ export default function SettingsPage() {
             onChange={(e) => setNewInvestor({ ...newInvestor, name: e.target.value })}
             required
           />
-          <input
+          <NumericInput
             className="input w-28"
-            type="number"
-            min="0"
-            max="100"
+            mode="decimal"
             value={newInvestor.share_percent}
-            onChange={(e) => setNewInvestor({ ...newInvestor, share_percent: e.target.value })}
+            onChange={(share_percent) => setNewInvestor({ ...newInvestor, share_percent })}
           />
           <button className="btn-secondary" type="submit">
             Добавить

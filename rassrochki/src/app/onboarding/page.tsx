@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { Spinner } from "@/components/Spinner";
+import { PersonNameInput } from "@/components/PersonNameInput";
 import { friendlyError } from "@/lib/friendly";
 
 export default function OnboardingPage() {
@@ -45,7 +46,7 @@ export default function OnboardingPage() {
         </div>
         <div>
           <label className="label">Ваше имя</label>
-          <input className="input" value={fullName} onChange={(e) => setFullName(e.target.value)} />
+          <PersonNameInput value={fullName} onChange={setFullName} />
         </div>
         <button className="btn-primary w-full" type="submit" disabled={loading}>
           {loading ? <Spinner label="Сохраняем…" /> : "Продолжить"}
