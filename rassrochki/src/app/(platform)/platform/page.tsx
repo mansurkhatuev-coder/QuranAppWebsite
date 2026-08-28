@@ -5,6 +5,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { PlatformOrganization } from "@/types/database";
 import { formatDateShort, formatMoney } from "@/lib/utils";
+import { NumericInput } from "@/components/NumericInput";
 import { ListPageSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { formatDistanceToNow } from "date-fns";
@@ -186,29 +187,23 @@ export default function PlatformPage() {
                     <div className="flex flex-wrap items-end gap-2">
                       <label className="text-sm">
                         <span className="mb-1 block text-[var(--muted)]">Мес.</span>
-                        <input
+                        <NumericInput
                           className="input w-16 py-1.5"
-                          type="number"
-                          min={1}
-                          max={36}
+                          mode="integer"
                           value={monthsByOrg[org.id] ?? "1"}
-                          onChange={(e) =>
-                            setMonthsByOrg((prev) => ({ ...prev, [org.id]: e.target.value }))
+                          onChange={(v) =>
+                            setMonthsByOrg((prev) => ({ ...prev, [org.id]: v }))
                           }
                         />
                       </label>
                       <label className="text-sm">
                         <span className="mb-1 block text-[var(--muted)]">Оплата ₽</span>
-                        <input
+                        <NumericInput
                           className="input w-28 py-1.5"
-                          type="number"
-                          min={0}
-                          step="1"
+                          mode="integer"
                           placeholder="0"
                           value={payByOrg[org.id] ?? ""}
-                          onChange={(e) =>
-                            setPayByOrg((prev) => ({ ...prev, [org.id]: e.target.value }))
-                          }
+                          onChange={(v) => setPayByOrg((prev) => ({ ...prev, [org.id]: v }))}
                         />
                       </label>
                       <button

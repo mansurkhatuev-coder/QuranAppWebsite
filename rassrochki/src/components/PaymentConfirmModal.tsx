@@ -6,6 +6,7 @@ import type { PaymentSchedule } from "@/types/database";
 import { formatMoney } from "@/lib/utils";
 import { friendlyError } from "@/lib/friendly";
 import { Spinner } from "@/components/Spinner";
+import { NumericInput } from "@/components/NumericInput";
 import { scheduleDueRemaining } from "@/lib/schedule-payments";
 
 export type PaymentConfirmValues = {
@@ -145,14 +146,11 @@ export function PaymentConfirmModal({
 
         <div>
           <label className="label">Сумма, ₽</label>
-          <input
-            className="input"
-            type="number"
-            min="0.01"
-            max={maxAllowed || undefined}
-            step="0.01"
+          <NumericInput
+            mode="decimal"
             value={amount}
-            onChange={(e) => setAmount(e.target.value)}
+            onChange={setAmount}
+            placeholder="0"
             required
           />
         </div>

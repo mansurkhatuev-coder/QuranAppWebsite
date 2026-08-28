@@ -3,6 +3,8 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
+import { PhoneInput } from "@/components/PhoneInput";
+import { PersonNameInput } from "@/components/PersonNameInput";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import { Spinner } from "@/components/Spinner";
@@ -74,20 +76,15 @@ export default function NewClientPage() {
       <div className="card space-y-4">
         <div>
           <label className="label">ФИО</label>
-          <input
-            className="input"
+          <PersonNameInput
             value={value.full_name}
-            onChange={(e) => setValue({ ...value, full_name: e.target.value })}
+            onChange={(full_name) => setValue({ ...value, full_name })}
             required
           />
         </div>
         <div>
           <label className="label">Телефон</label>
-          <input
-            className="input"
-            value={value.phone}
-            onChange={(e) => setValue({ ...value, phone: e.target.value })}
-          />
+          <PhoneInput value={value.phone} onChange={(phone) => setValue({ ...value, phone })} />
         </div>
         <div>
           <label className="label">Заметки</label>
