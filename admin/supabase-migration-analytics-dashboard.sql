@@ -263,6 +263,8 @@ begin
       'app_open', (select count(*)::int from public.analytics_events where created_at >= v_prev_from and created_at < v_prev_to and event = 'app_open'),
       'lessons', (select count(*)::int from public.analytics_events where created_at >= v_prev_from and created_at < v_prev_to and event = 'academy_lesson_completed'),
       'azkar', (select count(*)::int from public.analytics_events where created_at >= v_prev_from and created_at < v_prev_to and event = 'azkar_item_completed'),
+      'azkar_users', (select count(distinct installation_id)::int from public.analytics_events where created_at >= v_prev_from and created_at < v_prev_to and event = 'azkar_item_completed'),
+      'lesson_users', (select count(distinct installation_id)::int from public.analytics_events where created_at >= v_prev_from and created_at < v_prev_to and event = 'academy_lesson_completed'),
       'tasbih', (select count(*)::int from public.analytics_events where created_at >= v_prev_from and created_at < v_prev_to and event = 'tasbih_milestone')
     ) into v_prev;
   end if;
