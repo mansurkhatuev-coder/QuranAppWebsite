@@ -98,7 +98,8 @@
 
 Для упорядоченных KPI как у нормального продукта (активные, новые установки, азкары, тренд 30 дней):
 
-1. **SQL Editor** → выполните `website/admin/supabase-migration-analytics-dashboard.sql`
+1. **SQL Editor** → выполните `website/admin/supabase-migration-analytics-dashboard.sql`  
+   (создаёт `analytics_events`, если таблицы ещё нет; отдельно `supabase-migration-analytics.sql` не обязателен)
 2. Обновите вкладку **Аналитика** в админке
 
 Миграция: trigger на события → реестр установок, таблица `analytics_daily`, RPC `analytics_dashboard(p_days)`.
