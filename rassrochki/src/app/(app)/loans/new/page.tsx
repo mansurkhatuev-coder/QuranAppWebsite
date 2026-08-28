@@ -4,6 +4,9 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
 import { FormSkeleton } from "@/components/Skeleton";
+import { NumericInput } from "@/components/NumericInput";
+import { PersonNameInput } from "@/components/PersonNameInput";
+import { PhoneInput } from "@/components/PhoneInput";
 import { Spinner } from "@/components/Spinner";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
@@ -446,18 +449,15 @@ export default function NewLoanPage() {
 
             {showNewClient ? (
               <div className="space-y-2 rounded-xl border border-dashed border-teal-300 bg-teal-50/40 p-3">
-                <input
-                  className="input"
+                <PersonNameInput
                   placeholder="ФИО"
                   value={newClient.full_name}
-                  onChange={(e) => setNewClient({ ...newClient, full_name: e.target.value })}
+                  onChange={(full_name) => setNewClient({ ...newClient, full_name })}
                   required={showNewClient}
                 />
-                <input
-                  className="input"
-                  placeholder="Телефон"
+                <PhoneInput
                   value={newClient.phone}
-                  onChange={(e) => setNewClient({ ...newClient, phone: e.target.value })}
+                  onChange={(phone) => setNewClient({ ...newClient, phone })}
                 />
                 <button
                   type="button"
@@ -507,13 +507,10 @@ export default function NewLoanPage() {
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
               <label className="label">Цена товара, ₽</label>
-              <input
-                className="input"
-                type="number"
-                min="1"
-                step="0.01"
+              <NumericInput
+                mode="decimal"
                 value={value.cost_amount}
-                onChange={(e) => setValue({ ...value, cost_amount: e.target.value })}
+                onChange={(cost_amount) => setValue({ ...value, cost_amount })}
                 required
               />
             </div>
@@ -566,14 +563,11 @@ export default function NewLoanPage() {
             </div>
             {customTerm && (
               <div className="flex items-center gap-2">
-                <input
-                  className="input"
-                  type="number"
-                  min="1"
-                  max="120"
+                <NumericInput
+                  mode="integer"
                   value={value.term_months}
-                  onChange={(e) =>
-                    setValue({ ...value, term_months: e.target.value, monthly_payment: "" })
+                  onChange={(term_months) =>
+                    setValue({ ...value, term_months, monthly_payment: "" })
                   }
                   required
                   placeholder="Число месяцев"
@@ -606,14 +600,10 @@ export default function NewLoanPage() {
                 </button>
               ))}
             </div>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              max="500"
-              step="0.01"
+            <NumericInput
+              mode="decimal"
               value={value.markup_percent}
-              onChange={(e) => setValue({ ...value, markup_percent: e.target.value })}
+              onChange={(markup_percent) => setValue({ ...value, markup_percent })}
             />
             <p className="mt-1 text-xs text-[var(--muted)]">
               Пример: товар 10 000 ₽ + 30% → к возврату 13 000 ₽, прибыль 3 000 ₽
@@ -622,14 +612,11 @@ export default function NewLoanPage() {
 
           <div>
             <label className="label">Первоначальный взнос, ₽</label>
-            <input
-              className="input"
-              type="number"
-              min="0"
-              step="0.01"
+            <NumericInput
+              mode="decimal"
               value={value.down_payment}
-              onChange={(e) =>
-                setValue({ ...value, down_payment: e.target.value, monthly_payment: "" })
+              onChange={(down_payment) =>
+                setValue({ ...value, down_payment, monthly_payment: "" })
               }
               placeholder="0 — без взноса"
             />
@@ -658,13 +645,10 @@ export default function NewLoanPage() {
 
           <div>
             <label className="label">Платёж в месяц</label>
-            <input
-              className="input"
-              type="number"
-              min="1"
-              step="0.01"
+            <NumericInput
+              mode="decimal"
               value={value.monthly_payment}
-              onChange={(e) => setValue({ ...value, monthly_payment: e.target.value })}
+              onChange={(monthly_payment) => setValue({ ...value, monthly_payment })}
               placeholder="Авто"
             />
           </div>
@@ -739,15 +723,12 @@ export default function NewLoanPage() {
                   value={newInvestor.name}
                   onChange={(e) => setNewInvestor({ ...newInvestor, name: e.target.value })}
                 />
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  max="100"
+                <NumericInput
+                  mode="decimal"
                   placeholder="Доля от прибыли, %"
                   value={newInvestor.share_percent}
-                  onChange={(e) =>
-                    setNewInvestor({ ...newInvestor, share_percent: e.target.value })
+                  onChange={(share_percent) =>
+                    setNewInvestor({ ...newInvestor, share_percent })
                   }
                 />
                 <button
@@ -796,15 +777,12 @@ export default function NewLoanPage() {
             <>
               <div>
                 <label className="label">Сколько вложил инвестор, ₽</label>
-                <input
-                  className="input"
-                  type="number"
-                  min="0"
-                  step="0.01"
+                <NumericInput
+                  mode="decimal"
                   value={value.investor_amount}
-                  onChange={(e) => {
+                  onChange={(investor_amount) => {
                     setShareManual(false);
-                    setValue({ ...value, investor_amount: e.target.value });
+                    setValue({ ...value, investor_amount });
                   }}
                   placeholder="Например: 80000"
                 />
@@ -851,17 +829,14 @@ export default function NewLoanPage() {
                 <div className="grid gap-3 sm:grid-cols-2">
                   <div>
                     <label className="label">Доля владельца от прибыли, %</label>
-                    <input
-                      className="input"
-                      type="number"
-                      min="0"
-                      max="100"
+                    <NumericInput
+                      mode="decimal"
                       value={value.income_share_manager}
-                      onChange={(e) => {
-                        const manager = Number(e.target.value);
+                      onChange={(income_share_manager) => {
+                        const manager = Number(income_share_manager);
                         setValue({
                           ...value,
-                          income_share_manager: e.target.value,
+                          income_share_manager,
                           income_share_investor: String(Math.max(0, 100 - manager)),
                         });
                       }}
@@ -869,17 +844,14 @@ export default function NewLoanPage() {
                   </div>
                   <div>
                     <label className="label">Доля инвестора от прибыли, %</label>
-                    <input
-                      className="input"
-                      type="number"
-                      min="0"
-                      max="100"
+                    <NumericInput
+                      mode="decimal"
                       value={value.income_share_investor}
-                      onChange={(e) => {
-                        const invShare = Number(e.target.value);
+                      onChange={(income_share_investor) => {
+                        const invShare = Number(income_share_investor);
                         setValue({
                           ...value,
-                          income_share_investor: e.target.value,
+                          income_share_investor,
                           income_share_manager: String(Math.max(0, 100 - invShare)),
                         });
                       }}
@@ -930,27 +902,20 @@ export default function NewLoanPage() {
                     Удалить
                   </button>
                 </div>
-                <input
-                  className="input"
+                <PersonNameInput
                   placeholder="ФИО"
                   value={g.full_name}
-                  onChange={(e) =>
+                  onChange={(full_name) =>
                     setGuarantors((prev) =>
-                      prev.map((row, i) =>
-                        i === index ? { ...row, full_name: e.target.value } : row
-                      )
+                      prev.map((row, i) => (i === index ? { ...row, full_name } : row))
                     )
                   }
                 />
-                <input
-                  className="input"
-                  placeholder="Телефон"
+                <PhoneInput
                   value={g.phone}
-                  onChange={(e) =>
+                  onChange={(phone) =>
                     setGuarantors((prev) =>
-                      prev.map((row, i) =>
-                        i === index ? { ...row, phone: e.target.value } : row
-                      )
+                      prev.map((row, i) => (i === index ? { ...row, phone } : row))
                     )
                   }
                 />
