@@ -10,16 +10,40 @@
 
   /* ---------- Mirror LINKS to data-link buttons (CTA section) ---------- */
   if (typeof LINKS !== 'undefined') {
+    var linkKeyMap = { appstore: 'appStore', rustore: 'rustore', apk: 'apk' };
     document.querySelectorAll('[data-link]').forEach(function (el) {
-      var url = LINKS[el.getAttribute('data-link')];
+      var raw = el.getAttribute('data-link');
+      var key = linkKeyMap[raw] || raw;
+      var url = LINKS[key];
       if (url) {
         el.href = url;
         el.rel = 'noopener noreferrer';
         el.removeAttribute('aria-disabled');
         el.classList.remove('btn-disabled');
+        if (raw === 'apk') el.setAttribute('download', '');
       }
     });
   }
+
+  /* ---------- Android download panel toggle ---------- */
+  document.querySelectorAll('[data-android-toggle]').forEach(function (toggle) {
+    var panelId = toggle.getAttribute('aria-controls');
+    var panel = panelId ? document.getElementById(panelId) : null;
+    if (!panel) return;
+
+    toggle.addEventListener('click', function () {
+      var open = toggle.getAttribute('aria-expanded') === 'true';
+      var next = !open;
+      toggle.setAttribute('aria-expanded', next ? 'true' : 'false');
+      if (next) {
+        panel.hidden = false;
+      } else {
+        panel.hidden = true;
+      }
+      var sub = toggle.querySelector('.btn-sub');
+      if (sub) sub.textContent = next ? 'два способа ↑' : 'два способа ↓';
+    });
+  });
 
   /* ---------- Preloader (max ~1s) ---------- */
   var preloader = document.getElementById('preloader');
