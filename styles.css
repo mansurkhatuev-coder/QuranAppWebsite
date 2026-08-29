@@ -304,6 +304,83 @@ img {
   justify-content: center;
 }
 
+.download-cta {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.85rem;
+  width: 100%;
+}
+
+.download-android-panel {
+  width: min(100%, 36rem);
+  padding: 0.85rem;
+  border-radius: 20px;
+  background: rgba(248, 248, 248, 0.04);
+  border: 1px solid rgba(248, 248, 248, 0.12);
+}
+
+.download-android-panel[hidden] {
+  display: none;
+}
+
+.download-android-options {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.download-android-note {
+  margin: 0.75rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.45;
+  color: rgba(166, 166, 166, 0.75);
+  text-align: center;
+}
+
+.btn-stack {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  text-align: left;
+  line-height: 1.2;
+}
+
+.btn-label {
+  display: block;
+}
+
+.btn-sub {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.01em;
+  opacity: 0.72;
+}
+
+.btn-gold .btn-sub {
+  color: rgba(20, 17, 10, 0.72);
+  opacity: 1;
+}
+
+.btn-equal {
+  width: 100%;
+  background: rgba(248, 248, 248, 0.06);
+  border-color: rgba(248, 248, 248, 0.22);
+  color: var(--text);
+  box-shadow: none;
+}
+
+.btn-equal:hover {
+  color: var(--text);
+  border-color: var(--gold-soft);
+  box-shadow: 0 0 28px rgba(212, 175, 55, 0.16);
+}
+
+.btn[aria-expanded='true'] .btn-sub {
+  opacity: 0.9;
+}
+
 .hero-note {
   margin-top: 1.6rem;
   font-size: 0.8rem;
@@ -1351,9 +1428,17 @@ img {
     gap: 0.75rem;
   }
 
+  .download-android-options {
+    grid-template-columns: 1fr;
+  }
+
   .btn {
     min-height: 50px;
     padding: 0.85rem 1.5rem;
     font-size: 0.95rem;
+  }
+
+  .btn-stack {
+    min-width: min(100%, 16rem);
   }
 }

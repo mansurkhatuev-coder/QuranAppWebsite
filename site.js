@@ -115,6 +115,9 @@
         appStoreBtn.removeAttribute('aria-disabled');
         appStoreBtn.classList.remove('btn-disabled');
       }
+      wireLinkButtons('[data-link="rustore"]', rustoreUrl || LINKS.rustore);
+      wireLinkButtons('[data-link="appstore"]', ios.appStoreUrl || LINKS.appStore);
+      wireLinkButtons('[data-link="apk"]', apkUrl || LINKS.apk, { download: true });
     })
     .catch(function () { /* keep LINKS fallback */ });
 
