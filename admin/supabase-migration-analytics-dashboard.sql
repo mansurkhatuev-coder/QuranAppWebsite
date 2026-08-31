@@ -290,7 +290,6 @@ begin
   from (
     select coalesce(nullif(platform, ''), '—') as platform, count(*)::int as cnt
     from public.analytics_installations
-    where last_seen_at >= v_from
     group by 1
     order by 2 desc
     limit 8
