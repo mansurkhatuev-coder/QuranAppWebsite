@@ -402,26 +402,55 @@
     return json;
   }
 
-  async function callStoreDownloads(payload, query = '') {
+  async function callStoreDownloads(payload, query = '', opts = {}) {
     const session = await getSession();
     if (!session?.access_token) throw new Error('Нужен вход в Supabase');
     const url = config.storeDownloadsUrl;
     if (!url) throw new Error('Не задан storeDownloadsUrl в supabase-config.js');
-    const response = await fetch(`${url}${query}`, {
-      method: payload ? 'POST' : 'GET',
-      headers: {
-        Authorization: `Bearer ${session.access_token}`,
-        apikey: config.anonKey || '',
-        ...(payload ? { 'Content-Type': 'application/json' } : {}),
-      },
-      cache: 'no-store',
-      body: payload ? JSON.stringify(payload) : undefined,
-    });
-    const json = await response.json().catch(() => ({}));
-    if (!response.ok) {
-      throw new Error(json.error || `Store downloads failed (${response.status})`);
+
+    const timeoutMs = Number(opts.timeoutMs) || (payload?.action === 'refresh-apple' ? 90000 : 45000);
+    const attempts = payload?.action === 'refresh-apple' ? 2 : 1;
+    let lastError = null;
+
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const timer = controller
+        ? setTimeout(() => controller.abort(), timeoutMs)
+        : null;
+      try {
+        const response = await fetch(`${url}${query}`, {
+          method: payload ? 'POST' : 'GET',
+          headers: {
+            Authorization: `Bearer ${session.access_token}`,
+            apikey: config.anonKey || '',
+            ...(payload ? { 'Content-Type': 'application/json' } : {}),
+          },
+          cache: 'no-store',
+          body: payload ? JSON.stringify(payload) : undefined,
+          signal: controller ? controller.signal : undefined,
+        });
+        const json = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(json.error || `Store downloads failed (${response.status})`);
+        }
+        return json;
+      } catch (error) {
+        const aborted = error && (error.name === 'AbortError' || /abort/i.test(String(error.message || '')));
+        lastError = aborted
+          ? new Error(
+              payload?.action === 'refresh-apple'
+                ? 'Apple не ответил вовремя. На iPhone так бывает — нажмите «Обновить» ещё раз, не уходя со страницы.'
+                : 'Сервер не ответил вовремя. Попробуйте ещё раз.'
+            )
+          : error;
+        // One retry only for flaky mobile networks on Apple refresh.
+        if (attempt >= attempts || aborted) break;
+        await new Promise((resolve) => setTimeout(resolve, 1200));
+      } finally {
+        if (timer) clearTimeout(timer);
+      }
     }
-    return json;
+    throw lastError || new Error('Store downloads failed');
   }
 
   async function loadStoreDownloads() {

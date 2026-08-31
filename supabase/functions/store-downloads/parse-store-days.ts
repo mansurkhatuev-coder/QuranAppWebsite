@@ -33,19 +33,19 @@ function headerKind(value: string): 'date' | 'downloads' | 'updates' | 'type' | 
   if (!h) return 'other';
   if (/конверси|просмотр|view|conversion/.test(h)) return 'other';
   // RuStore: "Период" / "timePeriod" — monthly buckets, not a calendar "date" label.
-  if (/^timeperiod$|^time[_\s-]*period$|^период$|^period$/.test(h)) return 'date';
-  if (/период/.test(h) && !/дата/.test(h)) return 'other';
+  if (/^timeperiod$|^time[_\s-]*period$|^period$/.test(h)) return 'date';
+  if (/период/.test(h) && !/конверси|просмотр|view/.test(h)) return 'date';
   if (/^(date|дата|day|день)$/i.test(h) || /(^| )(date|дата)($| )/.test(h) || /дата начала/.test(h)) return 'date';
   if (/download type|тип.*скач|тип.*загруз/.test(h) || h === 'type') return 'type';
   if (/обнов|update/.test(h)) return 'updates';
   if (/^всего$|^total$|^итого$/.test(h)) return 'downloads';
-  if (/установ|install|скач|download/.test(h)) return 'downloads';
-  if (/^counts?$/.test(h) || h === 'количество') return 'counts';
+  if (/установ|install|скач|download|загруз/.test(h)) return 'downloads';
+  if (/^counts?$/.test(h) || h === 'количество' || /^кол-?во/.test(h)) return 'counts';
   return 'other';
 }
 
 function parseCount(raw: string): number {
-  const cleaned = raw.replace(/\s/g, '').replace(',', '.');
+  const cleaned = raw.replace(/[\s\u00a0]/g, '').replace(',', '.');
   const n = Number(cleaned);
   if (!Number.isFinite(n) || n < 0) return 0;
   return Math.round(n);

@@ -545,38 +545,44 @@
 
 .admin-analytics-spark-legend {
   margin: 0.55rem 0 0.1rem;
-  font-size: 0.82rem;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.86rem;
+  font-weight: 560;
+  color: rgba(248, 240, 220, 0.78);
 }
 
 .admin-analytics-sub {
   margin-left: 0.35rem;
-  font-size: 0.82rem;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.45);
+  font-size: 0.84rem;
+  font-weight: 560;
+  color: rgba(248, 240, 220, 0.72);
 }
 
 .admin-analytics-compare {
   margin: 0.65rem 0 0;
-  font-size: 0.88rem;
-  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.9rem;
+  color: rgba(248, 240, 220, 0.78);
 }
 
 .admin-analytics-compare strong {
-  color: rgba(255, 255, 255, 0.85);
-  font-weight: 650;
+  color: #fff6df;
+  font-weight: 700;
 }
 
 .admin-analytics-card {
-  border: 1px solid rgba(201, 162, 77, 0.22);
+  border: 1px solid rgba(201, 162, 77, 0.28);
   border-radius: 14px;
-  padding: 0.85rem 1rem;
-  background: rgba(255, 255, 255, 0.03);
+  padding: 0.9rem 1rem;
+  background: rgba(18, 24, 32, 0.92);
+  color: var(--text);
+}
+
+.admin-analytics-card .admin-muted {
+  color: rgba(232, 220, 196, 0.78);
 }
 
 .admin-analytics-card--hero {
-  border-color: rgba(201, 162, 77, 0.45);
-  background: rgba(201, 162, 77, 0.08);
+  border-color: rgba(201, 162, 77, 0.5);
+  background: linear-gradient(180deg, rgba(201, 162, 77, 0.16), rgba(18, 24, 32, 0.94));
   grid-column: span 2;
 }
 
@@ -591,6 +597,13 @@
   font-size: 1.55rem;
   font-weight: 700;
   letter-spacing: -0.02em;
+  color: #fff8ea;
+}
+
+.admin-analytics-social-head h3 {
+  margin: 0 0 0.25rem;
+  font-size: 1.05rem;
+  color: #fff6df;
 }
 
 .admin-analytics-social {
@@ -599,9 +612,37 @@
   margin: 1rem 0 1.25rem;
 }
 
-.admin-analytics-social-head h3 {
-  margin: 0 0 0.25rem;
-  font-size: 1.05rem;
+.admin-store-ok {
+  margin: 0 0 0.65rem;
+  padding: 10px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(111, 191, 115, 0.35);
+  background: rgba(61, 155, 110, 0.16);
+  color: #c8efcc;
+  font-size: 0.9rem;
+}
+
+.admin-store-status {
+  margin: 0 0 0.75rem;
+  color: rgba(248, 240, 220, 0.82);
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.admin-analytics-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  border-radius: 10px;
+  background: rgba(18, 24, 32, 0.88);
+  border: 1px solid rgba(201, 162, 77, 0.18);
+  font-size: 0.9rem;
+  color: rgba(248, 240, 220, 0.88);
+}
+
+.admin-analytics-list li strong {
+  color: #fff8ea;
 }
 
 .admin-store-value {
@@ -671,17 +712,6 @@
   padding: 0;
   display: grid;
   gap: 0.35rem;
-}
-
-.admin-analytics-list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.45rem 0.6rem;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  font-size: 0.9rem;
 }
 
 .admin-analytics-list li span {
@@ -1374,11 +1404,12 @@
   margin: 1rem 0 0.5rem;
   padding: 14px 16px;
   border-radius: 14px;
-  border: 1px solid rgba(201, 162, 77, 0.28);
-  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(201, 162, 77, 0.32);
+  background: rgba(18, 24, 32, 0.92);
+  color: var(--text);
 }
 .admin-store-progress.is-busy {
-  border-color: rgba(201, 162, 77, 0.5);
+  border-color: rgba(201, 162, 77, 0.55);
 }
 .admin-store-progress-head {
   display: flex;
@@ -1389,9 +1420,10 @@
 }
 .admin-store-progress-head strong {
   font-size: 0.95rem;
+  color: #fff6df;
 }
 .admin-store-progress-head span {
-  color: rgba(232, 220, 196, 0.72);
+  color: rgba(232, 220, 196, 0.82);
   font-size: 0.85rem;
 }
 .admin-store-bar {

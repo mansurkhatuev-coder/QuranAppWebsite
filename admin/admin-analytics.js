@@ -30,9 +30,11 @@
   let dashboardError = '';
   let storeSnapshot = null;
   let storeError = '';
+  let storeOk = '';
   let storeBusy = false;
   let storeBusyKind = '';
   let storeBusyHint = '';
+  let rustoreFileInput = null;
 
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
@@ -581,33 +583,35 @@
     const appleBusy = storeBusyKind === 'apple';
     const progress = apple && apple.progress;
     const percent = Number(progress && progress.percent) || 0;
+    const status = String(apple?.status || '');
     const numbersDone = percent >= 100 || (apple && Number(apple.days) > 0);
     const button = appleBusy
       ? 'Обновляю…'
       : numbersDone
         ? 'Обновить App Store'
         : 'Проверить App Store';
-    if (numbersDone && !appleBusy) {
-      return `
-        <div class="admin-store-progress" aria-live="polite">
-          <div class="admin-store-progress-head">
-            <strong>App Store</strong>
-            <span>готово</span>
-          </div>
-          <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
-            ${escapeHtml(button)}
-          </button>
-        </div>`;
-    }
+    const statusLine = appleBusy
+      ? `<p class="admin-store-status">${escapeHtml(storeBusyHint || 'Спрашиваю Apple…')}</p>`
+      : status === 'waiting'
+        ? '<p class="admin-store-status">Apple ещё готовит файлы. Цифры появятся позже — нажмите снова через сутки.</p>'
+        : status === 'needs_secrets'
+          ? '<p class="admin-store-status admin-error">Нужны секреты App Store Connect в Supabase.</p>'
+          : status === 'error' && apple?.message
+            ? `<p class="admin-store-status admin-error">${escapeHtml(apple.message)}</p>`
+            : numbersDone
+              ? `<p class="admin-store-status">В базе ${Number(apple.days) || 0} дн. · до ${escapeHtml(apple.lastDay || '—')}</p>`
+              : '';
     return `
       <div class="admin-store-progress ${appleBusy ? 'is-busy' : ''}" aria-live="polite">
         <div class="admin-store-progress-head">
           <strong>App Store</strong>
-          <span>${appleBusy ? 'запрос…' : `${percent}%`}</span>
+          <span>${appleBusy ? 'запрос…' : numbersDone ? 'готово' : `${percent}%`}</span>
         </div>
+        ${appleBusy || !numbersDone ? `
         <div class="admin-store-bar" aria-hidden="true">
-          <span style="width:${appleBusy ? Math.max(percent, 15) : percent}%"></span>
-        </div>
+          <span style="width:${appleBusy ? Math.max(percent, 18) : percent}%"></span>
+        </div>` : ''}
+        ${statusLine}
         <button type="button" id="analytics-apple-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
           ${escapeHtml(button)}
         </button>
@@ -640,22 +644,22 @@
 
   function renderRustoreUpload(rustore) {
     const rustoreBusy = storeBusyKind === 'rustore';
-    const button = rustoreBusy ? 'Загружаю…' : 'Загрузить CSV RuStore';
+    const button = rustoreBusy ? 'Загружаю…' : 'Выбрать CSV RuStore';
+    const statusLine = rustoreBusy
+      ? `<p class="admin-store-status">${escapeHtml(storeBusyHint || 'Читаю CSV…')}</p>`
+      : rustore && Number(rustore.days) > 0
+        ? `<p class="admin-store-status">Загружено ${Number(rustore.days)} дн. · до ${escapeHtml(rustore.lastDay || '—')}</p>`
+        : '<p class="admin-store-status">Экспорт из консоли RuStore → статистика → CSV</p>';
     return `
       <div class="admin-store-progress ${rustoreBusy ? 'is-busy' : ''}" aria-live="polite">
         <div class="admin-store-progress-head">
           <strong>RuStore</strong>
           <a class="admin-store-link" href="${RUSTORE_CONSOLE_URL}" target="_blank" rel="noopener noreferrer">Консоль</a>
         </div>
-        <div class="admin-toolbar" style="margin-top:8px;gap:10px;flex-wrap:wrap;align-items:center">
-          <label class="admin-inline-field">
-            CSV
-            <input type="file" id="analytics-rustore-csv" accept=".csv,.txt,.tsv,text/csv,text/plain" ${storeBusy ? 'disabled' : ''} />
-          </label>
-          <button type="button" id="analytics-rustore-upload" class="admin-button" ${storeBusy ? 'disabled' : ''}>
-            ${escapeHtml(button)}
-          </button>
-        </div>
+        ${statusLine}
+        <button type="button" id="analytics-rustore-upload" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+          ${escapeHtml(button)}
+        </button>
       </div>
     `;
   }
@@ -699,12 +703,16 @@
     const errorLine = storeError
       ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
       : '';
+    const okLine = !storeError && storeOk
+      ? `<p class="admin-store-ok">${escapeHtml(storeOk)}</p>`
+      : '';
 
     container.innerHTML = `
       <div class="admin-analytics-social-head">
         <h3>Скачивания в сторах</h3>
       </div>
       ${errorLine}
+      ${okLine}
       <div class="admin-analytics-grid" id="analytics-stores-alltime">
         <article class="admin-analytics-card admin-analytics-card--hero">
           <p class="admin-muted">RuStore</p>
@@ -724,10 +732,47 @@
     `;
   }
 
-  async function applyStoreSnapshot(next) {
+  async function applyStoreSnapshot(next, okMessage = '') {
     storeSnapshot = next;
     storeError = '';
+    if (okMessage) storeOk = okMessage;
     renderStoreDownloads(document.querySelector('#analytics-stores'));
+  }
+
+  function ensureRustoreFileInput(stores) {
+    if (rustoreFileInput && document.body.contains(rustoreFileInput)) return rustoreFileInput;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'analytics-rustore-csv-persistent';
+    input.accept = '.csv,.txt,.tsv,text/csv,text/plain';
+    input.setAttribute('aria-hidden', 'true');
+    input.tabIndex = -1;
+    input.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;opacity:0;';
+    // Keep outside #analytics-stores so re-renders do not destroy the picker (iOS Safari).
+    stores.parentElement.appendChild(input);
+    rustoreFileInput = input;
+    return input;
+  }
+
+  async function runStoreAction(kind, work) {
+    if (storeBusy) return;
+    storeBusy = true;
+    storeBusyKind = kind;
+    storeError = '';
+    storeOk = '';
+    const stores = document.querySelector('#analytics-stores');
+    renderStoreDownloads(stores);
+    try {
+      await work();
+    } catch (error) {
+      storeError = error instanceof Error ? error.message : String(error);
+      renderStoreDownloads(stores);
+    } finally {
+      storeBusy = false;
+      storeBusyKind = '';
+      storeBusyHint = '';
+      renderStoreDownloads(document.querySelector('#analytics-stores'));
+    }
   }
 
   function renderAll() {
@@ -807,6 +852,8 @@
     if (stores) stores.innerHTML = '<p class="admin-muted">Сторы: загрузка…</p>';
     if (breakdown) breakdown.innerHTML = '';
     if (stats) stats.textContent = 'Загрузка…';
+    storeError = '';
+    storeOk = '';
 
     try {
       await loadDashboardForRange();
@@ -887,65 +934,71 @@
     const stores = document.querySelector('#analytics-stores');
     if (stores && !stores.dataset.bound) {
       stores.dataset.bound = '1';
+      const fileInput = ensureRustoreFileInput(stores);
+
       const uploadRustoreFile = (file) => {
         if (!file || typeof global.AdminSupabase.uploadRustoreCsv !== 'function') return;
-        storeBusy = true;
-        storeBusyKind = 'rustore';
         storeBusyHint = 'Читаю CSV и отправляю на сервер…';
-        storeError = '';
-        renderStoreDownloads(stores);
-        void file
-          .arrayBuffer()
-          .then((buffer) => decodeStoreCsv(buffer))
-          .then((csv) => global.AdminSupabase.uploadRustoreCsv(csv))
-          .then((snap) => applyStoreSnapshot(snap))
-          .catch((error) => {
-            storeError = error instanceof Error ? error.message : String(error);
-            renderStoreDownloads(stores);
-          })
-          .finally(() => {
-            storeBusy = false;
-            storeBusyKind = '';
-            storeBusyHint = '';
-            renderStoreDownloads(stores);
-          });
+        void runStoreAction('rustore', async () => {
+          const buffer = await file.arrayBuffer();
+          const csv = decodeStoreCsv(buffer);
+          if (!String(csv || '').trim()) {
+            throw new Error('Файл пустой или не читается. Экспортируйте CSV заново из консоли RuStore.');
+          }
+          const snap = await global.AdminSupabase.uploadRustoreCsv(csv);
+          const days = Number(snap?.rustore?.days) || 0;
+          const total = sumStoreRows(snap?.rustore?.rows || [], 0);
+          await applyStoreSnapshot(
+            snap,
+            days
+              ? `RuStore обновлён: ${total} скачиваний · ${days} дн.`
+              : 'CSV принят, но строк с датами не нашлось.'
+          );
+        }).finally(() => {
+          // Allow selecting the same file again on iOS.
+          fileInput.value = '';
+        });
       };
-      stores.addEventListener('change', (event) => {
-        const input = event.target;
-        if (!(input instanceof HTMLInputElement) || input.id !== 'analytics-rustore-csv') return;
-        uploadRustoreFile(input.files && input.files[0]);
+
+      fileInput.addEventListener('change', () => {
+        const file = fileInput.files && fileInput.files[0];
+        if (file) uploadRustoreFile(file);
       });
+
       stores.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) return;
+
         if (target.closest('#analytics-rustore-upload')) {
-          const input = stores.querySelector('#analytics-rustore-csv');
-          const file = input instanceof HTMLInputElement ? input.files && input.files[0] : null;
-          if (file) {
-            uploadRustoreFile(file);
-            return;
-          }
-          if (input instanceof HTMLInputElement) input.click();
+          if (storeBusy) return;
+          fileInput.value = '';
+          fileInput.click();
           return;
         }
+
         if (!target.closest('#analytics-apple-refresh')) return;
         if (typeof global.AdminSupabase.refreshAppleDownloads !== 'function') return;
-        storeBusy = true;
-        storeBusyKind = 'apple';
-        storeBusyHint = 'Спрашиваю Apple: ключ → заказ отчёта → файлы. Обычно до минуты.';
-        renderStoreDownloads(stores);
-        void global.AdminSupabase.refreshAppleDownloads()
-          .then((snap) => applyStoreSnapshot(snap))
-          .catch((error) => {
-            storeError = error instanceof Error ? error.message : String(error);
-            renderStoreDownloads(stores);
-          })
-          .finally(() => {
-            storeBusy = false;
-            storeBusyKind = '';
-            storeBusyHint = '';
-            renderStoreDownloads(stores);
-          });
+        storeBusyHint = 'Спрашиваю Apple… на iPhone может занять до минуты. Не уходите со страницы.';
+        void runStoreAction('apple', async () => {
+          const beforeDays = Number(storeSnapshot?.apple?.days) || 0;
+          const beforeTotal = sumStoreRows(storeSnapshot?.apple?.rows || [], 0);
+          const snap = await global.AdminSupabase.refreshAppleDownloads();
+          const afterDays = Number(snap?.apple?.days) || 0;
+          const afterTotal = sumStoreRows(snap?.apple?.rows || [], 0);
+          const sync = snap?.appleSync || {};
+          const status = String(snap?.apple?.status || sync.status || '');
+          let ok = '';
+          if (status === 'waiting') {
+            ok = 'Запрос ушёл. Apple ещё готовит файлы — цифры обновятся позже.';
+          } else if (afterTotal > beforeTotal || afterDays > beforeDays) {
+            ok = `App Store обновлён: ${afterTotal} скачиваний · ${afterDays} дн.`;
+          } else if (afterDays > 0) {
+            ok = 'App Store проверен — цифры те же (новых файлов нет).';
+          } else {
+            ok = String(sync.message || snap?.apple?.message || 'App Store проверен.');
+          }
+          await applyStoreSnapshot(snap, ok);
+        });
       });
     }
   }
