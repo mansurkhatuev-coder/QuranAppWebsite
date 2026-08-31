@@ -236,6 +236,8 @@
           }</p>`
         : '';
 
+    const platformTotal = platforms.reduce((sum, p) => sum + (Number(p.count) || 0), 0);
+
     const platformList = platforms.length
       ? `<ul class="admin-analytics-list">${platforms
           .map((p) => {
@@ -245,6 +247,14 @@
             return `<li><span>${escapeHtml(name)}</span><strong>${Number(p.count) || 0}</strong></li>`;
           })
           .join('')}</ul>`
+      : '';
+
+    const platformNote = platforms.length
+      ? `<p class="admin-analytics-compare">Всего по ОС: <strong>${platformTotal}</strong>${
+          reliable && allTime > platformTotal
+            ? ` · без ОС в базе: <strong>${allTime - platformTotal}</strong>`
+            : ''
+        }</p>`
       : '';
 
     container.innerHTML = `
@@ -281,8 +291,9 @@
 
       ${platformList ? `
       <section class="admin-analytics-section">
-        <div class="admin-analytics-social-head"><h3>Телефоны</h3></div>
+        <div class="admin-analytics-social-head"><h3>Телефоны · всё время</h3></div>
         ${platformList}
+        ${platformNote}
       </section>` : ''}
     `;
   }
@@ -623,6 +634,104 @@
     return /дата|date|период|period|timeperiod|всего|total|установ|install|скач|download/i.test(String(text || ''));
   }
 
+  function parseRustoreCsvPreview(csv) {
+    const text = String(csv || '').replace(/^\uFEFF/, '').trim();
+    if (!text) return { ok: false, reason: 'Файл пустой.' };
+
+    const lines = text.split(/\r?\n/).map((line) => line.trimEnd()).filter((line) => line.trim());
+    if (lines.length < 2) return { ok: false, reason: 'В файле мало строк.' };
+
+    const detectDelimiter = (headerLine) => {
+      const semi = (headerLine.match(/;/g) || []).length;
+      const tab = (headerLine.match(/\t/g) || []).length;
+      const comma = (headerLine.match(/,/g) || []).length;
+      if (tab >= semi && tab >= comma && tab > 0) return '\t';
+      if (semi >= comma && semi > 0) return ';';
+      return ',';
+    };
+    const splitLine = (line, delimiter) =>
+      line.split(delimiter).map((cell) => cell.trim().replace(/^"|"$/g, ''));
+    const normalizeHeader = (value) => value.replace(/^\uFEFF/, '').trim().toLowerCase();
+    const headerKind = (value) => {
+      const h = normalizeHeader(value);
+      if (!h) return 'other';
+      if (/^timeperiod$|^time[_\s-]*period$|^period$/.test(h)) return 'date';
+      if (/период/.test(h) && !/конверси|просмотр|view/.test(h)) return 'date';
+      if (/^(date|дата|day|день)$/i.test(h) || /дата начала/.test(h)) return 'date';
+      if (/^всего$|^total$|^итого$/.test(h)) return 'downloads';
+      if (/установ|install|скач|download|загруз/.test(h)) return 'downloads';
+      if (/^counts?$/.test(h) || h === 'количество' || /^кол-?во/.test(h)) return 'counts';
+      return 'other';
+    };
+    const lastDayOfMonth = (year, month) => {
+      const last = new Date(Date.UTC(year, month, 0));
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${last.getUTCFullYear()}-${pad(last.getUTCMonth() + 1)}-${pad(last.getUTCDate())}`;
+    };
+    const parseDay = (raw) => {
+      const value = String(raw || '').trim();
+      const monthYear = /^(\d{1,2})[./-](\d{4})$/.exec(value);
+      if (monthYear) {
+        const month = Number(monthYear[1]);
+        const year = Number(monthYear[2]);
+        if (month >= 1 && month <= 12) return lastDayOfMonth(year, month);
+      }
+      const iso = /^(\d{4})-(\d{2})-(\d{2})/.exec(value);
+      if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`;
+      const dotted = /^(\d{1,2})[./](\d{1,2})[./](\d{4})$/.exec(value);
+      if (dotted) return `${dotted[3]}-${dotted[2].padStart(2, '0')}-${dotted[1].padStart(2, '0')}`;
+      return null;
+    };
+    const parseCount = (raw) => {
+      const cleaned = String(raw || '').replace(/[\s\u00a0]/g, '').replace(',', '.');
+      const n = Number(cleaned);
+      return Number.isFinite(n) && n >= 0 ? Math.round(n) : 0;
+    };
+
+    let header = null;
+    for (let i = 0; i < Math.min(lines.length, 25); i += 1) {
+      const delimiter = detectDelimiter(lines[i]);
+      const kinds = splitLine(lines[i], delimiter).map(headerKind);
+      if (kinds.includes('date') && (kinds.includes('downloads') || kinds.includes('counts'))) {
+        header = { index: i, delimiter, kinds };
+        break;
+      }
+    }
+    if (!header) {
+      return {
+        ok: false,
+        reason: 'Нет колонок «Период» и «Всего». Экспортируйте таблицу статистики из консоли RuStore.',
+      };
+    }
+
+    const cells0 = splitLine(lines[header.index], header.delimiter);
+    const dateIdx = header.kinds.indexOf('date');
+    let downloadsIdx = header.kinds.indexOf('downloads');
+    if (downloadsIdx < 0) downloadsIdx = header.kinds.indexOf('counts');
+
+    const merged = new Map();
+    for (const line of lines.slice(header.index + 1)) {
+      const cells = splitLine(line, header.delimiter);
+      const rawDay = cells[dateIdx] || '';
+      if (/^(всего|total|итого)$/i.test(rawDay.trim())) continue;
+      const day = parseDay(rawDay);
+      if (!day) continue;
+      merged.set(day, (merged.get(day) || 0) + parseCount(cells[downloadsIdx] || '0'));
+    }
+    const rows = [...merged.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+    const total = rows.reduce((sum, [, n]) => sum + n, 0);
+    if (!rows.length) {
+      return { ok: false, reason: 'Даты в файле не разобрались. Нужен помесячный CSV (05.2026) или дневной.' };
+    }
+    return {
+      ok: true,
+      rows: rows.length,
+      total,
+      lastDay: rows[rows.length - 1][0],
+      message: `${rows.length} мес. · ${total} скачиваний · до ${rows[rows.length - 1][0]}`,
+    };
+  }
+
   function decodeStoreCsv(buffer) {
     const bytes = buffer instanceof ArrayBuffer ? new Uint8Array(buffer) : buffer;
     if (bytes.length >= 2 && bytes[0] === 0xff && bytes[1] === 0xfe) {
@@ -945,14 +1054,18 @@
           if (!String(csv || '').trim()) {
             throw new Error('Файл пустой или не читается. Экспортируйте CSV заново из консоли RuStore.');
           }
+          const preview = parseRustoreCsvPreview(csv);
+          if (!preview.ok) {
+            throw new Error(preview.reason);
+          }
           const snap = await global.AdminSupabase.uploadRustoreCsv(csv);
-          const days = Number(snap?.rustore?.days) || 0;
-          const total = sumStoreRows(snap?.rustore?.rows || [], 0);
+          const days = Number(snap?.rustore?.days) || preview.rows || 0;
+          const total = sumStoreRows(snap?.rustore?.rows || [], 0) || preview.total || 0;
           await applyStoreSnapshot(
             snap,
             days
-              ? `RuStore обновлён: ${total} скачиваний · ${days} дн.`
-              : 'CSV принят, но строк с датами не нашлось.'
+              ? `RuStore обновлён: ${total} скачиваний · ${days} пер.`
+              : `CSV принят (${preview.message}), но сервер не сохранил строки. Задеплойте store-downloads.`
           );
         }).finally(() => {
           // Allow selecting the same file again on iOS.
