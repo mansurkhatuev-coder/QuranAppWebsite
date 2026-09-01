@@ -610,9 +610,45 @@
     ]);
   }
 
+  function utf8ToBase64(text) {
+    const bytes = new TextEncoder().encode(text);
+    let binary = '';
+    for (let i = 0; i < bytes.length; i += 1) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    return global.btoa(binary);
+  }
+
+  function utf8FromBase64(b64) {
+    const binary = global.atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return new TextDecoder().decode(bytes);
+  }
+
+  function encodeCloudPayload(inner) {
+    const savedAt = inner.savedAt || new Date().toISOString();
+    return {
+      format: 'b64-v2',
+      savedAt,
+      rowCount: Array.isArray(inner.rows) ? inner.rows.length : 0,
+      body: utf8ToBase64(JSON.stringify(inner)),
+    };
+  }
+
+  function decodeCloudPayload(stored) {
+    if (!stored || typeof stored !== 'object') throw new Error('Пустой снимок из облака');
+    if (stored.format === 'b64-v2' && stored.body) {
+      return JSON.parse(utf8FromBase64(stored.body));
+    }
+    return stored;
+  }
+
   function buildCloudPayload() {
     collectEditorValues();
-    return {
+    return encodeCloudPayload({
       version: 2,
       savedAt: new Date().toISOString(),
       rows: state.rows.map((row) => ({
@@ -620,11 +656,11 @@
         ce: row.ce ?? '',
         status: row.status ?? '',
       })),
-    };
+    });
   }
 
-  function applyCloudPayload(payload) {
-    if (!payload || typeof payload !== 'object') throw new Error('Пустой снимок из облака');
+  function applyCloudPayload(stored) {
+    const payload = decodeCloudPayload(stored);
     const incoming = Array.isArray(payload.rows) ? payload.rows : null;
     if (!incoming) throw new Error('В облаке нет rows[]');
 
