@@ -654,6 +654,7 @@
         return false;
       }
       if (
+        !options.auto &&
         !options.silent &&
         !global.confirm('Заменить текущие строки данными из облака? Локальные правки в полях будут перезаписаны.')
       ) {
@@ -704,9 +705,9 @@
     setCloudStatus('Вход…');
     try {
       await global.AdminSupabase.signIn(email, password);
-      await refreshCloudSession({ offerPull: true });
+      await refreshCloudSession({ autoPull: true });
       if ($('cloud-password')) $('cloud-password').value = '';
-      flash('Вход выполнен');
+      flash('Вход выполнен, данные загружены');
     } catch (error) {
       setCloudStatus(error instanceof Error ? error.message : 'Ошибка входа', 'err');
       flash(error instanceof Error ? error.message : 'Ошибка входа', true);
@@ -736,7 +737,7 @@
     state.cloudSession = session;
     state.cloudReady = Boolean(session?.access_token);
     updateCloudUi();
-    if (!state.cloudReady) return;
+    if (!state.cloudReady) return false;
 
     try {
       const data = await global.AdminSupabase.loadCeLocaleDraft();
@@ -744,18 +745,23 @@
         state.cloudMeta = { updated_at: data.updated_at, updated_by: data.updated_by };
         updateCloudUi();
       }
-      if (options.offerPull && data?.payload) {
-        setCloudStatus(`В облаке есть сохранение · ${new Date(data.updated_at).toLocaleString('ru-RU')}`);
+      if (options.autoPull !== false && data?.payload) {
+        return cloudPull({ silent: true, auto: true });
       }
+      if (data?.payload) {
+        setCloudStatus(`В облаке · ${new Date(data.updated_at).toLocaleString('ru-RU')}`);
+      }
+      return Boolean(data?.payload);
     } catch (error) {
       setCloudStatus(error instanceof Error ? error.message : 'Не удалось проверить облако', 'err');
+      return false;
     }
   }
 
   async function initCloud() {
     updateCloudUi();
     if (!global.AdminSupabase?.isEnabled?.()) return;
-    await refreshCloudSession();
+    await refreshCloudSession({ autoPull: true });
   }
 
   async function save(options = {}) {
