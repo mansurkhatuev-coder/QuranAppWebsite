@@ -14,9 +14,9 @@
     groupProgress: [],
     assignees: {},
     cloudReady: false,
-    cloudBusy: false,
     cloudMeta: null,
     saveBusy: false,
+    cloudSyncInFlight: false,
   };
 
   function $(id) {
@@ -56,9 +56,6 @@
     }
     if (message) {
       flash(message, tone === 'err', durationMs);
-      if (tone === 'ok') setCloudStatus(message, 'ok');
-      else if (tone === 'err') setCloudStatus(message, 'err');
-      else if (tone === 'busy') setCloudStatus(message);
     }
   }
 
@@ -604,80 +601,44 @@
     });
   }
 
-  function setCloudStatus(message, tone = '') {
-    const el = $('cloud-status');
-    if (!el) return;
-    el.textContent = message || '';
-    el.className = `cloud-status${tone ? ` ${tone}` : ''}`;
-  }
-
-  function updateCloudUi() {
-    const login = $('cloud-login');
-    const actions = $('cloud-actions');
-    const user = $('cloud-user');
-    const saveBtn = $('cloud-save');
-    const pullBtn = $('cloud-pull');
-    const signoutBtn = $('cloud-signout');
-    const signinBtn = $('cloud-signin');
-
-    const enabled = Boolean(global.AdminSupabase?.isEnabled?.());
-    if (!enabled) {
-      setCloudStatus('Supabase не настроен — сохранение только в браузере', 'err');
-      return;
-    }
-
-    if (state.cloudReady) {
-      if (login) login.hidden = true;
-      if (actions) actions.hidden = false;
-      if (user) {
-        const email = state.cloudSession?.user?.email || 'админ';
-        const stamp = state.cloudMeta?.updated_at
-          ? ` · облако ${new Date(state.cloudMeta.updated_at).toLocaleString('ru-RU')}`
-          : '';
-        user.textContent = `${email}${stamp}`;
-      }
-    } else {
-      if (login) login.hidden = false;
-      if (actions) actions.hidden = true;
-      if (!state.cloudBusy) setCloudStatus('Войдите тем же email/паролем, что в админке');
-    }
-
-    const disabled = state.cloudBusy || state.saveBusy || !state.cloudReady;
-    if (saveBtn) saveBtn.disabled = disabled;
-    if (pullBtn) pullBtn.disabled = disabled;
-    if (signoutBtn) signoutBtn.disabled = state.cloudBusy;
-    if (signinBtn) signinBtn.disabled = state.cloudBusy;
+  function withTimeout(promise, ms, message) {
+    return Promise.race([
+      promise,
+      new Promise((_, reject) => {
+        global.setTimeout(() => reject(new Error(message)), ms);
+      }),
+    ]);
   }
 
   function buildCloudPayload() {
     collectEditorValues();
     return {
-      version: 1,
+      version: 2,
       savedAt: new Date().toISOString(),
-      meta: state.meta,
-      glossary: state.glossary,
-      assignees: state.assignees,
       rows: state.rows.map((row) => ({
         key: row.key,
         ce: row.ce ?? '',
-        ru: row.ru ?? '',
-        en: row.en ?? '',
         status: row.status ?? '',
-        note: row.note ?? '',
-        group: row.group ?? grp(row.key),
-        priority: row.priority ?? 999,
       })),
     };
   }
 
   function applyCloudPayload(payload) {
     if (!payload || typeof payload !== 'object') throw new Error('Пустой снимок из облака');
-    const rows = Array.isArray(payload.rows) ? payload.rows : null;
-    if (!rows) throw new Error('В облаке нет rows[]');
+    const incoming = Array.isArray(payload.rows) ? payload.rows : null;
+    if (!incoming) throw new Error('В облаке нет rows[]');
 
-    state.rows = rows;
-    if (payload.meta) state.meta = payload.meta;
-    if (payload.glossary) state.glossary = payload.glossary;
+    const patchByKey = new Map(incoming.map((row) => [row.key, row]));
+    state.rows = state.rows.map((row) => {
+      const patch = patchByKey.get(row.key);
+      if (!patch) return row;
+      return {
+        ...row,
+        ce: patch.ce ?? row.ce,
+        status: patch.status ?? row.status,
+      };
+    });
+
     if (payload.assignees) {
       state.assignees = payload.assignees;
       persistAssignees();
@@ -694,140 +655,102 @@
     if (!global.AdminSupabase?.loadCeLocaleDraft) {
       throw new Error('Облако не подключено');
     }
-    state.cloudBusy = true;
-    updateCloudUi();
-    setCloudStatus('Загружаем из облака…');
     try {
-      const data = await global.AdminSupabase.loadCeLocaleDraft();
+      const data = await withTimeout(
+        global.AdminSupabase.loadCeLocaleDraft(),
+        15000,
+        'Таймаут загрузки (15 с)'
+      );
       if (!data?.payload) {
-        if (!options.silent) flash('В облаке пока пусто — сначала сохраните', true);
-        setCloudStatus('В облаке пока пусто');
+        if (!options.silent) setSaveFeedback('В облаке пока пусто', 'warn');
         return false;
       }
       if (
         !options.auto &&
         !options.silent &&
-        !global.confirm('Заменить текущие строки данными из облака? Локальные правки в полях будут перезаписаны.')
+        !global.confirm('Заменить текущие строки данными из облака?')
       ) {
-        setCloudStatus('Загрузка отменена');
         return false;
       }
       state.cloudMeta = { updated_at: data.updated_at, updated_by: data.updated_by };
       applyCloudPayload(data.payload);
-      persistLocal();
-      setCloudStatus(`Загружено из облака · ${new Date(data.updated_at).toLocaleString('ru-RU')}`, 'ok');
-      if (!options.silent) flash('Загружено из облака');
+      persistLocalSafe();
+      if (!options.silent) {
+        setSaveFeedback(`Загружено · ${new Date(data.updated_at).toLocaleString('ru-RU')}`, 'ok');
+      }
       return true;
-    } finally {
-      state.cloudBusy = false;
-      updateCloudUi();
+    } catch (error) {
+      if (!options.silent) {
+        setSaveFeedback(error instanceof Error ? error.message : 'Ошибка загрузки', 'err');
+      }
+      throw error;
     }
   }
 
-  async function cloudSave(options = {}) {
+  async function cloudSave() {
     if (!global.AdminSupabase?.saveCeLocaleDraft) {
       throw new Error('Облако не подключено');
     }
-    state.cloudBusy = true;
-    updateCloudUi();
-    if (!options.silent) setSaveFeedback('Сохраняем на сайт…', 'busy', 0);
-    else setCloudStatus('Сохраняем на сайт…');
+    const payload = buildCloudPayload();
+    await withTimeout(
+      global.AdminSupabase.saveCeLocaleDraft(payload),
+      20000,
+      'Таймаут сохранения (20 с) — проверьте интернет'
+    );
+    state.cloudMeta = { updated_at: payload.savedAt, updated_by: state.cloudSession?.user?.email };
+    return payload;
+  }
+
+  async function syncToCloud() {
+    if (!state.cloudReady || state.cloudSyncInFlight) return;
+    state.cloudSyncInFlight = true;
+    setSaveFeedback('Синхронизация с сайтом…', 'busy', 0);
     try {
-      const payload = buildCloudPayload();
-      const savePromise = global.AdminSupabase.saveCeLocaleDraft(payload);
-      const timeoutMs = 45000;
-      const result = await Promise.race([
-        savePromise,
-        new Promise((_, reject) => {
-          global.setTimeout(() => reject(new Error('Таймаут сохранения (45 с)')), timeoutMs);
-        }),
-      ]);
-      state.cloudMeta = { updated_at: payload.savedAt, updated_by: state.cloudSession?.user?.email };
+      const payload = await cloudSave();
       const stamp = new Date(payload.savedAt).toLocaleString('ru-RU');
-      const message = `Сохранено на сайт · ${stamp}`;
-      setCloudStatus(message, 'ok');
-      if (!options.silent) setSaveFeedback(message, 'ok');
-      return result;
+      setSaveFeedback(`На сайте · ${stamp}`, 'ok');
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Ошибка сохранения';
-      setCloudStatus(message, 'err');
-      if (!options.silent) setSaveFeedback(message, 'err');
-      throw error;
+      const message = error instanceof Error ? error.message : 'Ошибка синхронизации';
+      setSaveFeedback(`Локально сохранено · ${message}`, 'err');
     } finally {
-      state.cloudBusy = false;
-      updateCloudUi();
+      state.cloudSyncInFlight = false;
     }
-  }
-
-  async function cloudSignIn() {
-    const email = String($('cloud-email')?.value ?? '').trim();
-    const password = String($('cloud-password')?.value ?? '');
-    if (!email || !password) {
-      flash('Введите email и пароль админки', true);
-      return;
-    }
-    state.cloudBusy = true;
-    updateCloudUi();
-    setCloudStatus('Вход…');
-    try {
-      await global.AdminSupabase.signIn(email, password);
-      await refreshCloudSession({ autoPull: true });
-      if ($('cloud-password')) $('cloud-password').value = '';
-      flash('Вход выполнен, данные загружены');
-    } catch (error) {
-      setCloudStatus(error instanceof Error ? error.message : 'Ошибка входа', 'err');
-      flash(error instanceof Error ? error.message : 'Ошибка входа', true);
-    } finally {
-      state.cloudBusy = false;
-      updateCloudUi();
-    }
-  }
-
-  async function cloudSignOut() {
-    state.cloudBusy = true;
-    updateCloudUi();
-    try {
-      await global.AdminSupabase.signOut?.();
-    } catch {
-      // ignore
-    }
-    state.cloudReady = false;
-    state.cloudSession = null;
-    state.cloudMeta = null;
-    setCloudStatus('Вы вышли — сохранение только в браузере');
-    updateCloudUi();
   }
 
   async function refreshCloudSession(options = {}) {
     const session = await global.AdminSupabase.getSession().catch(() => null);
     state.cloudSession = session;
     state.cloudReady = Boolean(session?.access_token);
-    updateCloudUi();
     if (!state.cloudReady) return false;
 
     try {
-      const data = await global.AdminSupabase.loadCeLocaleDraft();
+      const data = await withTimeout(
+        global.AdminSupabase.loadCeLocaleDraft(),
+        15000,
+        'Таймаут загрузки (15 с)'
+      );
       if (data?.updated_at) {
         state.cloudMeta = { updated_at: data.updated_at, updated_by: data.updated_by };
-        updateCloudUi();
       }
       if (options.autoPull !== false && data?.payload) {
         return cloudPull({ silent: true, auto: true });
       }
-      if (data?.payload) {
-        setCloudStatus(`В облаке · ${new Date(data.updated_at).toLocaleString('ru-RU')}`);
-      }
       return Boolean(data?.payload);
     } catch (error) {
-      setCloudStatus(error instanceof Error ? error.message : 'Не удалось проверить облако', 'err');
+      if (!options.silent) {
+        setSaveFeedback(error instanceof Error ? error.message : 'Облако недоступно', 'warn');
+      }
       return false;
     }
   }
 
   async function initCloud() {
-    updateCloudUi();
     if (!global.AdminSupabase?.isEnabled?.()) return;
-    await refreshCloudSession({ autoPull: true });
+    const client = global.AdminSupabase.getClient();
+    client?.auth.onAuthStateChange(() => {
+      void refreshCloudSession({ autoPull: true, silent: true });
+    });
+    await refreshCloudSession({ autoPull: true, silent: true });
   }
 
   async function save(options = {}) {
@@ -846,23 +769,21 @@
       stats();
       if (state.focusedKey) updateRowChrome(state.focusedKey);
 
-      if (state.cloudReady && !options.skipCloud) {
-        await cloudSave({ silent: true });
-        const message = options.markFocusedReviewed
-          ? 'Проверено и сохранено на сайт'
-          : 'Сохранено в браузере и на сайт';
-        setSaveFeedback(message, 'ok');
+      if (state.cloudReady) {
+        setSaveFeedback(
+          options.markFocusedReviewed ? 'Сохранено · синхронизация…' : 'Сохранено · синхронизация…',
+          'ok'
+        );
+        void syncToCloud();
         return;
       }
 
-      const message = state.cloudReady
-        ? options.markFocusedReviewed
-          ? 'Сохранено и отмечено проверенным'
-          : 'Сохранено локально'
-        : options.markFocusedReviewed
-          ? 'Проверено · только в этом браузере (войдите для сохранения на сайт)'
-          : 'Сохранено только в этом браузере · войдите ниже для сайта';
-      setSaveFeedback(message, state.cloudReady ? 'ok' : 'warn');
+      setSaveFeedback(
+        options.markFocusedReviewed
+          ? 'Сохранено локально · войдите в админку для синхронизации'
+          : 'Сохранено локально · войдите в админку',
+        'warn'
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Ошибка сохранения';
       setSaveFeedback(message, 'err');
@@ -1022,24 +943,6 @@
       event.target.value = '';
     });
     $('next-unreviewed')?.addEventListener('click', () => focusNext(state.focusedKey ?? ''));
-    $('cloud-signin')?.addEventListener('click', () => {
-      void cloudSignIn();
-    });
-    $('cloud-signout')?.addEventListener('click', () => {
-      void cloudSignOut();
-    });
-    $('cloud-save')?.addEventListener('click', () => {
-      void cloudSave();
-    });
-    $('cloud-pull')?.addEventListener('click', () => {
-      void cloudPull();
-    });
-    $('cloud-password')?.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter') {
-        event.preventDefault();
-        void cloudSignIn();
-      }
-    });
 
     global.document.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {

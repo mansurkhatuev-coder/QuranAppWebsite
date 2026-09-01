@@ -106,22 +106,6 @@
           <button type="button" class="ghost" id="reset">Сброс правок</button>
         </div>
       </details>
-
-      <div id="cloud-bar" class="toolbar cloud-bar">
-        <div id="cloud-login" class="cloud-login">
-          <span class="hint">Сохранение на сайт:</span>
-          <input id="cloud-email" class="cloud-input" type="email" placeholder="Email админки" autocomplete="username" />
-          <input id="cloud-password" class="cloud-input" type="password" placeholder="Пароль" autocomplete="current-password" />
-          <button type="button" class="secondary" id="cloud-signin">Войти</button>
-        </div>
-        <div id="cloud-actions" class="cloud-actions" hidden>
-          <span id="cloud-user" class="hint"></span>
-          <button type="button" class="secondary" id="cloud-pull">Загрузить</button>
-          <button type="button" class="primary" id="cloud-save">Сохранить на сайт</button>
-          <button type="button" class="ghost" id="cloud-signout">Выйти</button>
-        </div>
-        <span id="cloud-status" class="cloud-status"></span>
-      </div>
     </header>
 
     <div class="workbench-layout">
@@ -150,18 +134,18 @@
     </div>
 
     <div class="footerbar">
-      <span class="hint">Ctrl+S — сохранить (на сайт, если вошли) · Shift+Ctrl+S — проверено</span>
+      <span class="hint">Ctrl+S — сохранить · синхронизация, если вы вошли в админку</span>
       <div><span id="msg" class="hint"></span></div>
     </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../supabase-config.js?v=6"></script>
-    <script src="../admin-supabase.js?v=13"></script>
+    <script src="../admin-supabase.js?v=14"></script>
     <script src="../assets/auth-lock.js?v=1"></script>
     <script src="./gate.js?v=1"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=7"></script>
+    <script src="./workbench.js?v=8"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
         window.CeWorkbench.boot();
