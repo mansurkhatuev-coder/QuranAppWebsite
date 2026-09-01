@@ -1,0 +1,695 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-01-core",
+    "title": "1 · Ядро UI",
+    "description": "Вкладки, общие кнопки, язык и тема — сделать в первую очередь",
+    "prefixes": [
+      "tabs.",
+      "common.",
+      "settings.sectionGeneral",
+      "settings.interfaceLanguage",
+      "settings.locale",
+      "settings.theme",
+      "settings.language",
+      "navigation."
+    ]
+  },
+  "progress": {
+    "total": 39,
+    "filled": 39,
+    "empty": 0,
+    "sameAsRu": 9,
+    "translated": 30,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 77,
+    "sameAsRuPct": 23,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "tabs.home",
+      "ru": "Главная",
+      "ce": "Коьрта",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10009,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.azkar",
+      "ru": "Азкары",
+      "ce": "Азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.namaz",
+      "ru": "Намаз",
+      "ce": "Маор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.names",
+      "ru": "Имена",
+      "ce": "ЦIенаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.quran",
+      "ru": "Коран",
+      "ce": "Куран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.settings",
+      "ru": "Настройки",
+      "ce": "ГIирсаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10013,
+      "hint": "Нижняя навигация приложения — видно каждый день · Пункт настроек",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.ok",
+      "ru": "ОК",
+      "ce": "ОК",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20009,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.on",
+      "ru": "Вкл",
+      "ce": "Iottar",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20009,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.off",
+      "ru": "Выкл",
+      "ce": "Baц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20010,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.back",
+      "ru": "Назад",
+      "ce": "ТIе-кхачар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.copy",
+      "ru": "Копировать",
+      "ce": "Kopi",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.done",
+      "ru": "Готово",
+      "ce": "Кхочаб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.next",
+      "ru": "Далее",
+      "ce": "Кхин дIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.skip",
+      "ru": "Пропустить",
+      "ce": "Baц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.sura",
+      "ru": "Сура",
+      "ce": "Сура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Сура",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.close",
+      "ru": "Закрыть",
+      "ce": "ДIан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20012,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Закрыть окно",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.modal",
+      "ru": "Окно",
+      "ce": "Окно",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20012,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.cancel",
+      "ru": "Отмена",
+      "ce": "Ца оьшу",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Отмена действия",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.copied",
+      "ru": "Скопировано",
+      "ce": "Kopi yina",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.finish",
+      "ru": "Завершить",
+      "ce": "Кхочабе",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.number",
+      "ru": "Номер",
+      "ce": "Nomor",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.source",
+      "ru": "Источник",
+      "ce": "Duk",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.status",
+      "ru": "Статус",
+      "ce": "Xal",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.loading",
+      "ru": "Загрузка приложения...",
+      "ce": "Хьалох приложения...",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20014,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Индикатор загрузки",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.suraList",
+      "ru": "Список сур",
+      "ce": "Суранаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20015,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Сура",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.progressOf",
+      "ru": "{{done}} из {{total}}",
+      "ce": "{{done}} из {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20017,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.selectTafsir",
+      "ru": "Выберите тафсир",
+      "ce": "Харжа тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20019,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.selectTranslation",
+      "ru": "Выберите перевод",
+      "ce": "Харжа гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20024,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.localeCe",
+      "ru": "Нохчийн",
+      "ce": "Нохчийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30017,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Язык интерфейса",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.localeEn",
+      "ru": "English",
+      "ce": "English",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30017,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Язык интерфейса",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.localeRu",
+      "ru": "Русский",
+      "ce": "Русский",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30017,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Язык интерфейса",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeDark",
+      "ru": "Тёмная",
+      "ce": "Iaьrla boda",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30018,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Тема оформления",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeLight",
+      "ru": "Светлая",
+      "ce": "Iaьrla",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30019,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Тема оформления",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeTitle",
+      "ru": "Тема",
+      "ce": "Tem",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30019,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Заголовок экрана или блока",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeSystem",
+      "ru": "Системная",
+      "ce": "Системная",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30020,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Тема оформления",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.sectionGeneral",
+      "ru": "Язык и оформление",
+      "ce": "Mot и оформление",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30023,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.interfaceLanguage",
+      "ru": "Язык интерфейса",
+      "ce": "Интерфейсан мот",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30026,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.sectionGeneralSummary",
+      "ru": "{{locale}} • {{theme}}",
+      "ce": "{{locale}} • {{theme}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30030,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "navigation.back",
+      "ru": "Назад",
+      "ce": "ТIе-кхачар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "navigation",
+      "groupLabel": "Навигация",
+      "priority": 55015,
+      "hint": "Переходы между экранами, хлебные крошки",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    }
+  ]
+}

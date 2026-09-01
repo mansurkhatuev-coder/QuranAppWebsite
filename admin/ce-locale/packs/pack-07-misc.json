@@ -1,0 +1,2141 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-07-misc",
+    "title": "7 · Прочее",
+    "description": "Шаринг, пуши, хиджра, имена, статистика",
+    "groups": [
+      "share",
+      "notifications",
+      "hijri",
+      "names",
+      "readingActivity",
+      "translation",
+      "tafsir",
+      "attribution",
+      "contact"
+    ]
+  },
+  "progress": {
+    "total": 124,
+    "filled": 124,
+    "empty": 0,
+    "sameAsRu": 70,
+    "translated": 54,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 44,
+    "sameAsRuPct": 56,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "share.card.close",
+      "ru": "Закрыть",
+      "ce": "ДIан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120016,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.saved",
+      "ru": "Сохранено в галерею",
+      "ce": "Ialab в галерею",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120016,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.title",
+      "ru": "Поделиться",
+      "ce": "Поделиться",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120016,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.tajweed",
+      "ru": "Таджвид",
+      "ce": "Тажвид",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120018,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.action.save",
+      "ru": "Сохранить в галерею",
+      "ce": "Ialаш в галерею",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120022,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.format.post",
+      "ru": "Пост 4:5",
+      "ce": "Пост 4:5",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120022,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.format.reel",
+      "ru": "Рилс 9:16",
+      "ce": "Рилс 9:16",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120022,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.onyx",
+      "ru": "Полночный оникс",
+      "ce": "Полночный оникс",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120022,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.action.share",
+      "ru": "Поделиться",
+      "ce": "Поделиться",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120023,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.night",
+      "ru": "Ночь и звёзды",
+      "ce": "Bu и звёзды",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120023,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.source.quran",
+      "ru": "Коран {{sura}}:{{ayah}}",
+      "ce": "Куран {{sura}}:{{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120023,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.error.capture",
+      "ru": "Не удалось создать картинку",
+      "ce": "Не удалось создать картинку",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120024,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.layers.arabic",
+      "ru": "Арабский",
+      "ce": "Iаьрбийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120024,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.overflow.hint",
+      "ru": "Выключите лишний слой или разбейте на несколько карточек",
+      "ce": "Выключите лишний слой или разбейте на несколько карточек",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120024,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.mihrab",
+      "ru": "Зелёный михраб",
+      "ce": "Зелёный михраб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120024,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preview.frame",
+      "ru": "Карточка {{index}} из {{total}}",
+      "ce": "Карта {{index}} из {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120024,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.format.section",
+      "ru": "Размер",
+      "ce": "Размер",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.layers.chechen",
+      "ru": "Чеченский",
+      "ce": "Нохчийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.layers.russian",
+      "ru": "Русский",
+      "ce": "Русский",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.layers.section",
+      "ru": "Что показать",
+      "ce": "Что показать",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.overflow.split",
+      "ru": "Разбить на {{count}} карточки",
+      "ce": "Разбить на {{count}} карточки",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.overflow.title",
+      "ru": "Не помещается на один кадр",
+      "ce": "Не помещается на один кадр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.section",
+      "ru": "Оформление",
+      "ce": "Оформление",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preview.series",
+      "ru": "Все карточки",
+      "ce": "Дерриге карточки",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120025,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.error.permission",
+      "ru": "Нужен доступ к галерее, чтобы сохранить картинку",
+      "ce": "Беза доступ к галерее, чтобы сохранить картинку",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120027,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.overflow.blocked",
+      "ru": "Слишком длинный текст — выключите один из слоёв",
+      "ce": "Слишком длинный текст — выключите один из слоёв",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120027,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.lightSheet",
+      "ru": "Светлый лист",
+      "ce": "Светлый лист",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120028,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.layers.translation",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120029,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.emeraldGold",
+      "ru": "Изумруд и золото",
+      "ce": "Изумруд и золото",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120029,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.preset.lightMushaf",
+      "ru": "Светлый мусхаф",
+      "ce": "Светлый мусаф",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120029,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.tajweed.unavailable",
+      "ru": "Нет данных таджвида",
+      "ce": "ХIан-хIa данных тажвидан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120030,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "share.card.layers.transliteration",
+      "ru": "Транслитерация",
+      "ce": "Транслитерация",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "share",
+      "groupLabel": "Шаринг",
+      "priority": 120033,
+      "hint": "Карточка для соцсетей, слои текста · Карточка / виджет UI",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayMsg1",
+      "ru": "Преумножьте салават на Пророка ﷺ. Можно прочитать суру «аль-Кахф» (18) — сунна пятницы.",
+      "ce": "Преумножьте салават на Пророка ﷺ. Можно прочитать суру «аль-Кахф» (18) — сунна пятницы.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130024,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayMsg2",
+      "ru": "Пятница — лучший день. Помните о салавате и постарайтесь прочитать суру «аль-Кахф».",
+      "ce": "Пятница — лучший день. Помните о салавате и постарайтесь прочитать суру «аль-Кахф».",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130024,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayMsg3",
+      "ru": "Преумножьте салават сегодня. Сура «аль-Кахф» — желательное чтение в пятницу.",
+      "ce": "Преумножьте салават сегодня. Сура «аль-Кахф» — желательное дешар в пятницу.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130024,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayMsg4",
+      "ru": "Пятничное напоминание: салават, дуа и чтение суры «аль-Кахф» (18), если получится.",
+      "ce": "Пятничное напоминание: салават, дуIа и дешар суранаш «аль-Кахф» (18), если получится.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130024,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayTitle",
+      "ru": "Благословенная пятница",
+      "ce": "Благословенная пятница",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130025,
+      "hint": "Пуши: аят дня, пятница, пост · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.rainDuaBody",
+      "ru": "Скажите: «АллохIумма, соййибан нафиIан» — о Аллах, ниспошли нам полезный дождь.",
+      "ce": "Скажите: «АллохIумма, соййибан нафиIан» — о АллахI, ниспошли нам полезный дождь.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130025,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.dailyDuaBody",
+      "ru": "Не забудьте дуа — оно ждёт вас на главной.",
+      "ce": "Не забудьте дуIа — оно ждёт вас на главной.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130026,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.rainDuaTitle",
+      "ru": "Идёт дождь",
+      "ce": "Идёт дождь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130026,
+      "hint": "Пуши: аят дня, пятница, пост · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.channel.adhan",
+      "ru": "Азан",
+      "ce": "Азан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130027,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.dailyAyahBody",
+      "ru": "Откройте приложение и прочитайте аят на главной.",
+      "ce": "Откройте приложение и прочитайте аьят на главной.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130027,
+      "hint": "Пуши: аят дня, пятница, пост · Аят",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.dailyDuaTitle",
+      "ru": "Дуа",
+      "ce": "ДуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130027,
+      "hint": "Пуши: аят дня, пятница, пост · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.channel.prayer",
+      "ru": "Намаз",
+      "ce": "Маор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130028,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.dailyAyahTitle",
+      "ru": "Аят",
+      "ce": "Аьят",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130028,
+      "hint": "Пуши: аят дня, пятница, пост · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.channel.adhanFajr",
+      "ru": "Азан • фаджр",
+      "ce": "Азан • Фаджр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130031,
+      "hint": "Пуши: аят дня, пятница, пост · Намаз Фаджр",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.channel.reminders",
+      "ru": "Напоминания",
+      "ce": "Десташ",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130031,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayLastHourBody",
+      "ru": "Сейчас особое время для дуа в пятницу — не упустите момент до магриба.",
+      "ce": "Сейчас особое время для дуIа в пятницу — не упустите момент до Магриба.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130032,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.fridayLastHourTitle",
+      "ru": "Последний час пятницы",
+      "ce": "Последний час пятницы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130033,
+      "hint": "Пуши: аят дня, пятница, пост · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.recommendedFastingBody",
+      "ru": "Завтра желательный пост: {{day}}.",
+      "ce": "Sandu желательный пост: {{day}}.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130036,
+      "hint": "Пуши: аят дня, пятница, пост",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "notifications.recommendedFastingTitle",
+      "ru": "Желательный пост",
+      "ce": "Желательный пост",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "notifications",
+      "groupLabel": "Уведомления",
+      "priority": 130037,
+      "hint": "Пуши: аят дня, пятница, пост · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.back",
+      "ru": "Назад",
+      "ce": "ТIе-кхачар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140010,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.title",
+      "ru": "Хиджра-календарь",
+      "ce": "ХIижра-календарь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140011,
+      "hint": "Календарь и праздники · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.today",
+      "ru": "Сегодня",
+      "ce": "Тa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140011,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.noEvents",
+      "ru": "Нет особых событий",
+      "ce": "ХIан-хIa особых событий",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140014,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.startsIn",
+      "ru": "До наступления",
+      "ce": "До наступления",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140014,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.upcoming",
+      "ru": "Ближайшие события",
+      "ce": "Ближайшие события",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140014,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.widgetNote",
+      "ru": "Виджет намаза на рабочий стол Android доступен после установки свежей сборки.",
+      "ce": "Виджет маоран на рабочий стол Android доступен после установки свежей сборки.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140016,
+      "hint": "Календарь и праздники · Виджет на главном экране ОС",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventArafah",
+      "ru": "День Арафа",
+      "ce": "De Арафа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140017,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventAshura",
+      "ru": "Ашура",
+      "ce": "Ашура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140017,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventMawlid",
+      "ru": "12 раби‘ аль-авваль",
+      "ce": "12 раби‘ аль-авваль",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140017,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventsOnDay",
+      "ru": "События дня",
+      "ce": "События дня",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140017,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.gregorianOn",
+      "ru": "По григорианскому: {{date}}",
+      "ce": "По григорианскому: {{date}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140017,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventEidAdha",
+      "ru": "Ид аль-Адха",
+      "ce": "Ид аль-Адха",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140018,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventEidFitr",
+      "ru": "Ид аль-Фитр",
+      "ce": "Ид аль-Фитр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140018,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventNewYear",
+      "ru": "Новый год по хиджре",
+      "ce": "Новый год по хиджре",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140018,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventRamadan",
+      "ru": "Начало Рамадана",
+      "ce": "Начало Ramadanа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140018,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.fastingTasua",
+      "ru": "Тасуа (9 мухаррам)",
+      "ce": "Тасуа (9 мухаррам)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140018,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.countdownToday",
+      "ru": "Сегодня",
+      "ce": "Тa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140020,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventIsraMiraj",
+      "ru": "Исра и Ми'радж",
+      "ce": "Исра и Ми'радж",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140020,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.fastingShawwal",
+      "ru": "Пост в Шаввале",
+      "ce": "Пост в Шаввале",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140020,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventLaylatQadr",
+      "ru": "Лейлат аль-Кадр",
+      "ce": "Лейлат аль-Кадр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140021,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.eventShaabanMid",
+      "ru": "Середина Шаабана",
+      "ce": "Середина Шаабана",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140021,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.fastingWhiteDay",
+      "ru": "Белые дни (аям аль-бид)",
+      "ce": "Белые дни (аям аль-бид)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140021,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.countdownMinutes",
+      "ru": "{{minutes}} м",
+      "ce": "{{minutes}} м",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140022,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.countdownDaysHours",
+      "ru": "{{days}} д {{hours}} ч",
+      "ce": "{{days}} д {{hours}} ч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140024,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "hijri.countdownHoursMinutes",
+      "ru": "{{hours}} ч {{minutes}} м",
+      "ce": "{{hours}} ч {{minutes}} м",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "hijri",
+      "groupLabel": "Хиджра",
+      "priority": 140027,
+      "hint": "Календарь и праздники",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.title",
+      "ru": "99 имён Аллаха",
+      "ce": "99 латт АллахIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150011,
+      "hint": "Раздел имён Аллаха · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.heroTitle",
+      "ru": "Имена Аллаха",
+      "ce": "ЦIенаш АллахIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150015,
+      "hint": "Раздел имён Аллаха · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.emptyState",
+      "ru": "Данные пока не загружены.",
+      "ce": "ХIинца хIара хаамаш хьалацахь яц.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150016,
+      "hint": "Раздел имён Аллаха · Пустое состояние — нет данных",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.heroArabic",
+      "ru": "الأسماء الحسنى",
+      "ce": "الأسماء الحسنى",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150016,
+      "hint": "Раздел имён Аллаха",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.jumpButton",
+      "ru": "Перейти",
+      "ce": "Локальни",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150016,
+      "hint": "Раздел имён Аллаха",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.heroSubtitle",
+      "ru": "Листайте карточки, чтобы читать имена и их значения.",
+      "ce": "Листайте карточки, чтобы читать цIенаш и их значения.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150018,
+      "hint": "Раздел имён Аллаха · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.featuredLabel",
+      "ru": "Аллах",
+      "ce": "АллахI",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150019,
+      "hint": "Раздел имён Аллаха",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "names.jumpPlaceholder",
+      "ru": "Номер карточки (0-99)",
+      "ce": "Nomor карточки (0-99)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "names",
+      "groupLabel": "99 имён",
+      "priority": 150021,
+      "hint": "Раздел имён Аллаха",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.title",
+      "ru": "Активность чтения",
+      "ce": "Активность чтения",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180021,
+      "hint": "Графики и активность чтения · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.bestDay",
+      "ru": "Лучший день: {{count}} стр. ({{label}})",
+      "ce": "Лучший день: {{count}} стр. ({{label}})",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180023,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.nextYear",
+      "ru": "Следующий год",
+      "ce": "Следующий год",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180024,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.prevYear",
+      "ru": "Предыдущий год",
+      "ce": "Предыдущий год",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180024,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.noHistory",
+      "ru": "Пока нет записей.",
+      "ce": "Пока нет записей.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180025,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.openMushaf",
+      "ru": "Открыть мусхаф",
+      "ce": "Схьаа мусаф",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180026,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.pagesCount",
+      "ru": "{{count}} стр.",
+      "ce": "{{count}} стр.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180026,
+      "hint": "Графики и активность чтения · Страница мусхафа",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.periodWeek",
+      "ru": "Неделя",
+      "ce": "Kho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180026,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.periodYear",
+      "ru": "Год",
+      "ce": "Sho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180026,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.recentDays",
+      "ru": "По дням",
+      "ce": "По дням",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180026,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.selectYear",
+      "ru": "Год",
+      "ce": "Sho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180026,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.emptyPeriod",
+      "ru": "В этом периоде пока нет прочитанных страниц",
+      "ce": "В этом периоде пока нет прочитанных страниц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180027,
+      "hint": "Графики и активность чтения · Пустое состояние — нет данных",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.periodMonth",
+      "ru": "Месяц",
+      "ce": "Bo",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180027,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.dailyGoalMet",
+      "ru": "Цель выполнена",
+      "ce": "Цель выполнена",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180028,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.khatmOverall",
+      "ru": "Общий хатм",
+      "ce": "Общий хатм",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180028,
+      "hint": "Графики и активность чтения · Хатм / завершение Корана",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.trackingHint",
+      "ru": "Обычная страница засчитывается после ~2,5 мин; короткие — быстрее. Повтор в тот же день не удваивает счёт.",
+      "ce": "Обычная страница засчитывается после ~2,5 мин; короткие — быстрее. Кхин а в тот же день не удваивает счёт.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180028,
+      "hint": "Графики и активность чтения · Подсказка пользователю",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.pagesInPeriod",
+      "ru": "страниц за период",
+      "ce": "страниц за период",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180029,
+      "hint": "Графики и активность чтения · Страница мусхафа",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.dailyGoalTitle",
+      "ru": "Цель на сегодня",
+      "ce": "Цель на сегодня",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180030,
+      "hint": "Графики и активность чтения · Заголовок экрана или блока",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.dailyGoalCustom",
+      "ru": "Своё",
+      "ce": "Своё",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180031,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.dailyGoalPresets",
+      "ru": "Страниц в день",
+      "ce": "AgIash в день",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180032,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.dailyGoalRemaining",
+      "ru": "Осталось {{count}} стр.",
+      "ce": "Осталось {{count}} стр.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180034,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "readingActivity.dailyGoalCustomPlaceholder",
+      "ru": "…",
+      "ce": "…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "readingActivity",
+      "groupLabel": "Статистика чтения",
+      "priority": 180042,
+      "hint": "Графики и активность чтения",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "translation.kuliev",
+      "ru": "Русский: Кулиев",
+      "ce": "Русский: Кулиев",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "translation",
+      "groupLabel": "Переводы (метки)",
+      "priority": 200018,
+      "hint": "Названия источников перевода в настройках",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "translation.chechenIbrahimov",
+      "ru": "Нохчийн: Ибрагимов А.К.",
+      "ce": "Нохчийн: Ибрагимов А.К.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "translation",
+      "groupLabel": "Переводы (метки)",
+      "priority": 200028,
+      "hint": "Названия источников перевода в настройках",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "translation.chechenMagomedov",
+      "ru": "Нохчийн: Магомедов Магомед",
+      "ce": "Нохчийн: Магомедов Магомед",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "translation",
+      "groupLabel": "Переводы (метки)",
+      "priority": 200028,
+      "hint": "Названия источников перевода в настройках",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tafsir.none",
+      "ru": "Не показывать",
+      "ce": "Не показывать",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tafsir",
+      "groupLabel": "Тафсир (метки)",
+      "priority": 205011,
+      "hint": "Названия тафсиров",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tafsir.saadi",
+      "ru": "Русский: ас-Саади",
+      "ce": "Русский: ас-Саади",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tafsir",
+      "groupLabel": "Тафсир (метки)",
+      "priority": 205012,
+      "hint": "Названия тафсиров",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tafsir.chechenMagomedov",
+      "ru": "Нохчийн: Магомедов Магомед",
+      "ce": "Нохчийн: Магомедов Магомед",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tafsir",
+      "groupLabel": "Тафсир (метки)",
+      "priority": 205023,
+      "hint": "Названия тафсиров",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.tanzil",
+      "ru": "Текст Корана: Tanzil Project (Uthmani), CC BY 3.0 — https://tanzil.net",
+      "ce": "Текст Куранан: Tanzil Project (Uthmani), CC BY 3.0 — https://tanzil.net",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250018,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.qcfV4Glyphs",
+      "ru": "Рендер таджвида: Quran Foundation QCF V4 glyph fonts — quran.com",
+      "ce": "Рендер тажвидан: Quran Foundation QCF V4 glyph fonts — quran.com",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250023,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.cloudSources",
+      "ru": "Дополнительные источники: alquran.cloud.",
+      "ce": "Дополнительные источники: alquran.cloud.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250024,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.academyCurriculum",
+      "ru": "Академия чтения: «معلم ثاني» и «معلم» (Ahmadkhani al-Makssudi).",
+      "ce": "Академи чтения: «معلم ثاني» и «معلم» (Ahmadkhani al-Makssudi).",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250029,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.tajweedDisclaimer",
+      "ru": "Цветовая разметка таджвида носит учебный характер и не заменяет обучение у знающего учителя.",
+      "ce": "Цветовая разметка тажвидан носит учебный характер и не заменяет обучение у знающего учителя.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250029,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.academyLetterAudio",
+      "ru": "Озвучка букв: islamcan.com",
+      "ce": "Озвучка букв: islamcan.com",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250030,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "attribution.mushafTajweedUnicode",
+      "ru": "Подсветка таджвида (Unicode): Quran Foundation `text_uthmani_tajweed` — quran.com",
+      "ce": "Подсветка тажвидан (Unicode): Quran Foundation `text_uthmani_tajweed` — quran.com",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "attribution",
+      "groupLabel": "Атрибуция",
+      "priority": 250032,
+      "hint": "Источники данных в «О приложении»",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "contact.email.label",
+      "ru": "Открыть почту",
+      "ce": "Схьаа почту",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "contact",
+      "groupLabel": "Контакты",
+      "priority": 255019,
+      "hint": "Обратная связь, поддержка",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "contact.privacy.label",
+      "ru": "Политика конфиденциальности",
+      "ce": "Политика конфиденциальности",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "contact",
+      "groupLabel": "Контакты",
+      "priority": 255021,
+      "hint": "Обратная связь, поддержка",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "contact.email.description",
+      "ru": "Откроется почтовое приложение для обратной связи.",
+      "ce": "Откроется почтовое приложение для обратной связи.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "contact",
+      "groupLabel": "Контакты",
+      "priority": 255025,
+      "hint": "Обратная связь, поддержка",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "contact.privacy.description",
+      "ru": "Какие данные использует приложение и как они хранятся.",
+      "ce": "Какие данные использует приложение и как они хранятся.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "contact",
+      "groupLabel": "Контакты",
+      "priority": 255027,
+      "hint": "Обратная связь, поддержка",
+      "packs": [
+        "pack-07-misc",
+        "pack-all"
+      ]
+    }
+  ]
+}

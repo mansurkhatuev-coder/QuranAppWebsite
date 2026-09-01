@@ -1,0 +1,4430 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-05-azkar",
+    "title": "5 · Азкары",
+    "description": "Каталог, тасбих, рукъя",
+    "groups": [
+      "azkar",
+      "ruqya",
+      "azkarActivity"
+    ]
+  },
+  "progress": {
+    "total": 259,
+    "filled": 259,
+    "empty": 0,
+    "sameAsRu": 111,
+    "translated": 148,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 57,
+    "sameAsRuPct": 43,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "azkar.hub.more",
+      "ru": "Ещё",
+      "ce": "Kхин а",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90014,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.mySet",
+      "ru": "Мой набор",
+      "ce": "Сан гуллам",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90015,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.short",
+      "ru": "Краткий",
+      "ce": "Краткий",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90016,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.empty.mySet",
+      "ru": "Ваш набор пока пуст. Откройте раздел и нажмите «В мой набор» у нужного азкара.",
+      "ce": "Shu набор пока пуст. Откройте раздел и нажмите «В мой набор» у нужного азkarа.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90017,
+      "hint": "Каталог азкаров, тасбих, поиск · Пустое состояние — нет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.names99",
+      "ru": "99 имён Аллаха",
+      "ce": "99 латт АллахIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90017,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.mode.custom",
+      "ru": "Мой набор",
+      "ce": "Сан гуллам",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90017,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.continue",
+      "ru": "Продолжить {{section}} · {{item}}",
+      "ce": "ДIайла {{section}} · {{item}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90018,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.nowBadge",
+      "ru": "Сейчас",
+      "ce": "Сейчас",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90018,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.classic",
+      "ru": "Полный набор",
+      "ce": "Derrig набор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90018,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.exit",
+      "ru": "Выйти",
+      "ce": "Выйти",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90018,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.title",
+      "ru": "Источник",
+      "ce": "Duk",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90018,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.title",
+      "ru": "Счётчик",
+      "ce": "Счётчик",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90018,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.empty.section",
+      "ru": "В этом разделе пока нет азкаров.",
+      "ce": "В этом разделе пока нет азkarash.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90019,
+      "hint": "Каталог азкаров, тасбих, поиск · Пустое состояние — нет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.fallbackTitle",
+      "ru": "Азкар №{{number}}",
+      "ce": "Азkar №{{number}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90019,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.namesMeta",
+      "ru": "Поминание и значения",
+      "ce": "Поминание и значения",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90019,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.mode.verified",
+      "ru": "Проверенные",
+      "ce": "Проверенные",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90019,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.quickNav.hint",
+      "ru": "Выберите номер, чтобы перейти к нужной карточке.",
+      "ce": "Харжа номер, чтобы перейти к нужной карточке.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90019,
+      "hint": "Каталог азкаров, тасбих, поиск · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.quran",
+      "ru": "Дуа из Корана",
+      "ce": "ДуIа из Куранан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90019,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.mySetCount",
+      "ru": "{{count}} в списке",
+      "ce": "{{count}} в списке",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.mySetEmpty",
+      "ru": "Добавьте азкары в личный список",
+      "ce": "Добавьте азkarash в личный список",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.quickNav.title",
+      "ru": "Быстрый переход",
+      "ce": "Tim переход",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.repeat",
+      "ru": "Повторить",
+      "ce": "Кхин а дIa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.custom",
+      "ru": "Мой набор",
+      "ce": "Сан гуллам",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.benefit",
+      "ru": "Польза / пояснение",
+      "ce": "Польза / пояснение",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.grading",
+      "ru": "Оценка",
+      "ce": "Оценка",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.toast.emptySet",
+      "ru": "Ваш набор пуст, нечего читать",
+      "ce": "Shu набор пуст, нечего читать",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90020,
+      "hint": "Каталог азкаров, тасбих, поиск · Пустое состояние — нет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.dua",
+      "ru": "Дуа",
+      "ce": "ДуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.allComplete",
+      "ru": "Все разделы завершены",
+      "ce": "Дерриге разделы завершены",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.readingMode",
+      "ru": "Режим чтения",
+      "ce": "Tajam чтения",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchClear",
+      "ru": "Очистить поиск",
+      "ce": "Очистить поиск",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchEmpty",
+      "ru": "Ничего не найдено по вашему запросу.",
+      "ce": "Ничего не найдено по вашему запросу.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.summary",
+      "ru": "Вы прочитали {{completed}} из {{total}}",
+      "ce": "Вы прочитали {{completed}} из {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.evening",
+      "ru": "Вечерние азкары",
+      "ce": "Soren азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.general",
+      "ru": "Дуа на каждый случай",
+      "ce": "ДуIа на каждый случай",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.morning",
+      "ru": "Утренние азкары",
+      "ce": "Iaьlhan азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.support",
+      "ru": "Дуа в поддержку",
+      "ce": "ДуIа в поддержку",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.gradedBy",
+      "ru": "Оценил",
+      "ce": "Оценил",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.quranRef",
+      "ru": "Коран, {{sura}}:{{ayah}}",
+      "ce": "Куран, {{sura}}:{{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.addAzkar",
+      "ru": "Добавить азкар",
+      "ce": "Добавить азkar",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.addEmpty",
+      "ru": "Ничего не найдено",
+      "ce": "Ничего не найдено",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.homeLink",
+      "ru": "Счётчик зикра",
+      "ce": "Счётчик zikrа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.lifetime",
+      "ru": "всего · {{count}}",
+      "ce": "всего · {{count}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.listA11y",
+      "ru": "Выбрать зикр",
+      "ce": "Харжа zikr",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.openA11y",
+      "ru": "Открыть счётчик",
+      "ce": "Схьаа счётчик",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90021,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.eveningShort",
+      "ru": "Вечер",
+      "ce": "Сore",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.morningShort",
+      "ru": "Утро",
+      "ce": "Iaьlha",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.openActivity",
+      "ru": "Активность",
+      "ce": "Активность",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchToggle",
+      "ru": "Поиск по азкарам и дуа",
+      "ce": "Latt по азkarам и дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchTitle",
+      "ru": "Сменить набор азкаров?",
+      "ce": "Сменить набор азkarash?",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.continue",
+      "ru": "Дальше",
+      "ce": "Дальше",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Продолжить",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.markDone",
+      "ru": "Засчитать",
+      "ce": "Засчитать",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.readingMode.hint",
+      "ru": "Выберите, что читать, и настройте автопереход.",
+      "ce": "Харжа, что читать, и настройте автопереход.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.quranOnly",
+      "ru": "Коран",
+      "ce": "Куран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.quranSura",
+      "ru": "Коран, сура {{sura}}",
+      "ce": "Куран, сура {{sura}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Сура",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.titleFull",
+      "ru": "Источник и достоверность",
+      "ce": "Хьаст а бакъдолуьш а",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.emptyHint",
+      "ru": "Просто нажимайте на круг",
+      "ce": "Просто нажимайте на круг",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.resetA11y",
+      "ru": "Сбросить счётчик",
+      "ce": "MettigIa счётчик",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.toast.addedToSet",
+      "ru": "Добавлено в «Мой набор»",
+      "ce": "Добавлено в «Сан гуллам»",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.toast.orderSaved",
+      "ru": "Порядок сохранён",
+      "ce": "Порядок сохранён",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90022,
+      "hint": "Каталог азкаров, тасбих, поиск · Сохранение",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.authenticity.weak",
+      "ru": "Слабый",
+      "ce": "Daikab",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Выбор города",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.dhikr",
+      "ru": "Зикры",
+      "ce": "Zikrы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.quran",
+      "ru": "Коран",
+      "ce": "Куран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.custom.moveUpA11y",
+      "ru": "Переместить выше",
+      "ce": "Переместить выше",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.dailyPractice",
+      "ru": "Ежедневная практика",
+      "ce": "De de практика",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.progressLabel",
+      "ru": "Прогресс сегодня",
+      "ce": "Doklam сегодня",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchResults",
+      "ru": "Результаты поиска",
+      "ce": "Результаты поиска",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchCancel",
+      "ru": "Отмена",
+      "ce": "Ца оьшу",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchFailed",
+      "ru": "Не удалось сменить набор. Попробуйте ещё раз.",
+      "ce": "Не удалось сменить набор. Кхин а орца ещё раз.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.doneTitle",
+      "ru": "Готово",
+      "ce": "Кхочаб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.itemLabel",
+      "ru": "Азкар {{number}}",
+      "ce": "Азkar {{number}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.circleA11y",
+      "ru": "{{dhikr}}, счёт {{count}}",
+      "ce": "{{dhikr}}, счёт {{count}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.emptyDhikr",
+      "ru": "Без зикра",
+      "ce": "Без zikrа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90023,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.authenticity.hasan",
+      "ru": "Хороший",
+      "ce": "Dikab",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Выбор города",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.authenticity.quran",
+      "ru": "Коран",
+      "ce": "Куран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Выбор города",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.authenticity.sahih",
+      "ru": "Достоверный",
+      "ce": "Dikab",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Выбор города",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.backToSections",
+      "ru": "К разделам",
+      "ce": "К разделам",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.mode.allWithLabels",
+      "ru": "Все с пометками",
+      "ce": "Дерриге с пометками",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchConfirm",
+      "ru": "Сменить и сбросить",
+      "ce": "Сменить и сбросить",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchedShort",
+      "ru": "Краткий набор утра и вечера",
+      "ce": "Краткий набор утра и вечера",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchMessage",
+      "ru": "Прогресс азкаров за сегодня будет сброшен. Чтение Корана и остальной прогресс приложения не затронуты.",
+      "ce": "Doklam азkarash за сегодня будет сброшен. Iaj Куранан и остальной прогресс приложения не затронуты.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.backToList",
+      "ru": "Вернуться к списку",
+      "ce": "Вернуться к списку",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.listenA11y",
+      "ru": "Слушать азкар",
+      "ce": "Ialаш азkar",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.sourceA11y",
+      "ru": "Источник и достоверность",
+      "ce": "Хьаст а бакъдолуьш а",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.readingMode.allSet",
+      "ru": "Весь набор",
+      "ce": "Весь набор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.mySetTitle",
+      "ru": "Ваш сохранённый список азкаров",
+      "ce": "Shu сохранённый список азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.sessionResume.body",
+      "ru": "Найдена незавершенная сессия чтения из «Моего набора». Продолжить с места остановки.",
+      "ce": "Найдена незавершенная сессия чтения из «Моего набора». ДIайла с места остановки.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.pickerTitle",
+      "ru": "Выберите зикр",
+      "ce": "Харжа zikr",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.toast.noIncomplete",
+      "ru": "Нет незавершенных азкаров для чтения",
+      "ce": "ХIан-хIa незавершенных азkarash для чтения",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90024,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.evening",
+      "ru": "Вечер",
+      "ce": "Сore",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.morning",
+      "ru": "Утро",
+      "ce": "Iaьlha",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.support",
+      "ru": "Поддержка",
+      "ce": "Gar",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.custom.addToSetA11y",
+      "ru": "Добавить в мой набор",
+      "ce": "Добавить в мой набор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.custom.moveDownA11y",
+      "ru": "Переместить ниже",
+      "ce": "Переместить ниже",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.progressSummary",
+      "ru": "{{finished}} из {{total}} завершено сегодня",
+      "ce": "{{finished}} из {{total}} завершено сегодня",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.sectionProgress",
+      "ru": "{{completed}} из {{total}} · {{progress}}%",
+      "ce": "{{completed}} из {{total}} · {{progress}}%",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.autoAdvance",
+      "ru": "Автопереход: {{state}}",
+      "ce": "Автопереход: {{state}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.skippedHint",
+      "ru": "Этот азкар помечен как пропущенный",
+      "ce": "Этот азkar помечен как пропущенный",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.unavailable",
+      "ru": "Этот азкар больше недоступен.",
+      "ce": "Этот азkar больше недоступен.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.pickGeneral",
+      "ru": "Выберите зикр или дуа",
+      "ce": "Харжа zikr или дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.pickSupport",
+      "ru": "Выберите дуа",
+      "ce": "Харжа дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.sessionResume.title",
+      "ru": "Продолжить чтение?",
+      "ce": "Дешар дIадайта?",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.openInMushaf",
+      "ru": "Открыть в мусхафе",
+      "ce": "Схьаа в мусафе",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.translation.chechen",
+      "ru": "Чеченский перевод",
+      "ce": "Нохчийн гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.translation.english",
+      "ru": "Английский перевод",
+      "ce": "Английский гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.translation.generic",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.translation.russian",
+      "ru": "Русский перевод",
+      "ce": "Оьрусийн гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90025,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchToggleA11y",
+      "ru": "Открыть поиск",
+      "ce": "Схьаа поиск",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90026,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.pack.switchedClassic",
+      "ru": "Полный классический набор утра и вечера",
+      "ce": "Derrig классический набор утра и вечера",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90026,
+      "hint": "Каталог азкаров, тасбих, поиск · Офлайн-пакет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.skippedCount",
+      "ru": "Пропущено: {{count}}",
+      "ce": "Baцab: {{count}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90026,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.pickQuranDua",
+      "ru": "Выберите дуа",
+      "ce": "Харжа дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90026,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.salawat",
+      "ru": "Салават",
+      "ce": "Салават",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90026,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.toast.removedFromSet",
+      "ru": "Убрано из «Моего набора»",
+      "ce": "Убрано из «Моего набора»",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90026,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.authenticity.disputed",
+      "ru": "Есть разногласия",
+      "ce": "Есть разногласия",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск · Выбор города",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchPlaceholder",
+      "ru": "Поиск по азкарам и дуа",
+      "ce": "Азкарашка а дуIанашка а лоьху",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.mySetProgress",
+      "ru": "Мой набор · {{current}}/{{total}}",
+      "ce": "Сан гуллам · {{current}}/{{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.eyebrow.quran",
+      "ru": "Коранические дуа",
+      "ce": "Куранические дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.sessionResume.restart",
+      "ru": "Начать заново",
+      "ce": "ДIайола заново",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.source.openHadithLink",
+      "ru": "Открыть ссылку на хадис",
+      "ce": "Схьаа ссылку на хадис",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.addPickerTitle",
+      "ru": "Выберите азкар",
+      "ce": "Харжа азkar",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.entryEmptyHint",
+      "ru": "Открыть счётчик",
+      "ce": "Схьаа счётчик",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.textModeArabic",
+      "ru": "Арабский",
+      "ce": "Iаьрбийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.toast.sessionNotFound",
+      "ru": "Сессия чтения не найдена",
+      "ce": "Sessi чтения не найдена",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90027,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.hideArabicA11y",
+      "ru": "Скрыть арабский текст",
+      "ce": "Бахьа арабский текст",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90028,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.showArabicA11y",
+      "ru": "Показать арабский текст",
+      "ce": "Гойта арабский текст",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90028,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.eyebrow.custom",
+      "ru": "Личный список",
+      "ce": "Локальни список",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90028,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.sessionResume.continue",
+      "ru": "Продолжить",
+      "ce": "ДIайла",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90028,
+      "hint": "Каталог азкаров, тасбих, поиск · Продолжить",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.circleA11yEmpty",
+      "ru": "Счёт {{count}}",
+      "ce": "Счёт {{count}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90028,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.afterPrayer",
+      "ru": "После намаза",
+      "ce": "TкIa маоран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.categoryTab.beforeSleep",
+      "ru": "Перед сном",
+      "ce": "Хьалха сном",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchFallback.debt",
+      "ru": "Долги",
+      "ce": "Долги",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchFallback.rizq",
+      "ru": "Ризк",
+      "ce": "Ризк",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.transliteration",
+      "ru": "Транскрипция",
+      "ce": "Транскрипция",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.eyebrow.evening",
+      "ru": "После асра",
+      "ce": "TкIa Асра",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.eyebrow.general",
+      "ru": "На каждый день",
+      "ce": "На каждый день",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.eyebrow.morning",
+      "ru": "После фаджра",
+      "ce": "TкIa Фаджра",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.section.eyebrow.support",
+      "ru": "За братьев и сестёр",
+      "ce": "За братьев и сестёр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.removeCustomA11y",
+      "ru": "Убрать из списка",
+      "ce": "Убрать из списка",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.textModeTranslit",
+      "ru": "Транслит",
+      "ce": "Транслит",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90029,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.custom.removeFromSetA11y",
+      "ru": "Убрать из моего набора",
+      "ce": "Убрать из моего набора",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90030,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchFallback.sleep",
+      "ru": "Сон",
+      "ce": "Сон",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90030,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.resetCounterA11y",
+      "ru": "Сбросить счетчик для {{label}}",
+      "ce": "MettigIa счетчик для {{label}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90030,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.allahuakbar",
+      "ru": "Аллаху акбар",
+      "ce": "АллахIу акбар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90030,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.subhanallah",
+      "ru": "Субханаллах",
+      "ce": "Субханаллах",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90030,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.continueSection.quran",
+      "ru": "дуа из Корана",
+      "ce": "дуIа из Куранан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90031,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.addRepetitionA11y",
+      "ru": "Добавить повторение для {{label}}",
+      "ce": "Добавить повторение для {{label}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90031,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.translation.unavailableEn",
+      "ru": "Проверенный английский перевод для этого азкара недоступен. См. источник для деталей достоверности.",
+      "ce": "Проверенный английский гоч для этого азkarа недоступен. См. хьаст для деталей достоверности.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90031,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchFallback.anxiety",
+      "ru": "Тревога",
+      "ce": "Тревога",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90032,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchFallback.illness",
+      "ru": "Болезнь",
+      "ce": "Болезнь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90032,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.readingMode.incompleteOnly",
+      "ru": "Только незавершенные",
+      "ce": "Только незавершенные",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90032,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.alhamdulillah",
+      "ru": "Альхамдулиллах",
+      "ce": "Альхамдулиллах",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90032,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.textModeTranslation",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90032,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.continueSection.evening",
+      "ru": "вечерние",
+      "ce": "вечерние",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.continueSection.general",
+      "ru": "дуа",
+      "ce": "дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.continueSection.morning",
+      "ru": "утренние",
+      "ce": "утренние",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.continueSection.support",
+      "ru": "дуа в поддержку",
+      "ce": "дуIа в поддержку",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.hideTranslationA11y",
+      "ru": "Скрыть перевод",
+      "ce": "Бахьа гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.reading.showTranslationA11y",
+      "ru": "Показать перевод",
+      "ce": "Гойта гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.addSearchPlaceholder",
+      "ru": "Поиск по азкарам и дуа",
+      "ce": "Latt по азkarам и дуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.astaghfirullah",
+      "ru": "Астагфируллах",
+      "ce": "Астагфируллах",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90033,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.lailahaillallah",
+      "ru": "Ля иляха илля Ллах",
+      "ce": "Ля иляха илля Ллах",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90034,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.hub.searchFallback.protection",
+      "ru": "Защита",
+      "ce": "Защита",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90035,
+      "hint": "Каталог азкаров, тасбих, поиск · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.translation.allahuakbar",
+      "ru": "Аллах велик",
+      "ce": "АллахI велик",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90036,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.translation.subhanallah",
+      "ru": "Пречист Аллах",
+      "ce": "Пречист АллахI",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90036,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.translation.alhamdulillah",
+      "ru": "Хвала Аллаху",
+      "ce": "Хвала АллахIу",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90038,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkar.tasbih.dhikr.lailahaillallah_wahdahu",
+      "ru": "Ля иляха илля-Ллаху вахдаху…",
+      "ce": "Ля иляха илля-Ллаху вахдаху…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkar",
+      "groupLabel": "Азкары",
+      "priority": 90042,
+      "hint": "Каталог азкаров, тасбих, поиск · Тасбих-счётчик",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.read",
+      "ru": "Читать",
+      "ce": "Iaj",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160010,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.pause",
+      "ru": "Пауза",
+      "ce": "Паузa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160011,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.title",
+      "ru": "Рукъя",
+      "ce": "Рукъя",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160011,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.listen",
+      "ru": "Слушать",
+      "ce": "Ialаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160012,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.alsoSee",
+      "ru": "Также: {{ref}}",
+      "ce": "Также: {{ref}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howTo.1",
+      "ru": "Намерение: защита и исцеление только от Аллаха.",
+      "ce": "Намерение: защита и исцеление только от АллахIа.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howTo.2",
+      "ru": "Предпочтительнее читать самому; прослушивание с телефона — помощь.",
+      "ce": "Предпочтительнее читать самому; прослушивание с телефона — помощь.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howTo.3",
+      "ru": "Читайте аяты выбранной сессии (Фатиха, аят аль-Курси, Ихляс, Фаляк, Нас и др.).",
+      "ce": "Читайте аьяты выбранной сессии (Фатиха, аьят аль-Курси, Ихляс, Фаляк, Нас и др.).",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howTo.4",
+      "ru": "Для Ихляс, Фаляк и Нас: сложите ладони, прочитайте, слегка дуньте на них и обтрите тело, начиная с головы и лица, трижды.",
+      "ce": "Для Ихляс, Фаляк и Нас: сложите ладони, прочитайте, слегка дуньте на них и обтрите тело, начиная с головы и лица, трижды.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howTo.5",
+      "ru": "При болезни то же самое: прочитать эти суры, дунуть на ладони и обтереть тело.",
+      "ce": "При болезни то же самое: прочитать эти суранаш, дунуть на ладони и обтереть тело.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howTo.6",
+      "ru": "Не используйте неясные заговоры, талисманы и обращение к колдунам.",
+      "ce": "Не используйте неясные заговоры, талисманы и обращение к колдунам.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160013,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.openSura",
+      "ru": "Открыть суру",
+      "ce": "Схьаа суру",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160014,
+      "hint": "Защитное чтение по сунне · Сура",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.subtitle",
+      "ru": "защита по сунне",
+      "ce": "защита по сунне",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160014,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.introBody",
+      "ru": "Исцеление только от Аллаха. Лучше читать самому. Телефон — помощь, чтобы слышать слова Аллаха, а не замена чтению.",
+      "ce": "Исцеление только от АллахIа. Лучше читать самому. Telefon — помощь, чтобы слышать слова АллахIа, а не замена чтению.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160015,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.disclaimer",
+      "ru": "Не заменяет врача и не обещает исцеления. Без диагностики «сихра» и без обещаний результата.",
+      "ce": "Не заменяет врача и не обещает исцеления. Без диагностики «сихра» и без обещаний результата.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160016,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howToTitle",
+      "ru": "Как делать",
+      "ce": "Как делать",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160016,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.introTitle",
+      "ru": "Важно",
+      "ce": "Важно",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160016,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.openSource",
+      "ru": "Открыть источник",
+      "ce": "Схьаа хьаст",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160016,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.repeatHint",
+      "ru": "×{{count}}",
+      "ce": "×{{count}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160016,
+      "hint": "Защитное чтение по сунне · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.passageAyah",
+      "ru": "{{sura}}:{{ayah}}",
+      "ce": "{{sura}}:{{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160017,
+      "hint": "Защитное чтение по сунне · Аят",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.emptySession",
+      "ru": "Сессия не найдена.",
+      "ce": "Sessi не найдена.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160018,
+      "hint": "Защитное чтение по сунне · Пустое состояние — нет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.expandHadith",
+      "ru": "Показать полностью",
+      "ce": "Гойта полностью",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160018,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.fullSuraHint",
+      "ru": "Полная сура — откройте чтение. Прослушивание всех 286 аятов с телефона здесь не предлагаем.",
+      "ce": "Derrig сура — откройте дешар. Ialаш всех 286 аьтанаш с телефона здесь не предлагаем.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160018,
+      "hint": "Защитное чтение по сунне · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.homeTileMeta",
+      "ru": "Чтение и прослушивание по сунне",
+      "ce": "Iaj и прослушивание по сунне",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160018,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.passageLabel",
+      "ru": "{{sura}}:{{from}}–{{to}}",
+      "ce": "{{sura}}:{{from}}–{{to}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160018,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.priorityRead",
+      "ru": "Прочитать самому",
+      "ce": "Прочитать самому",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160018,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.azkarLinkMeta",
+      "ru": "Защита Кораном по сунне",
+      "ce": "Защита Кураном по сунне",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160019,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.evidenceTitle",
+      "ru": "Доводы",
+      "ce": "Доводы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160019,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.homeTileTitle",
+      "ru": "Рукъя",
+      "ce": "Рукъя",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160019,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.howToFootnote",
+      "ru": "Дуновение на ладони — Бухари 5017. «Стакан воды» как отдельный ритуал сунны здесь не утверждаем.",
+      "ce": "Дуновение на ладони — Бухари 5017. «Стакан воды» как отдельный ритуал сунны здесь не утверждаем.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160019,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.priorityTitle",
+      "ru": "Порядок",
+      "ce": "Порядок",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160019,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.sessionsTitle",
+      "ru": "Сессии",
+      "ce": "Sessi",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160019,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.azkarLinkTitle",
+      "ru": "Рукъя",
+      "ce": "Рукъя",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160020,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.collapseHadith",
+      "ru": "Свернуть",
+      "ce": "Свернуть",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160020,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.priorityListen",
+      "ru": "Только слушать — допустимая помощь",
+      "ce": "Только слушать — допустимая помощь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160020,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.muslim-780",
+      "ru": "Муслим 780",
+      "ce": "Муслим 780",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160023,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.repeatYourselfHint",
+      "ru": "При своём чтении повторите {{count}} раза. Аудио тоже пройдёт этот цикл {{count}} раза.",
+      "ce": "При своём чтении повторите {{count}} раза. Audio тоже пройдёт этот цикл {{count}} раза.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160024,
+      "hint": "Защитное чтение по сунне · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.sessionActionsHint",
+      "ru": "«Слушать» сверху — все отрывки сессии, затем стоп. Play на карточке — только этот отрывок. Прогресс раздела «Прослушивание» не меняется.",
+      "ce": "«Ialаш» сверху — все отрывки сессии, затем стоп. Play на карточке — только этот отрывок. Doklam раздела «Ialаш» не меняется.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160024,
+      "hint": "Защитное чтение по сунне · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.muslim-2188",
+      "ru": "Муслим 2188",
+      "ce": "Муслим 2188",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160024,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.muslim-807a",
+      "ru": "Муслим 807a",
+      "ce": "Муслим 807a",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160024,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-2311",
+      "ru": "Бухари 2311",
+      "ce": "Бухари 2311",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5009",
+      "ru": "Бухари 5009",
+      "ce": "Бухари 5009",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5010",
+      "ru": "Бухари 5010",
+      "ce": "Бухари 5010",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5017",
+      "ru": "Бухари 5017",
+      "ce": "Бухари 5017",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5735",
+      "ru": "Бухари 5735",
+      "ce": "Бухари 5735",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5736",
+      "ru": "Бухари 5736",
+      "ce": "Бухари 5736",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5739",
+      "ru": "Бухари 5739",
+      "ce": "Бухари 5739",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5749",
+      "ru": "Бухари 5749",
+      "ce": "Бухари 5749",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.bukhari-5944",
+      "ru": "Бухари 5944",
+      "ce": "Бухари 5944",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.source.muslim-2192a",
+      "ru": "Муслим 2192a",
+      "ce": "Муслим 2192a",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160025,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.priorityListenRepeat",
+      "ru": "Слушать и повторять",
+      "ce": "Ialаш и повторять",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160026,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.muslim-2188.note",
+      "ru": "«Омыться» здесь — когда сглазившего просят умыться, а этой водой обливают того, на кого сглазили. Это не «помойся сам после рукьи» и не стакан воды как отдельный ритуал.",
+      "ce": "«Омыться» здесь — когда сглазившего просят умыться, а этой водой обливают того, на кого сглазили. Это не «помойся сам после рукьи» и не стакан воды как отдельный ритуал.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160029,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.muslim-780.title",
+      "ru": "Бакара и дом",
+      "ce": "Бакара и дом",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160029,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5010.note",
+      "ru": "В этой главе Бухари сократил рассказ словами «рассказал хадис». Суть та же: аят аль-Курси на ночь. Полная история о трёх ночах — Бухари 2311 (ссылка ниже).",
+      "ce": "В этой главе Бухари сократил рассказ словами «рассказал хадис». Суть та же: аьят аль-Курси на ночь. Derrig история о трёх ночах — Бухари 2311 (ссылка ниже).",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160030,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5017.note",
+      "ru": "В хадисе суры названы первыми словами: «Скажи: Он — Аллах Единый», «Скажи: прибегаю к Господу рассвета», «Скажи: прибегаю к Господу людей». Так обычно называют целую короткую суру, а не приказывают читать только первый аят. Читают Ихляс, Фаляк и Нас полностью, трижды, затем дуют на ладони и обтирают тело.",
+      "ce": "В хадисе суранаш названы первыми словами: «Скажи: Он — АллахI Единый», «Скажи: прибегаю к Господу рассвета», «Скажи: прибегаю к Господу людей». Так обычно называют целую короткую суру, а не приказывают читать только первый аьят. Читают Ихляс, Фаляк и Нас полностью, трижды, затем дуют на ладони и обтирают тело.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160030,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5735.note",
+      "ru": "«Му’аввизат» здесь — защитные суры Фаляк и Нас (часто вместе с Ихляс). Их читают целиком, затем слегка дуют на ладони или на больного.",
+      "ce": "«Му’аввизат» здесь — защитные суранаш Фаляк и Нас (часто вместе с Ихляс). Их читают целиком, затем слегка дуют на ладони или на больного.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160030,
+      "hint": "Защитное чтение по сунне",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.muslim-2188.title",
+      "ru": "Сглаз реален",
+      "ce": "Сглаз реален",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160030,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5009.title",
+      "ru": "Последние аяты Бакары",
+      "ce": "Последние аьяты Бакары",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160031,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5010.title",
+      "ru": "Аят аль-Курси на ночь",
+      "ce": "Аьят аль-Курси на ночь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160031,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5017.title",
+      "ru": "Ихляс, Фаляк, Нас и обтирание",
+      "ce": "Ихляс, Фаляк, Нас и обтирание",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160031,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5735.title",
+      "ru": "Те же суры при болезни",
+      "ce": "Те же суранаш при болезни",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160031,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5739.title",
+      "ru": "Рукъя от сглаза",
+      "ce": "Рукъя от сглаза",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160031,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.hadith.bukhari-5749.title",
+      "ru": "Фатиха — рукъя",
+      "ce": "Фатиха — рукъя",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160031,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.baqarah-home.title",
+      "ru": "Дом / Бакара",
+      "ce": "Дом / Бакара",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160032,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.night-suffice.title",
+      "ru": "На ночь",
+      "ce": "На ночь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160033,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.baqarah-home.subtitle",
+      "ru": "Полная сура · чтение",
+      "ce": "Derrig сура · дешар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160035,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.daily-protection.title",
+      "ru": "Ежедневная защита",
+      "ce": "De de защита",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160036,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.night-suffice.subtitle",
+      "ru": "Бакара 285–286 · аят аль-Курси",
+      "ce": "Бакара 285–286 · аьят аль-Курси",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160036,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.muawwidhat-nafath.title",
+      "ru": "Читать и обтереть",
+      "ce": "Iaj и обтереть",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160037,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.daily-protection.subtitle",
+      "ru": "Фатиха · аят аль-Курси · Ихляс · Фаляк · Нас",
+      "ce": "Фатиха · аьят аль-Курси · Ихляс · Фаляк · Нас",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160039,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "ruqya.session.muawwidhat-nafath.subtitle",
+      "ru": "Ихляс, Фаляк, Нас ×3 · дунуть на ладони",
+      "ce": "Ихляс, Фаляк, Нас ×3 · дунуть на ладони",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "ruqya",
+      "groupLabel": "Рукъя",
+      "priority": 160040,
+      "hint": "Защитное чтение по сунне · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.title",
+      "ru": "Активность азкаров",
+      "ce": "Активность азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185019,
+      "hint": "Прогресс по азкарам · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.bestDay",
+      "ru": "Лучший: утро {{morning}}% · вечер {{evening}}% ({{label}})",
+      "ce": "Лучший: утро {{morning}}% · вечер {{evening}}% ({{label}})",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185021,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.evening",
+      "ru": "Вечер",
+      "ce": "Сore",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185021,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.morning",
+      "ru": "Утро",
+      "ce": "Iaьlha",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185021,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.nextYear",
+      "ru": "Следующий год",
+      "ce": "Следующий год",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185022,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.prevYear",
+      "ru": "Предыдущий год",
+      "ce": "Предыдущий год",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185022,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.noHistory",
+      "ru": "Пока нет записей.",
+      "ce": "Пока нет записей.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185023,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.openAzkar",
+      "ru": "Открыть азкары",
+      "ce": "Схьаа азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185023,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.bestStreak",
+      "ru": "Лучшая: {{count}} дн.",
+      "ce": "Лучшая: {{count}} дн.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.periodWeek",
+      "ru": "Неделя",
+      "ce": "Kho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.periodYear",
+      "ru": "Год",
+      "ce": "Sho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.recentDays",
+      "ru": "По дням",
+      "ce": "По дням",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.selectYear",
+      "ru": "Год",
+      "ce": "Sho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.streakDays",
+      "ru": "{{count}} дн.",
+      "ce": "{{count}} дн.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.todayTitle",
+      "ru": "Сегодня",
+      "ce": "Тa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185024,
+      "hint": "Прогресс по азкарам · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.dayProgress",
+      "ru": "Утро {{morning}}% · Вечер {{evening}}%",
+      "ce": "Iaьlha {{morning}}% · Сore {{evening}}%",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185025,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.emptyPeriod",
+      "ru": "В этом периоде пока нет утренних или вечерних азкаров",
+      "ce": "В этом периоде пока нет утренних или вечерних азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185025,
+      "hint": "Прогресс по азкарам · Пустое состояние — нет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.openFromHub",
+      "ru": "Активность",
+      "ce": "Активность",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185025,
+      "hint": "Прогресс по азкарам · Хаб / каталог раздела",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.periodMonth",
+      "ru": "Месяц",
+      "ce": "Bo",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185025,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.streakTitle",
+      "ru": "Серия",
+      "ce": "Серия",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185025,
+      "hint": "Прогресс по азкарам · Заголовок экрана или блока",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.trackingHint",
+      "ru": "День входит в серию, если выполнен хотя бы один утренний или вечерний азкар. Столбцы показывают частичный прогресс — полный набор не обязателен.",
+      "ce": "De входит в серию, если выполнен хотя бы один утренний или вечерний азkar. Столбцы показывают частичный прогресс — полный набор не обязателен.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185026,
+      "hint": "Прогресс по азкарам · Подсказка пользователю",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.hubTileMetaEmpty",
+      "ru": "История утра и вечера",
+      "ce": "История утра и вечера",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185030,
+      "hint": "Прогресс по азкарам · Пустое состояние — нет данных",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "azkarActivity.activeDaysInPeriod",
+      "ru": "активных дней за период",
+      "ce": "активных дней за период",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "azkarActivity",
+      "groupLabel": "Статистика азкаров",
+      "priority": 185032,
+      "hint": "Прогресс по азкарам",
+      "packs": [
+        "pack-05-azkar",
+        "pack-all"
+      ]
+    }
+  ]
+}

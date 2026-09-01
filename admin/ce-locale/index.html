@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Чеченский UI — workbench</title>
+    <link rel="stylesheet" href="./workbench.css?v=6" />
+  </head>
+  <body>
+    <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
+      <form id="ce-gate-form" class="ce-gate-card">
+        <p class="ce-gate-kicker">waydean.ru · admin</p>
+        <h1 id="ce-gate-title">Чеченский UI</h1>
+        <p class="ce-gate-hint">Введите пароль для доступа к workbench</p>
+        <label class="ce-gate-label">
+          Пароль
+          <input id="ce-gate-password" type="password" autocomplete="current-password" required />
+        </label>
+        <p id="ce-gate-error" class="ce-gate-error" hidden></p>
+        <button type="submit" class="ce-gate-submit">Войти</button>
+      </form>
+    </div>
+
+    <div id="ce-app" hidden>
+    <header>
+      <div class="header-sticky">
+        <div class="header-top">
+          <div class="header-brand">
+            <h1>Чеченский UI · workbench</h1>
+            <p id="progress-headline" class="header-progress-line">Загрузка…</p>
+          </div>
+          <div class="top-links">
+            <a href="../index.html">← Админка</a>
+            <a href="./packs/">Пакеты</a>
+          </div>
+        </div>
+
+        <div class="toolbar toolbar-main">
+          <select id="pack" class="small pack-select"></select>
+          <input id="pack-assignee" class="assignee-input" placeholder="Ответственный" title="Ответственный за пакет" />
+          <input id="q" class="search" placeholder="Поиск…" />
+          <select id="status" class="small">
+            <option value="all">Все строки</option>
+            <option value="needs-review">Нужна проверка</option>
+            <option value="todo">Не проверено</option>
+            <option value="reviewed">Проверено</option>
+            <option value="translated">Переведено (≠ ru)</option>
+            <option value="same-as-ru">Как в ru</option>
+            <option value="empty">Пусто</option>
+            <option value="filled">Заполнено</option>
+          </select>
+          <select id="group" class="small">
+            <option value="all">Все домены</option>
+          </select>
+          <button type="button" class="secondary" id="save">Сохранить</button>
+          <button type="button" class="primary" id="save-reviewed">✓ проверено</button>
+          <button type="button" class="secondary" id="next-unreviewed">Далее →</button>
+        </div>
+      </div>
+
+      <details class="header-extra">
+        <summary>Прогресс и экспорт</summary>
+        <p class="sub">
+          Список: вкладки → главное → академия в конце. Справа — mockup и глоссарий. «Переведено» ≠ копия ru.
+        </p>
+        <p id="pack-headline" class="hint pack-headline"></p>
+
+        <section class="progress-panel compact" aria-label="Общий прогресс">
+          <div class="progress-grid">
+            <div class="progress-item">
+              <span class="progress-label">Переведено</span>
+              <div class="progress translated"><div id="bar-translated"></div></div>
+            </div>
+            <div class="progress-item">
+              <span class="progress-label">Как в ru</span>
+              <div class="progress same-ru"><div id="bar-same-ru"></div></div>
+            </div>
+            <div class="progress-item">
+              <span class="progress-label">Проверено</span>
+              <div class="progress review"><div id="bar-review"></div></div>
+            </div>
+          </div>
+          <div class="stats">
+            <span>Всего: <b id="total">0</b></span>
+            <span>Перев.: <b id="translated">0</b> (<b id="translated-pct">0</b>%)</span>
+            <span>Как ru: <b id="same-as-ru">0</b> (<b id="same-as-ru-pct">0</b>%)</span>
+            <span>Пусто: <b id="empty">0</b></span>
+            <span>Провер.: <b id="reviewed">0</b> (<b id="reviewed-pct">0</b>%)</span>
+            <span>В пакете: <b id="shown">0</b></span>
+          </div>
+        </section>
+
+        <details class="group-progress-panel">
+          <summary>Прогресс по разделам</summary>
+          <div id="group-progress" class="group-progress-grid"></div>
+        </details>
+
+        <div class="toolbar toolbar-secondary">
+          <button type="button" class="secondary" id="import-json-btn">Импорт JSON</button>
+          <input id="import-json" type="file" accept="application/json,.json" hidden />
+          <button type="button" class="secondary" id="export-pack">Пакет JSON</button>
+          <button type="button" class="secondary" id="export-entries">ce.entries.json</button>
+          <button type="button" class="primary" id="export-ts">ce.ts</button>
+          <button type="button" class="ghost" id="reset">Сброс правок</button>
+        </div>
+      </details>
+
+      <div id="cloud-bar" class="toolbar" hidden>
+        <span class="hint">Облако — после миграции Supabase</span>
+        <button type="button" class="secondary" id="cloud-pull" disabled>Загрузить из облака</button>
+        <button type="button" class="primary" id="cloud-save" disabled>Сохранить в облако</button>
+        <span id="cloud-status" class="cloud-status"></span>
+      </div>
+    </header>
+
+    <div class="workbench-layout">
+      <main><div id="table" class="table"></div></main>
+
+      <aside class="side-panel" aria-label="Превью и глоссарий">
+        <section class="preview-panel">
+          <div class="panel-head">
+            <h2>Превью</h2>
+            <span id="preview-template" class="hint"></span>
+          </div>
+          <div id="preview-host" class="preview-host">
+            <p class="hint preview-placeholder">Выберите строку</p>
+          </div>
+        </section>
+
+        <section class="glossary-panel">
+          <div class="panel-head">
+            <h2>Глоссарий</h2>
+            <span class="hint">Клик → вставка</span>
+          </div>
+          <input id="glossary-q" class="glossary-search" placeholder="маор, куран…" />
+          <div id="glossary-host" class="glossary-host"></div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footerbar">
+      <span class="hint">Ctrl+S сохранить · Shift+Ctrl+S проверено · Ctrl+Enter далее</span>
+      <div><span id="msg" class="hint"></span></div>
+    </div>
+    </div>
+
+    <script src="../assets/auth-lock.js?v=1"></script>
+    <script src="./gate.js?v=1"></script>
+    <script src="./workbench-mockup.js?v=1"></script>
+    <script src="./workbench.js?v=4"></script>
+    <script>
+      window.CeWorkbenchGate.mountGate(function () {
+        window.CeWorkbench.boot();
+      });
+    </script>
+  </body>
+</html>

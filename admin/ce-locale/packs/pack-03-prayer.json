@@ -1,0 +1,1625 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-03-prayer",
+    "title": "3 · Намаз",
+    "description": "Расписание, города, методы, уведомления",
+    "groups": [
+      "namaz",
+      "prayer",
+      "widgets"
+    ]
+  },
+  "progress": {
+    "total": 94,
+    "filled": 94,
+    "empty": 0,
+    "sameAsRu": 55,
+    "translated": 39,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 41,
+    "sameAsRuPct": 59,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "namaz.title",
+      "ru": "Намаз",
+      "ce": "Маор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60011,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.savedTo",
+      "ru": "Сохранено: {{path}}",
+      "ce": "Ialab: {{path}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60013,
+      "hint": "Экран расписания, компас, уведомления намаза · Сохранение",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.cityNear",
+      "ru": "Рядом с {{city}}",
+      "ce": "Рядом с {{city}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60014,
+      "hint": "Экран расписания, компас, уведомления намаза · Выбор города",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.monthDay",
+      "ru": "День",
+      "ce": "De",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60014,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.cityLabel",
+      "ru": "Город",
+      "ce": "Gala",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза · Выбор города",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.hideMonth",
+      "ru": "Скрыть расписание",
+      "ce": "Бахьа расписание",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.nextMonth",
+      "ru": "Следующий",
+      "ce": "Следующий",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.openQibla",
+      "ru": "Открыть компас Киблы",
+      "ce": "Схьаа компас Киблы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.prevMonth",
+      "ru": "Предыдущий",
+      "ce": "Предыдущий",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaTurn",
+      "ru": "Повернуть: {{degrees}}°",
+      "ce": "Повернуть: {{degrees}}°",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.showMonth",
+      "ru": "Показать расписание",
+      "ce": "Гойта расписание",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60015,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.duhaFromTo",
+      "ru": "Можно: {{start}} • Заканчивается: {{end}}",
+      "ce": "Можно: {{start}} • Заканчивается: {{end}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60016,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.duhaWindow",
+      "ru": "Окно намаза Духа",
+      "ce": "Окно маоран Духа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60016,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.exportCity",
+      "ru": "Город: {{city}}",
+      "ce": "Gala: {{city}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60016,
+      "hint": "Экран расписания, компас, уведомления намаза · Выбор города",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaTitle",
+      "ru": "Кибла",
+      "ce": "Къибла",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60016,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.selectCity",
+      "ru": "Выберите город",
+      "ce": "Харжа город",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60016,
+      "hint": "Экран расписания, компас, уведомления намаза · Выбор города",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.downloading",
+      "ru": "Подготовка файла…",
+      "ce": "Подготовка файла…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60017,
+      "hint": "Экран расписания, компас, уведомления намаза · Индикатор загрузки",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.cityFeatured",
+      "ru": "Чеченская Республика",
+      "ce": "Нохчийчоь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60018,
+      "hint": "Экран расписания, компас, уведомления намаза · Выбор города",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaAligned",
+      "ru": "Вы смотрите в сторону Киблы",
+      "ce": "Вы смотрите в сторону Киблы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60018,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaBearing",
+      "ru": "Кибла: {{degrees}}°",
+      "ce": "Къибла: {{degrees}}°",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60018,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaHeading",
+      "ru": "Курс: {{degrees}}°",
+      "ce": "Курс: {{degrees}}°",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60018,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaWebHint",
+      "ru": "На веб-версии показан только азимут Киблы",
+      "ce": "На веб-версии показан только азимут Киблы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60018,
+      "hint": "Экран расписания, компас, уведомления намаза · Подсказка пользователю",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.downloadMonth",
+      "ru": "Скачать месяц",
+      "ce": "Хьала месяц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60019,
+      "hint": "Экран расписания, компас, уведомления намаза · Скачивание офлайн-данных",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.openQiblaHint",
+      "ru": "Открыть компас",
+      "ce": "Схьаа компас",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60019,
+      "hint": "Экран расписания, компас, уведомления намаза · Подсказка пользователю",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.prayerLoading",
+      "ru": "Расчёт расписания…",
+      "ce": "Khata хьисапдо…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60019,
+      "hint": "Экран расписания, компас, уведомления намаза · Индикатор загрузки",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaSubtitle",
+      "ru": "Направление на Каабу от вашего города",
+      "ce": "БагIам на Каабу от вашего города",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60019,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.statusHeading",
+      "ru": "Расписание намазов • {{month}}",
+      "ce": "Маоран хаттар • {{month}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60019,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.cityPickerHint",
+      "ru": "При смене города можно применить рекомендуемый метод расчёта.",
+      "ce": "При смене города можно применить рекомендуемый метод расчёта.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60020,
+      "hint": "Экран расписания, компас, уведомления намаза · Подсказка пользователю",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaNoCompass",
+      "ru": "Компас недоступен на этом устройстве",
+      "ce": "Kompas недоступен на этом устройстве",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60020,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaTurnPhone",
+      "ru": "Поверните телефон, пока иконка Каабы не окажется под стрелкой",
+      "ce": "Поверните телефон, пока иконка Ka'ban не окажется под стрелкой",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60020,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.citySearchEmpty",
+      "ru": "Город не найден. Попробуйте другое название.",
+      "ce": "Gala не найден. Кхин а орца другое название.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60021,
+      "hint": "Экран расписания, компас, уведомления намаза · Пустое состояние — нет данных",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.monthClosedHint",
+      "ru": "Расписание на {{month}} скрыто. Нажмите «Показать расписание».",
+      "ce": "Khata на {{month}} скрыто. Нажмите «Гойта расписание».",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60021,
+      "hint": "Экран расписания, компас, уведомления намаза · Закрыть окно",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaNoLocation",
+      "ru": "Выберите город, чтобы показать направление",
+      "ce": "Харжа город, чтобы показать направление",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60021,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.cityFeaturedHint",
+      "ru": "Города Чеченской Республики. Для других — используйте поиск.",
+      "ce": "Города Чеченской Республики. Для других — используйте поиск.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60022,
+      "hint": "Экран расписания, компас, уведомления намаза · Подсказка пользователю",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.monthlyCardTitle",
+      "ru": "Расписание на {{month}}",
+      "ce": "Khata на {{month}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60022,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.openQiblaBearing",
+      "ru": "Компас • {{degrees}}° к Каабе",
+      "ce": "Kompas • {{degrees}}° к Каабе",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60022,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaCalibrating",
+      "ru": "Ожидание данных компаса…",
+      "ce": "Кхин а орца данных компаса…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60022,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.shareFileMessage",
+      "ru": "Файл расписания намазов за {{month}}",
+      "ce": "Faйl расписания маоров за {{month}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60022,
+      "hint": "Экран расписания, компас, уведомления намаза · Поделиться",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.statusNextPrayer",
+      "ru": "Следующий: {{name}} в {{time}} (через {{left}})",
+      "ce": "Следующий: {{name}} в {{time}} (через {{left}})",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60022,
+      "hint": "Экран расписания, компас, уведомления намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.citySearchLoading",
+      "ru": "Ищем города…",
+      "ce": "Ищем города…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60023,
+      "hint": "Экран расписания, компас, уведомления намаза · Индикатор загрузки",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.citySearchResults",
+      "ru": "Онлайн-поиск по всему миру",
+      "ce": "Онлайн-поиск по всему миру",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60023,
+      "hint": "Экран расписания, компас, уведомления намаза · Поле или плейсхолдер поиска",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.citySearchMinChars",
+      "ru": "Введите минимум 2 символа для онлайн-поиска",
+      "ce": "Введите минимум 2 символа для онлайн-поиска",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60024,
+      "hint": "Экран расписания, компас, уведомления намаза · Поле или плейсхолдер поиска",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.monthlyExportTitle",
+      "ru": "Расписание намазов — {{month}}",
+      "ce": "Маоран хаттар — {{month}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60024,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.monthlyCardSubtitle",
+      "ru": "Полный список намазов на месяц с возможностью скачать и поделиться.",
+      "ce": "Derrig список маоров на месяц с возможностью скачать и поделиться.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60025,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.nextPrayerCardTitle",
+      "ru": "Ближайший намаз",
+      "ce": "Ближайший маор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60025,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaPermissionBody",
+      "ru": "Без доступа к геолокации компас Киблы не сможет определить, куда вы смотрите. Разрешите геолокацию в настройках.",
+      "ce": "Без доступа к геолокации компас Киблы не сможет определить, куда вы смотрите. Разрешите геолокацию в настройках.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60025,
+      "hint": "Экран расписания, компас, уведомления намаза · Запрос разрешения системы",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaPermissionOpen",
+      "ru": "Разрешить",
+      "ce": "Разрешить",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60025,
+      "hint": "Экран расписания, компас, уведомления намаза · Запрос разрешения системы",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.shareWhatsappStatus",
+      "ru": "Поделиться",
+      "ce": "Поделиться",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60025,
+      "hint": "Экран расписания, компас, уведомления намаза · Поделиться",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.qiblaPermissionTitle",
+      "ru": "Нужна геолокация для Киблы",
+      "ce": "Беза геолокация для Киблы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60026,
+      "hint": "Экран расписания, компас, уведомления намаза · Заголовок экрана или блока",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.citySearchPlaceholder",
+      "ru": "Поиск города по всему миру",
+      "ce": "Latt города по всему миру",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60027,
+      "hint": "Экран расписания, компас, уведомления намаза · Поле или плейсхолдер поиска",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "namaz.citySearchOfflineFallback",
+      "ru": "Нет сети — показаны локальные совпадения",
+      "ce": "ХIан-хIa сети — показаны локальные совпадения",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "namaz",
+      "groupLabel": "Намаз (экран)",
+      "priority": 60031,
+      "hint": "Экран расписания, компас, уведомления намаза · Поле или плейсхолдер поиска",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.asr",
+      "ru": "Аср",
+      "ce": "Аср",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65015,
+      "hint": "Города, методы расчёта, GPS, Чечня · Намаз Аср",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.duha",
+      "ru": "Духа",
+      "ce": "Духа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65016,
+      "hint": "Города, методы расчёта, GPS, Чечня",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.fajr",
+      "ru": "Фаджр",
+      "ce": "Фаджр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65016,
+      "hint": "Города, методы расчёта, GPS, Чечня · Намаз Фаджр",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.isha",
+      "ru": "Иша",
+      "ce": "Иша",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65016,
+      "hint": "Города, методы расчёта, GPS, Чечня · Намаз Иша",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.mwl",
+      "ru": "Muslim World League",
+      "ce": "Muslim World League",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65017,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.dhuhr",
+      "ru": "Зухр",
+      "ce": "Зухр",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65017,
+      "hint": "Города, методы расчёта, GPS, Чечня · Намаз Зухр",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.ishraq",
+      "ru": "Ишрак",
+      "ce": "Ишрак",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65018,
+      "hint": "Города, методы расчёта, GPS, Чечня",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.dubai",
+      "ru": "Дубай",
+      "ce": "Дубай",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65019,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.egypt",
+      "ru": "Египет",
+      "ce": "Египет",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65019,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.qatar",
+      "ru": "Катар",
+      "ce": "Катар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65019,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.maghrib",
+      "ru": "Магриб",
+      "ce": "Магриб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65019,
+      "hint": "Города, методы расчёта, GPS, Чечня · Намаз Магриб",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.sunrise",
+      "ru": "Восход",
+      "ce": "Малх",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65019,
+      "hint": "Города, методы расчёта, GPS, Чечня · Восход",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.kuwait",
+      "ru": "Кувейт",
+      "ce": "Кувейт",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65020,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.tehran",
+      "ru": "Тегеран",
+      "ce": "Тегеран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65020,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.turkey",
+      "ru": "Турция",
+      "ce": "Турция",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65020,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.tahajjud",
+      "ru": "Тахаджуд",
+      "ce": "Тахаджуд",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65020,
+      "hint": "Города, методы расчёта, GPS, Чечня",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.karachi",
+      "ru": "Карачи",
+      "ce": "Карачи",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65021,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.mwlDesc",
+      "ru": "Всемирная мусульманская лига",
+      "ce": "Всемирная мусульманская лига",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65021,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.name.lastThird",
+      "ru": "Последняя треть ночи",
+      "ce": "Последняя треть ночи",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65021,
+      "hint": "Города, методы расчёта, GPS, Чечня",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.dubaiDesc",
+      "ru": "ОАЭ",
+      "ce": "ОАЭ",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65023,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.egyptDesc",
+      "ru": "Египетское генеральное управление",
+      "ce": "Египетское генеральное управление",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65023,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.qatarDesc",
+      "ru": "Катар",
+      "ce": "Катар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65023,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.singapore",
+      "ru": "Сингапур",
+      "ce": "Сингапур",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65023,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.ummAlQura",
+      "ru": "Умм аль-Кура",
+      "ce": "Умм аль-Кура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65023,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.kuwaitDesc",
+      "ru": "Кувейт",
+      "ce": "Кувейт",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65024,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.tehranDesc",
+      "ru": "Иран",
+      "ce": "Иран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65024,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.turkeyDesc",
+      "ru": "Диянет",
+      "ce": "Диянет",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65024,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.karachiDesc",
+      "ru": "Университет исламских наук, Карачи",
+      "ce": "Университет исламских наук, Карачи",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65025,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.notification.title",
+      "ru": "{{name}}",
+      "ce": "{{name}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65025,
+      "hint": "Города, методы расчёта, GPS, Чечня · Текст уведомления",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.moonsighting",
+      "ru": "Moonsighting Committee",
+      "ce": "Moonsighting Committee",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65026,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.northAmerica",
+      "ru": "Северная Америка",
+      "ce": "Северная Америка",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65026,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.singaporeDesc",
+      "ru": "MUIS",
+      "ce": "MUIS",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65027,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.ummAlQuraDesc",
+      "ru": "Мекка",
+      "ce": "Мекка",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65027,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.notification.bodyNow",
+      "ru": "Время намаза наступило.",
+      "ce": "Hun маоран наступило.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65027,
+      "hint": "Города, методы расчёта, GPS, Чечня · Текст уведомления",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.notification.bodyLead",
+      "ru": "Через {{minutes}} мин (в {{time}}).",
+      "ce": "Через {{minutes}} мин (в {{time}}).",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65028,
+      "hint": "Города, методы расчёта, GPS, Чечня · Текст уведомления",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.chechenRepublic",
+      "ru": "Чеченская Республика (ДУМ ЧР)",
+      "ce": "Нохчийчоь (ДУМ ЧР)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65029,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.notification.bodyAdhan",
+      "ru": "Время намаза.",
+      "ce": "Hun маоран.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65029,
+      "hint": "Города, методы расчёта, GPS, Чечня · Текст уведомления",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.moonsightingDesc",
+      "ru": "Комитет по наблюдению луны",
+      "ce": "Комитет по наблюдению луны",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65030,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.northAmericaDesc",
+      "ru": "ISNA",
+      "ce": "ISNA",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65030,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.source.calculatedNotice",
+      "ru": "Показано расчётное время. Официальное расписание ДУМ на сегодня недоступно.",
+      "ce": "Показано расчётное время. Официальное расписание ДУМ на сегодня недоступно.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65030,
+      "hint": "Города, методы расчёта, GPS, Чечня",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "prayer.method.chechenRepublicDesc",
+      "ru": "Профиль как в Payde (RU-CE): Qatar + tune (Fajr +21, Sunrise -4, Asr +6, Maghrib +3), Зухр фиксирован в 12:30.",
+      "ce": "Профиль как в Payde (RU-CE): Qatar + tune (Фаджр +21, Sunrise -4, Аср +6, Магриб +3), Зухр фиксирован в 12:30.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "prayer",
+      "groupLabel": "Намаз (логика)",
+      "priority": 65033,
+      "hint": "Города, методы расчёта, GPS, Чечня · Метод расчёта намаза",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "widgets.prayer.empty",
+      "ru": "Откройте приложение, чтобы обновить время намаза",
+      "ce": "Откройте приложение, чтобы обновить время маоран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "widgets",
+      "groupLabel": "Виджеты",
+      "priority": 170020,
+      "hint": "Виджет намаза на Android (редко) · Пустое состояние — нет данных",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "widgets.prayer.countdownIn",
+      "ru": "через {{left}}",
+      "ce": "через {{left}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "widgets",
+      "groupLabel": "Виджеты",
+      "priority": 170026,
+      "hint": "Виджет намаза на Android (редко)",
+      "packs": [
+        "pack-03-prayer",
+        "pack-all"
+      ]
+    }
+  ]
+}

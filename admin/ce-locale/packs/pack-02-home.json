@@ -1,0 +1,978 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-02-home",
+    "title": "2 · Главная",
+    "description": "Главный экран и верхняя панель",
+    "prefixes": [
+      "home.",
+      "topBar."
+    ]
+  },
+  "progress": {
+    "total": 56,
+    "filled": 56,
+    "empty": 0,
+    "sameAsRu": 20,
+    "translated": 36,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 64,
+    "sameAsRuPct": 36,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "home.salam",
+      "ru": "Ассаляму алейкум",
+      "ce": "Ассаляму алейкум",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40010,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.title",
+      "ru": "Главная",
+      "ce": "Коьрта",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40010,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.pagesOf",
+      "ru": "{{done}} из {{total}} страниц",
+      "ce": "{{done}} из {{total}} страниц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40012,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Страница мусхафа",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.duaTitle",
+      "ru": "Дуа",
+      "ce": "ДуIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40013,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.goToAyah",
+      "ru": "В мусхаф",
+      "ce": "В мусаф",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40013,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Аят",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.goToName",
+      "ru": "К имени",
+      "ce": "К имени",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40013,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerAt",
+      "ru": "в {{time}}",
+      "ce": "в {{time}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40013,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.ayahTitle",
+      "ru": "Аят",
+      "ce": "Аьят",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40014,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.localTime",
+      "ru": "Местное время{{zone}}",
+      "ce": "Местное время{{zone}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40014,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.nameTitle",
+      "ru": "Имена Аллаха",
+      "ce": "ЦIенаш АллахIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40014,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.openAzkar",
+      "ru": "Открыть азкары",
+      "ce": "Схьаа азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40014,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.openNamaz",
+      "ru": "Открыть экран Намаз",
+      "ce": "Схьаа экран Маор",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40014,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.openNames",
+      "ru": "Все 99 имён",
+      "ce": "Дерриге 99 латт",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40014,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.azkarTitle",
+      "ru": "Азкары сегодня",
+      "ce": "Азkarash сегодня",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.expandAyah",
+      "ru": "Показать аят полностью",
+      "ce": "Гойта аьят полностью",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Аят",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.goToSource",
+      "ru": "К источнику",
+      "ce": "К источнику",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.khatmTitle",
+      "ru": "Прогресс чтения Корана",
+      "ce": "Doklam чтения Куранан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.noLastRead",
+      "ru": "Начните чтение в мусхафе, и здесь появится место продолжения.",
+      "ce": "Начните дешар в мусафе, и здесь появится место продолжения.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerNext",
+      "ru": "Следующий: {{name}}",
+      "ce": "Следующий: {{name}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerSoon",
+      "ru": "Расписание намазов",
+      "ce": "Маоран хаттар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40015,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.greetingDay",
+      "ru": "Добрый день",
+      "ce": "Добрый день",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40016,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Приветствие по времени суток",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.lastReadPage",
+      "ru": "Страница {{page}}",
+      "ce": "AgIa {{page}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40017,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Страница мусхафа",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.azkarSubtitle",
+      "ru": "{{done}} из {{total}} утренних и вечерних",
+      "ce": "{{done}} из {{total}} утренних и вечерних",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40018,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.greetingNight",
+      "ru": "Спокойной ночи",
+      "ce": "Спокойной ночи",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40018,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Приветствие по времени суток",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.hijriCardOpen",
+      "ru": "Весь календарь",
+      "ce": "Весь календарь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40018,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Карточка / виджет UI",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerLoading",
+      "ru": "Расчёт расписания…",
+      "ce": "Khata хьисапдо…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40018,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Индикатор загрузки",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.appUpdateLater",
+      "ru": "Позже",
+      "ce": "Позже",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.appUpdateTitle",
+      "ru": "Доступно обновление",
+      "ce": "Iotto обновление",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Заголовок экрана или блока",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.dailyGoalShort",
+      "ru": "Сегодня: {{done}} / {{goal}} стр.",
+      "ce": "Тa: {{done}} / {{goal}} стр.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.duaUnavailable",
+      "ru": "Дуа пока недоступно.",
+      "ce": "ДуIа пока недоступно.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerLocation",
+      "ru": "{{city}}",
+      "ce": "{{city}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerSoonText",
+      "ru": "Скоро здесь будет следующий намаз, город и время до него.",
+      "ce": "Скоро здесь будет следующий маор, город и время до него.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.readingSession",
+      "ru": "Сессия чтения: {{percent}}%",
+      "ce": "Sessi чтения: {{percent}}%",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40019,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.appUpdateAction",
+      "ru": "Обновить",
+      "ce": "Kxicham",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.ayahUnavailable",
+      "ru": "Аят пока недоступен.",
+      "ce": "Аьят пока недоступен.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Аят",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.continueReading",
+      "ru": "Продолжить чтение",
+      "ce": "Дешар дIадайта",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Продолжить",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.greetingEvening",
+      "ru": "Добрый вечер",
+      "ce": "Добрый вечер",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Приветствие по времени суток",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.greetingMorning",
+      "ru": "Доброе утро",
+      "ce": "Доброе утро",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Приветствие по времени суток",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.nameUnavailable",
+      "ru": "Имена Аллаха пока недоступны.",
+      "ce": "ЦIенаш АллахIа пока недоступны.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerCountdown",
+      "ru": "До намаза: {{time}}",
+      "ce": "До маоран: {{time}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40020,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.hijriUnavailable",
+      "ru": "Дата по хиджре недоступна",
+      "ce": "Дата по хиджре недоступна",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40021,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.lastReadPageAyah",
+      "ru": "Страница {{page}} • сура {{sura}}:{{ayah}}",
+      "ce": "AgIa {{page}} • сура {{sura}}:{{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40021,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Аят",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.readingWeekPages",
+      "ru": "За 7 дней: {{count}} стр.",
+      "ce": "За 7 дней: {{count}} стр.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40021,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Страница мусхафа",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.openHijriCalendar",
+      "ru": "Хиджра-календарь",
+      "ce": "ХIижра-календарь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40022,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.announcementAction",
+      "ru": "Подробнее",
+      "ce": "Ма-дарra",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40023,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.dailyGoalPagesUnit",
+      "ru": "страниц сегодня",
+      "ce": "страниц сегодня",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40023,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Страница мусхафа",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.openPrayerSettings",
+      "ru": "Настройки намаза",
+      "ce": "ГIирсаш маоран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40023,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Пункт настроек",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.announcementDismiss",
+      "ru": "Скрыть",
+      "ce": "Бахьа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40024,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.hijriHolidayNewYear",
+      "ru": "С новым годом по хиджре! Пусть Аллах дарует вам баракат.",
+      "ce": "С новым годом по хиджре! Пусть АллахI дарует вам баракат.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40024,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Праздник по хиджре",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.hijriHolidayRamadan",
+      "ru": "С наступлением Рамадана! Пусть этот месяц будет благословенным.",
+      "ce": "С наступлением Ramadanа! Пусть этот месяц будет благословенным.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40024,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Праздник по хиджре",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.openReadingActivity",
+      "ru": "Статистика",
+      "ce": "Статистика",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40024,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.prayerLocationDenied",
+      "ru": "Нет доступа к геолокации — выбран город из списка.",
+      "ce": "ХIан-хIa доступа к геолокации — выбран город из списка.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40025,
+      "hint": "Карточки на главном экране: намаз, аят, азкары",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.hijriHolidayEidAlAdha",
+      "ru": "С праздником Ид аль-Адха! Пусть Аллах примет ваши благие дела.",
+      "ce": "С праздником Ид аль-Адха! Пусть АллахI примет ваши благие дела.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40026,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Праздник по хиджре",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "home.hijriHolidayEidAlFitr",
+      "ru": "С праздником Ид аль-Фитр! Тақаббалаллаху минна ва минкум.",
+      "ce": "С праздником Ид аль-Фитр! Тақаббалаллаху минна ва минкум.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "home",
+      "groupLabel": "Главная",
+      "priority": 40026,
+      "hint": "Карточки на главном экране: намаз, аят, азкары · Праздник по хиджре",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "topBar.themeDark",
+      "ru": "Включить тёмную тему",
+      "ce": "Iottar тёмную тему",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "topBar",
+      "groupLabel": "Верхняя панель",
+      "priority": 50016,
+      "hint": "Заголовки и кнопки в шапке экранов · Тема оформления",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "topBar.themeLight",
+      "ru": "Включить светлую тему",
+      "ce": "Iottar светлую тему",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "topBar",
+      "groupLabel": "Верхняя панель",
+      "priority": 50017,
+      "hint": "Заголовки и кнопки в шапке экранов · Тема оформления",
+      "packs": [
+        "pack-02-home",
+        "pack-all"
+      ]
+    }
+  ]
+}

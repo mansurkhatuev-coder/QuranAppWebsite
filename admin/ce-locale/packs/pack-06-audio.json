@@ -1,0 +1,1660 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-06-audio",
+    "title": "6 · Аудио",
+    "description": "Плеер, чтецы, слушание",
+    "groups": [
+      "listening",
+      "playback",
+      "audio",
+      "reciter"
+    ]
+  },
+  "progress": {
+    "total": 96,
+    "filled": 96,
+    "empty": 0,
+    "sameAsRu": 40,
+    "translated": 56,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 58,
+    "sameAsRuPct": 42,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "listening.open",
+      "ru": "Начать",
+      "ce": "ДIайола",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100014,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.stop",
+      "ru": "Стоп",
+      "ce": "Стоп",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100014,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.continue",
+      "ru": "Продолжить",
+      "ce": "ДIайла",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100018,
+      "hint": "Режим прослушивания Корана · Продолжить",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.nextSura",
+      "ru": "След. сура",
+      "ce": "След. сура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100018,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.playA11y",
+      "ru": "Воспроизвести",
+      "ce": "Хьаьжо",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100018,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.prevSura",
+      "ru": "Пред. сура",
+      "ce": "Пред. сура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100018,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.comboHint",
+      "ru": "Сейчас играет:",
+      "ce": "Сейчас играет:",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана · Подсказка пользователю",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.homeEmpty",
+      "ru": "Выберите суру и слой: арабский, перевод или тафсир.",
+      "ce": "Харжа суру и слой: арабский, гоч или тафсир.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана · Пустое состояние — нет данных",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.homeTitle",
+      "ru": "Прослушивание",
+      "ce": "Ialаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.pauseA11y",
+      "ru": "Пауза",
+      "ce": "Паузa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.startSura",
+      "ru": "Слушать суру",
+      "ce": "Ialаш суру",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.suraShort",
+      "ru": "Сура {{number}}",
+      "ce": "Сура {{number}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.suraTitle",
+      "ru": "Сура",
+      "ce": "Сура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100019,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.homeStreak",
+      "ru": "Серия: {{count}} дн.",
+      "ce": "Серия: {{count}} дн.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.layerTitle",
+      "ru": "Слой",
+      "ce": "Kхae",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.nowPlaying",
+      "ru": "Сура {{sura}} · аят {{ayah}}",
+      "ce": "Сура {{sura}} · аьят {{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.presetFull",
+      "ru": "Араб + перевод + тафсир",
+      "ce": "Араб + гоч + тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.repeatHint",
+      "ru": "Сура будет прослушана {{count}} раз подряд",
+      "ce": "Сура будет прослушана {{count}} раз подряд",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана · Подсказка пользователю",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.repeatOnce",
+      "ru": "Один раз",
+      "ce": "Один раз",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.repeatPass",
+      "ru": "Проход {{pass}} из {{total}}",
+      "ce": "Проход {{pass}} из {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.streakDays",
+      "ru": "Серия {{count}} дн.",
+      "ce": "Серия {{count}} дн.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100020,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.layerArabic",
+      "ru": "Арабский",
+      "ce": "Iаьрбийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100021,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.layerTafsir",
+      "ru": "Тафсир",
+      "ce": "Тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100021,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.repeatTitle",
+      "ru": "Режим",
+      "ce": "Tajam",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100021,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.restartSura",
+      "ru": "Сначала",
+      "ce": "Хьалха",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100021,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.screenTitle",
+      "ru": "Прослушивание",
+      "ce": "Ialаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100021,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.homeProgress",
+      "ru": "Аят {{ayah}} из {{total}}",
+      "ce": "Аьят {{ayah}} из {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.nextSuraA11y",
+      "ru": "Следующая сура",
+      "ce": "Следующая сура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.openFromSura",
+      "ru": "Открыть режим прослушивания",
+      "ce": "Схьаа режим прослушивания",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.presetArabic",
+      "ru": "Арабский",
+      "ce": "Iаьрбийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.presetTafsir",
+      "ru": "Тафсир",
+      "ce": "Тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.prevSuraA11y",
+      "ru": "Предыдущая сура",
+      "ce": "Предыдущая сура",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.reciterTitle",
+      "ru": "Чтец",
+      "ce": "Кori",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100022,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.modeOnceShort",
+      "ru": "Раз",
+      "ce": "Раз",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100023,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.quranProgress",
+      "ru": "{{done}} из {{total}} аятов",
+      "ce": "{{done}} из {{total}} аьтанаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100023,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.resetProgress",
+      "ru": "Сбросить прогресс",
+      "ce": "MettigIa прогресс",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100023,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.miniPlayerDrag",
+      "ru": "Перетащить плеер вверх или вниз",
+      "ce": "Перетащить плеер вверх или вниз",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100024,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.miniPlayerOpen",
+      "ru": "Открыть прослушивание",
+      "ce": "Схьаа прослушивание",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100024,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.modeRepeatA11y",
+      "ru": "Повтор суры, сейчас {{count}} раз",
+      "ce": "Кхин а суранаш, сейчас {{count}} раз",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100024,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.playingEyebrow",
+      "ru": "Сейчас играет",
+      "ce": "Сейчас играет",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100024,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.lockScreen.ayah",
+      "ru": "Аят {{ayah}}",
+      "ce": "Аьят {{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100025,
+      "hint": "Режим прослушивания Корана · Аят",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.lockScreen.sura",
+      "ru": "Сура {{sura}}",
+      "ce": "Сура {{sura}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100025,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.miniPlayerClose",
+      "ru": "Остановить и закрыть",
+      "ce": "ТIоьхна и закрыть",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100025,
+      "hint": "Режим прослушивания Корана · Закрыть окно",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.modeRepeatShort",
+      "ru": "Повтор",
+      "ce": "Кхин а",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100025,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.suraListenCount",
+      "ru": "Прослушен: {{count}}",
+      "ce": "Прослушен: {{count}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100025,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.suraUnavailable",
+      "ru": "недоступно",
+      "ce": "недоступно",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100025,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.audioUnavailable",
+      "ru": "Аудио недоступно. Проверьте интернет или попробуйте позже.",
+      "ce": "Audio недоступно. Хьаа интернет или попробуйте позже.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100026,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.layerTranslation",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100026,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.modeContinueA11y",
+      "ru": "После суры перейти к следующей",
+      "ce": "TкIa суранаш перейти к следующей",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100026,
+      "hint": "Режим прослушивания Корана · Продолжить",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.modeContinueShort",
+      "ru": "Далее",
+      "ce": "Кхин дIа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100027,
+      "hint": "Режим прослушивания Корана · Продолжить",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.presetTranslation",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100027,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.quranKhatmCompact",
+      "ru": "Коран · {{percent}}%",
+      "ce": "Куран · {{percent}}%",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100027,
+      "hint": "Режим прослушивания Корана · Хатм / завершение Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.suraProgressShort",
+      "ru": "Сура {{sura}}: {{ayah}}/{{total}} · {{percent}}%",
+      "ce": "Сура {{sura}}: {{ayah}}/{{total}} · {{percent}}%",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100027,
+      "hint": "Режим прослушивания Корана · Сура",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.lockScreen.basmala",
+      "ru": "Басмала",
+      "ce": "Басмала",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100028,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.offlineReciterHint",
+      "ru": "Для прослушивания с выключенным экраном скачайте эту суру или весь пакет чтеца.",
+      "ce": "Для прослушивания с выключенным экраном скачайте эту суру или весь пакет кorin.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100028,
+      "hint": "Режим прослушивания Корана · Офлайн-режим",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.presetArabicTafsir",
+      "ru": "Араб + тафсир",
+      "ce": "Араб + тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100028,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.resetProgressTitle",
+      "ru": "Сбросить прогресс прослушивания?",
+      "ce": "MettigIa прогресс прослушивания?",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100028,
+      "hint": "Режим прослушивания Корана · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.layerSlotTafsirA11y",
+      "ru": "Слой «Тафсир». Нажмите, чтобы перейти к арабскому и выбрать чтеца",
+      "ce": "Kхae «Тафсир». Нажмите, чтобы перейти к арабскому и выбрать кorin",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100029,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.resetProgressConfirm",
+      "ru": "Сбросить",
+      "ce": "MettigIa",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100030,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.resetProgressMessage",
+      "ru": "Будут удалены сохранённые позиции, завершённые суры и последняя сессия. Офлайн-пакеты аудио не затрагиваются.",
+      "ce": "Будут удалены сохранённые позиции, завершённые суранаш и последняя сессия. Офлайн-пакеты аудио не затрагиваются.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100030,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.presetArabicTranslation",
+      "ru": "Араб + перевод",
+      "ce": "Араб + гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100033,
+      "hint": "Режим прослушивания Корана",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.layerSlotTranslationA11y",
+      "ru": "Слой «Перевод». Нажмите, чтобы перейти к арабскому и выбрать чтеца",
+      "ce": "Kхae «Гоч». Нажмите, чтобы перейти к арабскому и выбрать кorin",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100034,
+      "hint": "Режим прослушивания Корана · Слой в шаринг-карточке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.offlineReciterDownloadFull",
+      "ru": "Весь Коран",
+      "ce": "Весь Куран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100036,
+      "hint": "Режим прослушивания Корана · Скачивание офлайн-данных",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "listening.offlineReciterDownloadSura",
+      "ru": "Сура {{sura}}",
+      "ce": "Сура {{sura}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "listening",
+      "groupLabel": "Слушание",
+      "priority": 100036,
+      "hint": "Режим прослушивания Корана · Скачивание офлайн-данных",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.mode",
+      "ru": "Режим",
+      "ce": "Tajam",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105013,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.speed",
+      "ru": "Скорость",
+      "ce": "Zho",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105014,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.expand",
+      "ru": "Показать плеер",
+      "ce": "Гойта плеер",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105015,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.collapse",
+      "ru": "Скрыть плеер",
+      "ce": "Бахьа плеер",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105017,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.reciterA11y",
+      "ru": "Выбрать чтеца",
+      "ce": "Харжа кorin",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105020,
+      "hint": "Глобальный плеер: play, pause, скорость · Чтец",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.sourceAdhan",
+      "ru": "Азан",
+      "ce": "Азан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105020,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.sourceAzkar",
+      "ru": "Азкары",
+      "ce": "Азkarash",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105020,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.sourceQuran",
+      "ru": "Чтение Корана",
+      "ce": "Iaj Куранан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105020,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.adhanPreview",
+      "ru": "Превью азана",
+      "ce": "Превью азана",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105021,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.settingsA11y",
+      "ru": "Настройки плеера",
+      "ce": "ГIирсаш плеера",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105021,
+      "hint": "Глобальный плеер: play, pause, скорость · Пункт настроек",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.settingsTitle",
+      "ru": "Плеер",
+      "ce": "Плеер",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105022,
+      "hint": "Глобальный плеер: play, pause, скорость · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.basmalaPlaying",
+      "ru": "Басмала",
+      "ce": "Басмала",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105023,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.modeRepeatA11y",
+      "ru": "Повтор очереди",
+      "ce": "Кхин а очереди",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105023,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.modeSingleA11y",
+      "ru": "Один аят",
+      "ce": "Один аьят",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105023,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.sourceListening",
+      "ru": "Прослушивание",
+      "ce": "Ialаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105024,
+      "hint": "Глобальный плеер: play, pause, скорость",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "playback.modeContinueA11y",
+      "ru": "Продолжить по странице",
+      "ce": "ДIайла по странице",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "playback",
+      "groupLabel": "Плеер",
+      "priority": 105025,
+      "hint": "Глобальный плеер: play, pause, скорость · Продолжить",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "audio.error.network",
+      "ru": "Нет доступа к аудио-серверу. Проверьте интернет; возможно нужен VPN.",
+      "ce": "ХIан-хIa доступа к аудио-серверу. Хьаа интернет; возможно нужен VPN.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "audio",
+      "groupLabel": "Аудио",
+      "priority": 110019,
+      "hint": "Ошибки и статусы загрузки аудио · Сообщение об ошибке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "audio.error.playback",
+      "ru": "Не удалось воспроизвести аудио",
+      "ce": "Не удалось воспроизвести аудио",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "audio",
+      "groupLabel": "Аудио",
+      "priority": 110020,
+      "hint": "Ошибки и статусы загрузки аудио · Сообщение об ошибке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "audio.error.serverTimeout",
+      "ru": "Нет ответа от аудио-сервера. Проверьте интернет, возможно нужен VPN.",
+      "ce": "ХIан-хIa ответа от аудио-сервера. Хьаа интернет, возможно нужен VPN.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "audio",
+      "groupLabel": "Аудио",
+      "priority": 110025,
+      "hint": "Ошибки и статусы загрузки аудио · Сообщение об ошибке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "audio.error.unavailableTitle",
+      "ru": "Аудио недоступно",
+      "ce": "Audio недоступно",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "audio",
+      "groupLabel": "Аудио",
+      "priority": 110028,
+      "hint": "Ошибки и статусы загрузки аудио · Сообщение об ошибке",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.ajamy",
+      "ru": "Ахмед Аль-Аджами",
+      "ce": "Ахмед Аль-Аджами",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115018,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.basfar",
+      "ru": "Абдуллах Басфар",
+      "ce": "Абдуллах Басфар",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115019,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.husary",
+      "ru": "Махмуд Аль-Хусари",
+      "ce": "Махмуд Аль-Хусари",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115019,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.pickerTitle",
+      "ru": "Выбор чтеца",
+      "ce": "Выбор кorin",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115019,
+      "hint": "Список чтецов и офлайн-паки · Заголовок экрана или блока",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.alafasy",
+      "ru": "Мишари Аль-Афаси",
+      "ce": "МИшари Аль-Афаси",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115020,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.minshawi",
+      "ru": "Мухаммад Аль-Миншави",
+      "ce": "Мухаммад Аль-Миншави",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115021,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.aymansowaid",
+      "ru": "Айман Сувейд",
+      "ce": "Айман Сувейд",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115024,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.mahermuaiqly",
+      "ru": "Махер Аль-Муайкли",
+      "ce": "Махер Аль-Муайкли",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115025,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.mansouralsalimi",
+      "ru": "Мансур ас-Салими",
+      "ce": "Мансур ас-Салими",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115028,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.yasseraldossari",
+      "ru": "Яссир Аль-Досари",
+      "ce": "Яссир Аль-Досари",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115028,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.abdulbasitmurattal",
+      "ru": "Абдул Басит Муратталь",
+      "ce": "Абдул Басит Муратталь",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115031,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "reciter.name.abdurrahmaansudais",
+      "ru": "Абдуррахман Ас-Судайс",
+      "ce": "Абдуррахман Ас-Судайс",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "reciter",
+      "groupLabel": "Чтецы",
+      "priority": 115031,
+      "hint": "Список чтецов и офлайн-паки",
+      "packs": [
+        "pack-06-audio",
+        "pack-all"
+      ]
+    }
+  ]
+}

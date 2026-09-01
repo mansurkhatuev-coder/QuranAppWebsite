@@ -1,0 +1,3088 @@
+{
+  "generatedAt": "2026-09-01T19:11:26.320Z",
+  "pack": {
+    "id": "pack-04-quran",
+    "title": "4 · Коран и мусхаф",
+    "description": "Суры, чтение, страницы мусхафа",
+    "groups": [
+      "quran",
+      "sura",
+      "mushaf",
+      "tajweed"
+    ]
+  },
+  "progress": {
+    "total": 180,
+    "filled": 180,
+    "empty": 0,
+    "sameAsRu": 118,
+    "translated": 62,
+    "reviewed": 0,
+    "filledPct": 100,
+    "translatedPct": 34,
+    "sameAsRuPct": 66,
+    "reviewedPct": 0
+  },
+  "rows": [
+    {
+      "key": "quran.openSura",
+      "ru": "Открыть",
+      "ce": "Схьаа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70014,
+      "hint": "Список сур, режимы чтения, переводы · Сура",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.tabTitle",
+      "ru": "Коран",
+      "ce": "Куран",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70014,
+      "hint": "Список сур, режимы чтения, переводы · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.ayahCount",
+      "ru": "{{count}} аятов",
+      "ce": "{{count}} аьтанаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70015,
+      "hint": "Список сур, режимы чтения, переводы · Аят",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.emptyData",
+      "ru": "Данные пока не загружены.",
+      "ce": "ХIинца хIара хаамаш хьалацахь яц.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70015,
+      "hint": "Список сур, режимы чтения, переводы · Пустое состояние — нет данных",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.heroTitle",
+      "ru": "Режим суры",
+      "ce": "Tajam суранаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70015,
+      "hint": "Список сур, режимы чтения, переводы · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.modeSuras",
+      "ru": "Суры",
+      "ce": "Суры",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70015,
+      "hint": "Список сур, режимы чтения, переводы · Сура",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.modeMushaf",
+      "ru": "Мусхаф",
+      "ce": "Мусаф",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70016,
+      "hint": "Список сур, режимы чтения, переводы",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.heroSubtitle",
+      "ru": "Откройте нужную суру из списка или перейдите сразу по номеру.",
+      "ce": "Откройте нужную суру из списка или перейдите сразу по номеру.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70018,
+      "hint": "Список сур, режимы чтения, переводы · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.continueReading",
+      "ru": "Продолжить чтение",
+      "ce": "Дешар дIадайта",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70021,
+      "hint": "Список сур, режимы чтения, переводы · Продолжить",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.revelationMeccan",
+      "ru": "мекканская",
+      "ce": "мекканская",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70022,
+      "hint": "Список сур, режимы чтения, переводы",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.revelationMedinan",
+      "ru": "мединская",
+      "ce": "мединская",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70023,
+      "hint": "Список сур, режимы чтения, переводы",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "quran.continueReadingMeta",
+      "ru": "Сура {{sura}} · аят {{ayah}}",
+      "ce": "Сура {{sura}} · аьят {{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "quran",
+      "groupLabel": "Коран",
+      "priority": 70025,
+      "hint": "Список сур, режимы чтения, переводы · Продолжить",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.go",
+      "ru": "Перейти",
+      "ce": "Локальни",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75011,
+      "hint": "Экран суры: аяты, плеер, таджвид",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.title",
+      "ru": "Навигация по аятам",
+      "ce": "Навигация по аьятанм",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75014,
+      "hint": "Экран суры: аяты, плеер, таджвид · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.tafsir.hide",
+      "ru": "Скрыть тафсир",
+      "ce": "Бахьа тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75016,
+      "hint": "Экран суры: аяты, плеер, таджвид",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.tafsir.show",
+      "ru": "Показать тафсир",
+      "ce": "Гойта тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75016,
+      "hint": "Экран суры: аяты, плеер, таджвид",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.layer.arabic",
+      "ru": "Арабский",
+      "ce": "Iаьрбийн",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75017,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.layer.tafsir",
+      "ru": "Тафсир",
+      "ce": "Тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75017,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.openA11y",
+      "ru": "Навигация по аятам",
+      "ce": "Навигация по аьятанм",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75017,
+      "hint": "Экран суры: аяты, плеер, таджвид",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.layer.tajweed",
+      "ru": "Таджвид",
+      "ce": "Тажвид",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75018,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.player.nowAyah",
+      "ru": "Сейчас: аят {{sura}}:{{ayah}}",
+      "ce": "Сейчас: аьят {{sura}}:{{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75019,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.player.tapHint",
+      "ru": "Нажмите на аят для прослушивания",
+      "ce": "Нажмите на аьят для прослушивания",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75019,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.currentAyah",
+      "ru": "Аят {{ayah}} / {{total}}",
+      "ce": "Аьят {{ayah}} / {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75020,
+      "hint": "Экран суры: аяты, плеер, таджвид · Аят",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.nextAyahA11y",
+      "ru": "Следующий аят",
+      "ce": "Следующий аьят",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75021,
+      "hint": "Экран суры: аяты, плеер, таджвид · Аят",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.prevAyahA11y",
+      "ru": "Предыдущий аят",
+      "ce": "Предыдущий аьят",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75021,
+      "hint": "Экран суры: аяты, плеер, таджвид · Аят",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.layer.translation",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75022,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.nav.scrollTopA11y",
+      "ru": "Вернуться наверх",
+      "ce": "Вернуться наверх",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75022,
+      "hint": "Экран суры: аяты, плеер, таджвид",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.player.nowBasmala",
+      "ru": "Сейчас: басмала",
+      "ce": "Сейчас: басмала",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75022,
+      "hint": "Экран суры: аяты, плеер, таджвид · Слой в шаринг-карточке",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "sura.screen.bySuraTitle",
+      "ru": "По суре",
+      "ce": "По суре",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "sura",
+      "groupLabel": "Сура",
+      "priority": 75023,
+      "hint": "Экран суры: аяты, плеер, таджвид · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.go",
+      "ru": "Перейти",
+      "ce": "Локальни",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80013,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.juz",
+      "ru": "Джуз",
+      "ce": "Juз",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80014,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.reciter",
+      "ru": "Чтец",
+      "ce": "Кori",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80014,
+      "hint": "Страницы мусхафа, масштаб, закладки · Чтец",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.ayah",
+      "ru": "Аят",
+      "ce": "Аьят",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80015,
+      "hint": "Страницы мусхафа, масштаб, закладки · Аят",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.page",
+      "ru": "Стр.",
+      "ce": "Стр.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80015,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.juzGo",
+      "ru": "Джуз",
+      "ce": "Juз",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80016,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.off",
+      "ru": "Выкл",
+      "ce": "Baц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80018,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab1",
+      "ru": "Lab 1 · WebView",
+      "ce": "Lab 1 · WebView",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80019,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab2",
+      "ru": "Lab 2 · Majeed",
+      "ce": "Lab 2 · Majeed",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80019,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.hint.tapAyah",
+      "ru": "Кликните по аяту для воспроизведения, долгое нажатие вызовет окно с тафсиром и переводом",
+      "ce": "Кликните по аьяту для воспроизведения, долгое нажатие вызовет окно с тафсиром и гочом",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80019,
+      "hint": "Страницы мусхафа, масштаб, закладки · Подсказка пользователю",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.modal.tafsir",
+      "ru": "Тафсир",
+      "ce": "Тафсир",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80019,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.chrome.expand",
+      "ru": "Показать навигацию",
+      "ce": "Гойта навигацию",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80020,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.empty",
+      "ru": "В clip lab нечего показать.",
+      "ce": "В clip lab нечего показать.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80020,
+      "hint": "Страницы мусхафа, масштаб, закладки · Пустое состояние — нет данных",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.modal.ayahRef",
+      "ru": "Аят {{sura}}:{{ayah}}",
+      "ce": "Аьят {{sura}}:{{ayah}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80020,
+      "hint": "Страницы мусхафа, масштаб, закладки · Аят",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.navigation",
+      "ru": "Навигация",
+      "ce": "Навигация",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80021,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.pageLabelShort",
+      "ru": "стр. {{page}}",
+      "ce": "стр. {{page}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80021,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.chrome.collapse",
+      "ru": "Скрыть навигацию",
+      "ce": "Бахьа навигацию",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80022,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.loading",
+      "ru": "Загрузка clip lab…",
+      "ce": "Хьалох clip lab…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80022,
+      "hint": "Страницы мусхафа, масштаб, закладки · Индикатор загрузки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.empty.notLoaded",
+      "ru": "Данные пока не загружены.",
+      "ce": "ХIинца хIара хаамаш хьалацахь яц.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80022,
+      "hint": "Страницы мусхафа, масштаб, закладки · Пустое состояние — нет данных",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.pageJuzMeta",
+      "ru": "Стр. {{page}} • Джуз {{juz}}",
+      "ce": "Стр. {{page}} • Juз {{juz}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80022,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4LoadingJuz",
+      "ru": "Загрузка джуза {{juz}}…",
+      "ce": "Хьалох джуза {{juz}}…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80022,
+      "hint": "Страницы мусхафа, масштаб, закладки · Индикатор загрузки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab2Hint",
+      "ru": "Majeed как Payde: карточка страницы, заголовок суры, басмала отдельно, аяты с переносом. Pinch — кегль, не CSS zoom.",
+      "ce": "Majeed как Payde: карточка страницы, заголовок суранаш, басмала отдельно, аьяты с переносом. Pinch — кегль, не CSS zoom.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80023,
+      "hint": "Страницы мусхафа, масштаб, закладки · Подсказка пользователю",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.offShort",
+      "ru": "Выкл",
+      "ce": "Baц",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80023,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.nextPageA11y",
+      "ru": "Перейти на страницу {{page}}",
+      "ce": "Локальни на страницу {{page}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80023,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.prevPageA11y",
+      "ru": "Перейти на страницу {{page}}",
+      "ce": "Локальни на страницу {{page}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80023,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.chrome.expandPage",
+      "ru": "{{page}}. Показать навигацию",
+      "ce": "{{page}}. Гойта навигацию",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab1Short",
+      "ru": "L1 WV",
+      "ce": "L1 WV",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab2Short",
+      "ru": "L2",
+      "ce": "L2",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab2Title",
+      "ru": "Lab 2 · Majeed",
+      "ce": "Lab 2 · Majeed",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.modal.translation",
+      "ru": "Перевод",
+      "ce": "Гоч",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.nextPageShort",
+      "ru": "След. >",
+      "ce": "След. >",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.prevPageShort",
+      "ru": "< Пред.",
+      "ce": "< Пред.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80024,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.amiri",
+      "ru": "Amiri",
+      "ce": "Amiri",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80025,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.kitab",
+      "ru": "Kitab",
+      "ce": "Kitab",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80025,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.suraListToggle",
+      "ru": "Выбрать суру из списка",
+      "ce": "Харжа суру из списка",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80025,
+      "hint": "Страницы мусхафа, масштаб, закладки · Сура",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.mushaf",
+      "ru": "Mushaf (Majeed QURANFONT=2)",
+      "ce": "Mushaf (Majeed QURANFONT=2)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80026,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.suraSearchEmpty",
+      "ru": "Ничего не найдено",
+      "ce": "Ничего не найдено",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80026,
+      "hint": "Страницы мусхафа, масштаб, закладки · Пустое состояние — нет данных",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.islamic",
+      "ru": "IslamicFont (Usmanic)",
+      "ce": "IslamicFont (Usmanic)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80027,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.fontFallback",
+      "ru": "Шрифты lab не загрузились — системный шрифт может клипать иначе.",
+      "ce": "Шрифты lab не загрузились — системный шрифт может клипать иначе.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80027,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.pageJuzTotalMeta",
+      "ru": "Стр. {{page}} / {{total}} - Джуз {{juz}}",
+      "ce": "Стр. {{page}} / {{total}} - Juз {{juz}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80027,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.saleemAc",
+      "ru": "Saleem AC",
+      "ce": "Saleem AC",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80028,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.switcherTitle",
+      "ru": "CLIP LAB (dev) — вырезать после исследования",
+      "ce": "CLIP LAB (dev) — вырезать после исследования",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80028,
+      "hint": "Страницы мусхафа, масштаб, закладки · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.notoNaskh",
+      "ru": "Noto Naskh",
+      "ce": "Noto Naskh",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80029,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.saleemRes",
+      "ru": "Saleem (APK res)",
+      "ce": "Saleem (APK res)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80029,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.pageCurrentOfTotal",
+      "ru": "Стр. {{page}} / {{total}}",
+      "ce": "Стр. {{page}} / {{total}}",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80029,
+      "hint": "Страницы мусхафа, масштаб, закладки · Страница мусхафа",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartTitle",
+      "ru": "Полностью закройте приложение",
+      "ce": "Полностью закройте приложение",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80029,
+      "hint": "Страницы мусхафа, масштаб, закладки · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.amiriQuran",
+      "ru": "Amiri Quran",
+      "ce": "Amiri Quran",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.amiriShort",
+      "ru": "Amiri",
+      "ce": "Amiri",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.kitabShort",
+      "ru": "Kitab",
+      "ce": "Kitab",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.saleemLigs",
+      "ru": "Saleem ligs (живой Majeed IndoPak)",
+      "ce": "Saleem ligs (живой Majeed IndoPak)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.uthmanTaha",
+      "ru": "Uthman Taha",
+      "ce": "Uthman Taha",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.lab2Placeholder",
+      "ru": "Режим Majeed, стр. {{page}} (Saleem + zoom на страницу).",
+      "ce": "Tajam Majeed, стр. {{page}} (Saleem + zoom на страницу).",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartAction",
+      "ru": "Как закрыть приложение",
+      "ce": "Как закрыть приложение",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки · Тема оформления",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.restore.readingPosition",
+      "ru": "Восстановление места чтения...",
+      "ce": "Восстановление места чтения...",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80030,
+      "hint": "Страницы мусхафа, масштаб, закладки",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.islamicBold",
+      "ru": "IslamicFont bold",
+      "ce": "IslamicFont bold",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80031,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.mushafShort",
+      "ru": "Mushaf",
+      "ce": "Mushaf",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80031,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartDismiss",
+      "ru": "Продолжить без перезапуска",
+      "ce": "ДIайла без перезапуска",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80031,
+      "hint": "Страницы мусхафа, масштаб, закладки · Тема оформления",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartMessage",
+      "ru": "После смены темы QCF-таджвиду нужен полный перезапуск приложения (не перезагрузка внутри). Закройте приложение полностью и откройте снова, или продолжите с новой темой.",
+      "ce": "TкIa смены темы QCF-тажвиду нужен полный перезапуск приложения (не перезагрузка внутри). Закройте приложение полностью и откройте снова, или продолжите с новой темой.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80031,
+      "hint": "Страницы мусхафа, масштаб, закладки · Тема оформления",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.islamicShort",
+      "ru": "Islamic",
+      "ce": "Islamic",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80032,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.scheherazade",
+      "ru": "Scheherazade",
+      "ce": "Scheherazade",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80032,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.uthmanicHafs",
+      "ru": "Uthmanic Hafs",
+      "ce": "Uthmanic Hafs",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80032,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.fontSwitcherTitle",
+      "ru": "Шрифт lab (Majeed / наш)",
+      "ce": "Шрифт lab (Majeed / наш)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80032,
+      "hint": "Страницы мусхафа, масштаб, закладки · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.nav.suraSearchPlaceholder",
+      "ru": "Найти суру…",
+      "ce": "Latt суру…",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80032,
+      "hint": "Страницы мусхафа, масштаб, закладки · Поле или плейсхолдер поиска",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartCloseApp",
+      "ru": "Закрыть приложение",
+      "ce": "ДIан приложение",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80032,
+      "hint": "Страницы мусхафа, масштаб, закладки · Закрыть окно",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.saleemAcShort",
+      "ru": "AC",
+      "ce": "AC",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80033,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.kfgqpcUthmanic",
+      "ru": "KFGQPC Усмани",
+      "ce": "KFGQPC Усмани",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80034,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.notoNaskhShort",
+      "ru": "Noto",
+      "ce": "Noto",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80034,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.saleemResShort",
+      "ru": "S-res",
+      "ce": "S-res",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80034,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.amiriQuranShort",
+      "ru": "AQ",
+      "ce": "AQ",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80035,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.saleemLigsShort",
+      "ru": "Saleem",
+      "ce": "Saleem",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80035,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.uthmanTahaShort",
+      "ru": "Taha",
+      "ce": "Taha",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80035,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.islamicBoldShort",
+      "ru": "I-bold",
+      "ce": "I-bold",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80036,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.scheherazadeShort",
+      "ru": "Scheh",
+      "ce": "Scheh",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80037,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.uthmanicHafsShort",
+      "ru": "Hafs",
+      "ce": "Hafs",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80037,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.clipLab.font.kfgqpcUthmanicShort",
+      "ru": "KFG",
+      "ce": "KFG",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80039,
+      "hint": "Страницы мусхафа, масштаб, закладки · Шрифт",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartInstructionsIos",
+      "ru": "Смахните вверх от нижнего края экрана (или дважды нажмите кнопку Home), смахните это приложение из списка, затем откройте его снова с главного экрана.",
+      "ce": "Смахните вверх от нижнего края экрана (или дважды нажмите кнопку Home), смахните это приложение из списка, затем откройте его снова с главного экрана.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80039,
+      "hint": "Страницы мусхафа, масштаб, закладки · Тема оформления",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartInstructionsTitle",
+      "ru": "Полный перезапуск",
+      "ce": "Derrig перезапуск",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80041,
+      "hint": "Страницы мусхафа, масштаб, закладки · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "mushaf.qcfV4ThemeRestartInstructionsAndroid",
+      "ru": "Полностью закройте приложение и откройте снова из списка приложений. Перезагрузка внутри приложения не сбрасывает QCF-шрифты.",
+      "ce": "Полностью закройте приложение и откройте снова из списка приложений. Перезагрузка внутри приложения не сбрасывает QCF-шрифты.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "mushaf",
+      "groupLabel": "Мусхаф",
+      "priority": 80043,
+      "hint": "Страницы мусхафа, масштаб, закладки · Тема оформления",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.open",
+      "ru": "Справочник таджвида",
+      "ce": "Справочник тажвидан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190018,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.close",
+      "ru": "Закрыть",
+      "ce": "ДIан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190019,
+      "hint": "Подписи в режиме таджвида · Закрыть окно",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.title",
+      "ru": "Справочник цветов таджвида",
+      "ce": "Справочник цветов тажвидан",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190019,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.disable",
+      "ru": "Выключить таджвид",
+      "ce": "Iottar baц тажвид",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190021,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.subtitle",
+      "ru": "Значения цветов правил таджвида в тексте мусхафа.",
+      "ce": "Значения цветов правил тажвидан в тексте мусафа.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190022,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.madd",
+      "ru": "Мадд таби‘и (естественное удлинение)",
+      "ce": "Мадд таби‘и (естественное удлинение)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190023,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd.title",
+      "ru": "Оранжевый — удлинение (мадд)",
+      "ce": "Оранжевый — удлинение (мадд)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190024,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.ikhfa",
+      "ru": "Ихфа — сокрытие нуна или танвина",
+      "ce": "Ихфа — сокрытие нуна или танвина",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190024,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.iqlab",
+      "ru": "Икляб — превращение нуна в мим перед ب",
+      "ce": "Икляб — превращение нуна в мим перед ب",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190024,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.madd2",
+      "ru": "Мадд 2 хараката",
+      "ce": "Мадд 2 хараката",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190024,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.madd6",
+      "ru": "Мадд лязим (6 счётов)",
+      "ce": "Мадд лязим (6 счётов)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190024,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.enableQcfV4",
+      "ru": "Включить QCF V4 глифы",
+      "ce": "Iottar QCF V4 глифы",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190025,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.green.title",
+      "ru": "Зелёный — гунна и сокрытие",
+      "ce": "Зелёный — гунна и сокрытие",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190025,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd2.title",
+      "ru": "Коричневый — мадд (2 счёта)",
+      "ce": "Коричневый — мадд (2 счёта)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190025,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd6.title",
+      "ru": "Тёмно-красный — мадд (6 счётов)",
+      "ce": "Тёмно-красный — мадд (6 счётов)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190025,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.muted.title",
+      "ru": "Серый — без звука и слияние",
+      "ce": "Серый — без звука и слияние",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190025,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.silent",
+      "ru": "Непроизносимые буквы",
+      "ce": "Непроизносимые хьаьрфаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190025,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd45.title",
+      "ru": "Красный — мадд (4–5 счётов)",
+      "ce": "Красный — мадд (4–5 счётов)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190026,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.ghunnah",
+      "ru": "Гунна (ن، م с шаддой)",
+      "ce": "Гунна (ن، م с шаддой)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190026,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.madd246",
+      "ru": "Мадд ваджиб или джа’из (4–6 счётов)",
+      "ce": "Мадд ваджиб или джа’из (4–6 счётов)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190026,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.qalqalah",
+      "ru": "Калькаля сугъра или кубра",
+      "ce": "Калькаля сугъра или кубра",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190027,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.variantMushaf",
+      "ru": "Quran.com (Unicode / QCF V4)",
+      "ce": "Quran.com (Unicode / QCF V4)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190027,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.qalqalah.title",
+      "ru": "Голубой — калькаля",
+      "ce": "Голубой — калькаля",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190028,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.enableQfUnicode",
+      "ru": "Включить Quran.com Unicode",
+      "ce": "Iottar Quran.com Unicode",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190029,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.hamzatWasl",
+      "ru": "Хамзат аль-васль",
+      "ce": "Хамзат аль-васль",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190029,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd.description",
+      "ru": "Естественное или обязательное удлинение гласной.",
+      "ce": "Естественное или обязательное удлинение гласной.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190030,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.ikhfa",
+      "ru": "Ихфа",
+      "ce": "Ихфа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190030,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.iqlab",
+      "ru": "Икляб",
+      "ce": "Икляб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190030,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.green.description",
+      "ru": "Удержание звука в носу или сокрытие буквы перед губной.",
+      "ce": "Удержание звука в носу или сокрытие хьаьрфаш перед губной.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd2.description",
+      "ru": "Удлинение на два хараката, когда после буквы мадда стоит сукун.",
+      "ce": "Удлинение на два хараката, когда после хьаьрфаш мадда стоит сукун.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd6.description",
+      "ru": "Обязательный мадд, удлиняемый на шесть счётов.",
+      "ce": "Обязательный мадд, удлиняемый на шесть счётов.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.muted.description",
+      "ru": "Буквы без произношения или слияние без гунны.",
+      "ce": "Хьаьрфаш без произношения или слияние без гунны.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.maddMunfasil",
+      "ru": "Мадд мунфасиль (разделённый)",
+      "ce": "Мадд мунфасиль (разделённый)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.maddMuttasil",
+      "ru": "Мадд муттасиль (связанный)",
+      "ce": "Мадд муттасиль (связанный)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.ikhfa.title",
+      "ru": "Фиолетовый — ихфа",
+      "ce": "Фиолетовый — ихфа",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.iqlab.title",
+      "ru": "Голубой — икляб",
+      "ce": "Голубой — икляб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.silent",
+      "ru": "Непроизносимые буквы",
+      "ce": "Непроизносимые хьаьрфаш",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190031,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.madd45.description",
+      "ru": "Связанный или разделённый мадд на четыре или пять счётов.",
+      "ce": "Связанный или разделённый мадд на четыре или пять счётов.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190032,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.lamShamsiyyah",
+      "ru": "Лям шамсия (ассимилированный лям)",
+      "ce": "Лям шамсия (ассимилированный лям)",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190032,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.ghunnah",
+      "ru": "Гунна",
+      "ce": "Гунна",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190032,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.silent.title",
+      "ru": "Серый — без звука",
+      "ce": "Серый — без звука",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190032,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.idghaamGhunnah",
+      "ru": "Идгам с гунной",
+      "ce": "Идгам с гунной",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190033,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.ghunnah.title",
+      "ru": "Оранжевый — гунна",
+      "ce": "Оранжевый — гунна",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190033,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.qalqalah",
+      "ru": "Калькаля",
+      "ce": "Калькаля",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190033,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.qalqalah.description",
+      "ru": "Отскок (эхо) на буквах с сукуном из группы ق ط ب ج د.",
+      "ce": "Отскок (эхо) на буквах с сукуном из группы ق ط ب ج د.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190034,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.qalqalah.title",
+      "ru": "Красный — калькаля",
+      "ce": "Красный — калькаля",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190034,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.guide.rule.idghaamNoGhunnah",
+      "ru": "Идгам без гунны",
+      "ce": "Идгам без гунны",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190035,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.hamzatWasl",
+      "ru": "Хамзат аль-васль",
+      "ce": "Хамзат аль-васль",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190035,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.maddNormal",
+      "ru": "Мадд таби‘и",
+      "ce": "Мадд таби‘и",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190035,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.maddNormal.title",
+      "ru": "Синий — мадд таби‘и",
+      "ce": "Синий — мадд таби‘и",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190036,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.ikhfa.description",
+      "ru": "Сокрытие нуна, танвина или мима с сукуном.",
+      "ce": "Сокрытие нуна, танвина или мима с сукуном.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190037,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.iqlab.description",
+      "ru": "Превращение нуна в мим перед буквой ب.",
+      "ce": "Превращение нуна в мим перед буквой ب.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190037,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.ikhfaShafawi",
+      "ru": "Ихфа шафави",
+      "ce": "Ихфа шафави",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190037,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.idghamGhunnah",
+      "ru": "Идгам с гунной",
+      "ce": "Идгам с гунной",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190038,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.idghamShafawi",
+      "ru": "Идгам шафави",
+      "ce": "Идгам шафави",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190038,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.lamShamsiyyah",
+      "ru": "Лям шамсия",
+      "ce": "Лям шамсия",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190038,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.silent.description",
+      "ru": "Непроизносимые буквы и ассимилированный лям.",
+      "ce": "Непроизносимые хьаьрфаш и ассимилированный лям.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190038,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.ghunnah.description",
+      "ru": "Удержание звука в носу (нун или мим с шаддой).",
+      "ce": "Удержание звука в носу (нун или мим с шаддой).",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190039,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.idghamGhunnah.title",
+      "ru": "Бирюзовый — идгам с гунной",
+      "ce": "Бирюзовый — идгам с гунной",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190039,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.idghamShafawi.title",
+      "ru": "Салатовый — идгам шафави",
+      "ce": "Салатовый — идгам шафави",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190039,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.maddObligatory",
+      "ru": "Мадд ваджиб",
+      "ce": "Мадд ваджиб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190039,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.maddObligatory.title",
+      "ru": "Тёмно-синий — мадд ваджиб",
+      "ce": "Тёмно-синий — мадд ваджиб",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190040,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.qalqalah.description",
+      "ru": "Отскок на буквах ق ط ب ج د с сукуном.",
+      "ce": "Отскок на буквах ق ط ب ج د с сукуном.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190040,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.idghamNoGhunnah",
+      "ru": "Идгам без гунны",
+      "ce": "Идгам без гунны",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190040,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.rule.maddPermissible",
+      "ru": "Мадд джа’из",
+      "ce": "Мадд джа’из",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190040,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.idghamNoGhunnah.title",
+      "ru": "Зелёный — идгам без гунны",
+      "ce": "Зелёный — идгам без гунны",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190041,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.maddPermissible.title",
+      "ru": "Синий — мадд джа’из",
+      "ce": "Синий — мадд джа’из",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190041,
+      "hint": "Подписи в режиме таджвида · Заголовок экрана или блока",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.maddNormal.description",
+      "ru": "Естественное удлинение на два счёта.",
+      "ce": "Естественное удлинение на два счёта.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190042,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.idghamGhunnah.description",
+      "ru": "Слияние с удержанием звука в носу.",
+      "ce": "Слияние с удержанием звука в носу.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190045,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.idghamShafawi.description",
+      "ru": "Слияние мима с сукуном в другой мим.",
+      "ce": "Слияние мима с сукуном в другой мим.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190045,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.maddObligatory.description",
+      "ru": "Обязательное удлинение на 4–5 счётов.",
+      "ce": "Обязательное удлинение на 4–5 счётов.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190046,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.idghamNoGhunnah.description",
+      "ru": "Слияние без удержания в носу.",
+      "ce": "Слияние без удержания в носу.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190047,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tajweed.mushafGuide.maddPermissible.description",
+      "ru": "Допустимое удлинение на 4–5 счётов.",
+      "ce": "Допустимое удлинение на 4–5 счётов.",
+      "status": "todo",
+      "sourceStatus": "ai-draft",
+      "note": "AI/rule draft from ru.ts — native review recommended",
+      "updatedAt": "2026-09-01T18:52:55.897Z",
+      "group": "tajweed",
+      "groupLabel": "Таджвид (UI)",
+      "priority": 190047,
+      "hint": "Подписи в режиме таджвида",
+      "packs": [
+        "pack-04-quran",
+        "pack-all"
+      ]
+    }
+  ]
+}
