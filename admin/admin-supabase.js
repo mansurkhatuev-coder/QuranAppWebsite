@@ -517,7 +517,13 @@
       updated_at: new Date().toISOString(),
       updated_by: email,
     });
-    if (error) throw error;
+    if (error) {
+      const hint =
+        error.code === '42P01' || /does not exist/i.test(error.message ?? '')
+          ? 'Таблица ce_locale_draft не найдена — выполните миграцию в Supabase'
+          : error.message;
+      throw new Error(hint || 'Не удалось сохранить в Supabase');
+    }
     return { ok: true, updatedBy: email };
   }
 

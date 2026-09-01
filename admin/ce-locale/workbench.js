@@ -16,6 +16,7 @@
     cloudReady: false,
     cloudBusy: false,
     cloudMeta: null,
+    saveBusy: false,
   };
 
   function $(id) {
@@ -26,7 +27,7 @@
     return key.split('.')[0] || 'other';
   }
 
-  function flash(message, isError = false) {
+  function flash(message, isError = false, durationMs = 2200) {
     const el = $('msg');
     if (!el) return;
     el.textContent = message;
@@ -35,7 +36,57 @@
     flash.timer = global.setTimeout(() => {
       el.textContent = '';
       el.className = 'hint';
-    }, 2200);
+    }, durationMs);
+  }
+
+  function setSaveFeedback(message, tone = '', durationMs = 4000) {
+    const status = $('save-status');
+    if (status) {
+      status.textContent = message || '';
+      status.className = `save-status${tone ? ` ${tone}` : ''}`;
+      if (message && durationMs > 0) {
+        global.clearTimeout(setSaveFeedback.timer);
+        setSaveFeedback.timer = global.setTimeout(() => {
+          if (status.textContent === message) {
+            status.textContent = '';
+            status.className = 'save-status';
+          }
+        }, durationMs);
+      }
+    }
+    if (message) {
+      flash(message, tone === 'err', durationMs);
+      if (tone === 'ok') setCloudStatus(message, 'ok');
+      else if (tone === 'err') setCloudStatus(message, 'err');
+      else if (tone === 'busy') setCloudStatus(message);
+    }
+  }
+
+  function setSaveBusy(busy) {
+    state.saveBusy = busy;
+    const saveBtn = $('save');
+    const saveReviewedBtn = $('save-reviewed');
+    const nextBtn = $('next-unreviewed');
+    if (saveBtn) {
+      saveBtn.disabled = busy;
+      saveBtn.textContent = busy ? 'Сохраняем…' : 'Сохранить';
+    }
+    if (saveReviewedBtn) saveReviewedBtn.disabled = busy;
+    if (nextBtn) nextBtn.disabled = busy;
+  }
+
+  function persistLocalSafe() {
+    try {
+      persistLocal();
+      return true;
+    } catch (error) {
+      const message =
+        error instanceof Error && /quota/i.test(error.message)
+          ? 'Браузер переполнен — войдите и сохраните на сайт'
+          : 'Не удалось сохранить в браузере';
+      setSaveFeedback(message, 'err');
+      return false;
+    }
   }
 
   function isFilled(row) {
@@ -591,7 +642,7 @@
       if (!state.cloudBusy) setCloudStatus('Войдите тем же email/паролем, что в админке');
     }
 
-    const disabled = state.cloudBusy || !state.cloudReady;
+    const disabled = state.cloudBusy || state.saveBusy || !state.cloudReady;
     if (saveBtn) saveBtn.disabled = disabled;
     if (pullBtn) pullBtn.disabled = disabled;
     if (signoutBtn) signoutBtn.disabled = state.cloudBusy;
@@ -679,14 +730,29 @@
     }
     state.cloudBusy = true;
     updateCloudUi();
-    setCloudStatus('Сохраняем на сайт…');
+    if (!options.silent) setSaveFeedback('Сохраняем на сайт…', 'busy', 0);
+    else setCloudStatus('Сохраняем на сайт…');
     try {
       const payload = buildCloudPayload();
-      await global.AdminSupabase.saveCeLocaleDraft(payload);
+      const savePromise = global.AdminSupabase.saveCeLocaleDraft(payload);
+      const timeoutMs = 45000;
+      const result = await Promise.race([
+        savePromise,
+        new Promise((_, reject) => {
+          global.setTimeout(() => reject(new Error('Таймаут сохранения (45 с)')), timeoutMs);
+        }),
+      ]);
       state.cloudMeta = { updated_at: payload.savedAt, updated_by: state.cloudSession?.user?.email };
-      setCloudStatus(`Сохранено на сайт · ${new Date(payload.savedAt).toLocaleString('ru-RU')}`, 'ok');
-      if (!options.silent) flash('Сохранено на сайт');
-      return true;
+      const stamp = new Date(payload.savedAt).toLocaleString('ru-RU');
+      const message = `Сохранено на сайт · ${stamp}`;
+      setCloudStatus(message, 'ok');
+      if (!options.silent) setSaveFeedback(message, 'ok');
+      return result;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка сохранения';
+      setCloudStatus(message, 'err');
+      if (!options.silent) setSaveFeedback(message, 'err');
+      throw error;
     } finally {
       state.cloudBusy = false;
       updateCloudUi();
@@ -765,35 +831,44 @@
   }
 
   async function save(options = {}) {
-    collectEditorValues();
-    if (options.markFocusedReviewed && state.focusedKey) {
-      const row = state.rows.find((item) => item.key === state.focusedKey);
-      if (row) row.status = 'reviewed';
-    }
-    persistLocal();
-    render();
+    if (state.saveBusy) return;
+    setSaveBusy(true);
+    setSaveFeedback('Сохраняем…', 'busy', 0);
 
-    if (state.cloudReady && !options.skipCloud) {
-      try {
+    try {
+      collectEditorValues();
+      if (options.markFocusedReviewed && state.focusedKey) {
+        const row = state.rows.find((item) => item.key === state.focusedKey);
+        if (row) row.status = 'reviewed';
+      }
+
+      persistLocalSafe();
+      stats();
+      if (state.focusedKey) updateRowChrome(state.focusedKey);
+
+      if (state.cloudReady && !options.skipCloud) {
         await cloudSave({ silent: true });
-        flash(
-          options.markFocusedReviewed
-            ? 'Проверено и сохранено на сайт'
-            : 'Сохранено в браузере и на сайт'
-        );
-        return;
-      } catch (error) {
-        flash(
-          `${options.markFocusedReviewed ? 'Проверено локально' : 'Сохранено локально'} · облако: ${
-            error instanceof Error ? error.message : 'ошибка'
-          }`,
-          true
-        );
+        const message = options.markFocusedReviewed
+          ? 'Проверено и сохранено на сайт'
+          : 'Сохранено в браузере и на сайт';
+        setSaveFeedback(message, 'ok');
         return;
       }
-    }
 
-    flash(options.markFocusedReviewed ? 'Сохранено и отмечено проверенным' : 'Сохранено локально');
+      const message = state.cloudReady
+        ? options.markFocusedReviewed
+          ? 'Сохранено и отмечено проверенным'
+          : 'Сохранено локально'
+        : options.markFocusedReviewed
+          ? 'Проверено · только в этом браузере (войдите для сохранения на сайт)'
+          : 'Сохранено только в этом браузере · войдите ниже для сайта';
+      setSaveFeedback(message, state.cloudReady ? 'ok' : 'warn');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Ошибка сохранения';
+      setSaveFeedback(message, 'err');
+    } finally {
+      setSaveBusy(false);
+    }
   }
 
   function focusNext(fromKey) {

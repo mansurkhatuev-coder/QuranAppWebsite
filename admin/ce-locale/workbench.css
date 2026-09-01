@@ -841,6 +841,34 @@ main {
   color: var(--green);
 }
 
+.toolbar-main {
+  align-items: center;
+}
+
+.save-status {
+  flex: 1 1 180px;
+  min-width: 140px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.save-status.ok {
+  color: var(--green);
+}
+
+.save-status.err {
+  color: var(--red);
+}
+
+.save-status.warn {
+  color: var(--gold);
+}
+
+.save-status.busy {
+  color: var(--blue);
+}
+
 .cloud-status.err {
   color: var(--red);
 }
