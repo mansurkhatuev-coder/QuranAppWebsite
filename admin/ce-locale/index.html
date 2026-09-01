@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Чеченский UI — workbench</title>
-    <link rel="stylesheet" href="./workbench.css?v=6" />
+    <link rel="stylesheet" href="./workbench.css?v=7" />
   </head>
   <body>
     <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
@@ -106,10 +106,19 @@
         </div>
       </details>
 
-      <div id="cloud-bar" class="toolbar" hidden>
-        <span class="hint">Облако — после миграции Supabase</span>
-        <button type="button" class="secondary" id="cloud-pull" disabled>Загрузить из облака</button>
-        <button type="button" class="primary" id="cloud-save" disabled>Сохранить в облако</button>
+      <div id="cloud-bar" class="toolbar cloud-bar">
+        <div id="cloud-login" class="cloud-login">
+          <span class="hint">Сохранение на сайт:</span>
+          <input id="cloud-email" class="cloud-input" type="email" placeholder="Email админки" autocomplete="username" />
+          <input id="cloud-password" class="cloud-input" type="password" placeholder="Пароль" autocomplete="current-password" />
+          <button type="button" class="secondary" id="cloud-signin">Войти</button>
+        </div>
+        <div id="cloud-actions" class="cloud-actions" hidden>
+          <span id="cloud-user" class="hint"></span>
+          <button type="button" class="secondary" id="cloud-pull">Загрузить</button>
+          <button type="button" class="primary" id="cloud-save">Сохранить на сайт</button>
+          <button type="button" class="ghost" id="cloud-signout">Выйти</button>
+        </div>
         <span id="cloud-status" class="cloud-status"></span>
       </div>
     </header>
@@ -140,15 +149,18 @@
     </div>
 
     <div class="footerbar">
-      <span class="hint">Ctrl+S сохранить · Shift+Ctrl+S проверено · Ctrl+Enter далее</span>
+      <span class="hint">Ctrl+S — сохранить (на сайт, если вошли) · Shift+Ctrl+S — проверено</span>
       <div><span id="msg" class="hint"></span></div>
     </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../supabase-config.js?v=6"></script>
+    <script src="../admin-supabase.js?v=13"></script>
     <script src="../assets/auth-lock.js?v=1"></script>
     <script src="./gate.js?v=1"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=4"></script>
+    <script src="./workbench.js?v=5"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
         window.CeWorkbench.boot();

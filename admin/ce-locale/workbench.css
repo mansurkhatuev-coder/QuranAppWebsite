@@ -845,6 +845,32 @@ main {
   color: var(--red);
 }
 
+.cloud-bar {
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px 10px;
+  border-top: 1px solid var(--line);
+  background: rgba(12, 20, 18, 0.92);
+}
+
+.cloud-login,
+.cloud-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.cloud-input {
+  min-width: 160px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel2);
+  color: var(--text);
+  font: inherit;
+}
+
 .top-links {
   display: flex;
   gap: 10px;

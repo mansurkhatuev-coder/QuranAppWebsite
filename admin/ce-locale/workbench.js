@@ -13,6 +13,9 @@
     packProgress: [],
     groupProgress: [],
     assignees: {},
+    cloudReady: false,
+    cloudBusy: false,
+    cloudMeta: null,
   };
 
   function $(id) {
@@ -550,7 +553,212 @@
     });
   }
 
-  function save(options = {}) {
+  function setCloudStatus(message, tone = '') {
+    const el = $('cloud-status');
+    if (!el) return;
+    el.textContent = message || '';
+    el.className = `cloud-status${tone ? ` ${tone}` : ''}`;
+  }
+
+  function updateCloudUi() {
+    const login = $('cloud-login');
+    const actions = $('cloud-actions');
+    const user = $('cloud-user');
+    const saveBtn = $('cloud-save');
+    const pullBtn = $('cloud-pull');
+    const signoutBtn = $('cloud-signout');
+    const signinBtn = $('cloud-signin');
+
+    const enabled = Boolean(global.AdminSupabase?.isEnabled?.());
+    if (!enabled) {
+      setCloudStatus('Supabase не настроен — сохранение только в браузере', 'err');
+      return;
+    }
+
+    if (state.cloudReady) {
+      if (login) login.hidden = true;
+      if (actions) actions.hidden = false;
+      if (user) {
+        const email = state.cloudSession?.user?.email || 'админ';
+        const stamp = state.cloudMeta?.updated_at
+          ? ` · облако ${new Date(state.cloudMeta.updated_at).toLocaleString('ru-RU')}`
+          : '';
+        user.textContent = `${email}${stamp}`;
+      }
+    } else {
+      if (login) login.hidden = false;
+      if (actions) actions.hidden = true;
+      if (!state.cloudBusy) setCloudStatus('Войдите тем же email/паролем, что в админке');
+    }
+
+    const disabled = state.cloudBusy || !state.cloudReady;
+    if (saveBtn) saveBtn.disabled = disabled;
+    if (pullBtn) pullBtn.disabled = disabled;
+    if (signoutBtn) signoutBtn.disabled = state.cloudBusy;
+    if (signinBtn) signinBtn.disabled = state.cloudBusy;
+  }
+
+  function buildCloudPayload() {
+    collectEditorValues();
+    return {
+      version: 1,
+      savedAt: new Date().toISOString(),
+      meta: state.meta,
+      glossary: state.glossary,
+      assignees: state.assignees,
+      rows: state.rows.map((row) => ({
+        key: row.key,
+        ce: row.ce ?? '',
+        ru: row.ru ?? '',
+        en: row.en ?? '',
+        status: row.status ?? '',
+        note: row.note ?? '',
+        group: row.group ?? grp(row.key),
+        priority: row.priority ?? 999,
+      })),
+    };
+  }
+
+  function applyCloudPayload(payload) {
+    if (!payload || typeof payload !== 'object') throw new Error('Пустой снимок из облака');
+    const rows = Array.isArray(payload.rows) ? payload.rows : null;
+    if (!rows) throw new Error('В облаке нет rows[]');
+
+    state.rows = rows;
+    if (payload.meta) state.meta = payload.meta;
+    if (payload.glossary) state.glossary = payload.glossary;
+    if (payload.assignees) {
+      state.assignees = payload.assignees;
+      persistAssignees();
+    }
+    loadLocalOverrides();
+    initPackSelect();
+    initGroupSelect();
+    updateAssigneeField();
+    renderGlossary();
+    render();
+  }
+
+  async function cloudPull(options = {}) {
+    if (!global.AdminSupabase?.loadCeLocaleDraft) {
+      throw new Error('Облако не подключено');
+    }
+    state.cloudBusy = true;
+    updateCloudUi();
+    setCloudStatus('Загружаем из облака…');
+    try {
+      const data = await global.AdminSupabase.loadCeLocaleDraft();
+      if (!data?.payload) {
+        if (!options.silent) flash('В облаке пока пусто — сначала сохраните', true);
+        setCloudStatus('В облаке пока пусто');
+        return false;
+      }
+      if (
+        !options.silent &&
+        !global.confirm('Заменить текущие строки данными из облака? Локальные правки в полях будут перезаписаны.')
+      ) {
+        setCloudStatus('Загрузка отменена');
+        return false;
+      }
+      state.cloudMeta = { updated_at: data.updated_at, updated_by: data.updated_by };
+      applyCloudPayload(data.payload);
+      persistLocal();
+      setCloudStatus(`Загружено из облака · ${new Date(data.updated_at).toLocaleString('ru-RU')}`, 'ok');
+      if (!options.silent) flash('Загружено из облака');
+      return true;
+    } finally {
+      state.cloudBusy = false;
+      updateCloudUi();
+    }
+  }
+
+  async function cloudSave(options = {}) {
+    if (!global.AdminSupabase?.saveCeLocaleDraft) {
+      throw new Error('Облако не подключено');
+    }
+    state.cloudBusy = true;
+    updateCloudUi();
+    setCloudStatus('Сохраняем на сайт…');
+    try {
+      const payload = buildCloudPayload();
+      await global.AdminSupabase.saveCeLocaleDraft(payload);
+      state.cloudMeta = { updated_at: payload.savedAt, updated_by: state.cloudSession?.user?.email };
+      setCloudStatus(`Сохранено на сайт · ${new Date(payload.savedAt).toLocaleString('ru-RU')}`, 'ok');
+      if (!options.silent) flash('Сохранено на сайт');
+      return true;
+    } finally {
+      state.cloudBusy = false;
+      updateCloudUi();
+    }
+  }
+
+  async function cloudSignIn() {
+    const email = String($('cloud-email')?.value ?? '').trim();
+    const password = String($('cloud-password')?.value ?? '');
+    if (!email || !password) {
+      flash('Введите email и пароль админки', true);
+      return;
+    }
+    state.cloudBusy = true;
+    updateCloudUi();
+    setCloudStatus('Вход…');
+    try {
+      await global.AdminSupabase.signIn(email, password);
+      await refreshCloudSession({ offerPull: true });
+      if ($('cloud-password')) $('cloud-password').value = '';
+      flash('Вход выполнен');
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : 'Ошибка входа', 'err');
+      flash(error instanceof Error ? error.message : 'Ошибка входа', true);
+    } finally {
+      state.cloudBusy = false;
+      updateCloudUi();
+    }
+  }
+
+  async function cloudSignOut() {
+    state.cloudBusy = true;
+    updateCloudUi();
+    try {
+      await global.AdminSupabase.signOut?.();
+    } catch {
+      // ignore
+    }
+    state.cloudReady = false;
+    state.cloudSession = null;
+    state.cloudMeta = null;
+    setCloudStatus('Вы вышли — сохранение только в браузере');
+    updateCloudUi();
+  }
+
+  async function refreshCloudSession(options = {}) {
+    const session = await global.AdminSupabase.getSession().catch(() => null);
+    state.cloudSession = session;
+    state.cloudReady = Boolean(session?.access_token);
+    updateCloudUi();
+    if (!state.cloudReady) return;
+
+    try {
+      const data = await global.AdminSupabase.loadCeLocaleDraft();
+      if (data?.updated_at) {
+        state.cloudMeta = { updated_at: data.updated_at, updated_by: data.updated_by };
+        updateCloudUi();
+      }
+      if (options.offerPull && data?.payload) {
+        setCloudStatus(`В облаке есть сохранение · ${new Date(data.updated_at).toLocaleString('ru-RU')}`);
+      }
+    } catch (error) {
+      setCloudStatus(error instanceof Error ? error.message : 'Не удалось проверить облако', 'err');
+    }
+  }
+
+  async function initCloud() {
+    updateCloudUi();
+    if (!global.AdminSupabase?.isEnabled?.()) return;
+    await refreshCloudSession();
+  }
+
+  async function save(options = {}) {
     collectEditorValues();
     if (options.markFocusedReviewed && state.focusedKey) {
       const row = state.rows.find((item) => item.key === state.focusedKey);
@@ -558,6 +766,27 @@
     }
     persistLocal();
     render();
+
+    if (state.cloudReady && !options.skipCloud) {
+      try {
+        await cloudSave({ silent: true });
+        flash(
+          options.markFocusedReviewed
+            ? 'Проверено и сохранено на сайт'
+            : 'Сохранено в браузере и на сайт'
+        );
+        return;
+      } catch (error) {
+        flash(
+          `${options.markFocusedReviewed ? 'Проверено локально' : 'Сохранено локально'} · облако: ${
+            error instanceof Error ? error.message : 'ошибка'
+          }`,
+          true
+        );
+        return;
+      }
+    }
+
     flash(options.markFocusedReviewed ? 'Сохранено и отмечено проверенным' : 'Сохранено локально');
   }
 
@@ -684,8 +913,12 @@
       }
     });
     $('glossary-q')?.addEventListener('input', renderGlossary);
-    $('save')?.addEventListener('click', () => save());
-    $('save-reviewed')?.addEventListener('click', () => save({ markFocusedReviewed: true }));
+    $('save')?.addEventListener('click', () => {
+      void save();
+    });
+    $('save-reviewed')?.addEventListener('click', () => {
+      void save({ markFocusedReviewed: true });
+    });
     $('reset')?.addEventListener('click', () => {
       if (!global.confirm('Удалить локальные правки в этом браузере?')) return;
       global.localStorage.removeItem(STORE_KEY);
@@ -708,15 +941,33 @@
       event.target.value = '';
     });
     $('next-unreviewed')?.addEventListener('click', () => focusNext(state.focusedKey ?? ''));
+    $('cloud-signin')?.addEventListener('click', () => {
+      void cloudSignIn();
+    });
+    $('cloud-signout')?.addEventListener('click', () => {
+      void cloudSignOut();
+    });
+    $('cloud-save')?.addEventListener('click', () => {
+      void cloudSave();
+    });
+    $('cloud-pull')?.addEventListener('click', () => {
+      void cloudPull();
+    });
+    $('cloud-password')?.addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        void cloudSignIn();
+      }
+    });
 
     global.document.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
         event.preventDefault();
-        save({ markFocusedReviewed: Boolean(event.shiftKey) });
+        void save({ markFocusedReviewed: Boolean(event.shiftKey) });
       }
       if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
-        save({ markFocusedReviewed: true });
+        void save({ markFocusedReviewed: true });
         focusNext(state.focusedKey ?? '');
       }
     });
@@ -726,6 +977,7 @@
     bindUi();
     try {
       await loadData();
+      await initCloud();
     } catch (error) {
       flash(error instanceof Error ? error.message : 'Не удалось загрузить data.json', true);
     }

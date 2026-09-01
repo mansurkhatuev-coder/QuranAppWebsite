@@ -488,6 +488,39 @@
     return json;
   }
 
+  async function loadCeLocaleDraft() {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const session = await getSession();
+    if (!session) throw new Error('Нужен вход в Supabase');
+
+    const { data, error } = await client
+      .from('ce_locale_draft')
+      .select('payload,updated_at,updated_by')
+      .eq('id', 1)
+      .maybeSingle();
+    if (error) throw error;
+    if (!data?.payload) return null;
+    return data;
+  }
+
+  async function saveCeLocaleDraft(payload) {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const session = await getSession();
+    if (!session) throw new Error('Нужен вход в Supabase');
+
+    const email = session.user?.email || 'admin';
+    const { error } = await client.from('ce_locale_draft').upsert({
+      id: 1,
+      payload,
+      updated_at: new Date().toISOString(),
+      updated_by: email,
+    });
+    if (error) throw error;
+    return { ok: true, updatedBy: email };
+  }
+
   global.AdminSupabase = {
     isEnabled,
     getClient,
@@ -512,5 +545,7 @@
     loadStoreDownloads,
     uploadRustoreCsv,
     refreshAppleDownloads,
+    loadCeLocaleDraft,
+    saveCeLocaleDraft,
   };
 })(window);
