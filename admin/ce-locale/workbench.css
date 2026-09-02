@@ -757,6 +757,49 @@ main {
   letter-spacing: 0.07em;
 }
 
+.field-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.field-head .label {
+  margin-bottom: 0;
+}
+
+.field-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.tool-btn {
+  padding: 3px 8px;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.tool-btn:hover {
+  color: var(--text);
+  border-color: rgba(214, 179, 91, 0.45);
+}
+
+.tool-btn.yandex {
+  color: #f0c27a;
+}
+
+.tool-btn.yandex:hover {
+  border-color: rgba(201, 149, 74, 0.55);
+  color: #ffd89a;
+}
+
 .key {
   font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
   color: #c5d1cd;
