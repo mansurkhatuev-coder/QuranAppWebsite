@@ -491,12 +491,37 @@
       meta.append(badge);
 
       const ru = document.createElement('div');
-      ru.innerHTML = `<div class="label">Русский</div><div class="source">${escapeHtml(row.ru)}</div>`;
+      const ruHead = document.createElement('div');
+      ruHead.className = 'field-head';
+      const ruLabel = document.createElement('div');
+      ruLabel.className = 'label';
+      ruLabel.textContent = 'Русский';
+      const ruTools = document.createElement('div');
+      ruTools.className = 'field-tools';
+      const copyRuBtn = createToolButton('Копировать', 'Скопировать русский текст');
+      copyRuBtn.addEventListener('click', () => {
+        void copyText(row.ru);
+      });
+      const yandexBtn = createToolButton('Яндекс ↗', 'Открыть Яндекс.Переводчик (ru → ce) с этим текстом');
+      yandexBtn.classList.add('yandex');
+      yandexBtn.addEventListener('click', () => {
+        openYandexTranslate(row.ru);
+      });
+      ruTools.append(copyRuBtn, yandexBtn);
+      ruHead.append(ruLabel, ruTools);
+      const ruSource = document.createElement('div');
+      ruSource.className = 'source';
+      ruSource.textContent = row.ru;
+      ru.append(ruHead, ruSource);
 
       const editorWrap = document.createElement('div');
+      const editorHead = document.createElement('div');
+      editorHead.className = 'field-head';
       const editorLabel = document.createElement('div');
       editorLabel.className = 'label';
       editorLabel.textContent = 'Нохчийн';
+      const editorTools = document.createElement('div');
+      editorTools.className = 'field-tools';
       const editor = document.createElement('textarea');
       editor.className = 'editor';
       editor.value = row.ce ?? '';
@@ -513,7 +538,13 @@
         stats();
         if (state.focusedKey === row.key) renderPreview(row);
       });
-      editorWrap.append(editorLabel, editor);
+      const pasteBtn = createToolButton('Вставить', 'Вставить перевод из буфера обмена');
+      pasteBtn.addEventListener('click', () => {
+        void pasteIntoEditor(editor, row);
+      });
+      editorTools.append(pasteBtn);
+      editorHead.append(editorLabel, editorTools);
+      editorWrap.append(editorHead, editor);
 
       const actions = document.createElement('div');
       actions.className = 'row-actions';
@@ -622,6 +653,75 @@
       .replace(/</g, '&lt;')
       .replace(/>/g, '&gt;')
       .replace(/"/g, '&quot;');
+  }
+
+  function yandexTranslateUrl(text) {
+    const trimmed = String(text ?? '').trim();
+    if (!trimmed) return 'https://translate.yandex.ru/?lang=ru-ce';
+    return `https://translate.yandex.ru/?lang=ru-ce&text=${encodeURIComponent(trimmed)}`;
+  }
+
+  function createToolButton(label, title) {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'tool-btn';
+    btn.textContent = label;
+    if (title) btn.title = title;
+    return btn;
+  }
+
+  async function copyText(text) {
+    const value = String(text ?? '');
+    if (!value.trim()) {
+      flash('Нечего копировать', true);
+      return false;
+    }
+    try {
+      await navigator.clipboard.writeText(value);
+      flash('Скопировано');
+      return true;
+    } catch {
+      const textarea = document.createElement('textarea');
+      textarea.value = value;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.left = '-9999px';
+      document.body.append(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      textarea.remove();
+      if (ok) flash('Скопировано');
+      else flash('Не удалось скопировать', true);
+      return ok;
+    }
+  }
+
+  async function pasteIntoEditor(editor, row) {
+    try {
+      const text = await navigator.clipboard.readText();
+      if (!String(text).trim()) {
+        flash('Буфер пуст', true);
+        return;
+      }
+      editor.value = text;
+      row.ce = text;
+      updateRowChrome(row.key);
+      stats();
+      if (state.focusedKey === row.key) renderPreview(row);
+      flash('Вставлено из буфера');
+    } catch {
+      editor.focus();
+      flash('Нет доступа к буферу — вставьте вручную (Ctrl+V)', true);
+    }
+  }
+
+  function openYandexTranslate(text) {
+    const trimmed = String(text ?? '').trim();
+    if (!trimmed) {
+      flash('Нет русского текста', true);
+      return;
+    }
+    global.open(yandexTranslateUrl(trimmed), '_blank', 'noopener,noreferrer');
   }
 
   function escapeTs(value) {
