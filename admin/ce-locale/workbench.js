@@ -98,6 +98,10 @@
     return row.status === 'reviewed';
   }
 
+  function isUncertain(row) {
+    return row.status === 'uncertain';
+  }
+
   function loadAssignees() {
     try {
       const raw = global.localStorage.getItem(ASSIGNEE_KEY);
@@ -181,7 +185,7 @@
   function persistLocal() {
     const cePayload = state.rows.map((row) => ({ key: row.key, ce: row.ce }));
     const reviewPayload = state.rows
-      .filter((row) => row.status === 'reviewed')
+      .filter((row) => row.status === 'reviewed' || row.status === 'uncertain')
       .map((row) => [row.key, row.status]);
     global.localStorage.setItem(STORE_KEY, JSON.stringify(cePayload));
     global.localStorage.setItem(REVIEW_KEY, JSON.stringify(reviewPayload));
@@ -198,6 +202,7 @@
     const sameAsRu = rows.filter((row) => isSameAsRu(row)).length;
     const translated = rows.filter((row) => isTranslated(row)).length;
     const reviewed = rows.filter((row) => isReviewed(row)).length;
+    const uncertain = rows.filter((row) => isUncertain(row)).length;
     return {
       total,
       filled,
@@ -205,6 +210,7 @@
       sameAsRu,
       translated,
       reviewed,
+      uncertain,
       filledPct: total ? Math.round((filled / total) * 100) : 0,
       translatedPct: total ? Math.round((translated / total) * 100) : 0,
       sameAsRuPct: total ? Math.round((sameAsRu / total) * 100) : 0,
@@ -219,11 +225,18 @@
       entries[row.key] = {
         ru: row.ru,
         ce: row.ce,
-        status: row.status === 'reviewed' ? 'reviewed' : row.sourceStatus || 'ai-draft',
+        status:
+          row.status === 'reviewed'
+            ? 'reviewed'
+            : row.status === 'uncertain'
+              ? 'needs-review'
+              : row.sourceStatus || 'ai-draft',
         note:
           row.status === 'reviewed'
             ? 'Reviewed in translation workbench'
-            : row.note || 'Workbench edit — native review recommended',
+            : row.status === 'uncertain'
+              ? 'Uncertain translation — native review required'
+              : row.note || 'Workbench edit — native review recommended',
         updatedAt: now,
       };
     });
@@ -239,7 +252,12 @@
           key,
           ru: row.ru ?? '',
           ce: row.ce ?? '',
-          status: row.status === 'reviewed' || row.status === 'manual' ? 'reviewed' : 'todo',
+          status:
+            row.status === 'reviewed' || row.status === 'manual'
+              ? 'reviewed'
+              : row.status === 'uncertain' || row.status === 'needs-review'
+                ? 'uncertain'
+                : 'todo',
           sourceStatus: row.status ?? 'ai-draft',
           note: row.note ?? '',
           updatedAt: row.updatedAt ?? null,
@@ -250,6 +268,7 @@
 
   function rowBadgeMeta(row) {
     if (isReviewed(row)) return { className: 'badge reviewed', text: 'Проверено' };
+    if (isUncertain(row)) return { className: 'badge uncertain', text: 'Пересмотреть' };
     if (isSameAsRu(row)) return { className: 'badge todo same-as-ru', text: 'Как в ru' };
     if (isFilled(row)) return { className: 'badge todo', text: 'Черновик' };
     return { className: 'badge empty', text: 'Пусто' };
@@ -262,6 +281,7 @@
     article.classList.toggle('empty', !isFilled(row));
     article.classList.toggle('same-as-ru', isSameAsRu(row));
     article.classList.toggle('reviewed', isReviewed(row));
+    article.classList.toggle('uncertain', isUncertain(row));
     const badge = article.querySelector('.badge');
     if (!badge) return;
     const meta = rowBadgeMeta(row);
@@ -425,11 +445,13 @@
         const reviewed = isReviewed(row);
         if (statusFilter === 'empty' && filled) return false;
         if (statusFilter === 'filled' && !filled) return false;
+        const uncertain = isUncertain(row);
         if (statusFilter === 'reviewed' && !reviewed) return false;
-        if (statusFilter === 'todo' && reviewed) return false;
+        if (statusFilter === 'uncertain' && !uncertain) return false;
+        if (statusFilter === 'todo' && (reviewed || uncertain)) return false;
         if (statusFilter === 'same-as-ru' && !isSameAsRu(row)) return false;
         if (statusFilter === 'translated' && !isTranslated(row)) return false;
-        if (statusFilter === 'needs-review' && (!filled || reviewed || isSameAsRu(row))) return false;
+        if (statusFilter === 'needs-review' && (!filled || reviewed || uncertain || isSameAsRu(row))) return false;
         if (!term) return true;
         return (
           row.key.toLowerCase().includes(term) ||
@@ -451,6 +473,7 @@
       if (!isFilled(row)) article.classList.add('empty');
       if (isSameAsRu(row)) article.classList.add('same-as-ru');
       if (isReviewed(row)) article.classList.add('reviewed');
+      if (isUncertain(row)) article.classList.add('uncertain');
       if (row.key === state.focusedKey) article.classList.add('focused');
       article.dataset.key = row.key;
 
@@ -504,12 +527,23 @@
         render();
         flash(isReviewed(row) ? 'Отмечено проверенным' : 'Снята отметка');
       });
+      const uncertainBtn = document.createElement('button');
+      uncertainBtn.type = 'button';
+      uncertainBtn.className = isUncertain(row) ? 'secondary uncertain-active' : 'secondary';
+      uncertainBtn.textContent = isUncertain(row) ? 'Снять ?' : 'Не уверен ?';
+      uncertainBtn.title = 'Перевод есть, но позже пересмотреть';
+      uncertainBtn.addEventListener('click', () => {
+        row.status = isUncertain(row) ? 'todo' : 'uncertain';
+        persistLocal();
+        render();
+        flash(isUncertain(row) ? 'Отмечено: пересмотреть позже' : 'Снята отметка');
+      });
       const nextBtn = document.createElement('button');
       nextBtn.type = 'button';
       nextBtn.className = 'secondary';
       nextBtn.textContent = 'Далее →';
       nextBtn.addEventListener('click', () => focusNext(row.key));
-      actions.append(reviewBtn, nextBtn);
+      actions.append(reviewBtn, uncertainBtn, nextBtn);
 
       article.append(meta, ru, editorWrap, actions);
       fragment.append(article);
