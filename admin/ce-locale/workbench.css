@@ -733,6 +733,10 @@ main {
   box-shadow: inset 3px 0 0 var(--green);
 }
 
+.row.uncertain {
+  box-shadow: inset 3px 0 0 #c9954a;
+}
+
 .row.focused {
   border-color: var(--gold);
 }
@@ -795,6 +799,11 @@ main {
 .badge.reviewed {
   background: #163528;
   color: #9de7c4;
+}
+
+.badge.uncertain {
+  background: #2a2218;
+  color: #f0c27a;
 }
 
 .badge.todo {
