@@ -915,15 +915,20 @@
       });
       editorTools.append(pasteBtn);
       if (dupSiblings.length > 1) {
+        const unreviewedDupCount = dupSiblings.filter((item) => !isReviewed(item)).length;
         const spreadBtn = createToolButton(
           'На все',
-          `Поставить этот перевод во все ${dupSiblings.length} ключей с таким же русским текстом (без отметки «проверено»)`
+          `Поставить перевод в непроверенные ключи (${unreviewedDupCount} без ✓ из ${dupSiblings.length}). Проверенные пропускаются.`
         );
         spreadBtn.classList.add('spread');
         if (!String(row.ce ?? '').trim()) spreadBtn.disabled = true;
         spreadBtn.addEventListener('click', () => {
-          const count = spreadCeToDuplicates(row);
-          if (count > 0) flash(`Обновлено ${count} дубликатов`);
+          const { updated, skippedReviewed } = spreadCeToDuplicates(row);
+          if (updated > 0) {
+            const skip =
+              skippedReviewed > 0 ? ` · пропущено ${skippedReviewed} ✓` : '';
+            flash(`Обновлено ${updated}${skip}`);
+          }
         });
         editorTools.append(spreadBtn);
       }
@@ -1097,9 +1102,18 @@
     const ceVariants = new Set(
       siblings.map((item) => String(item.ce ?? '').trim()).filter(Boolean)
     );
+    const unreviewed = siblings.filter((item) => !isReviewed(item)).length;
     let text = `${total} таких же`;
+    if (unreviewed < total) {
+      text += ` · ${unreviewed} без ✓`;
+    }
     if (ceVariants.size > 1) {
-      text += ` · ${ceVariants.size} ${ceVariants.size < 5 ? 'перевода' : 'переводов'}`;
+      const n = ceVariants.size;
+      const mod10 = n % 10;
+      const mod100 = n % 100;
+      const word =
+        mod10 >= 2 && mod10 <= 4 && (mod100 < 10 || mod100 >= 20) ? 'варианта' : 'вариантов';
+      text += ` · ${n} ${word} ce`;
     }
     return text;
   }
@@ -1109,14 +1123,23 @@
     const ce = String(sourceRow.ce ?? '').trim();
     if (!ce) {
       flash('Сначала введите чеченский перевод', true);
-      return 0;
+      return { updated: 0, skippedReviewed: 0 };
     }
 
     const siblings = getDuplicateSiblings(sourceRow);
-    const toUpdate = siblings.filter((item) => String(item.ce ?? '').trim() !== ce);
+    const skippedReviewed = siblings.filter(
+      (item) => isReviewed(item) && String(item.ce ?? '').trim() !== ce
+    ).length;
+    const toUpdate = siblings.filter(
+      (item) => !isReviewed(item) && String(item.ce ?? '').trim() !== ce
+    );
     if (!toUpdate.length) {
-      flash('У всех дубликатов уже такой перевод');
-      return 0;
+      if (skippedReviewed > 0) {
+        flash(`Пропущено ${skippedReviewed} проверенных · обновлять нечего`);
+      } else {
+        flash('У всех дубликатов уже такой перевод');
+      }
+      return { updated: 0, skippedReviewed };
     }
 
     const conflicting = toUpdate.filter((item) => {
@@ -1124,10 +1147,12 @@
       return existing && existing !== ce;
     });
     if (conflicting.length) {
+      const skipLine =
+        skippedReviewed > 0 ? `\n\nПроверенные (✓) не трогаем — пропустим ${skippedReviewed}.` : '';
       const ok = global.confirm(
-        `У ${conflicting.length} ключей другой перевод.\n\nЗаменить на:\n«${truncateText(ce, 80)}»\n\nОтметки «проверено» не меняются.`
+        `У ${conflicting.length} ключей другой перевод.\n\nЗаменить на:\n«${truncateText(ce, 80)}»${skipLine}`
       );
-      if (!ok) return 0;
+      if (!ok) return { updated: 0, skippedReviewed };
     }
 
     toUpdate.forEach((item) => {
@@ -1148,7 +1173,7 @@
 
     persistLocal();
     stats();
-    return toUpdate.length;
+    return { updated: toUpdate.length, skippedReviewed };
   }
 
   async function copyText(text) {
