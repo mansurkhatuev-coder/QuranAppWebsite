@@ -1404,6 +1404,9 @@
       if (global.document.hidden) saveUiState();
     });
     global.window.addEventListener('pagehide', saveUiState);
+    global.window.addEventListener('focus', () => {
+      lastBecameVisibleAt = Date.now();
+    });
 
     global.document.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
