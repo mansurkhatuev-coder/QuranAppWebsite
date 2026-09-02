@@ -96,11 +96,23 @@
   }
 
   function isReviewed(row) {
-    return row.status === 'reviewed';
+    return row.status === 'reviewed' || row.status === 'manual';
   }
 
   function isUncertain(row) {
     return row.status === 'uncertain';
+  }
+
+  function mergeWorkflowStatus(localStatus, cloudStatus) {
+    const cloud = String(cloudStatus ?? '').trim();
+    const local = String(localStatus ?? '').trim();
+    if (cloud === 'reviewed' || cloud === 'uncertain' || cloud === 'manual') {
+      return cloud === 'manual' ? 'reviewed' : cloud;
+    }
+    if (local === 'reviewed' || local === 'uncertain' || local === 'manual') {
+      return local === 'manual' ? 'reviewed' : local;
+    }
+    return local || cloud || 'todo';
   }
 
   function loadAssignees() {
@@ -170,10 +182,18 @@
     try {
       const ceRaw = global.localStorage.getItem(STORE_KEY);
       const reviewRaw = global.localStorage.getItem(REVIEW_KEY);
-      const ceMap = ceRaw ? new Map(JSON.parse(ceRaw).map((x) => [x.key, x.ce])) : new Map();
+      const ceMap = ceRaw ? new Map(JSON.parse(ceRaw).map((x) => [x.key, x])) : new Map();
       const reviewMap = reviewRaw ? new Map(JSON.parse(reviewRaw)) : new Map();
       state.rows.forEach((row) => {
-        if (ceMap.has(row.key)) row.ce = ceMap.get(row.key);
+        if (ceMap.has(row.key)) {
+          const patch = ceMap.get(row.key);
+          if (patch && typeof patch === 'object') {
+            if (patch.ce != null) row.ce = patch.ce;
+            if (patch.status) row.status = patch.status;
+          } else {
+            row.ce = patch;
+          }
+        }
         if (reviewMap.has(row.key)) row.status = reviewMap.get(row.key);
       });
       const savedPack = global.localStorage.getItem(PACK_KEY);
@@ -184,7 +204,11 @@
   }
 
   function persistLocal() {
-    const cePayload = state.rows.map((row) => ({ key: row.key, ce: row.ce }));
+    const cePayload = state.rows.map((row) => ({
+      key: row.key,
+      ce: row.ce,
+      ...(row.status === 'reviewed' || row.status === 'uncertain' ? { status: row.status } : {}),
+    }));
     const reviewPayload = state.rows
       .filter((row) => row.status === 'reviewed' || row.status === 'uncertain')
       .map((row) => [row.key, row.status]);
@@ -450,6 +474,79 @@
     flash(`Вставлено: ${ceText}`);
   }
 
+  function rowMatchesStatusFilter(row, statusFilter) {
+    const filled = isFilled(row);
+    const reviewed = isReviewed(row);
+    const uncertain = isUncertain(row);
+    if (statusFilter === 'empty' && filled) return false;
+    if (statusFilter === 'filled' && !filled) return false;
+    if (statusFilter === 'reviewed' && !reviewed) return false;
+    if (statusFilter === 'uncertain' && !uncertain) return false;
+    if (statusFilter === 'todo' && (reviewed || uncertain)) return false;
+    if (statusFilter === 'same-as-ru' && !isSameAsRu(row)) return false;
+    if (statusFilter === 'translated' && !isTranslated(row)) return false;
+    if (statusFilter === 'needs-review' && (!filled || reviewed || uncertain || isSameAsRu(row))) return false;
+    return true;
+  }
+
+  function rowMatchesSearch(row, term) {
+    if (!term) return true;
+    return (
+      row.key.toLowerCase().includes(term) ||
+      row.ru.toLowerCase().includes(term) ||
+      String(row.ce).toLowerCase().includes(term) ||
+      String(row.hint ?? '').toLowerCase().includes(term)
+    );
+  }
+
+  function countRowsMatchingFilters(options = {}) {
+    const statusFilter = options.statusFilter ?? ($('status')?.value ?? 'all');
+    const groupFilter = options.groupFilter ?? ($('group')?.value ?? 'all');
+    const term = options.term ?? ($('q')?.value ?? '').trim().toLowerCase();
+    const respectPack = options.respectPack !== false;
+    return state.rows.filter((row) => {
+      if (respectPack && !rowInSelectedPack(row)) return false;
+      if (groupFilter !== 'all' && grp(row.key) !== groupFilter) return false;
+      if (statusFilter !== 'all' && !rowMatchesStatusFilter(row, statusFilter)) return false;
+      return rowMatchesSearch(row, term);
+    }).length;
+  }
+
+  function resetFilters(options = {}) {
+    if ($('q')) $('q').value = '';
+    if ($('status')) $('status').value = 'all';
+    if ($('group')) $('group').value = 'all';
+    if (options.allPacks && $('pack')) $('pack').value = 'pack-all';
+    saveUiState();
+    render();
+    flash(options.allPacks ? 'Фильтры сброшены · все ключи' : 'Фильтры сброшены');
+  }
+
+  function buildEmptyFilterMessage(statusFilter, groupFilter, term) {
+    const inAllPacks = countRowsMatchingFilters({ respectPack: false });
+    const inCurrentPack = countRowsMatchingFilters({ respectPack: true });
+    const pack = getPackDef(getSelectedPack());
+    const parts = [];
+
+    if (inAllPacks > 0 && pack && !pack.all) {
+      parts.push(`В пакете «${pack.title}» ничего не найдено, но по фильтру есть <strong>${inAllPacks}</strong> ключ(ей) во всех пакетах.`);
+      parts.push('Нажмите «Сброс фильтров» или выберите пакет «Все ключи».');
+    } else if (term) {
+      parts.push('Поиск ничего не нашёл. Очистите строку поиска или нажмите «Сброс фильтров».');
+    } else if (statusFilter === 'reviewed') {
+      parts.push('Проверенных ключей по текущим фильтрам нет.');
+      parts.push('Если только что отметили «Проверено» — нажмите «Сохранить» и проверьте пакет «Все ключи».');
+    } else {
+      parts.push('По текущим фильтрам строк нет. Попробуйте «Сброс фильтров».');
+    }
+
+    if (groupFilter !== 'all') {
+      parts.push(`Домен: ${groupFilter}.`);
+    }
+
+    return parts.join(' ');
+  }
+
   function renderGlossary() {
     const host = $('glossary-host');
     if (!host) return;
@@ -506,30 +603,38 @@
       .filter((row) => {
         if (!rowInSelectedPack(row)) return false;
         if (groupFilter !== 'all' && grp(row.key) !== groupFilter) return false;
-        const filled = isFilled(row);
-        const reviewed = isReviewed(row);
-        if (statusFilter === 'empty' && filled) return false;
-        if (statusFilter === 'filled' && !filled) return false;
-        const uncertain = isUncertain(row);
-        if (statusFilter === 'reviewed' && !reviewed) return false;
-        if (statusFilter === 'uncertain' && !uncertain) return false;
-        if (statusFilter === 'todo' && (reviewed || uncertain)) return false;
-        if (statusFilter === 'same-as-ru' && !isSameAsRu(row)) return false;
-        if (statusFilter === 'translated' && !isTranslated(row)) return false;
-        if (statusFilter === 'needs-review' && (!filled || reviewed || uncertain || isSameAsRu(row))) return false;
-        if (!term) return true;
-        return (
-          row.key.toLowerCase().includes(term) ||
-          row.ru.toLowerCase().includes(term) ||
-          String(row.ce).toLowerCase().includes(term) ||
-          String(row.hint ?? '').toLowerCase().includes(term)
-        );
+        if (statusFilter !== 'all' && !rowMatchesStatusFilter(row, statusFilter)) return false;
+        return rowMatchesSearch(row, term);
       })
       .sort((a, b) => (a.priority ?? 999999) - (b.priority ?? 999999) || a.key.localeCompare(b.key));
 
     const table = $('table');
     if (!table) return;
     table.innerHTML = '';
+
+    if (!state.filtered.length) {
+      const empty = document.createElement('div');
+      empty.className = 'empty-filter';
+      empty.innerHTML = buildEmptyFilterMessage(statusFilter, groupFilter, term);
+      const actions = document.createElement('div');
+      actions.style.marginTop = '12px';
+      actions.style.display = 'flex';
+      actions.style.gap = '8px';
+      actions.style.justifyContent = 'center';
+      actions.style.flexWrap = 'wrap';
+      const resetBtn = document.createElement('button');
+      resetBtn.type = 'button';
+      resetBtn.className = 'secondary';
+      resetBtn.textContent = 'Сброс фильтров';
+      resetBtn.addEventListener('click', () => resetFilters({ allPacks: true }));
+      actions.append(resetBtn);
+      empty.append(actions);
+      table.append(empty);
+      $('shown').textContent = '0';
+      stats();
+      renderPreview();
+      return;
+    }
 
     const fragment = document.createDocumentFragment();
     state.filtered.forEach((row) => {
@@ -1051,7 +1156,7 @@
       return {
         ...row,
         ce: patch.ce ?? row.ce,
-        status: patch.status ?? row.status,
+        status: mergeWorkflowStatus(row.status, patch.status),
       };
     });
 
@@ -1325,6 +1430,7 @@
       saveUiState();
       render();
     });
+    $('reset-filters')?.addEventListener('click', () => resetFilters({ allPacks: true }));
     $('pack')?.addEventListener('change', () => {
       persistLocal();
       updateAssigneeField();

@@ -19,6 +19,18 @@ html {
 
 body {
   touch-action: manipulation;
+  padding-left: env(safe-area-inset-left);
+  padding-right: env(safe-area-inset-right);
+  background: var(--bg);
+}
+
+.safe-area-top {
+  height: env(safe-area-inset-top, 0px);
+  min-height: env(safe-area-inset-top, 0px);
+  background: rgba(10, 16, 15, 0.97);
+  position: sticky;
+  top: 0;
+  z-index: 11;
 }
 
 header {
@@ -27,11 +39,11 @@ header {
 
 .header-sticky {
   position: sticky;
-  top: 0;
+  top: env(safe-area-inset-top, 0px);
   z-index: 10;
   background: rgba(10, 16, 15, 0.97);
   backdrop-filter: blur(12px);
-  padding: 8px 14px 8px;
+  padding: 6px 14px 8px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -875,11 +887,25 @@ main {
   right: 0;
   background: rgba(10, 16, 15, 0.97);
   border-top: 1px solid var(--line);
-  padding: 10px 18px;
+  padding: 10px 18px calc(10px + env(safe-area-inset-bottom, 0px));
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
+}
+
+.empty-filter {
+  padding: 18px 16px;
+  border: 1px dashed var(--line);
+  border-radius: 12px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+}
+
+.empty-filter strong {
+  color: var(--text);
 }
 
 .hint {
