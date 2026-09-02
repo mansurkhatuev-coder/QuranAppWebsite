@@ -1380,6 +1380,9 @@
     $('refresh-app')?.addEventListener('click', () => {
       void refreshWorkbench();
     });
+    $('refresh-app-footer')?.addEventListener('click', () => {
+      void refreshWorkbench();
+    });
     $('paste-dialog-cancel')?.addEventListener('click', closePasteDialog);
     $('paste-dialog-form')?.addEventListener('submit', (event) => {
       event.preventDefault();
