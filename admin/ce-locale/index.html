@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Чеченский UI — workbench</title>
-    <link rel="stylesheet" href="./workbench.css?v=13" />
+    <link rel="stylesheet" href="./workbench.css?v=14" />
   </head>
   <body>
     <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
@@ -33,11 +33,11 @@
           <div class="top-links">
             <a href="../index.html">← Админка</a>
             <a href="./packs/">Пакеты</a>
-            <button type="button" class="link-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA">↻ Обновить</button>
           </div>
         </div>
 
         <div class="toolbar toolbar-main">
+          <button type="button" class="secondary refresh-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA">↻ Обновить</button>
           <select id="pack" class="small pack-select"></select>
           <input id="pack-assignee" class="assignee-input" placeholder="Ответственный" title="Ответственный за пакет" />
           <input id="q" class="search" placeholder="Поиск…" />
@@ -136,7 +136,7 @@
     </div>
 
     <div class="footerbar">
-      <span class="hint">Ctrl+S — сохранить · синхронизация, если вы вошли в админку</span>
+      <span class="hint">Ctrl+S — сохранить · <button type="button" class="link-btn inline" id="refresh-app-footer">↻ Обновить</button> — после обновлений на сайте</span>
       <div><span id="msg" class="hint"></span></div>
     </div>
 
@@ -162,7 +162,7 @@
     <script src="../assets/auth-lock.js?v=1"></script>
     <script src="./gate.js?v=1"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=13"></script>
+    <script src="./workbench.js?v=14"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
         window.CeWorkbench.boot();
