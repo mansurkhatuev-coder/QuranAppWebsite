@@ -604,7 +604,10 @@
         stats();
         if (state.focusedKey === row.key) renderPreview(row);
       });
-      const pasteBtn = createToolButton('Вставить…', 'Открыть окно вставки перевода из Яндекса');
+      const pasteBtn = createToolButton(
+        'Вставить',
+        'Вставить перевод из буфера (если не получится — откроется окно)'
+      );
       pasteBtn.addEventListener('click', () => {
         void pasteIntoEditor(editor, row);
       });
@@ -762,11 +765,8 @@
     }
   }
 
-  async function pasteIntoEditor(editor, row) {
-    openPasteDialog(editor, row);
-  }
-
   let pasteDialogTarget = null;
+  let lastBecameVisibleAt = Date.now();
 
   function setPasteDialogWarning(message) {
     const warn = $('paste-dialog-warn');
@@ -786,7 +786,54 @@
     return Boolean(trimmed && ru && trimmed === ru);
   }
 
-  function openPasteDialog(editor, row) {
+  function applyPastedText(editor, row, text) {
+    editor.value = text;
+    row.ce = text;
+    updateRowChrome(row.key);
+    stats();
+    if (state.focusedKey === row.key) renderPreview(row);
+    persistUiStateSoon();
+  }
+
+  async function readClipboardPlainTextOnce() {
+    if (!navigator.clipboard?.readText) return null;
+    try {
+      return await navigator.clipboard.readText();
+    } catch {
+      return null;
+    }
+  }
+
+  async function readClipboardPlainTextFromItems() {
+    if (!navigator.clipboard?.read) return null;
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        if (!item.types.includes('text/plain')) continue;
+        const blob = await item.getType('text/plain');
+        return await blob.text();
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  async function tryReadClipboardText(options = {}) {
+    const retries = options.retries ?? (Date.now() - lastBecameVisibleAt < 4000 ? 4 : 2);
+    for (let attempt = 0; attempt < retries; attempt += 1) {
+      if (attempt > 0) {
+        await new Promise((resolve) => global.setTimeout(resolve, 40 * attempt));
+      }
+      await new Promise((resolve) => global.requestAnimationFrame(resolve));
+
+      const text = (await readClipboardPlainTextOnce()) ?? (await readClipboardPlainTextFromItems());
+      if (text != null) return text;
+    }
+    return null;
+  }
+
+  function openPasteDialog(editor, row, options = {}) {
     const dialog = $('paste-dialog');
     const input = $('paste-dialog-input');
     if (!dialog || !input) {
@@ -796,10 +843,24 @@
     }
 
     pasteDialogTarget = { editor, row };
-    input.value = '';
-    setPasteDialogWarning('');
+    input.value = options.initialValue ?? '';
+    setPasteDialogWarning(options.warning ?? '');
     dialog.hidden = false;
     global.setTimeout(() => input.focus(), 0);
+
+    void tryReadClipboardText({ retries: 3 }).then((clip) => {
+      if (!pasteDialogTarget || pasteDialogTarget.row !== row) return;
+      const trimmed = String(clip ?? '').trim();
+      if (!trimmed || input.value.trim()) return;
+      if (looksLikeRussianSource(trimmed, row)) {
+        setPasteDialogWarning(
+          'В буфере русский исходник. Скопируйте перевод справа в Яндексе и вставьте сюда.'
+        );
+        return;
+      }
+      input.value = trimmed;
+      setPasteDialogWarning('');
+    });
   }
 
   function closePasteDialog() {
@@ -827,14 +888,45 @@
       input.focus();
       return false;
     }
-    editor.value = text;
-    row.ce = text;
-    updateRowChrome(row.key);
-    stats();
-    if (state.focusedKey === row.key) renderPreview(row);
+    applyPastedText(editor, row, text);
     closePasteDialog();
     flash('Перевод вставлен');
     return true;
+  }
+
+  async function pasteIntoEditor(editor, row) {
+    state.focusedKey = row.key;
+
+    const clip = await tryReadClipboardText();
+    const trimmed = String(clip ?? '').trim();
+
+    if (trimmed && !looksLikeRussianSource(trimmed, row)) {
+      applyPastedText(editor, row, trimmed);
+      flash('Вставлено из буфера');
+      return;
+    }
+
+    if (trimmed && looksLikeRussianSource(trimmed, row)) {
+      openPasteDialog(editor, row, {
+        warning:
+          'В буфере русский исходник — скопируйте перевод из Яндекса и вставьте ниже (Ctrl+V).',
+      });
+      flash('В буфере русский текст — нужен перевод', true, 3500);
+      return;
+    }
+
+    editor.focus();
+    await new Promise((resolve) => global.requestAnimationFrame(resolve));
+    const clipAfterFocus = String((await tryReadClipboardText({ retries: 2 })) ?? '').trim();
+    if (clipAfterFocus && !looksLikeRussianSource(clipAfterFocus, row)) {
+      applyPastedText(editor, row, clipAfterFocus);
+      flash('Вставлено из буфера');
+      return;
+    }
+
+    openPasteDialog(editor, row, {
+      warning: 'Буфер недоступен — вставьте перевод вручную (Ctrl+V).',
+    });
   }
 
   async function refreshWorkbench() {
@@ -1308,9 +1400,13 @@
     });
 
     global.document.addEventListener('visibilitychange', () => {
+      if (!global.document.hidden) lastBecameVisibleAt = Date.now();
       if (global.document.hidden) saveUiState();
     });
     global.window.addEventListener('pagehide', saveUiState);
+    global.window.addEventListener('focus', () => {
+      lastBecameVisibleAt = Date.now();
+    });
 
     global.document.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
