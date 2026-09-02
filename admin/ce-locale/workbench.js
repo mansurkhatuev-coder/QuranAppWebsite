@@ -811,6 +811,7 @@
     }
 
     const fragment = document.createDocumentFragment();
+    const ruDuplicateIndex = buildRuDuplicateIndex();
     state.filtered.forEach((row) => {
       const article = document.createElement('article');
       article.className = 'row';
@@ -838,8 +839,16 @@
       const ruHead = document.createElement('div');
       ruHead.className = 'field-head';
       const ruLabel = document.createElement('div');
-      ruLabel.className = 'label';
+      ruLabel.className = 'label ru-label';
       ruLabel.textContent = 'Русский';
+      const dupSiblings = ruDuplicateIndex.get(rowRuKey(row)) ?? [];
+      if (dupSiblings.length > 1) {
+        const dupBadge = document.createElement('span');
+        dupBadge.className = 'dup-count';
+        dupBadge.textContent = duplicateCountLabel(dupSiblings);
+        dupBadge.title = `${dupSiblings.length} ключей с тем же русским текстом`;
+        ruLabel.append(dupBadge);
+      }
       const ruTools = document.createElement('div');
       ruTools.className = 'field-tools';
       const copyRuBtn = createToolButton('Копировать', 'Скопировать русский текст');
@@ -905,12 +914,10 @@
         void pasteIntoEditor(editor, row);
       });
       editorTools.append(pasteBtn);
-      const dupSiblings = getDuplicateSiblings(row);
       if (dupSiblings.length > 1) {
-        const dupCount = dupSiblings.length - 1;
         const spreadBtn = createToolButton(
-          `На все (${dupCount})`,
-          'Поставить этот перевод во все ключи с таким же русским текстом (без отметки «проверено»)'
+          'На все',
+          `Поставить этот перевод во все ${dupSiblings.length} ключей с таким же русским текстом (без отметки «проверено»)`
         );
         spreadBtn.classList.add('spread');
         if (!String(row.ce ?? '').trim()) spreadBtn.disabled = true;
@@ -1071,6 +1078,30 @@
     const ru = rowRuKey(row);
     if (!ru) return [];
     return state.rows.filter((item) => rowRuKey(item) === ru);
+  }
+
+  function buildRuDuplicateIndex() {
+    const byRu = new Map();
+    for (const item of state.rows) {
+      const ru = rowRuKey(item);
+      if (!ru) continue;
+      if (!byRu.has(ru)) byRu.set(ru, []);
+      byRu.get(ru).push(item);
+    }
+    return byRu;
+  }
+
+  function duplicateCountLabel(siblings) {
+    const total = siblings.length;
+    if (total <= 1) return '';
+    const ceVariants = new Set(
+      siblings.map((item) => String(item.ce ?? '').trim()).filter(Boolean)
+    );
+    let text = `${total} таких же`;
+    if (ceVariants.size > 1) {
+      text += ` · ${ceVariants.size} ${ceVariants.size < 5 ? 'перевода' : 'переводов'}`;
+    }
+    return text;
   }
 
   function spreadCeToDuplicates(sourceRow) {
