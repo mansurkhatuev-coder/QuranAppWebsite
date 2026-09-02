@@ -910,6 +910,19 @@ main {
   color: #ffd89a;
 }
 
+.tool-btn.spread {
+  color: #9fd4ff;
+}
+
+.tool-btn.spread:hover:not(:disabled) {
+  border-color: rgba(120, 180, 255, 0.55);
+}
+
+.tool-btn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
 .key {
   font: 12px ui-monospace, SFMono-Regular, Menlo, monospace;
   color: #c5d1cd;

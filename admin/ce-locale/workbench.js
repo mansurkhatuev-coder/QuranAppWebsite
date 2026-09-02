@@ -323,6 +323,8 @@
         return 'Снята отметка';
       case 'paste':
         return 'Вставлен перевод';
+      case 'spread':
+        return 'Разнесён перевод';
       case 'ce':
         return 'Изменён перевод';
       default:
@@ -888,6 +890,8 @@
       });
       editor.addEventListener('input', () => {
         row.ce = editor.value;
+        const spreadBtn = article.querySelector('.tool-btn.spread');
+        if (spreadBtn) spreadBtn.disabled = !String(editor.value).trim();
         updateRowChrome(row.key);
         stats();
         if (state.focusedKey === row.key) renderPreview(row);
@@ -901,6 +905,21 @@
         void pasteIntoEditor(editor, row);
       });
       editorTools.append(pasteBtn);
+      const dupSiblings = getDuplicateSiblings(row);
+      if (dupSiblings.length > 1) {
+        const dupCount = dupSiblings.length - 1;
+        const spreadBtn = createToolButton(
+          `На все (${dupCount})`,
+          'Поставить этот перевод во все ключи с таким же русским текстом (без отметки «проверено»)'
+        );
+        spreadBtn.classList.add('spread');
+        if (!String(row.ce ?? '').trim()) spreadBtn.disabled = true;
+        spreadBtn.addEventListener('click', () => {
+          const count = spreadCeToDuplicates(row);
+          if (count > 0) flash(`Обновлено ${count} дубликатов`);
+        });
+        editorTools.append(spreadBtn);
+      }
       editorHead.append(editorLabel, editorTools);
       editorWrap.append(editorHead, editor);
 
@@ -1042,6 +1061,63 @@
     btn.textContent = label;
     if (title) btn.title = title;
     return btn;
+  }
+
+  function rowRuKey(row) {
+    return String(row.ru ?? '').trim();
+  }
+
+  function getDuplicateSiblings(row) {
+    const ru = rowRuKey(row);
+    if (!ru) return [];
+    return state.rows.filter((item) => rowRuKey(item) === ru);
+  }
+
+  function spreadCeToDuplicates(sourceRow) {
+    collectEditorValues();
+    const ce = String(sourceRow.ce ?? '').trim();
+    if (!ce) {
+      flash('Сначала введите чеченский перевод', true);
+      return 0;
+    }
+
+    const siblings = getDuplicateSiblings(sourceRow);
+    const toUpdate = siblings.filter((item) => String(item.ce ?? '').trim() !== ce);
+    if (!toUpdate.length) {
+      flash('У всех дубликатов уже такой перевод');
+      return 0;
+    }
+
+    const conflicting = toUpdate.filter((item) => {
+      const existing = String(item.ce ?? '').trim();
+      return existing && existing !== ce;
+    });
+    if (conflicting.length) {
+      const ok = global.confirm(
+        `У ${conflicting.length} ключей другой перевод.\n\nЗаменить на:\n«${truncateText(ce, 80)}»\n\nОтметки «проверено» не меняются.`
+      );
+      if (!ok) return 0;
+    }
+
+    toUpdate.forEach((item) => {
+      const prevCe = item.ce ?? '';
+      const prevStatus = item.status ?? 'todo';
+      item.ce = ce;
+      recordChange({
+        key: item.key,
+        action: 'spread',
+        prevCe,
+        prevStatus,
+        ce,
+      });
+      updateRowChrome(item.key);
+      const editor = document.querySelector(`textarea.editor[data-key="${CSS.escape(item.key)}"]`);
+      if (editor) editor.value = ce;
+    });
+
+    persistLocal();
+    stats();
+    return toUpdate.length;
   }
 
   async function copyText(text) {
