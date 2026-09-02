@@ -538,7 +538,7 @@
         stats();
         if (state.focusedKey === row.key) renderPreview(row);
       });
-      const pasteBtn = createToolButton('Вставить', 'Вставить перевод из буфера обмена');
+      const pasteBtn = createToolButton('Вставить…', 'Открыть окно вставки перевода из Яндекса');
       pasteBtn.addEventListener('click', () => {
         void pasteIntoEditor(editor, row);
       });
@@ -697,22 +697,110 @@
   }
 
   async function pasteIntoEditor(editor, row) {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!String(text).trim()) {
-        flash('Буфер пуст', true);
-        return;
-      }
-      editor.value = text;
-      row.ce = text;
-      updateRowChrome(row.key);
-      stats();
-      if (state.focusedKey === row.key) renderPreview(row);
-      flash('Вставлено из буфера');
-    } catch {
-      editor.focus();
-      flash('Нет доступа к буферу — вставьте вручную (Ctrl+V)', true);
+    openPasteDialog(editor, row);
+  }
+
+  let pasteDialogTarget = null;
+
+  function setPasteDialogWarning(message) {
+    const warn = $('paste-dialog-warn');
+    if (!warn) return;
+    if (message) {
+      warn.textContent = message;
+      warn.hidden = false;
+    } else {
+      warn.textContent = '';
+      warn.hidden = true;
     }
+  }
+
+  function looksLikeRussianSource(text, row) {
+    const trimmed = String(text ?? '').trim();
+    const ru = String(row.ru ?? '').trim();
+    return Boolean(trimmed && ru && trimmed === ru);
+  }
+
+  function openPasteDialog(editor, row) {
+    const dialog = $('paste-dialog');
+    const input = $('paste-dialog-input');
+    if (!dialog || !input) {
+      editor.focus();
+      flash('Вставьте в поле вручную (Ctrl+V)', true);
+      return;
+    }
+
+    pasteDialogTarget = { editor, row };
+    input.value = '';
+    setPasteDialogWarning('');
+    dialog.hidden = false;
+    global.setTimeout(() => input.focus(), 0);
+  }
+
+  function closePasteDialog() {
+    const dialog = $('paste-dialog');
+    if (dialog) dialog.hidden = true;
+    pasteDialogTarget = null;
+    setPasteDialogWarning('');
+  }
+
+  function applyPasteDialog() {
+    const input = $('paste-dialog-input');
+    if (!pasteDialogTarget || !input) return false;
+    const text = String(input.value).trim();
+    if (!text) {
+      flash('Вставьте текст перевода', true);
+      input.focus();
+      return false;
+    }
+    const { editor, row } = pasteDialogTarget;
+    if (looksLikeRussianSource(text, row)) {
+      setPasteDialogWarning(
+        'Похоже на русский исходник. Скопируйте перевод справа в Яндексе, затем вставьте сюда.'
+      );
+      flash('Это русский текст — нужен перевод из Яндекса', true, 4000);
+      input.focus();
+      return false;
+    }
+    editor.value = text;
+    row.ce = text;
+    updateRowChrome(row.key);
+    stats();
+    if (state.focusedKey === row.key) renderPreview(row);
+    closePasteDialog();
+    flash('Перевод вставлен');
+    return true;
+  }
+
+  async function refreshWorkbench() {
+    setSaveFeedback('Обновляем страницу…', 'busy', 0);
+    try {
+      if ('caches' in global) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(async (name) => {
+            const cache = await caches.open(name);
+            const entries = await cache.keys();
+            await Promise.all(
+              entries
+                .filter((req) => {
+                  const path = new URL(req.url).pathname;
+                  return path.includes('/ce-locale/') || path.includes('/admin/');
+                })
+                .map((req) => cache.delete(req))
+            );
+          })
+        );
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.update()));
+      }
+    } catch (error) {
+      console.warn('Workbench refresh cache clear failed', error);
+    }
+    const url = new URL(global.location.href);
+    url.searchParams.set('r', String(Date.now()));
+    global.location.replace(url.toString());
   }
 
   function openYandexTranslate(text) {
@@ -1113,6 +1201,27 @@
       event.target.value = '';
     });
     $('next-unreviewed')?.addEventListener('click', () => focusNext(state.focusedKey ?? ''));
+    $('refresh-app')?.addEventListener('click', () => {
+      void refreshWorkbench();
+    });
+    $('paste-dialog-cancel')?.addEventListener('click', closePasteDialog);
+    $('paste-dialog-form')?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      applyPasteDialog();
+    });
+    $('paste-dialog-input')?.addEventListener('input', () => {
+      if (!pasteDialogTarget) return;
+      const input = $('paste-dialog-input');
+      if (!input) return;
+      if (looksLikeRussianSource(input.value, pasteDialogTarget.row)) {
+        setPasteDialogWarning('Похоже на русский исходник — нужен перевод из Яндекса.');
+      } else {
+        setPasteDialogWarning('');
+      }
+    });
+    $('paste-dialog')?.addEventListener('click', (event) => {
+      if (event.target?.id === 'paste-dialog') closePasteDialog();
+    });
 
     global.document.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
@@ -1123,6 +1232,13 @@
         event.preventDefault();
         void save({ markFocusedReviewed: true });
         focusNext(state.focusedKey ?? '');
+      }
+      if (event.key === 'Escape') {
+        const dialog = $('paste-dialog');
+        if (dialog && !dialog.hidden) {
+          event.preventDefault();
+          closePasteDialog();
+        }
       }
     });
   }
