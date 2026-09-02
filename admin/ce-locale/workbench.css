@@ -294,12 +294,101 @@ button {
 
 .side-panel {
   position: sticky;
-  top: var(--header-sticky-h);
-  height: calc(100vh - var(--header-sticky-h));
+  top: calc(var(--header-sticky-h) + env(safe-area-inset-top, 0px));
+  height: calc(100vh - var(--header-sticky-h) - env(safe-area-inset-top, 0px));
   overflow: auto;
   border-left: 1px solid var(--line);
   background: rgba(10, 16, 15, 0.98);
-  padding: 16px 14px 100px;
+  padding: 12px 14px calc(100px + env(safe-area-inset-bottom, 0px));
+}
+
+.side-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.side-tab {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+  color: var(--muted);
+  padding: 8px 6px;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.side-tab.active {
+  color: var(--text);
+  border-color: rgba(214, 179, 91, 0.45);
+  background: rgba(214, 179, 91, 0.08);
+}
+
+.side-tab-panel[hidden] {
+  display: none !important;
+}
+
+.history-hint {
+  margin: 0 0 10px;
+  line-height: 1.4;
+}
+
+.history-host {
+  display: grid;
+  gap: 8px;
+  max-height: calc(100vh - var(--header-sticky-h) - 180px);
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.history-item {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  width: 100%;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel2);
+  color: var(--text);
+  padding: 10px;
+  cursor: pointer;
+}
+
+.history-item:hover {
+  border-color: rgba(214, 179, 91, 0.45);
+}
+
+.history-item-top {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.history-item-action {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--gold);
+}
+
+.history-item-time {
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.history-item-key {
+  font: 11px ui-monospace, SFMono-Regular, Menlo, monospace;
+  color: #c5d1cd;
+  word-break: break-all;
+}
+
+.history-item-ce {
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.35;
 }
 
 .panel-head {
@@ -316,9 +405,9 @@ button {
 }
 
 .preview-panel {
-  margin-bottom: 18px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--line);
+  margin-bottom: 0;
+  padding-bottom: 0;
+  border-bottom: none;
 }
 
 .preview-host {

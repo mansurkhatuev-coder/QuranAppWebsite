@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Чеченский UI — workbench</title>
-    <link rel="stylesheet" href="./workbench.css?v=15" />
+    <link rel="stylesheet" href="./workbench.css?v=16" />
   </head>
   <body>
     <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
@@ -117,8 +117,14 @@
     <div class="workbench-layout">
       <main><div id="table" class="table"></div></main>
 
-      <aside class="side-panel" aria-label="Превью и глоссарий">
-        <section class="preview-panel">
+      <aside class="side-panel" aria-label="Превью, глоссарий и история">
+        <div class="side-tabs" role="tablist" aria-label="Боковая панель">
+          <button type="button" class="side-tab active" data-side-tab="preview" role="tab" aria-selected="true">Превью</button>
+          <button type="button" class="side-tab" data-side-tab="glossary" role="tab" aria-selected="false">Глоссарий</button>
+          <button type="button" class="side-tab" data-side-tab="history" role="tab" aria-selected="false">Последние</button>
+        </div>
+
+        <section class="side-tab-panel preview-panel" data-side-panel="preview">
           <div class="panel-head">
             <h2>Превью</h2>
             <span id="preview-template" class="hint"></span>
@@ -128,13 +134,22 @@
           </div>
         </section>
 
-        <section class="glossary-panel">
+        <section class="side-tab-panel glossary-panel" data-side-panel="glossary" hidden>
           <div class="panel-head">
             <h2>Глоссарий</h2>
             <span class="hint">Клик → вставка</span>
           </div>
           <input id="glossary-q" class="glossary-search" placeholder="маор, куран…" />
           <div id="glossary-host" class="glossary-host"></div>
+        </section>
+
+        <section class="side-tab-panel history-panel" data-side-panel="history" hidden>
+          <div class="panel-head">
+            <h2>Последние изменения</h2>
+            <button type="button" class="link-btn inline" id="clear-history">Очистить</button>
+          </div>
+          <p class="hint history-hint">Переводы и отметки «Проверено» — кликните, чтобы вернуться к ключу.</p>
+          <div id="history-host" class="history-host"></div>
         </section>
       </aside>
     </div>
@@ -166,7 +181,7 @@
     <script src="../assets/auth-lock.js?v=1"></script>
     <script src="./gate.js?v=2"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=15"></script>
+    <script src="./workbench.js?v=16"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
         window.CeWorkbench.boot();

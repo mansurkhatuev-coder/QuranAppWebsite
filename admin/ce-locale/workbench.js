@@ -3,12 +3,15 @@
   const REVIEW_KEY = 'quranapp_ce_workbench_review_v3';
   const PACK_KEY = 'quranapp_ce_workbench_pack_v1';
   const UI_KEY = 'quranapp_ce_workbench_ui_v1';
+  const HISTORY_KEY = 'quranapp_ce_workbench_history_v1';
   const ASSIGNEE_KEY = 'quranapp_ce_workbench_assignees_v1';
+  const HISTORY_LIMIT = 120;
 
   const state = {
     rows: [],
     filtered: [],
     focusedKey: null,
+    history: [],
     meta: { packs: [], groups: {}, defaultPackId: 'pack-01-core' },
     glossary: { categories: [] },
     packProgress: [],
@@ -281,6 +284,147 @@
     });
   }
 
+  function historyActionLabel(action) {
+    switch (action) {
+      case 'reviewed':
+        return 'Проверено ✓';
+      case 'uncertain':
+        return 'Пересмотреть ?';
+      case 'todo':
+        return 'Снята отметка';
+      case 'paste':
+        return 'Вставлен перевод';
+      case 'ce':
+        return 'Изменён перевод';
+      default:
+        return 'Изменение';
+    }
+  }
+
+  function truncateText(value, max = 64) {
+    const text = String(value ?? '').trim();
+    return text.length > max ? `${text.slice(0, max)}…` : text;
+  }
+
+  function loadHistory() {
+    try {
+      const raw = global.localStorage.getItem(HISTORY_KEY);
+      state.history = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(state.history)) state.history = [];
+    } catch {
+      state.history = [];
+    }
+  }
+
+  function persistHistory() {
+    try {
+      global.localStorage.setItem(HISTORY_KEY, JSON.stringify(state.history.slice(0, HISTORY_LIMIT)));
+    } catch (error) {
+      console.warn('Workbench history save failed', error);
+    }
+  }
+
+  function recordChange(entry) {
+    const row = state.rows.find((item) => item.key === entry.key);
+    if (!row) return;
+    const prevCe = entry.prevCe ?? '';
+    const nextCe = row.ce ?? entry.ce ?? '';
+    const prevStatus = entry.prevStatus ?? '';
+    const nextStatus = row.status ?? entry.status ?? 'todo';
+    const action = entry.action ?? 'ce';
+
+    if (action === 'ce' && prevCe.trim() === nextCe.trim()) return;
+    if (action !== 'ce' && prevStatus === nextStatus && prevCe.trim() === nextCe.trim()) return;
+
+    state.history.unshift({
+      id: `${Date.now()}-${entry.key}`,
+      at: new Date().toISOString(),
+      key: entry.key,
+      ru: row.ru ?? '',
+      ce: nextCe,
+      prevCe,
+      prevStatus,
+      status: nextStatus,
+      action,
+      label: entry.label ?? historyActionLabel(action),
+    });
+    state.history = state.history.slice(0, HISTORY_LIMIT);
+    persistHistory();
+    const historyPanel = document.querySelector('[data-side-panel="history"]');
+    if (historyPanel && !historyPanel.hidden) renderHistory();
+  }
+
+  function switchSideTab(tabId) {
+    document.querySelectorAll('.side-tab').forEach((btn) => {
+      const active = btn.dataset.sideTab === tabId;
+      btn.classList.toggle('active', active);
+      btn.setAttribute('aria-selected', active ? 'true' : 'false');
+    });
+    document.querySelectorAll('.side-tab-panel').forEach((panel) => {
+      panel.hidden = panel.dataset.sidePanel !== tabId;
+    });
+    if (tabId === 'history') renderHistory();
+    if (tabId === 'glossary') renderGlossary();
+  }
+
+  function focusRowFromHistory(key) {
+    const row = state.rows.find((item) => item.key === key);
+    if (!row) {
+      flash('Ключ не найден в списке', true);
+      return;
+    }
+    if ($('pack')) $('pack').value = 'pack-all';
+    if ($('status')) $('status').value = 'all';
+    if ($('group')) $('group').value = 'all';
+    if ($('q')) $('q').value = key;
+    state.focusedKey = key;
+    saveUiState();
+    render();
+    switchSideTab('preview');
+    scrollToFocusedRow({ focus: true });
+    flash(`Открыт ключ ${key}`);
+  }
+
+  function renderHistory() {
+    const host = $('history-host');
+    if (!host) return;
+    host.innerHTML = '';
+    if (!state.history.length) {
+      host.innerHTML = '<p class="hint">Пока пусто — сюда попадают правки перевода и отметки «Проверено».</p>';
+      return;
+    }
+    const fragment = global.document.createDocumentFragment();
+    state.history.forEach((entry) => {
+      const btn = global.document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'history-item';
+      const when = new Date(entry.at).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: '2-digit',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+      btn.innerHTML = `
+        <span class="history-item-top">
+          <span class="history-item-action">${escapeHtml(entry.label ?? historyActionLabel(entry.action))}</span>
+          <span class="history-item-time">${escapeHtml(when)}</span>
+        </span>
+        <span class="history-item-key">${escapeHtml(entry.key)}</span>
+        <span class="history-item-ce">${escapeHtml(truncateText(entry.ce))}</span>
+      `;
+      btn.addEventListener('click', () => focusRowFromHistory(entry.key));
+      fragment.append(btn);
+    });
+    host.append(fragment);
+  }
+
+  function clearHistory() {
+    state.history = [];
+    persistHistory();
+    renderHistory();
+    flash('История очищена');
+  }
+
   function isTranslated(row) {
     return isFilled(row) && !isSameAsRu(row);
   }
@@ -524,7 +668,6 @@
 
   function buildEmptyFilterMessage(statusFilter, groupFilter, term) {
     const inAllPacks = countRowsMatchingFilters({ respectPack: false });
-    const inCurrentPack = countRowsMatchingFilters({ respectPack: true });
     const pack = getPackDef(getSelectedPack());
     const parts = [];
 
@@ -697,11 +840,22 @@
       editor.value = row.ce ?? '';
       editor.dataset.key = row.key;
       editor.addEventListener('focus', () => {
+        editor.dataset.prevCe = row.ce ?? '';
+        editor.dataset.prevStatus = row.status ?? 'todo';
         state.focusedKey = row.key;
         persistUiStateSoon();
         document.querySelectorAll('.row.focused').forEach((el) => el.classList.remove('focused'));
         article.classList.add('focused');
         renderPreview(row);
+      });
+      editor.addEventListener('blur', () => {
+        const prevCe = editor.dataset.prevCe ?? '';
+        const prevStatus = editor.dataset.prevStatus ?? row.status ?? 'todo';
+        if (String(prevCe).trim() !== String(row.ce ?? '').trim()) {
+          recordChange({ key: row.key, action: 'ce', prevCe, prevStatus });
+        }
+        editor.dataset.prevCe = row.ce ?? '';
+        editor.dataset.prevStatus = row.status ?? 'todo';
       });
       editor.addEventListener('input', () => {
         row.ce = editor.value;
@@ -727,7 +881,15 @@
       reviewBtn.className = isReviewed(row) ? 'secondary' : 'primary';
       reviewBtn.textContent = isReviewed(row) ? 'Снять ✓' : 'Проверено ✓';
       reviewBtn.addEventListener('click', () => {
+        const prevStatus = row.status ?? 'todo';
+        const prevCe = row.ce ?? '';
         row.status = isReviewed(row) ? 'todo' : 'reviewed';
+        recordChange({
+          key: row.key,
+          action: row.status === 'reviewed' ? 'reviewed' : 'todo',
+          prevStatus,
+          prevCe,
+        });
         persistLocal();
         render();
         flash(isReviewed(row) ? 'Отмечено проверенным' : 'Снята отметка');
@@ -738,7 +900,15 @@
       uncertainBtn.textContent = isUncertain(row) ? 'Снять ?' : 'Не уверен ?';
       uncertainBtn.title = 'Перевод есть, но позже пересмотреть';
       uncertainBtn.addEventListener('click', () => {
+        const prevStatus = row.status ?? 'todo';
+        const prevCe = row.ce ?? '';
         row.status = isUncertain(row) ? 'todo' : 'uncertain';
+        recordChange({
+          key: row.key,
+          action: row.status === 'uncertain' ? 'uncertain' : 'todo',
+          prevStatus,
+          prevCe,
+        });
         persistLocal();
         render();
         flash(isUncertain(row) ? 'Отмечено: пересмотреть позже' : 'Снята отметка');
@@ -891,13 +1061,22 @@
     return Boolean(trimmed && ru && trimmed === ru);
   }
 
-  function applyPastedText(editor, row, text) {
+  function applyPastedText(editor, row, text, options = {}) {
+    const prevCe = row.ce ?? '';
+    const prevStatus = row.status ?? 'todo';
     editor.value = text;
     row.ce = text;
     updateRowChrome(row.key);
     stats();
     if (state.focusedKey === row.key) renderPreview(row);
     persistUiStateSoon();
+    recordChange({
+      key: row.key,
+      action: options.action ?? 'paste',
+      prevCe,
+      prevStatus,
+      ce: text,
+    });
   }
 
   async function readClipboardPlainTextOnce() {
@@ -1285,7 +1464,12 @@
       collectEditorValues();
       if (options.markFocusedReviewed && state.focusedKey) {
         const row = state.rows.find((item) => item.key === state.focusedKey);
-        if (row) row.status = 'reviewed';
+        if (row && !isReviewed(row)) {
+          const prevStatus = row.status ?? 'todo';
+          const prevCe = row.ce ?? '';
+          row.status = 'reviewed';
+          recordChange({ key: row.key, action: 'reviewed', prevStatus, prevCe });
+        }
       }
 
       persistLocalSafe();
@@ -1408,11 +1592,13 @@
     state.glossary = payload.glossary ?? { categories: [] };
     loadLocalOverrides();
     loadAssignees();
+    loadHistory();
     initPackSelect();
     initGroupSelect();
     applyUiState(loadUiState());
     updateAssigneeField();
     renderGlossary();
+    renderHistory();
     render();
     scrollToFocusedRow();
   }
@@ -1454,6 +1640,13 @@
       persistUiStateSoon();
       renderGlossary();
     });
+    document.querySelectorAll('.side-tab').forEach((btn) => {
+      btn.addEventListener('click', () => switchSideTab(btn.dataset.sideTab ?? 'preview'));
+    });
+    $('clear-history')?.addEventListener('click', () => {
+      if (!global.confirm('Очистить историю последних изменений?')) return;
+      clearHistory();
+    });
     $('save')?.addEventListener('click', () => {
       void save();
     });
@@ -1466,6 +1659,7 @@
       global.localStorage.removeItem(REVIEW_KEY);
       global.localStorage.removeItem(PACK_KEY);
       global.localStorage.removeItem(UI_KEY);
+      global.localStorage.removeItem(HISTORY_KEY);
       global.location.reload();
     });
     $('export-ts')?.addEventListener('click', exportTs);
