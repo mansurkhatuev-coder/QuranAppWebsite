@@ -2,6 +2,7 @@
   const STORE_KEY = 'quranapp_ce_workbench_v3';
   const REVIEW_KEY = 'quranapp_ce_workbench_review_v3';
   const PACK_KEY = 'quranapp_ce_workbench_pack_v1';
+  const UI_KEY = 'quranapp_ce_workbench_ui_v1';
   const ASSIGNEE_KEY = 'quranapp_ce_workbench_assignees_v1';
 
   const state = {
@@ -190,6 +191,70 @@
     global.localStorage.setItem(STORE_KEY, JSON.stringify(cePayload));
     global.localStorage.setItem(REVIEW_KEY, JSON.stringify(reviewPayload));
     global.localStorage.setItem(PACK_KEY, getSelectedPack());
+    saveUiState();
+  }
+
+  function setSelectValue(select, value) {
+    if (!select || value == null || value === '') return;
+    const hasOption = [...select.options].some((option) => option.value === value);
+    if (hasOption) select.value = value;
+  }
+
+  function saveUiState() {
+    const payload = {
+      pack: getSelectedPack(),
+      status: $('status')?.value ?? 'all',
+      group: $('group')?.value ?? 'all',
+      q: $('q')?.value ?? '',
+      glossaryQ: $('glossary-q')?.value ?? '',
+      focusedKey: state.focusedKey ?? '',
+    };
+    try {
+      global.localStorage.setItem(UI_KEY, JSON.stringify(payload));
+    } catch (error) {
+      console.warn('Workbench UI state save failed', error);
+    }
+  }
+
+  function loadUiState() {
+    try {
+      const raw = global.localStorage.getItem(UI_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function applyUiState(ui) {
+    if (!ui || typeof ui !== 'object') return;
+    setSelectValue($('pack'), ui.pack);
+    setSelectValue($('status'), ui.status);
+    setSelectValue($('group'), ui.group);
+    if ($('q') && typeof ui.q === 'string') $('q').value = ui.q;
+    if ($('glossary-q') && typeof ui.glossaryQ === 'string') $('glossary-q').value = ui.glossaryQ;
+    if (ui.focusedKey && state.rows.some((row) => row.key === ui.focusedKey)) {
+      state.focusedKey = ui.focusedKey;
+    }
+  }
+
+  function persistUiStateSoon() {
+    global.clearTimeout(persistUiStateSoon.timer);
+    persistUiStateSoon.timer = global.setTimeout(saveUiState, 250);
+  }
+
+  function scrollToFocusedRow(options = {}) {
+    if (!state.focusedKey) return;
+    global.requestAnimationFrame(() => {
+      const editor = document.querySelector(
+        `textarea.editor[data-key="${CSS.escape(state.focusedKey)}"]`
+      );
+      if (!editor) return;
+      editor.scrollIntoView({
+        behavior: options.smooth ? 'smooth' : 'auto',
+        block: 'center',
+      });
+      if (options.focus) editor.focus({ preventScroll: true });
+    });
   }
 
   function isTranslated(row) {
@@ -528,6 +593,7 @@
       editor.dataset.key = row.key;
       editor.addEventListener('focus', () => {
         state.focusedKey = row.key;
+        persistUiStateSoon();
         document.querySelectorAll('.row.focused').forEach((el) => el.classList.remove('focused'));
         article.classList.add('focused');
         renderPreview(row);
@@ -538,7 +604,7 @@
         stats();
         if (state.focusedKey === row.key) renderPreview(row);
       });
-      const pasteBtn = createToolButton('Вставить', 'Вставить перевод из буфера обмена');
+      const pasteBtn = createToolButton('Вставить…', 'Открыть окно вставки перевода из Яндекса');
       pasteBtn.addEventListener('click', () => {
         void pasteIntoEditor(editor, row);
       });
@@ -697,22 +763,110 @@
   }
 
   async function pasteIntoEditor(editor, row) {
-    try {
-      const text = await navigator.clipboard.readText();
-      if (!String(text).trim()) {
-        flash('Буфер пуст', true);
-        return;
-      }
-      editor.value = text;
-      row.ce = text;
-      updateRowChrome(row.key);
-      stats();
-      if (state.focusedKey === row.key) renderPreview(row);
-      flash('Вставлено из буфера');
-    } catch {
-      editor.focus();
-      flash('Нет доступа к буферу — вставьте вручную (Ctrl+V)', true);
+    openPasteDialog(editor, row);
+  }
+
+  let pasteDialogTarget = null;
+
+  function setPasteDialogWarning(message) {
+    const warn = $('paste-dialog-warn');
+    if (!warn) return;
+    if (message) {
+      warn.textContent = message;
+      warn.hidden = false;
+    } else {
+      warn.textContent = '';
+      warn.hidden = true;
     }
+  }
+
+  function looksLikeRussianSource(text, row) {
+    const trimmed = String(text ?? '').trim();
+    const ru = String(row.ru ?? '').trim();
+    return Boolean(trimmed && ru && trimmed === ru);
+  }
+
+  function openPasteDialog(editor, row) {
+    const dialog = $('paste-dialog');
+    const input = $('paste-dialog-input');
+    if (!dialog || !input) {
+      editor.focus();
+      flash('Вставьте в поле вручную (Ctrl+V)', true);
+      return;
+    }
+
+    pasteDialogTarget = { editor, row };
+    input.value = '';
+    setPasteDialogWarning('');
+    dialog.hidden = false;
+    global.setTimeout(() => input.focus(), 0);
+  }
+
+  function closePasteDialog() {
+    const dialog = $('paste-dialog');
+    if (dialog) dialog.hidden = true;
+    pasteDialogTarget = null;
+    setPasteDialogWarning('');
+  }
+
+  function applyPasteDialog() {
+    const input = $('paste-dialog-input');
+    if (!pasteDialogTarget || !input) return false;
+    const text = String(input.value).trim();
+    if (!text) {
+      flash('Вставьте текст перевода', true);
+      input.focus();
+      return false;
+    }
+    const { editor, row } = pasteDialogTarget;
+    if (looksLikeRussianSource(text, row)) {
+      setPasteDialogWarning(
+        'Похоже на русский исходник. Скопируйте перевод справа в Яндексе, затем вставьте сюда.'
+      );
+      flash('Это русский текст — нужен перевод из Яндекса', true, 4000);
+      input.focus();
+      return false;
+    }
+    editor.value = text;
+    row.ce = text;
+    updateRowChrome(row.key);
+    stats();
+    if (state.focusedKey === row.key) renderPreview(row);
+    closePasteDialog();
+    flash('Перевод вставлен');
+    return true;
+  }
+
+  async function refreshWorkbench() {
+    setSaveFeedback('Обновляем страницу…', 'busy', 0);
+    try {
+      if ('caches' in global) {
+        const cacheNames = await caches.keys();
+        await Promise.all(
+          cacheNames.map(async (name) => {
+            const cache = await caches.open(name);
+            const entries = await cache.keys();
+            await Promise.all(
+              entries
+                .filter((req) => {
+                  const path = new URL(req.url).pathname;
+                  return path.includes('/ce-locale/') || path.includes('/admin/');
+                })
+                .map((req) => cache.delete(req))
+            );
+          })
+        );
+      }
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.map((registration) => registration.update()));
+      }
+    } catch (error) {
+      console.warn('Workbench refresh cache clear failed', error);
+    }
+    const url = new URL(global.location.href);
+    url.searchParams.set('r', String(Date.now()));
+    global.location.replace(url.toString());
   }
 
   function openYandexTranslate(text) {
@@ -816,9 +970,11 @@
     loadLocalOverrides();
     initPackSelect();
     initGroupSelect();
+    applyUiState(loadUiState());
     updateAssigneeField();
     renderGlossary();
     render();
+    scrollToFocusedRow();
   }
 
   async function cloudPull(options = {}) {
@@ -973,6 +1129,7 @@
       return;
     }
     state.focusedKey = next.key;
+    saveUiState();
     render();
     const editor = document.querySelector(`textarea.editor[data-key="${CSS.escape(next.key)}"]`);
     editor?.focus();
@@ -1056,15 +1213,26 @@
     loadAssignees();
     initPackSelect();
     initGroupSelect();
+    applyUiState(loadUiState());
     updateAssigneeField();
     renderGlossary();
     render();
+    scrollToFocusedRow();
   }
 
   function bindUi() {
-    $('q')?.addEventListener('input', render);
-    $('status')?.addEventListener('change', render);
-    $('group')?.addEventListener('change', render);
+    $('q')?.addEventListener('input', () => {
+      persistUiStateSoon();
+      render();
+    });
+    $('status')?.addEventListener('change', () => {
+      saveUiState();
+      render();
+    });
+    $('group')?.addEventListener('change', () => {
+      saveUiState();
+      render();
+    });
     $('pack')?.addEventListener('change', () => {
       persistLocal();
       updateAssigneeField();
@@ -1084,7 +1252,10 @@
         flash('Ответственный сохранён');
       }
     });
-    $('glossary-q')?.addEventListener('input', renderGlossary);
+    $('glossary-q')?.addEventListener('input', () => {
+      persistUiStateSoon();
+      renderGlossary();
+    });
     $('save')?.addEventListener('click', () => {
       void save();
     });
@@ -1096,6 +1267,7 @@
       global.localStorage.removeItem(STORE_KEY);
       global.localStorage.removeItem(REVIEW_KEY);
       global.localStorage.removeItem(PACK_KEY);
+      global.localStorage.removeItem(UI_KEY);
       global.location.reload();
     });
     $('export-ts')?.addEventListener('click', exportTs);
@@ -1113,6 +1285,32 @@
       event.target.value = '';
     });
     $('next-unreviewed')?.addEventListener('click', () => focusNext(state.focusedKey ?? ''));
+    $('refresh-app')?.addEventListener('click', () => {
+      void refreshWorkbench();
+    });
+    $('paste-dialog-cancel')?.addEventListener('click', closePasteDialog);
+    $('paste-dialog-form')?.addEventListener('submit', (event) => {
+      event.preventDefault();
+      applyPasteDialog();
+    });
+    $('paste-dialog-input')?.addEventListener('input', () => {
+      if (!pasteDialogTarget) return;
+      const input = $('paste-dialog-input');
+      if (!input) return;
+      if (looksLikeRussianSource(input.value, pasteDialogTarget.row)) {
+        setPasteDialogWarning('Похоже на русский исходник — нужен перевод из Яндекса.');
+      } else {
+        setPasteDialogWarning('');
+      }
+    });
+    $('paste-dialog')?.addEventListener('click', (event) => {
+      if (event.target?.id === 'paste-dialog') closePasteDialog();
+    });
+
+    global.document.addEventListener('visibilitychange', () => {
+      if (global.document.hidden) saveUiState();
+    });
+    global.window.addEventListener('pagehide', saveUiState);
 
     global.document.addEventListener('keydown', (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
@@ -1123,6 +1321,13 @@
         event.preventDefault();
         void save({ markFocusedReviewed: true });
         focusNext(state.focusedKey ?? '');
+      }
+      if (event.key === 'Escape') {
+        const dialog = $('paste-dialog');
+        if (dialog && !dialog.hidden) {
+          event.preventDefault();
+          closePasteDialog();
+        }
       }
     });
   }

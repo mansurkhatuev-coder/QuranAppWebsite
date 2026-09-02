@@ -2,10 +2,10 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Чеченский UI — workbench</title>
-    <link rel="stylesheet" href="./workbench.css?v=10" />
+    <link rel="stylesheet" href="./workbench.css?v=12" />
   </head>
   <body>
     <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
@@ -33,6 +33,7 @@
           <div class="top-links">
             <a href="../index.html">← Админка</a>
             <a href="./packs/">Пакеты</a>
+            <button type="button" class="link-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA">↻ Обновить</button>
           </div>
         </div>
 
@@ -138,6 +139,21 @@
       <span class="hint">Ctrl+S — сохранить · синхронизация, если вы вошли в админку</span>
       <div><span id="msg" class="hint"></span></div>
     </div>
+
+    <div id="paste-dialog" class="paste-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="paste-dialog-title">
+      <form id="paste-dialog-form" class="paste-dialog-card">
+        <h2 id="paste-dialog-title">Вставить перевод</h2>
+        <p class="paste-dialog-hint">
+          Скопируйте результат в Яндексе, затем вставьте сюда (Ctrl+V или долгое нажатие → Вставить).
+        </p>
+        <textarea id="paste-dialog-input" class="paste-dialog-input" rows="4" placeholder="Нохчийн текст…"></textarea>
+        <p id="paste-dialog-warn" class="paste-dialog-warn" hidden></p>
+        <div class="paste-dialog-actions">
+          <button type="button" class="secondary" id="paste-dialog-cancel">Отмена</button>
+          <button type="submit" class="primary">Применить</button>
+        </div>
+      </form>
+    </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -146,7 +162,7 @@
     <script src="../assets/auth-lock.js?v=1"></script>
     <script src="./gate.js?v=1"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=10"></script>
+    <script src="./workbench.js?v=12"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
         window.CeWorkbench.boot();
