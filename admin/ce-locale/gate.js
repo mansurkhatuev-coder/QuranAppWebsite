@@ -23,6 +23,15 @@
     }
   }
 
+  async function hasAdminSession() {
+    try {
+      const session = await global.AdminSupabase?.getSession?.();
+      return Boolean(session?.access_token);
+    } catch {
+      return false;
+    }
+  }
+
   function mountGate(onSuccess) {
     const gate = global.document.getElementById('ce-gate');
     const app = global.document.getElementById('ce-app');
@@ -41,46 +50,54 @@
       return;
     }
 
-    if (isUnlocked()) {
-      showApp();
-      return;
-    }
-
-    app.hidden = true;
-    gate.hidden = false;
-
-    form?.addEventListener('submit', (event) => {
-      event.preventDefault();
-      if (error) error.hidden = true;
-
-      try {
-        global.AuthLock?.assertAllowed?.(SCOPE);
-      } catch (lockError) {
-        if (error) {
-          error.hidden = false;
-          error.textContent =
-            lockError instanceof Error ? lockError.message : 'Слишком много попыток';
-        }
+    void (async () => {
+      if (isUnlocked()) {
+        showApp();
         return;
       }
 
-      if (normalize(input?.value) === PASSWORD) {
-        global.AuthLock?.clear?.(SCOPE);
+      if (await hasAdminSession()) {
         unlock();
         showApp();
         return;
       }
 
-      const snap = global.AuthLock?.recordFailure?.(SCOPE);
-      if (error) {
-        error.hidden = false;
-        error.textContent = snap?.locked ? snap.message : 'Неверный пароль';
-      }
-      input?.select();
-      input?.focus();
-    });
+      app.hidden = true;
+      gate.hidden = false;
 
-    input?.focus();
+      form?.addEventListener('submit', (event) => {
+        event.preventDefault();
+        if (error) error.hidden = true;
+
+        try {
+          global.AuthLock?.assertAllowed?.(SCOPE);
+        } catch (lockError) {
+          if (error) {
+            error.hidden = false;
+            error.textContent =
+              lockError instanceof Error ? lockError.message : 'Слишком много попыток';
+          }
+          return;
+        }
+
+        if (normalize(input?.value) === PASSWORD) {
+          global.AuthLock?.clear?.(SCOPE);
+          unlock();
+          showApp();
+          return;
+        }
+
+        const snap = global.AuthLock?.recordFailure?.(SCOPE);
+        if (error) {
+          error.hidden = false;
+          error.textContent = snap?.locked ? snap.message : 'Неверный пароль';
+        }
+        input?.select();
+        input?.focus();
+      });
+
+      input?.focus();
+    })();
   }
 
   global.CeWorkbenchGate = { mountGate };
