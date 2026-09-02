@@ -12,6 +12,15 @@
   --header-sticky-h: 76px;
 }
 
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  touch-action: manipulation;
+}
+
 header {
   border-bottom: 1px solid var(--line);
 }
@@ -1171,6 +1180,28 @@ main {
   .footerbar {
     align-items: flex-start;
     flex-direction: column;
+  }
+}
+
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea,
+  button {
+    font-size: 16px;
+  }
+
+  .tool-btn {
+    font-size: 14px;
+    padding: 6px 10px;
+  }
+
+  .label,
+  .key,
+  .row-hint,
+  .hint,
+  .badge {
+    font-size: 12px;
   }
 }
 
