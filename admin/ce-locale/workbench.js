@@ -21,6 +21,7 @@
     cloudMeta: null,
     saveBusy: false,
     cloudSyncInFlight: false,
+    cloudBootstrapped: false,
   };
 
   function $(id) {
@@ -116,6 +117,34 @@
       return local === 'manual' ? 'reviewed' : local;
     }
     return local || cloud || 'todo';
+  }
+
+  function mergeCloudCe(localCe, cloudCe) {
+    const local = String(localCe ?? '');
+    const cloud = String(cloudCe ?? '');
+    if (cloud === local) return local;
+    if (local.trim() && !cloud.trim()) return local;
+    if (!local.trim() && cloud.trim()) return cloud;
+    // Unsaved local edits win over stale cloud snapshot.
+    return local;
+  }
+
+  function persistLocalSoon() {
+    global.clearTimeout(persistLocalSoon.timer);
+    persistLocalSoon.timer = global.setTimeout(() => {
+      try {
+        collectEditorValues();
+        persistLocal();
+      } catch (error) {
+        console.warn('Workbench draft autosave failed', error);
+      }
+    }, 400);
+  }
+
+  function flushLocalDraft() {
+    global.clearTimeout(persistLocalSoon.timer);
+    collectEditorValues();
+    persistLocalSafe();
   }
 
   function loadAssignees() {
@@ -862,6 +891,7 @@
         updateRowChrome(row.key);
         stats();
         if (state.focusedKey === row.key) renderPreview(row);
+        persistLocalSoon();
       });
       const pasteBtn = createToolButton(
         'Вставить',
@@ -1324,6 +1354,7 @@
   }
 
   function applyCloudPayload(stored) {
+    collectEditorValues();
     const payload = decodeCloudPayload(stored);
     const incoming = Array.isArray(payload.rows) ? payload.rows : null;
     if (!incoming) throw new Error('В облаке нет rows[]');
@@ -1334,7 +1365,7 @@
       if (!patch) return row;
       return {
         ...row,
-        ce: patch.ce ?? row.ce,
+        ce: mergeCloudCe(row.ce, patch.ce),
         status: mergeWorkflowStatus(row.status, patch.status),
       };
     });
@@ -1358,6 +1389,7 @@
       throw new Error('Облако не подключено');
     }
     try {
+      collectEditorValues();
       const data = await withTimeout(
         global.AdminSupabase.loadCeLocaleDraft(),
         15000,
@@ -1434,9 +1466,11 @@
       if (data?.updated_at) {
         state.cloudMeta = { updated_at: data.updated_at, updated_by: data.updated_by };
       }
-      if (options.autoPull !== false && data?.payload) {
+      if (options.autoPull !== false && !state.cloudBootstrapped && data?.payload) {
+        state.cloudBootstrapped = true;
         return cloudPull({ silent: true, auto: true });
       }
+      if (data?.payload) state.cloudBootstrapped = true;
       return Boolean(data?.payload);
     } catch (error) {
       if (!options.silent) {
@@ -1449,8 +1483,9 @@
   async function initCloud() {
     if (!global.AdminSupabase?.isEnabled?.()) return;
     const client = global.AdminSupabase.getClient();
-    client?.auth.onAuthStateChange(() => {
-      void refreshCloudSession({ autoPull: true, silent: true });
+    client?.auth.onAuthStateChange((event) => {
+      if (event === 'TOKEN_REFRESHED') return;
+      void refreshCloudSession({ autoPull: false, silent: true });
     });
     await refreshCloudSession({ autoPull: true, silent: true });
   }
@@ -1703,10 +1738,17 @@
     });
 
     global.document.addEventListener('visibilitychange', () => {
-      if (!global.document.hidden) lastBecameVisibleAt = Date.now();
-      if (global.document.hidden) saveUiState();
+      if (!global.document.hidden) {
+        lastBecameVisibleAt = Date.now();
+        return;
+      }
+      flushLocalDraft();
+      saveUiState();
     });
-    global.window.addEventListener('pagehide', saveUiState);
+    global.window.addEventListener('pagehide', () => {
+      flushLocalDraft();
+      saveUiState();
+    });
     global.window.addEventListener('focus', () => {
       lastBecameVisibleAt = Date.now();
     });
