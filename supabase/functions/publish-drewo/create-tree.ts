@@ -196,6 +196,8 @@ export function customizeTemplateHtml(options: {
   html = html.replace(/>Войти в демо</g, '>Войти<');
   html = html.replace(/var DEMO_GATE_PERSON_ID = 'islam-a';/, "var DEMO_GATE_PERSON_ID = '';");
   html = html.replace(/var DEMO_GATE_PASSWORD = 'демо';/, "var DEMO_GATE_PASSWORD = '';");
+  html = html.replace(/var DEMO_MODE = true;/, 'var DEMO_MODE = false;');
+  html = html.replace(/gateSubmit\.textContent = 'Войти в демо';/g, "gateSubmit.textContent = 'Войти';");
   html = html.replace(/<h1>Некъ<\/h1>/i, `<h1>${escapeHtml(title)}</h1>`);
   html = html.replace(/>Линия Берса</g, `>Линия ${escapeHtml(rootName)}<`);
 
