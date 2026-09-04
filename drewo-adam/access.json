@@ -3,5 +3,28 @@
   "locked": false,
   "lockedReason": "",
   "pinnedBackups": [],
-  "visitCount": 0
+  "visitCount": 0,
+  "deletedAt": null,
+  "billing": {
+    "plan": "family_half_year",
+    "status": "disabled",
+    "trialEndsAt": null,
+    "paidUntil": null,
+    "priceRub": 790,
+    "priceLocked": true,
+    "periodMonths": 6,
+    "paymentMethod": null,
+    "lastPaymentAt": null,
+    "lastPaymentAmount": null,
+    "lastPaymentId": null,
+    "revenueTotal": 0,
+    "notes": "",
+    "sbp": {
+      "customerId": null,
+      "subscriptionId": null,
+      "lastPaymentUrl": null,
+      "lastQrId": null,
+      "lastProviderStatus": null
+    }
+  }
 }
