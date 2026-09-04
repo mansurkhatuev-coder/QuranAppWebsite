@@ -1,22 +1,23 @@
 # Биллинг семейных древ
 
-Модель: **30 дней trial → 790 ₽ / 6 месяцев**. Сейчас оплата через **WhatsApp**, в API уже заложены поля под **СБП**.
+Модель: **30 дней полный премиум (trial) → 790 ₽ / 6 месяцев**. Без оплаты после trial древо остаётся в **простом режиме** (классика, правки можно). Сейчас оплата через **WhatsApp**, в API уже заложены поля под **СБП**.
 
 ## Роли
 
 | Кто | Где | Задача |
 |---|---|---|
 | Разработчик | `/trees/` | Продлить / trial / отключить / удалить |
-| Семья | страница древа | Смотреть всегда; править при активном доступе; «Продлить в WhatsApp» при истечении |
+| Семья | страница древа | Смотреть и править всегда (если не отключено); премиум-оформление — в trial/оплате |
 
 `/trees/` — админка платформы, не кабинет покупателя.
 
 ## Тариф
 
-- Trial: 30 дней с момента создания (ownership = `customer`)
-- Продление: 790 ₽ за 6 месяцев (`priceRub` + `periodMonths` в `access.json`)
-- `priceLocked: true` — цена этого древа не поднимается автоматически при общем повышении
-- Свои древа (`ownership: mine`) по умолчанию `status: exempt` (без оплаты)
+- Trial: 30 дней **полного премиума** (ownership = `customer`)
+- После trial без оплаты: **простой режим** (классика, без premium-неба) — правки не режем
+- Продление: 790 ₽ за 6 месяцев премиума
+- `priceLocked: true` — цена этого древа фиксируется
+- Свои древа (`ownership: mine`) → `status: exempt` (премиум без оплаты)
 
 ## Жизненный цикл (`access.json` → `billing`)
 
@@ -24,37 +25,19 @@
 exempt | trial | active | expired | disabled
 ```
 
-- **expired / disabled** → правки закрыты (как lock), **просмотр остаётся**
-- Удаление: сначала **Отключить**, потом подтверждение названием + чекбокс → soft-delete (реестр + invite stub; файлы древа остаются)
+- **expired** → простой режим (`hasPremium: false`, правки открыты)
+- **disabled** → правки закрыты
+- Удаление: сначала **Отключить**, потом подтверждение названием
 
 ## WhatsApp
 
-1. Впишите номер в `trees/billing-config.js` → `whatsappPhone` (например `79001234567`)
-2. Кнопка в админке и баннер на древе собирают текст с названием, кодом и ценой
+1. Впишите номер в `trees/billing-config.js` → `whatsappPhone`
+2. Кнопка в админке и баннер на древе
 
 ## СБП (задел)
 
-В `billing` есть:
-
-- `paymentMethod`: `manual_whatsapp` | `sbp`
-- `lastPaymentId`, `lastPaymentAt`, `lastPaymentAmount`
-- `sbp.customerId` / `subscriptionId` / `lastPaymentUrl` / `lastQrId` / `lastProviderStatus`
-
-В `billing-config.js`: `sbpEnabled` + `sbpCheckoutUrl` — когда будет checkout, баннер покажет кнопку «Оплатить по СБП».
-
-API уже принимает `paymentMethod: "sbp"` в `set-billing` / `extend`.
+`paymentMethod: sbp`, `lastPaymentId`, блок `sbp.*`; в конфиге `sbpEnabled` / `sbpCheckoutUrl`.
 
 ## Edge Function
 
-`publish-drewo`:
-
-- `create-tree` — customer → trial
-- `set-billing` — `extend` | `activate_trial` | `deactivate` | `set_exempt` (нужен вход Trees)
-- `soft-delete-tree` — только после `disabled`
-- `status` / `hub-overview` / `auth` — отдают `billing` и эффективный `locked`
-
-После правок функции — **задеплоить** `publish-drewo` в Supabase.
-
-## Текст для семьи
-
-> Оплата нужна на развитие и поддержку проекта. Ваша цена фиксируется для этого древа.
+После правок — **задеплоить** `publish-drewo`.

@@ -1,6 +1,6 @@
 /**
- * Billing banner on family-tree pages (view stays open; edits blocked by server).
- * Expects access.json billing + optional /trees/billing-config.js
+ * Billing banner on family-tree pages.
+ * Expired premium → simple mode CTA (edits stay). Disabled → lock message.
  */
 (function () {
   function ensureBanner() {
@@ -12,11 +12,11 @@
     el.hidden = true;
     el.innerHTML =
       '<div class="billing-banner-copy">' +
-      '<strong id="billing-banner-title">Нужно продлить доступ</strong>' +
+      '<strong id="billing-banner-title">Простой режим</strong>' +
       '<p id="billing-banner-text"></p>' +
       '</div>' +
       '<div class="billing-banner-actions">' +
-      '<a id="billing-whatsapp" class="billing-wa-btn" target="_blank" rel="noopener noreferrer">Продлить в WhatsApp</a>' +
+      '<a id="billing-whatsapp" class="billing-wa-btn" target="_blank" rel="noopener noreferrer">Премиум в WhatsApp</a>' +
       '<a id="billing-sbp" class="billing-sbp-btn" hidden href="#">Оплатить по СБП</a>' +
       '</div>';
     const lock = document.getElementById('lock-banner');
@@ -34,8 +34,9 @@
     style.id = 'billing-banner-style';
     style.textContent =
       '.billing-banner{display:none;margin:10px 14px 0;padding:12px 14px;border-radius:14px;' +
-      'background:rgba(180,90,76,.1);border:1px solid rgba(180,90,76,.28);color:#5c2f28;' +
+      'background:rgba(107,90,69,.12);border:1px solid rgba(107,90,69,.28);color:#3d3226;' +
       'font-family:inherit;gap:10px;align-items:flex-start;justify-content:space-between;flex-wrap:wrap}' +
+      '.billing-banner.is-blocked{background:rgba(180,90,76,.1);border-color:rgba(180,90,76,.28);color:#5c2f28}' +
       '.billing-banner.visible{display:flex}' +
       '.billing-banner strong{display:block;font-size:15px}' +
       '.billing-banner p{margin:4px 0 0;font-size:13px;line-height:1.4;opacity:.92}' +
@@ -73,8 +74,9 @@
       billing.status = 'expired';
     }
 
-    const hasAccess =
+    const hasPremium =
       billing.status === 'exempt' || billing.status === 'trial' || billing.status === 'active';
+    const hasAccess = billing.status !== 'disabled';
     let reason = 'ok';
     let label = '';
     let editBlockReason = '';
@@ -84,35 +86,52 @@
       editBlockReason = 'Древо отключено. Напишите в WhatsApp, чтобы восстановить доступ.';
     } else if (billing.status === 'expired') {
       reason = billing.lastPaymentAt ? 'subscription_expired' : 'trial_expired';
-      label = reason === 'trial_expired' ? 'Пробный период закончился' : 'Нужно продлить';
+      label = 'Простой режим';
       editBlockReason =
-        reason === 'trial_expired'
-          ? 'Пробный месяц закончился. Просмотр доступен — правки после оплаты.'
-          : 'Срок оплаты закончился. Просмотр доступен — правки после продления.';
+        'Премиум закончился: классическое оформление. Правки доступны. Верните премиум для красивого режима.';
     } else if (billing.status === 'trial') {
-      label = 'Пробный период';
+      label = 'Премиум (пробный)';
     } else if (billing.status === 'active') {
-      label = 'Оплачено';
+      label = 'Премиум';
     } else {
       label = 'Без оплаты';
     }
 
     return Object.assign({}, billing, {
       hasAccess,
+      hasPremium,
       reason,
       label,
-      editsBlocked: !hasAccess,
+      editsBlocked: billing.status === 'disabled',
       editBlockReason,
     });
+  }
+
+  function applyPremiumGate(billing) {
+    const premiumOk = !billing || billing.hasPremium !== false || billing.status === 'exempt';
+    document.body.classList.toggle('billing-simple', Boolean(billing) && !premiumOk);
+    const themeSelect = document.getElementById('theme-select');
+    if (!themeSelect) return;
+    const premiumOpt = themeSelect.querySelector('option[value="premium"]');
+    if (premiumOpt) premiumOpt.disabled = !premiumOk;
+    if (!premiumOk) {
+      themeSelect.value = 'classic';
+      document.body.setAttribute('data-theme', 'classic');
+      try {
+        if (typeof window.setTheme === 'function') window.setTheme('classic', false);
+      } catch (_) {}
+    }
   }
 
   function applyBilling(rawBilling) {
     injectStyles();
     const banner = ensureBanner();
     const billing = reconcile(rawBilling);
-    if (!billing || billing.status === 'exempt' || billing.hasAccess) {
+    applyPremiumGate(billing);
+
+    if (!billing || billing.status === 'exempt' || billing.hasPremium) {
       banner.hidden = true;
-      banner.classList.remove('visible');
+      banner.classList.remove('visible', 'is-blocked');
       return;
     }
 
@@ -123,15 +142,17 @@
     const meta = treeMeta();
     const cfg = window.DrewoBilling?.config?.() || {};
 
-    if (titleEl) titleEl.textContent = billing.label || 'Нужно продлить доступ';
+    if (titleEl) titleEl.textContent = billing.label || 'Простой режим';
     if (textEl) {
       const price = billing.priceRub || cfg.priceRub || 790;
       const months = billing.periodMonths || cfg.periodMonths || 6;
       textEl.textContent =
-        (billing.editBlockReason || 'Просмотр открыт. Правки — после оплаты.') +
-        ` ${price} ₽ / ${months === 6 ? 'полгода' : months + ' мес'}.` +
+        (billing.editBlockReason || 'Доступен простой режим.') +
+        ` Премиум: ${price} ₽ / ${months === 6 ? 'полгода' : months + ' мес'}.` +
         (billing.priceLocked ? ' Ваша цена сохранена.' : '');
     }
+
+    banner.classList.toggle('is-blocked', billing.reason === 'disabled');
 
     if (wa && window.DrewoBilling) {
       wa.href = window.DrewoBilling.renewUrl({
@@ -142,6 +163,7 @@
         periodMonths: billing.periodMonths,
         reason: billing.reason,
       });
+      wa.textContent = billing.reason === 'disabled' ? 'Написать в WhatsApp' : 'Премиум в WhatsApp';
     }
 
     const sbpUrl = window.DrewoBilling?.sbpCheckoutUrl?.(meta);

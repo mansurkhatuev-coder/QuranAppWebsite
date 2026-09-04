@@ -398,7 +398,7 @@
     } else if (billing?.status === 'active') {
       bits.push(`<span class="badge badge-ok">Оплачено</span>`);
     } else if (billing?.status === 'expired') {
-      bits.push(`<span class="badge badge-locked">Истекло</span>`);
+      bits.push(`<span class="badge badge-quiet">Простой</span>`);
     } else if (billing?.status === 'disabled') {
       bits.push(`<span class="badge badge-locked">Отключено</span>`);
     } else if (billing?.status === 'exempt') {

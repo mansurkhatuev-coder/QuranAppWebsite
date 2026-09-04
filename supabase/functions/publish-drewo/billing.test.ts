@@ -17,13 +17,14 @@ Deno.test('legacy / missing billing is exempt', () => {
   assertEquals(access.editsBlocked, false);
 });
 
-Deno.test('trial expires into blocked edits', () => {
+Deno.test('trial expires into simple mode (edits stay, premium off)', () => {
   const now = new Date('2026-09-04T12:00:00.000Z');
   const trial = startTrialBilling(new Date('2026-08-01T12:00:00.000Z'), 30);
   const access = getBillingAccess(trial, now);
-  assertEquals(access.hasAccess, false);
+  assertEquals(access.hasAccess, true);
+  assertEquals(access.hasPremium, false);
   assertEquals(access.reason, 'trial_expired');
-  assertEquals(access.editsBlocked, true);
+  assertEquals(access.editsBlocked, false);
 });
 
 Deno.test('extend sets active paidUntil and revenue', () => {

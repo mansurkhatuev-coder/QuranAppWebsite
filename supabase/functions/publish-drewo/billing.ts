@@ -34,10 +34,12 @@ export type TreeBilling = {
 
 export type BillingAccessState = {
   hasAccess: boolean;
+  /** Premium visuals (sky, premium theme). Trial + paid + exempt. */
+  hasPremium: boolean;
   reason: 'ok' | 'exempt' | 'disabled' | 'trial_expired' | 'subscription_expired';
   daysLeft: number | null;
   label: string | null;
-  /** Edits blocked for ordinary editors (view + export stay). */
+  /** Edits blocked only when tree is disabled (not when premium lapsed). */
   editsBlocked: boolean;
   editBlockReason: string;
 };
@@ -244,6 +246,7 @@ export function getBillingAccess(billingInput: TreeBilling, now = new Date()): B
   if (billing.status === 'exempt') {
     return {
       hasAccess: true,
+      hasPremium: true,
       reason: 'exempt',
       daysLeft: null,
       label: 'Без оплаты (своё)',
@@ -255,6 +258,7 @@ export function getBillingAccess(billingInput: TreeBilling, now = new Date()): B
   if (billing.status === 'disabled') {
     return {
       hasAccess: false,
+      hasPremium: false,
       reason: 'disabled',
       daysLeft: null,
       label: 'Отключено',
@@ -267,9 +271,10 @@ export function getBillingAccess(billingInput: TreeBilling, now = new Date()): B
     const left = daysUntil(billing.trialEndsAt, now);
     return {
       hasAccess: true,
+      hasPremium: true,
       reason: 'ok',
       daysLeft: left,
-      label: billing.trialEndsAt ? `Пробный до ${formatRuDate(billing.trialEndsAt)}` : 'Пробный период',
+      label: billing.trialEndsAt ? `Премиум (пробный) до ${formatRuDate(billing.trialEndsAt)}` : 'Премиум (пробный)',
       editsBlocked: false,
       editBlockReason: '',
     };
@@ -279,25 +284,25 @@ export function getBillingAccess(billingInput: TreeBilling, now = new Date()): B
     const left = daysUntil(billing.paidUntil, now);
     return {
       hasAccess: true,
+      hasPremium: true,
       reason: 'ok',
       daysLeft: left,
-      label: billing.paidUntil ? `Оплачено до ${formatRuDate(billing.paidUntil)}` : 'Оплачено',
+      label: billing.paidUntil ? `Премиум до ${formatRuDate(billing.paidUntil)}` : 'Премиум',
       editsBlocked: false,
       editBlockReason: '',
     };
   }
 
-  // expired
+  // expired → simple mode: edits OK, premium visuals off
   const trialish = Boolean(billing.trialEndsAt) && !billing.lastPaymentAt;
   return {
-    hasAccess: false,
+    hasAccess: true,
+    hasPremium: false,
     reason: trialish ? 'trial_expired' : 'subscription_expired',
     daysLeft: 0,
-    label: trialish ? 'Пробный период закончился' : 'Нужно продлить',
-    editsBlocked: true,
-    editBlockReason: trialish
-      ? 'Пробный месяц закончился. Просмотр доступен — правки после оплаты.'
-      : 'Срок оплаты закончился. Просмотр доступен — правки после продления.',
+    label: trialish ? 'Простой режим (пробный премиум закончился)' : 'Простой режим',
+    editsBlocked: false,
+    editBlockReason: '',
   };
 }
 
@@ -396,6 +401,7 @@ export function publicBillingView(billingInput: TreeBilling, now = new Date()) {
     paymentMethod: billing.paymentMethod,
     revenueTotal: billing.revenueTotal,
     hasAccess: access.hasAccess,
+    hasPremium: access.hasPremium,
     reason: access.reason,
     daysLeft: access.daysLeft,
     label: access.label,
@@ -423,10 +429,12 @@ export function buildWhatsAppRenewText(options: {
     options.periodMonths === 6 ? 'полгода' : `${options.periodMonths} мес.`;
   const why =
     options.reason === 'trial_expired'
-      ? 'Пробный месяц закончился.'
-      : 'Срок оплаты закончился.';
+      ? 'Пробный премиум закончился — хочу снова полный режим.'
+      : options.reason === 'disabled'
+        ? 'Древо отключено.'
+        : 'Хочу продлить премиум.';
   const lines = [
-    'Здравствуйте! Хочу продлить семейное древо.',
+    'Здравствуйте! Хочу премиум для семейного древа.',
     why,
     `Древо: ${options.treeTitle}`,
     `Код: ${options.code || options.treeDir}`,

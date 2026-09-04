@@ -2516,6 +2516,10 @@
             <option value="night">Ночь</option>
           </select>
         </label>
+        <label class="style-pick">
+          <span>Женщины</span>
+          <input id="show-women-toggle" type="checkbox" />
+        </label>
       </div>
     </nav>
   </div>
@@ -2524,7 +2528,7 @@
     <ol>
       <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека (имя, годы, био).</li>
       <li>Вход: своё имя из списка + пароль семьи. <b>Кто я</b> ставится при входе; фото — в карточке (долгое нажатие), кружок на древе после «Сохранить».</li>
-      <li><b>+ сын</b> и <b>Редактировать</b> — сначала обычный пароль.</li>
+      <li><b>+</b> (добавить человека) и <b>Редактировать</b> — сначала обычный пароль. Пол выбирается в форме. Тумблер «Женщины» по умолчанию выключен.</li>
       <li>В «Редактировать»: перенос на нового отца, у листьев — удалить. Имя меняется из карточки.</li>
       <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
       <li><b>Управление</b> и восстановление бэкапа — суперпароль.</li>
@@ -2561,10 +2565,17 @@
 
   <dialog id="add-dialog" aria-labelledby="add-dialog-title">
     <form id="add-form" method="dialog">
-      <strong id="add-dialog-title">Добавить сына</strong>
+      <strong id="add-dialog-title">Добавить человека</strong>
       <label>
         Имя
         <input id="add-name" type="text" name="name" autocomplete="off" required="">
+      </label>
+      <label>
+        Пол
+        <select id="add-gender" name="gender">
+          <option value="male" selected="">Мужской</option>
+          <option value="female">Женский</option>
+        </select>
       </label>
       <div class="dialog-actions">
         <button type="submit" value="save">Сохранить</button>
@@ -3413,7 +3424,9 @@
   function canAddSon(root, parentId, nutsuId) {
     const node = findById(root, parentId);
     if (!node) return false;
-    // Root gate + all descendants may receive sons.
+    // Broken/missing gate (customer tree still pointing at demo id) → allow all.
+    if (!nutsuId || !findById(root, nutsuId)) return true;
+    // Root gate + all descendants may receive children.
     if (parentId === nutsuId) return true;
     return isUnderNutsu(root, parentId, nutsuId);
   }
@@ -3426,14 +3439,15 @@
     return tree;
   }
 
-  function addSon(root, parentId, name, nutsuId) {
+  function addSon(root, parentId, name, nutsuId, gender) {
     if (!canAddSon(root, parentId, nutsuId)) {
       throw new Error('Cannot add son to this node');
     }
     const tree = cloneTree(root);
     const parent = findById(tree, parentId);
     const sonId = `added-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    parent.sons.push({ id: sonId, name: name.trim(), sons: [] });
+    const g = gender === 'female' ? 'female' : 'male';
+    parent.sons.push({ id: sonId, name: name.trim(), gender: g, sons: [] });
     return { tree: markAllowAdd(tree, nutsuId), sonId };
   }
 
@@ -4155,6 +4169,9 @@
       var addDialog = document.getElementById('add-dialog');
       var addForm = document.getElementById('add-form');
       var addNameInput = document.getElementById('add-name');
+      var addGenderSelect = document.getElementById('add-gender');
+      var showWomenToggle = document.getElementById('show-women-toggle');
+      var showWomen = false;
       var addCancelBtn = document.getElementById('add-cancel');
       var installHomeBtn = document.getElementById('install-home');
       var reloadPageBtn = document.getElementById('reload-page');
@@ -4196,6 +4213,11 @@
       var baseTreeJson = '';
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo-reklama';
+      var SHOW_WOMEN_KEY = 'drewo-show-women:' + TREE_DIR;
+      try {
+        showWomen = localStorage.getItem(SHOW_WOMEN_KEY) === '1';
+      } catch (errWomen) {}
+      if (showWomenToggle) showWomenToggle.checked = !!showWomen;
       var DEMO_MODE = true;
       var DEMO_MAX_PEOPLE = 90;
       var VIEW_SESSION_KEY = 'drewo-reklama-view-session';
@@ -7121,7 +7143,8 @@
           var addBtn = document.createElement('button');
           addBtn.type = 'button';
           addBtn.className = 'add-son';
-          addBtn.textContent = '+ сын';
+          addBtn.textContent = '+';
+          addBtn.title = 'Добавить человека';
           addBtn.style.fontSize = Math.max(8, 11 * s) + 'px';
           addBtn.style.minHeight = Math.max(18, 26 * s) + 'px';
           addBtn.addEventListener('pointerdown', function (e) {
@@ -7139,8 +7162,22 @@
         return el;
       }
 
+      function treeForView() {
+        if (showWomen) return tree;
+        function filterNode(node) {
+          if (!node || typeof node !== 'object') return null;
+          if (node.gender === 'female') return null;
+          var copy = Object.assign({}, node);
+          copy.sons = (Array.isArray(node.sons) ? node.sons : [])
+            .map(filterNode)
+            .filter(Boolean);
+          return copy;
+        }
+        return filterNode(tree) || tree;
+      }
+
       function render(fit) {
-        computeLayout(tree);
+        computeLayout(treeForView());
         if (fit) fitView();
 
         var s = map.scale;
@@ -7172,6 +7209,7 @@
       function openAddDialog(parentId) {
         addParentId = parentId;
         if (addNameInput) addNameInput.value = '';
+        if (addGenderSelect) addGenderSelect.value = 'male';
         if (!addDialog) return;
         try {
           if (addDialog.open) addDialog.close();
@@ -7184,7 +7222,7 @@
             try {
               if (typeof addDialog.showModal === 'function') addDialog.showModal();
             } catch (err3) {
-              showToast('Не удалось открыть форму «+ сын»', 'error');
+              showToast('Не удалось открыть форму добавления', 'error');
             }
           }, 120);
           return;
@@ -7197,6 +7235,7 @@
       function closeAddDialog() {
         addParentId = null;
         addNameInput.value = '';
+        if (addGenderSelect) addGenderSelect.value = 'male';
         if (addDialog.open) addDialog.close();
       }
 
@@ -7217,11 +7256,12 @@
           return;
         }
         var father = TreeModel.findById(tree, addParentId);
+        var gender = addGenderSelect && addGenderSelect.value === 'female' ? 'female' : 'male';
         var result;
         try {
-          result = TreeModel.addSon(tree, addParentId, name, NUTSU_ID);
+          result = TreeModel.addSon(tree, addParentId, name, NUTSU_ID, gender);
         } catch (err) {
-          showToast((err && err.message) || 'Нельзя добавить сына сюда', 'error');
+          showToast((err && err.message) || 'Нельзя добавить сюда', 'error');
           return;
         }
         tree = result.tree;
@@ -7233,10 +7273,18 @@
           father: father ? father.name : addParentId,
           sonId: result.sonId,
           fatherId: addParentId,
+          gender: gender,
         });
+        if (gender === 'female' && !showWomen) {
+          showWomen = true;
+          if (showWomenToggle) showWomenToggle.checked = true;
+          try {
+            localStorage.setItem(SHOW_WOMEN_KEY, '1');
+          } catch (errShow) {}
+        }
         expanded.add(addParentId);
         closeAddDialog();
-        showToast('Добавлен: ' + name, 'success');
+        showToast(gender === 'female' ? 'Добавлена: ' + name : 'Добавлен: ' + name, 'success');
         render(true);
       }
 
@@ -7442,6 +7490,15 @@
       if (skyModeSelect) {
         skyModeSelect.addEventListener('change', function () {
           setSkyMode(skyModeSelect.value);
+        });
+      }
+      if (showWomenToggle) {
+        showWomenToggle.addEventListener('change', function () {
+          showWomen = !!showWomenToggle.checked;
+          try {
+            localStorage.setItem(SHOW_WOMEN_KEY, showWomen ? '1' : '0');
+          } catch (errToggle) {}
+          render(true);
         });
       }
 
