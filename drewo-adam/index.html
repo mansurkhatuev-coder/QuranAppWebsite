@@ -7332,7 +7332,18 @@
           var action = pendingPasswordAction;
           var pass = passwordInput.value;
           if (passwordError) passwordError.hidden = true;
-          verifyAuth(pass)
+          verifyLocalEditor(pass)
+            .then(function (ok) {
+              if (ok) {
+                return {
+                  role: 'editor',
+                  locked: accessLocked,
+                  lockedReason: accessLockedReason,
+                  fromServer: false,
+                };
+              }
+              return verifyAuth(pass);
+            })
             .then(function (data) {
               var needSuper = action && String(action.type).indexOf('super') === 0;
               if (needSuper && data.role !== 'super') {
