@@ -549,6 +549,95 @@ select {
   color: var(--danger);
 }
 
+.badge-ok {
+  background: rgba(47, 122, 85, 0.14);
+  color: var(--ok);
+}
+
+.badge-trial {
+  background: rgba(107, 90, 69, 0.14);
+  color: var(--bark);
+}
+
+.billing-panel {
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid var(--line);
+}
+
+.billing-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 1rem;
+  margin: 0 0 0.35rem;
+  font-size: 0.86rem;
+  color: var(--ink);
+}
+
+.billing-hint {
+  margin: 0 0 0.65rem;
+  font-size: 0.75rem;
+  color: var(--ink-soft);
+}
+
+.billing-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  align-items: flex-end;
+}
+
+.billing-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
+}
+
+.billing-field input {
+  width: 5.5rem;
+  padding: 0.4rem 0.5rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--surface-solid);
+  color: var(--ink);
+}
+
+.billing-danger {
+  color: var(--danger) !important;
+}
+
+.billing-delete {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 14px;
+  border: 1px solid rgba(180, 90, 76, 0.28);
+  background: rgba(180, 90, 76, 0.08);
+}
+
+.billing-delete p {
+  margin: 0 0 0.55rem;
+  font-size: 0.86rem;
+}
+
+.billing-delete input[type='text'] {
+  width: 100%;
+  margin-bottom: 0.55rem;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: #fff;
+}
+
+.billing-ack {
+  display: flex;
+  gap: 0.5rem;
+  align-items: flex-start;
+  margin-bottom: 0.65rem;
+  font-size: 0.84rem;
+}
+
 .badge-quiet {
   background: rgba(79, 101, 89, 0.1);
   color: var(--ink-soft);

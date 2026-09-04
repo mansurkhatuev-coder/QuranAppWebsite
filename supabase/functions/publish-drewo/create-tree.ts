@@ -226,6 +226,19 @@ export function customizeTemplateHtml(options: {
     );
   }
 
+  if (!html.includes('drewo-billing-banner.js')) {
+    const billingScripts = `
+  <script src="/trees/billing-config.js?v=1"></script>
+  <script src="/assets/drewo-billing.js?v=1"></script>
+  <script src="/assets/drewo-billing-banner.js?v=1"></script>
+`;
+    if (/<\/body>/i.test(html)) {
+      html = html.replace(/<\/body>/i, `${billingScripts}</body>`);
+    } else {
+      html += billingScripts;
+    }
+  }
+
   return html;
 }
 
