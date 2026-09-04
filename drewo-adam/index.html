@@ -26,6 +26,7 @@
       --bg2: #2a5246;
       --sand: #d4b483;
       --sand-dim: #a8895a;
+      --line-mother: #c995a8;
       --text: #f3ebe0;
       --text-dim: color-mix(in srgb, var(--text) 62%, transparent);
       --panel: color-mix(in srgb, var(--bg0) 78%, black);
@@ -41,6 +42,7 @@
       --bg2: #2c4638;
       --sand: #e2c48a;
       --sand-dim: #b89555;
+      --line-mother: #d9a8b8;
       --text: #f7f1e6;
       --panel: color-mix(in srgb, #0a141a 80%, black);
       --header-bg: color-mix(in srgb, #0a151c 92%, black);
@@ -790,6 +792,29 @@
     /* Per-node leaf-glow removed — fireflies are drawn on canvas (see JS). */
     .leaf-glow {
       display: none !important;
+    }
+
+    .person.is-female .person-btn {
+      border-color: color-mix(in srgb, var(--line-mother) 58%, transparent);
+    }
+
+    body[data-theme="premium"] .person.is-female .person-btn {
+      border-color: color-mix(in srgb, var(--line-mother) 52%, transparent);
+      box-shadow:
+        0 0 0 1px color-mix(in srgb, var(--line-mother) 22%, transparent),
+        0 8px 18px color-mix(in srgb, black 28%, transparent);
+    }
+
+    .add-gender-wrap[hidden],
+    .add-father-hint[hidden] {
+      display: none !important;
+    }
+
+    .add-father-hint {
+      margin: 0.35rem 0 0;
+      font-size: 0.86rem;
+      line-height: 1.35;
+      color: var(--text-dim);
     }
 
     body[data-theme="premium"][data-sky="night"] .person-btn.is-leaf {
@@ -2525,6 +2550,8 @@
       <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека (имя, годы, био).</li>
       <li>Вход: своё имя из списка + пароль семьи. <b>Кто я</b> ставится при входе; фото — в карточке (долгое нажатие), кружок на древе после «Сохранить».</li>
       <li><b>+</b> (добавить человека) и <b>Редактировать</b> — сначала обычный пароль. Пол выбирается в форме. Тумблер «Женщины» по умолчанию выключен.</li>
+      <li>Линии от женщин к детям — другого цвета (розовые), чтобы не смешиваться с мужской линией.</li>
+      <li>В карточке человека: <b>Добавить отца</b>. Если дети были у матери — отец встаёт рядом с ней, дети переходят к нему.</li>
       <li>В «Редактировать»: перенос на нового отца, у листьев — удалить. Имя меняется из карточки.</li>
       <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
       <li><b>Управление</b> и восстановление бэкапа — суперпароль.</li>
@@ -2562,11 +2589,12 @@
   <dialog id="add-dialog" aria-labelledby="add-dialog-title">
     <form id="add-form" method="dialog">
       <strong id="add-dialog-title">Добавить человека</strong>
+      <p id="add-father-hint" class="add-father-hint" hidden>Новый отец появится в древе, ребёнок перейдёт к нему.</p>
       <label>
         Имя
         <input id="add-name" type="text" name="name" autocomplete="off" required="">
       </label>
-      <label>
+      <label id="add-gender-wrap" class="add-gender-wrap">
         Пол
         <select id="add-gender" name="gender">
           <option value="male" selected="">Мужской</option>
@@ -2718,6 +2746,7 @@
       <div id="person-sheet-bio" class="person-sheet-bio is-empty">Краткой биографии пока нет.</div>
       <div class="dialog-actions">
         <button type="button" id="person-sheet-rename">Изменить имя</button>
+        <button type="button" id="person-sheet-add-father">Добавить отца</button>
         <button type="button" id="person-sheet-edit-bio">Добавить / изменить</button>
         <button type="button" id="person-sheet-set-me">Это я</button>
         <button type="button" id="person-sheet-close">Закрыть</button>
@@ -2892,6 +2921,79 @@
     const g = gender === 'female' ? 'female' : 'male';
     parent.sons.push({ id: sonId, name: name.trim(), gender: g, sons: [] });
     return { tree: markAllowAdd(tree, nutsuId), sonId };
+  }
+
+  function findParentOf(root, childId) {
+    let found = null;
+    function walk(node) {
+      const sons = Array.isArray(node.sons) ? node.sons : [];
+      for (let i = 0; i < sons.length; i++) {
+        if (sons[i].id === childId) {
+          found = { parent: node, child: sons[i], index: i };
+          return true;
+        }
+        if (walk(sons[i])) return true;
+      }
+      return false;
+    }
+    walk(root);
+    return found;
+  }
+
+  /**
+   * Insert a father for childId.
+   * If current parent is female and has a parent: place father beside the mother
+   * and move the child under the new father (patrilineal).
+   * Otherwise insert the father between current parent and child.
+   */
+  function insertFather(root, childId, fatherName, nutsuId) {
+    const name = String(fatherName || '').trim();
+    if (!name) throw new Error('Укажите имя отца');
+    if (!root || childId === root.id) {
+      throw new Error('У корня древа отца добавить нельзя');
+    }
+    const tree = cloneTree(root);
+    const info = findParentOf(tree, childId);
+    if (!info) throw new Error('Человек не найден');
+    const fatherId = `added-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const curParent = info.parent;
+
+    if (curParent.gender === 'female') {
+      const grand = findParentOf(tree, curParent.id);
+      if (grand) {
+        if (!canAddSon(tree, grand.parent.id, nutsuId)) {
+          throw new Error('Сюда нельзя добавить отца');
+        }
+        const child = curParent.sons.splice(info.index, 1)[0];
+        const father = { id: fatherId, name: name, gender: 'male', sons: [child] };
+        const motherIdx = grand.parent.sons.findIndex((s) => s.id === curParent.id);
+        const at = motherIdx >= 0 ? motherIdx + 1 : grand.parent.sons.length;
+        grand.parent.sons.splice(at, 0, father);
+        return {
+          tree: markAllowAdd(tree, nutsuId),
+          fatherId: fatherId,
+          mode: 'beside-mother',
+          motherName: curParent.name,
+          childName: child.name,
+          childId: child.id,
+        };
+      }
+    }
+
+    if (!canAddSon(tree, curParent.id, nutsuId)) {
+      throw new Error('Сюда нельзя добавить отца');
+    }
+    const child = curParent.sons.splice(info.index, 1)[0];
+    const father = { id: fatherId, name: name, gender: 'male', sons: [child] };
+    curParent.sons.splice(info.index, 0, father);
+    return {
+      tree: markAllowAdd(tree, nutsuId),
+      fatherId: fatherId,
+      mode: 'between',
+      parentName: curParent.name,
+      childName: child.name,
+      childId: child.id,
+    };
   }
 
   function toJSON(root) {
@@ -3150,6 +3252,8 @@
     canAddSon,
     markAllowAdd,
     addSon,
+    findParentOf,
+    insertFather,
     toJSON,
     fromJSON,
     gregorianYearToHijri,
@@ -3613,9 +3717,15 @@
       var addForm = document.getElementById('add-form');
       var addNameInput = document.getElementById('add-name');
       var addGenderSelect = document.getElementById('add-gender');
+      var addGenderWrap = document.getElementById('add-gender-wrap');
+      var addFatherHint = document.getElementById('add-father-hint');
+      var addDialogTitle = document.getElementById('add-dialog-title');
+      var addMode = 'child'; // 'child' | 'father'
+      var addFatherChildId = null;
       var showWomenToggle = document.getElementById('show-women-toggle');
       var showWomen = false;
       var addCancelBtn = document.getElementById('add-cancel');
+      var personSheetAddFather = document.getElementById('person-sheet-add-father');
       var installHomeBtn = document.getElementById('install-home');
       var reloadPageBtn = document.getElementById('reload-page');
       var shareTreeBtn = document.getElementById('share-tree');
@@ -4454,6 +4564,20 @@
             '</strong>'
           );
         }
+        if (entry.type === 'add-father') {
+          var extra =
+            entry.mode === 'beside-mother' && entry.motherName
+              ? ' (был' + (female ? 'а' : '') + ' у <strong>' + escapeHtml(entry.motherName) + '</strong>)'
+              : '';
+          return (
+            '<strong>' +
+            escapeHtml(entry.father) +
+            '</strong> → отец <strong>' +
+            escapeHtml(entry.son) +
+            '</strong>' +
+            extra
+          );
+        }
         if (entry.type === 'reparent') {
           return (
             '<strong>' +
@@ -5000,6 +5124,26 @@
         openPasswordDialog({ type: 'add', parentId: parentId });
       }
 
+      function requestAddFather(childId) {
+        if (!childId || childId === tree.id) {
+          showToast('У корня древа отца добавить нельзя', 'error');
+          return;
+        }
+        if (treeLocked && !isSuperSession()) {
+          showToast('Правки заблокированы. Нужен суперпароль.', 'error', 4200);
+          return;
+        }
+        if (!findParentInfo(tree, childId)) {
+          showToast('Человек не найден', 'error');
+          return;
+        }
+        if (editUnlocked || sessionRole === 'editor' || sessionRole === 'super') {
+          openAddFatherDialog(childId);
+          return;
+        }
+        openPasswordDialog({ type: 'add-father', childId: childId });
+      }
+
       function renamePerson(id, nextName) {
         var name = String(nextName || '').trim();
         if (!name) return { ok: false, reason: 'Пустое имя' };
@@ -5100,6 +5244,10 @@
           personSheetSetMe.textContent =
             myPersonId && String(myPersonId) === String(id) ? 'Это уже вы' : 'Это я';
           personSheetSetMe.disabled = !!(myPersonId && String(myPersonId) === String(id));
+        }
+        if (personSheetAddFather) {
+          var canFather = id !== tree.id && !!findParentInfo(tree, id);
+          personSheetAddFather.hidden = !canFather;
         }
         if (typeof personSheetDialog.showModal === 'function') personSheetDialog.showModal();
       }
@@ -6181,6 +6329,7 @@
             sonIds: visibleSons(node).map(function (s) {
               return s.id;
             }),
+            gender: node.gender === 'female' ? 'female' : 'male',
             born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
             died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
             photo: photoVersion(node) || null,
@@ -6308,6 +6457,8 @@
           }
 
           var busY = (parent.bottom + childTop) / 2;
+          var motherLine = parent.gender === 'female';
+          var lineStroke = motherLine ? 'var(--line-mother)' : 'var(--sand)';
 
           var trunk = document.createElementNS(SVG_NS, 'path');
           trunk.setAttribute(
@@ -6318,9 +6469,10 @@
               ' L ' + maxX + ' ' + busY
           );
           trunk.setAttribute('fill', 'none');
-          trunk.setAttribute('stroke', 'var(--sand)');
+          trunk.setAttribute('stroke', lineStroke);
           trunk.setAttribute('stroke-width', String(stroke));
           trunk.setAttribute('opacity', String(lineOpacity));
+          if (motherLine) trunk.classList.add('mother-link');
           linksSvg.appendChild(trunk);
 
           centers.forEach(function (child) {
@@ -6330,9 +6482,10 @@
               'M ' + child.cx + ' ' + busY + ' L ' + child.cx + ' ' + child.y
             );
             stub.setAttribute('fill', 'none');
-            stub.setAttribute('stroke', 'var(--sand)');
+            stub.setAttribute('stroke', lineStroke);
             stub.setAttribute('stroke-width', String(stroke));
             stub.setAttribute('opacity', String(lineOpacity));
+            if (motherLine) stub.classList.add('mother-link');
             linksSvg.appendChild(stub);
 
             if (premium) {
@@ -6340,8 +6493,9 @@
               tip.setAttribute('cx', String(child.cx));
               tip.setAttribute('cy', String(child.y));
               tip.setAttribute('r', '1.8');
-              tip.setAttribute('fill', 'var(--sand)');
+              tip.setAttribute('fill', lineStroke);
               tip.setAttribute('opacity', String(lineOpacity));
+              if (motherLine) tip.classList.add('mother-link');
               linksSvg.appendChild(tip);
               if (TreeModel.isMyBranchEdge(myBranchIds, id, child.id)) {
                 stub.setAttribute('pathLength', '1');
@@ -6357,8 +6511,9 @@
                   (child.cx - 4) + ',' + (child.y - 5) + ' ' +
                   (child.cx + 4) + ',' + (child.y - 5)
               );
-              arrow.setAttribute('fill', 'var(--sand)');
+              arrow.setAttribute('fill', lineStroke);
               arrow.setAttribute('opacity', String(lineOpacity));
+              if (motherLine) arrow.classList.add('mother-link');
               linksSvg.appendChild(arrow);
             }
           });
@@ -6436,6 +6591,7 @@
         var s = map.scale;
         var el = document.createElement('div');
         el.className = 'person';
+        if (meta.gender === 'female') el.classList.add('is-female');
         el.dataset.id = meta.id;
         el.style.left = meta.x * s + 'px';
         el.style.top = meta.y * s + 'px';
@@ -6692,7 +6848,32 @@
         }
       }
 
+      function configureAddDialog(mode) {
+        addMode = mode === 'father' ? 'father' : 'child';
+        if (addDialogTitle) {
+          addDialogTitle.textContent =
+            addMode === 'father' ? 'Добавить отца' : 'Добавить человека';
+        }
+        if (addGenderWrap) addGenderWrap.hidden = addMode === 'father';
+        if (addFatherHint) {
+          addFatherHint.hidden = addMode !== 'father';
+          if (addMode === 'father' && addFatherChildId) {
+            var childNode = TreeModel.findById(tree, addFatherChildId);
+            var pInfo = findParentInfo(tree, addFatherChildId);
+            var mom = pInfo && pInfo.parent && pInfo.parent.gender === 'female';
+            addFatherHint.textContent = mom
+              ? 'Отец встанет рядом с матерью, а ' +
+                ((childNode && childNode.name) || 'ребёнок') +
+                ' перейдёт к нему. Линии матери останутся другого цвета.'
+              : 'Отец встанет между текущим родителем и этим человеком.';
+          }
+        }
+        if (addGenderSelect) addGenderSelect.value = 'male';
+      }
+
       function openAddDialog(parentId) {
+        addFatherChildId = null;
+        configureAddDialog('child');
         addParentId = parentId;
         if (addNameInput) addNameInput.value = '';
         if (addGenderSelect) addGenderSelect.value = 'male';
@@ -6720,12 +6901,104 @@
 
       function closeAddDialog() {
         addParentId = null;
+        addFatherChildId = null;
+        addMode = 'child';
         addNameInput.value = '';
         if (addGenderSelect) addGenderSelect.value = 'male';
+        if (addGenderWrap) addGenderWrap.hidden = false;
+        if (addFatherHint) addFatherHint.hidden = true;
+        if (addDialogTitle) addDialogTitle.textContent = 'Добавить человека';
         if (addDialog.open) addDialog.close();
       }
 
+      function openAddFatherDialog(childId) {
+        addParentId = null;
+        addFatherChildId = childId;
+        configureAddDialog('father');
+        if (addNameInput) addNameInput.value = '';
+        if (!addDialog) return;
+        try {
+          if (addDialog.open) addDialog.close();
+        } catch (err) {}
+        try {
+          if (typeof addDialog.showModal === 'function') addDialog.showModal();
+          else addDialog.setAttribute('open', '');
+        } catch (err2) {
+          window.setTimeout(function () {
+            try {
+              if (typeof addDialog.showModal === 'function') addDialog.showModal();
+            } catch (err3) {
+              showToast('Не удалось открыть форму', 'error');
+            }
+          }, 120);
+          return;
+        }
+        window.setTimeout(function () {
+          if (addNameInput) addNameInput.focus();
+        }, 30);
+      }
+
+      function saveAddFather() {
+        if (!addFatherChildId) return;
+        if (!editUnlocked && !(sessionRole === 'editor' || sessionRole === 'super')) {
+          closeAddDialog();
+          showToast('Сначала введите пароль', 'error');
+          return;
+        }
+        editUnlocked = true;
+        var name = addNameInput ? addNameInput.value.trim() : '';
+        if (!name) {
+          if (addNameInput) addNameInput.focus();
+          return;
+        }
+        if (!assertDemoCanAddPerson()) {
+          return;
+        }
+        var childId = addFatherChildId;
+        var result;
+        try {
+          result = TreeModel.insertFather(tree, childId, name, NUTSU_ID);
+        } catch (err) {
+          showToast((err && err.message) || 'Нельзя добавить отца', 'error');
+          return;
+        }
+        tree = result.tree;
+        persistTree();
+        pushActivity({
+          type: 'add-father',
+          at: new Date().toISOString(),
+          son: result.childName,
+          father: name,
+          sonId: result.childId,
+          fatherId: result.fatherId,
+          gender: (TreeModel.findById(tree, result.childId) || {}).gender === 'female' ? 'female' : 'male',
+          mode: result.mode,
+          motherName: result.motherName || '',
+        });
+        if (!showWomen) {
+          // Keep women visible so mother/children context stays clear after move.
+          var maybeMom = result.mode === 'beside-mother';
+          if (maybeMom) {
+            showWomen = true;
+            if (showWomenToggle) showWomenToggle.checked = true;
+            try {
+              localStorage.setItem(SHOW_WOMEN_KEY, '1');
+            } catch (errShow) {}
+          }
+        }
+        expanded.add(result.fatherId);
+        expanded.add(result.childId);
+        closeAddDialog();
+        showToast('Добавлен отец: ' + name, 'success');
+        pendingScrollId = result.fatherId;
+        render(true);
+      }
+
       function saveAddSon() {
+        if (addMode === 'father') {
+          saveAddFather();
+          return;
+        }
         if (!addParentId) return;
         if (!editUnlocked && !(sessionRole === 'editor' || sessionRole === 'super')) {
           closeAddDialog();
@@ -7023,6 +7296,8 @@
                 }
                 if (nextAction.type === 'add') {
                   openAddDialog(nextAction.parentId);
+                } else if (nextAction.type === 'add-father') {
+                  openAddFatherDialog(nextAction.childId);
                 } else if (nextAction.type === 'backups') {
                   openBackupDialog();
                   loadBackupList(pass);
@@ -7517,6 +7792,14 @@
           var id = personSheetTargetId;
           closePersonSheet();
           requestRename(id);
+        });
+      }
+      if (personSheetAddFather) {
+        personSheetAddFather.addEventListener('click', function () {
+          if (!personSheetTargetId) return;
+          var id = personSheetTargetId;
+          closePersonSheet();
+          requestAddFather(id);
         });
       }
       if (personSheetEditBio) {
