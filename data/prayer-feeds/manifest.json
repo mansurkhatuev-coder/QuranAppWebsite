@@ -1,0 +1,85 @@
+{
+  "schemaVersion": 1,
+  "year": 2026,
+  "generatedAt": "2026-09-04T21:20:54.118459Z",
+  "places": [
+    {
+      "placeId": "grozny",
+      "sourceId": "assolat_grozny",
+      "authority": "ДУМ Чеченской Республики / Assolat",
+      "file": "2026/grozny.json",
+      "bundled": false
+    },
+    {
+      "placeId": "moscow_ru",
+      "sourceId": "cdum_moscow",
+      "authority": "ЦДУМ России",
+      "file": "2026/moscow_ru.json",
+      "bundled": true
+    },
+    {
+      "placeId": "spb_ru",
+      "sourceId": "cdum_spb",
+      "authority": "ЦДУМ России",
+      "file": "2026/spb_ru.json",
+      "bundled": true
+    },
+    {
+      "placeId": "kazan_ru",
+      "sourceId": "dumrt_kazan",
+      "authority": "ДУМ Республики Татарстан",
+      "file": "2026/kazan_ru.json",
+      "bundled": true
+    },
+    {
+      "placeId": "almaty_kz",
+      "sourceId": "muftyat_kz_almaty",
+      "authority": "ДУМК Казахстан",
+      "file": "2026/almaty_kz.json",
+      "bundled": true
+    },
+    {
+      "placeId": "astana_kz",
+      "sourceId": "muftyat_kz_astana",
+      "authority": "ДУМК Казахстан",
+      "file": "2026/astana_kz.json",
+      "bundled": true
+    },
+    {
+      "placeId": "shymkent_kz",
+      "sourceId": "muftyat_kz_shymkent",
+      "authority": "ДУМК Казахстан",
+      "file": "2026/shymkent_kz.json",
+      "bundled": true
+    },
+    {
+      "placeId": "aktobe_kz",
+      "sourceId": "muftyat_kz_aktobe",
+      "authority": "ДУМК Казахстан",
+      "file": "2026/aktobe_kz.json",
+      "bundled": true
+    },
+    {
+      "placeId": "karaganda_kz",
+      "sourceId": "muftyat_kz_karaganda",
+      "authority": "ДУМК Казахстан",
+      "file": "2026/karaganda_kz.json",
+      "bundled": true
+    },
+    {
+      "placeId": "nalchik_ru",
+      "sourceId": "kbrdum_nalchik_pdf",
+      "authority": "ДУМ Кабардино-Балкарской Республики",
+      "file": "2026/nalchik_ru.json",
+      "bundled": true
+    },
+    {
+      "placeId": "vladikavkaz_ru",
+      "sourceId": "islamosetia_vladikavkaz_pdf",
+      "authority": "Исламская община Республики Северная Осетия — Алания / islamosetia.ru",
+      "file": "2026/vladikavkaz_ru.json",
+      "bundled": true
+    }
+  ],
+  "failures": []
+}
