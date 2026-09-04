@@ -693,6 +693,8 @@ const AUTH_ATTEMPTS = new Map<string, AuthAttemptState>();
 const AUTH_FAIL_WINDOW_MS = 15 * 60 * 1000;
 const AUTH_MAX_FAILS = 5;
 const AUTH_LOCK_MS = 15 * 60 * 1000;
+/** How many unpinned auto-backups to keep when pruning after publish. */
+const AUTO_BACKUP_KEEP = 30;
 
 function clientIp(request: Request): string {
   const cf = request.headers.get('cf-connecting-ip');

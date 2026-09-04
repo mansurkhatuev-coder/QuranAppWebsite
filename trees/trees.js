@@ -434,13 +434,22 @@
     return `
       <div class="billing-wrap" data-dir="${dir}">
         <button type="button" class="btn btn-quiet billing-toggle" data-billing-toggle="${dir}" aria-expanded="false">
-          Биллинг · ${label}
+          <span class="billing-toggle-label">Оплата · ${label}</span>
+          <span class="billing-toggle-chevron" aria-hidden="true"></span>
         </button>
         <div class="billing-panel" data-billing-panel="${dir}" hidden>
-          <p class="billing-line">
-            <span>${escapeHtml(String(price))} ₽ / ${billing?.periodMonths || cfg.periodMonths || 6} мес</span>
-            <span>Доход: ${revenue}</span>
-          </p>
+          <div class="billing-stats">
+            <div class="billing-stat">
+              <span class="billing-stat-label">Тариф</span>
+              <span class="billing-stat-value">${escapeHtml(String(price))} ₽</span>
+              <span class="billing-stat-hint">${billing?.periodMonths || cfg.periodMonths || 6} мес</span>
+            </div>
+            <div class="billing-stat">
+              <span class="billing-stat-label">Доход</span>
+              <span class="billing-stat-value">${revenue}</span>
+              <span class="billing-stat-hint">с этого древа</span>
+            </div>
+          </div>
           <div class="billing-actions">
             <label class="billing-field">
               <span>Периоды</span>
@@ -462,7 +471,7 @@
                 ? `<button type="button" class="btn btn-quiet billing-danger" data-billing-action="deactivate" data-dir="${dir}">Отключить</button>`
                 : `<button type="button" class="btn btn-quiet billing-danger" data-billing-delete="${dir}" data-title="${title}">Удалить</button>`
             }
-            <a class="btn btn-quiet" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+            <a class="btn btn-quiet billing-wa" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
           </div>
           <div class="billing-delete" data-delete-panel="${dir}" hidden>
             <p>Удаление из каталога: введите <strong>${title}</strong> и подтвердите.</p>
@@ -1021,6 +1030,37 @@
     }
   }
 
+  async function waitUntilPageReady(path, options) {
+    const href = openHref(path);
+    const maxMs = options?.maxMs ?? 90000;
+    const started = Date.now();
+    let attempt = 0;
+    while (Date.now() - started < maxMs) {
+      attempt += 1;
+      const elapsedSec = Math.round((Date.now() - started) / 1000);
+      showBoot(
+        attempt === 1
+          ? 'Публикую страницу на сайте…'
+          : `Жду появления страницы… ${elapsedSec} с`
+      );
+      try {
+        const response = await fetch(href, {
+          method: 'GET',
+          cache: 'no-store',
+          redirect: 'follow',
+        });
+        if (response.ok) return href;
+      } catch {
+        // CDN/Pages may still be rolling out.
+      }
+      const delay = Math.min(2500, 700 + attempt * 350);
+      await new Promise((resolve) => window.setTimeout(resolve, delay));
+    }
+    throw new Error(
+      'Древо создано, но страница ещё не успела появиться на сайте. Обновите список через минуту и откройте вручную.'
+    );
+  }
+
   async function handleCreateTree(event) {
     event.preventDefault();
     const err = $('#create-tree-error');
@@ -1052,14 +1092,17 @@
         status.textContent = `Создано: ${created.title || created.path || ''}. Откройте и добавьте людей.`;
       }
       if (created.path) {
-        window.setTimeout(() => {
-          window.location.href = openHref(created.path);
-        }, 600);
+        const readyHref = await waitUntilPageReady(created.path);
+        window.location.href = readyHref;
       }
     } catch (error) {
       if (err) {
         err.hidden = false;
         err.textContent = error instanceof Error ? error.message : 'Не удалось создать';
+      }
+      const status = $('#status-line');
+      if (status && error instanceof Error) {
+        status.textContent = error.message;
       }
     } finally {
       if (submit) submit.disabled = false;

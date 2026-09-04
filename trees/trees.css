@@ -537,47 +537,127 @@ select {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  padding: 0.28rem 0.55rem;
-  border-radius: 8px;
-  font-size: 0.72rem;
+  padding: 0.32rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.7rem;
   font-weight: 600;
+  letter-spacing: 0.02em;
   white-space: nowrap;
 }
 
 .badge-locked {
   background: rgba(180, 90, 76, 0.12);
+  border-color: rgba(180, 90, 76, 0.18);
   color: var(--danger);
 }
 
 .badge-ok {
   background: rgba(47, 122, 85, 0.14);
+  border-color: rgba(47, 122, 85, 0.18);
   color: var(--ok);
 }
 
 .badge-trial {
-  background: rgba(107, 90, 69, 0.14);
-  color: var(--bark);
+  background: linear-gradient(135deg, rgba(45, 106, 79, 0.12), rgba(61, 143, 104, 0.18));
+  border-color: rgba(45, 106, 79, 0.2);
+  color: var(--moss);
 }
 
 .billing-wrap {
-  margin-top: 0.65rem;
+  margin-top: 0.75rem;
 }
 
 .billing-toggle {
   width: 100%;
   justify-content: space-between;
+  gap: 0.75rem;
   text-align: left;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 0.7rem 0.85rem;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.55);
+  border: 1px solid var(--line);
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.6) inset;
+}
+
+.billing-toggle-label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.billing-toggle-chevron {
+  flex: 0 0 auto;
+  width: 0.55rem;
+  height: 0.55rem;
+  border-right: 2px solid var(--ink-soft);
+  border-bottom: 2px solid var(--ink-soft);
+  transform: rotate(45deg);
+  transition: transform 0.2s var(--ease);
+  opacity: 0.7;
 }
 
 .billing-toggle.is-open {
   background: var(--moss-soft);
+  border-color: rgba(45, 106, 79, 0.22);
+}
+
+.billing-toggle.is-open .billing-toggle-chevron {
+  transform: rotate(-135deg);
+  margin-top: 0.2rem;
 }
 
 .billing-panel {
   margin-top: 0.55rem;
-  padding-top: 0.55rem;
-  border-top: 1px solid var(--line);
+  padding: 0.85rem;
+  border-radius: 16px;
+  border: 1px solid var(--line);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.72), rgba(248, 250, 248, 0.9));
+  box-shadow: 0 10px 28px rgba(19, 36, 28, 0.06);
+}
+
+.billing-stats {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+  margin-bottom: 0.75rem;
+}
+
+.billing-stat {
+  min-width: 0;
+  padding: 0.65rem 0.7rem;
+  border-radius: 12px;
+  background: rgba(45, 106, 79, 0.06);
+  border: 1px solid rgba(45, 106, 79, 0.1);
+}
+
+.billing-stat-label {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  margin-bottom: 0.15rem;
+}
+
+.billing-stat-value {
+  display: block;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+.billing-stat-hint {
+  display: block;
+  margin-top: 0.12rem;
+  font-size: 0.72rem;
+  color: var(--ink-soft);
 }
 
 .billing-line {
@@ -605,7 +685,7 @@ select {
 .billing-field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.25rem;
   font-size: 0.72rem;
   color: var(--ink-soft);
 }
@@ -620,20 +700,32 @@ select {
 
 .billing-field input {
   width: 5.5rem;
-  padding: 0.45rem 0.5rem;
+  padding: 0.5rem 0.55rem;
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: 12px;
   background: var(--surface-solid);
   color: var(--ink);
+  transition: border-color 0.15s var(--ease), box-shadow 0.15s var(--ease);
+}
+
+.billing-field input:focus {
+  outline: none;
+  border-color: rgba(45, 106, 79, 0.45);
+  box-shadow: 0 0 0 3px rgba(45, 106, 79, 0.12);
 }
 
 .billing-danger {
   color: var(--danger) !important;
 }
 
+.billing-wa {
+  border-color: rgba(18, 140, 126, 0.28) !important;
+  color: #0f6f64 !important;
+}
+
 .billing-delete {
   margin-top: 0.75rem;
-  padding: 0.75rem;
+  padding: 0.85rem;
   border-radius: 14px;
   border: 1px solid rgba(180, 90, 76, 0.28);
   background: rgba(180, 90, 76, 0.08);
@@ -649,7 +741,7 @@ select {
   margin-bottom: 0.55rem;
   padding: 0.55rem 0.7rem;
   border: 1px solid var(--line-strong);
-  border-radius: 10px;
+  border-radius: 12px;
   background: #fff;
 }
 
@@ -663,6 +755,7 @@ select {
 
 .badge-quiet {
   background: rgba(79, 101, 89, 0.1);
+  border-color: rgba(79, 101, 89, 0.14);
   color: var(--ink-soft);
 }
 
@@ -810,24 +903,26 @@ select {
 /* ---- Create dialog ---- */
 
 .create-dialog {
-  width: min(calc(100vw - 1.5rem), 420px);
+  width: min(calc(100vw - 1.5rem), 440px);
   margin: auto;
   padding: 0;
   border: 1px solid var(--line-strong);
-  border-radius: calc(var(--radius) + 2px);
-  background: var(--surface-solid);
+  border-radius: calc(var(--radius) + 4px);
+  background:
+    linear-gradient(165deg, rgba(255, 255, 255, 0.96), rgba(246, 250, 247, 0.98));
   color: var(--ink);
+  box-shadow: 0 24px 60px rgba(19, 36, 28, 0.18);
 }
 
 .create-dialog::backdrop {
-  background: rgba(19, 36, 28, 0.35);
-  backdrop-filter: blur(6px);
+  background: rgba(19, 36, 28, 0.42);
+  backdrop-filter: blur(8px);
 }
 
 .create-dialog form {
   display: grid;
-  gap: 0.75rem;
-  padding: 1.2rem 1.2rem 1.25rem;
+  gap: 0.8rem;
+  padding: 1.3rem 1.25rem 1.3rem;
 }
 
 .create-dialog-head {
@@ -840,7 +935,7 @@ select {
 .create-dialog-head h2 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: 1.55rem;
+  font-size: 1.65rem;
   font-weight: 400;
   letter-spacing: -0.02em;
 }
