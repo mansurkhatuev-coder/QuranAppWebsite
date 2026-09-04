@@ -1046,6 +1046,8 @@
       closeCreateDialog();
       const form = $('#create-tree-form');
       if (form) form.reset();
+      await refresh();
+      const status = $('#status-line');
       if (status) {
         status.textContent = `Создано: ${created.title || created.path || ''}. Откройте и добавьте людей.`;
       }
@@ -1080,7 +1082,7 @@
     });
     $('#create-tree-close')?.addEventListener('click', () => closeCreateDialog());
     $('#create-tree-cancel')?.addEventListener('click', () => closeCreateDialog());
-    $('#create-code')?.addEventListener('input', updateCodePreview);
+    $('#create-title')?.addEventListener('input', () => syncCreateCodeFromTitle());
     $('#create-tree-form')?.addEventListener('submit', (event) => {
       void handleCreateTree(event);
     });
