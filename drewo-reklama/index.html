@@ -26,7 +26,7 @@
       --bg2: #2a5246;
       --sand: #d4b483;
       --sand-dim: #a8895a;
-      --line-mother: #c995a8;
+      --line-mother: #e0789c;
       --text: #f3ebe0;
       --text-dim: color-mix(in srgb, var(--text) 62%, transparent);
       --panel: color-mix(in srgb, var(--bg0) 78%, black);
@@ -42,7 +42,7 @@
       --bg2: #2c4638;
       --sand: #e2c48a;
       --sand-dim: #b89555;
-      --line-mother: #d9a8b8;
+      --line-mother: #ef8aab;
       --text: #f7f1e6;
       --panel: color-mix(in srgb, #0a141a 80%, black);
       --header-bg: color-mix(in srgb, #0a151c 92%, black);
@@ -7016,6 +7016,7 @@
           var busY = (parent.bottom + childTop) / 2;
           var motherLine = parent.gender === 'female';
           var lineStroke = motherLine ? 'var(--line-mother)' : 'var(--sand)';
+          var lineW = motherLine ? stroke + 0.55 : stroke;
 
           var trunk = document.createElementNS(SVG_NS, 'path');
           trunk.setAttribute(
@@ -7027,7 +7028,7 @@
           );
           trunk.setAttribute('fill', 'none');
           trunk.setAttribute('stroke', lineStroke);
-          trunk.setAttribute('stroke-width', String(stroke));
+          trunk.setAttribute('stroke-width', String(lineW));
           trunk.setAttribute('opacity', String(lineOpacity));
           if (motherLine) trunk.classList.add('mother-link');
           linksSvg.appendChild(trunk);
@@ -7040,7 +7041,7 @@
             );
             stub.setAttribute('fill', 'none');
             stub.setAttribute('stroke', lineStroke);
-            stub.setAttribute('stroke-width', String(stroke));
+            stub.setAttribute('stroke-width', String(lineW));
             stub.setAttribute('opacity', String(lineOpacity));
             if (motherLine) stub.classList.add('mother-link');
             linksSvg.appendChild(stub);
