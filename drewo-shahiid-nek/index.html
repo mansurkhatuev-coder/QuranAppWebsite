@@ -2551,7 +2551,7 @@
       <li>Вход: своё имя из списка + пароль семьи. <b>Кто я</b> ставится при входе; фото — в карточке (долгое нажатие), кружок на древе после «Сохранить».</li>
       <li><b>+</b> (добавить человека) и <b>Редактировать</b> — сначала обычный пароль. Пол выбирается в форме. Тумблер «Женщины» по умолчанию выключен.</li>
       <li>Линии от женщин к детям — другого цвета (розовые), чтобы не смешиваться с мужской линией.</li>
-      <li>В карточке человека: <b>Добавить отца</b>. Если дети были у матери — отец встаёт рядом с ней, дети переходят к нему.</li>
+      <li>В карточке человека: <b>Добавить отца</b> — в том числе у вершины древа (род растёт вверх). Если дети были у матери — отец встаёт рядом с ней, дети переходят к нему.</li>
       <li>В «Редактировать»: перенос на нового отца, у листьев — удалить. Имя меняется из карточки.</li>
       <li>После изменений нажмите <b>Сохранить</b> — иначе на сайте останется старое.</li>
       <li><b>Управление</b> и восстановление бэкапа — суперпароль.</li>
@@ -2896,6 +2896,8 @@
   function canAddSon(root, parentId, nutsuId) {
     const node = findById(root, parentId);
     if (!node) return false;
+    // Current apex is always editable (tree grows upward via «Добавить отца»).
+    if (parentId === root.id) return true;
     // Broken/missing gate (customer tree still pointing at demo id) → allow all.
     if (!nutsuId || !findById(root, nutsuId)) return true;
     // Root gate + all descendants may receive children.
@@ -2942,6 +2944,7 @@
 
   /**
    * Insert a father for childId.
+   * If child is the tree root: new father becomes the apex, old root is his child.
    * If current parent is female and has a parent: place father beside the mother
    * and move the child under the new father (patrilineal).
    * Otherwise insert the father between current parent and child.
@@ -2949,13 +2952,25 @@
   function insertFather(root, childId, fatherName, nutsuId) {
     const name = String(fatherName || '').trim();
     if (!name) throw new Error('Укажите имя отца');
-    if (!root || childId === root.id) {
-      throw new Error('У корня древа отца добавить нельзя');
+    if (!root) throw new Error('Древо пустое');
+    const fatherId = `added-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Grow upward: new father becomes the tree root.
+    if (childId === root.id) {
+      const oldRoot = cloneTree(root);
+      const father = { id: fatherId, name: name, gender: 'male', sons: [oldRoot] };
+      return {
+        tree: markAllowAdd(father, nutsuId),
+        fatherId: fatherId,
+        mode: 'above-root',
+        childName: oldRoot.name,
+        childId: oldRoot.id,
+      };
     }
+
     const tree = cloneTree(root);
     const info = findParentOf(tree, childId);
     if (!info) throw new Error('Человек не найден');
-    const fatherId = `added-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const curParent = info.parent;
 
     if (curParent.gender === 'female') {
@@ -4565,10 +4580,13 @@
           );
         }
         if (entry.type === 'add-father') {
-          var extra =
-            entry.mode === 'beside-mother' && entry.motherName
-              ? ' (был' + (female ? 'а' : '') + ' у <strong>' + escapeHtml(entry.motherName) + '</strong>)'
-              : '';
+          var extra = '';
+          if (entry.mode === 'above-root') {
+            extra = ' (новая вершина древа)';
+          } else if (entry.mode === 'beside-mother' && entry.motherName) {
+            extra =
+              ' (был' + (female ? 'а' : '') + ' у <strong>' + escapeHtml(entry.motherName) + '</strong>)';
+          }
           return (
             '<strong>' +
             escapeHtml(entry.father) +
@@ -5125,15 +5143,15 @@
       }
 
       function requestAddFather(childId) {
-        if (!childId || childId === tree.id) {
-          showToast('У корня древа отца добавить нельзя', 'error');
+        if (!childId) {
+          showToast('Человек не найден', 'error');
           return;
         }
         if (treeLocked && !isSuperSession()) {
           showToast('Правки заблокированы. Нужен суперпароль.', 'error', 4200);
           return;
         }
-        if (!findParentInfo(tree, childId)) {
+        if (childId !== tree.id && !findParentInfo(tree, childId)) {
           showToast('Человек не найден', 'error');
           return;
         }
@@ -5246,7 +5264,7 @@
           personSheetSetMe.disabled = !!(myPersonId && String(myPersonId) === String(id));
         }
         if (personSheetAddFather) {
-          var canFather = id !== tree.id && !!findParentInfo(tree, id);
+          var canFather = id === tree.id || !!findParentInfo(tree, id);
           personSheetAddFather.hidden = !canFather;
         }
         if (typeof personSheetDialog.showModal === 'function') personSheetDialog.showModal();
@@ -6860,13 +6878,19 @@
           addFatherHint.hidden = addMode !== 'father';
           if (addMode === 'father' && addFatherChildId) {
             var childNode = TreeModel.findById(tree, addFatherChildId);
-            var pInfo = findParentInfo(tree, addFatherChildId);
-            var mom = pInfo && pInfo.parent && pInfo.parent.gender === 'female';
-            addFatherHint.textContent = mom
-              ? 'Отец встанет рядом с матерью, а ' +
-                ((childNode && childNode.name) || 'ребёнок') +
-                ' перейдёт к нему. Линии матери останутся другого цвета.'
-              : 'Отец встанет между текущим родителем и этим человеком.';
+            var childLabel = (childNode && childNode.name) || 'этот человек';
+            if (addFatherChildId === tree.id) {
+              addFatherHint.textContent =
+                'Новый отец станет вершиной древа, а ' + childLabel + ' — его потомком. Так род растёт вверх, когда узнаёте предков.';
+            } else {
+              var pInfo = findParentInfo(tree, addFatherChildId);
+              var mom = pInfo && pInfo.parent && pInfo.parent.gender === 'female';
+              addFatherHint.textContent = mom
+                ? 'Отец встанет рядом с матерью, а ' +
+                  childLabel +
+                  ' перейдёт к нему. Линии матери останутся другого цвета.'
+                : 'Отец встанет между текущим родителем и этим человеком.';
+            }
           }
         }
         if (addGenderSelect) addGenderSelect.value = 'male';
