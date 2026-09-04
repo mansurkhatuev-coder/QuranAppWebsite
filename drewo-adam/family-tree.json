@@ -1,17 +1,137 @@
 {
-  "id": "hadzhimurad",
-  "name": "Гази",
+  "id": "added-1788553864985-1d0rzo",
+  "name": "Хьажимурид",
+  "gender": "male",
   "sons": [
     {
-      "id": "added-1788536348710-thwbsv",
-      "name": "1али",
-      "gender": "male",
+      "id": "hadzhimurad",
+      "name": "Гази",
       "sons": [
         {
-          "id": "added-1788536371007-vzmj2y",
-          "name": "Адам",
+          "id": "added-1788536348710-thwbsv",
+          "name": "1али",
           "gender": "male",
-          "sons": []
+          "sons": [
+            {
+              "id": "added-1788536371007-vzmj2y",
+              "name": "1алаш",
+              "gender": "male",
+              "sons": [
+                {
+                  "id": "added-1788554026268-ltfxim",
+                  "name": "Элина",
+                  "gender": "female",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788554033737-whbb2v",
+                  "name": "Тасмина",
+                  "gender": "female",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788554039688-j84opr",
+                  "name": "Сайхан",
+                  "gender": "male",
+                  "sons": []
+                }
+              ]
+            },
+            {
+              "id": "added-1788553938250-xbu6cu",
+              "name": "Адам",
+              "gender": "male",
+              "sons": [
+                {
+                  "id": "added-1788554066224-bz5llh",
+                  "name": "Аслан",
+                  "gender": "male",
+                  "sons": [
+                    {
+                      "id": "added-1788554163532-wwp2xm",
+                      "name": "Ясмина",
+                      "gender": "female",
+                      "sons": []
+                    },
+                    {
+                      "id": "added-1788554178832-mnsauy",
+                      "name": "Камила",
+                      "gender": "female",
+                      "sons": []
+                    }
+                  ]
+                },
+                {
+                  "id": "added-1788554074391-3d8u3k",
+                  "name": "Альбика",
+                  "gender": "female",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788554086024-iojzec",
+                  "name": "Мансур",
+                  "gender": "male",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788554096407-2ea8cl",
+                  "name": "Мухьаммад",
+                  "gender": "male",
+                  "sons": []
+                }
+              ]
+            },
+            {
+              "id": "added-1788554007773-1s58ff",
+              "name": "Казбек",
+              "gender": "male",
+              "sons": [
+                {
+                  "id": "added-1788554105877-ygqbx6",
+                  "name": "Рустам",
+                  "gender": "male",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788554113998-0ysz9u",
+                  "name": "Ахьмад",
+                  "gender": "male",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788554120809-nc43vl",
+                  "name": "Амир",
+                  "gender": "male",
+                  "sons": []
+                }
+              ]
+            },
+            {
+              "id": "added-1788554013942-i5l82r",
+              "name": "Хава",
+              "gender": "female",
+              "sons": []
+            }
+          ]
+        },
+        {
+          "id": "added-1788553953066-jkz7pw",
+          "name": "1умар",
+          "gender": "male",
+          "sons": [
+            {
+              "id": "added-1788554138998-62pka4",
+              "name": "Бислан",
+              "gender": "male",
+              "sons": []
+            },
+            {
+              "id": "added-1788554146645-puzfk3",
+              "name": "1ела",
+              "gender": "male",
+              "sons": []
+            }
+          ]
         }
       ]
     }
