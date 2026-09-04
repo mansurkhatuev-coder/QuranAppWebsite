@@ -1,1 +1,19 @@
-{"id":"hadzhimurad","name":"Hadzhimurad","sons":[]}
+{
+  "id": "hadzhimurad",
+  "name": "Гази",
+  "sons": [
+    {
+      "id": "added-1788536348710-thwbsv",
+      "name": "1али",
+      "gender": "male",
+      "sons": [
+        {
+          "id": "added-1788536371007-vzmj2y",
+          "name": "Адам",
+          "gender": "male",
+          "sons": []
+        }
+      ]
+    }
+  ]
+}
