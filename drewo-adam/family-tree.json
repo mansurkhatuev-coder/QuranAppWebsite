@@ -59,13 +59,15 @@
                       "gender": "female",
                       "sons": []
                     }
-                  ]
+                  ],
+                  "born": 1998
                 },
                 {
                   "id": "added-1788554074391-3d8u3k",
                   "name": "Альбика",
                   "gender": "female",
-                  "sons": []
+                  "sons": [],
+                  "born": 2001
                 },
                 {
                   "id": "added-1788554086024-iojzec",
