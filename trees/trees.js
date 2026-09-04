@@ -238,6 +238,40 @@
     return json;
   }
 
+  async function callSetBilling(payload) {
+    const response = await fetch(publishUrl(), {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ action: 'set-billing', ...payload }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `set-billing ${response.status}`);
+    }
+    return json;
+  }
+
+  async function callSoftDeleteTree(payload) {
+    const response = await fetch(publishUrl(), {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ action: 'soft-delete-tree', ...payload }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `soft-delete-tree ${response.status}`);
+    }
+    return json;
+  }
+
+  function billingConfig() {
+    return window.DrewoBilling?.config?.() || {
+      priceRub: 790,
+      periodMonths: 6,
+      whatsappPhone: '',
+    };
+  }
+
   function metaFromRemote(remote) {
     const dir = remote.treeDir || remote.dir;
     const code = remote.code || '';
@@ -326,6 +360,8 @@
           ...local,
           locked: Boolean(remote?.locked),
           lockedReason: remote?.lockedReason || '',
+          billing: remote?.billing || null,
+          deletedAt: remote?.deletedAt || null,
           lastSavedAt: remote?.lastSavedAt || local.lastSavedAt,
           backupCount: remote?.backupCount ?? local.backupCount,
           addedSinceBaseline:
@@ -353,14 +389,93 @@
 
   function badgeHtml(row) {
     const bits = [];
+    const billing = row.billing;
     if (row.meta.ownership === 'customer') {
       bits.push(`<span class="badge badge-quiet">Заказчик</span>`);
     }
-    if (row.locked) {
+    if (billing?.status === 'trial') {
+      bits.push(`<span class="badge badge-trial">Trial</span>`);
+    } else if (billing?.status === 'active') {
+      bits.push(`<span class="badge badge-ok">Оплачено</span>`);
+    } else if (billing?.status === 'expired') {
+      bits.push(`<span class="badge badge-quiet">Простой</span>`);
+    } else if (billing?.status === 'disabled') {
+      bits.push(`<span class="badge badge-locked">Отключено</span>`);
+    } else if (billing?.status === 'exempt') {
+      bits.push(`<span class="badge badge-quiet">Без оплаты</span>`);
+    }
+    if (row.locked && billing?.status !== 'expired' && billing?.status !== 'disabled') {
       bits.push(`<span class="badge badge-locked">Закрыто</span>`);
     }
     if (!bits.length) return '';
     return `<div class="badge-row">${bits.join('')}</div>`;
+  }
+
+  function billingPanelHtml(row) {
+    const billing = row.billing;
+    const cfg = billingConfig();
+    const price = billing?.priceRub ?? cfg.priceRub;
+    const dir = escapeHtml(row.meta.dir);
+    const title = escapeHtml(row.meta.title);
+    const label = escapeHtml(billing?.label || 'Статус неизвестен');
+    const revenue =
+      billing?.revenueTotal != null ? `${formatNumber(billing.revenueTotal)} ₽` : '—';
+    const disabled = billing?.status === 'disabled';
+    const waUrl =
+      window.DrewoBilling?.renewUrl?.({
+        title: row.meta.title,
+        treeDir: row.meta.dir,
+        code: row.meta.code,
+        priceRub: price,
+        periodMonths: billing?.periodMonths || cfg.periodMonths,
+        reason: billing?.reason,
+      }) || '#';
+
+    return `
+      <div class="billing-panel" data-dir="${dir}">
+        <p class="billing-line">
+          <span>${label}</span>
+          <span>${escapeHtml(String(price))} ₽ / ${billing?.periodMonths || cfg.periodMonths || 6} мес</span>
+          <span>Доход: ${revenue}</span>
+        </p>
+        <p class="billing-hint">WhatsApp сейчас · СБП заложено в API (paymentMethod=sbp)</p>
+        <div class="billing-actions">
+          <label class="billing-field">
+            <span>Периоды</span>
+            <input type="number" min="1" max="12" value="1" data-billing-periods="${dir}" />
+          </label>
+          <label class="billing-field">
+            <span>Оплата ₽</span>
+            <input type="number" min="0" step="1" placeholder="${escapeHtml(String(price))}" data-billing-pay="${dir}" />
+          </label>
+          <button type="button" class="btn btn-primary" data-billing-action="extend" data-dir="${dir}">Продлить 6 мес</button>
+          <button type="button" class="btn btn-quiet" data-billing-action="activate_trial" data-dir="${dir}">+30 дн. trial</button>
+          ${
+            row.meta.ownership === 'mine'
+              ? `<button type="button" class="btn btn-quiet" data-billing-action="set_exempt" data-dir="${dir}">Без оплаты</button>`
+              : ''
+          }
+          ${
+            !disabled
+              ? `<button type="button" class="btn btn-quiet billing-danger" data-billing-action="deactivate" data-dir="${dir}">Отключить</button>`
+              : `<button type="button" class="btn btn-quiet billing-danger" data-billing-delete="${dir}" data-title="${title}">Удалить</button>`
+          }
+          <a class="btn btn-quiet" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+        </div>
+        <div class="billing-delete" data-delete-panel="${dir}" hidden>
+          <p>Удаление из каталога: введите <strong>${title}</strong> и подтвердите. Файлы древа на сайте останутся для восстановления.</p>
+          <input type="text" data-delete-name="${dir}" placeholder="Название древа" autocomplete="off" />
+          <label class="billing-ack">
+            <input type="checkbox" data-delete-ack="${dir}" />
+            <span>Понимаю: откатить удаление из каталога нельзя</span>
+          </label>
+          <div class="billing-actions">
+            <button type="button" class="btn btn-primary billing-danger" data-delete-confirm="${dir}" data-title="${title}">Удалить навсегда</button>
+            <button type="button" class="btn btn-ghost" data-delete-cancel="${dir}">Отмена</button>
+          </div>
+        </div>
+      </div>
+    `;
   }
 
   function treeGlyphSvg() {
@@ -443,6 +558,7 @@
                 ${row.locked && row.lockedReason ? `<span>${escapeHtml(row.lockedReason)}</span>` : ''}
                 ${row.liveOk ? '' : '<span>статус недоступен</span>'}
               </p>
+              ${billingPanelHtml(row)}
             </div>
             <div class="tree-actions">
               <a class="btn btn-primary" href="${href}">Открыть древо</a>
@@ -733,6 +849,122 @@
     preview.textContent = code ? `/t/${code}` : '/t/…';
   }
 
+  async function handleBillingAction(dir, action) {
+    const status = $('#status-line');
+    const periodsInput = document.querySelector(`[data-billing-periods="${CSS.escape(dir)}"]`);
+    const payInput = document.querySelector(`[data-billing-pay="${CSS.escape(dir)}"]`);
+    const periods = Number(periodsInput?.value || '1') || 1;
+    const payRaw = payInput?.value;
+    const paymentAmount =
+      payRaw === undefined || payRaw === '' ? null : Number(payRaw);
+
+    if (action === 'deactivate') {
+      const ok = window.confirm(`Отключить «${dir}»? Правки закроются, просмотр останется до удаления.`);
+      if (!ok) return;
+    }
+
+    showBoot(
+      action === 'extend'
+        ? 'Продлеваю…'
+        : action === 'activate_trial'
+          ? 'Включаю trial…'
+          : action === 'set_exempt'
+            ? 'Снимаю оплату…'
+            : 'Отключаю…'
+    );
+    try {
+      await callSetBilling({
+        treeDir: dir,
+        billingAction: action,
+        periods,
+        paymentAmount,
+        paymentMethod: action === 'extend' ? 'manual_whatsapp' : undefined,
+      });
+      if (payInput) payInput.value = '';
+      if (status) status.textContent = `Биллинг обновлён: ${dir} · ${action}`;
+      await refresh();
+    } catch (error) {
+      if (status) {
+        status.textContent = error instanceof Error ? error.message : 'Не удалось обновить биллинг';
+      }
+    } finally {
+      hideBoot();
+    }
+  }
+
+  async function handleSoftDelete(dir, title) {
+    const status = $('#status-line');
+    const nameInput = document.querySelector(`[data-delete-name="${CSS.escape(dir)}"]`);
+    const ack = document.querySelector(`[data-delete-ack="${CSS.escape(dir)}"]`);
+    const confirmTitle = String(nameInput?.value || '').trim();
+    if (confirmTitle !== title) {
+      if (status) status.textContent = `Для удаления введите точное название: ${title}`;
+      return;
+    }
+    if (!ack?.checked) {
+      if (status) status.textContent = 'Подтвердите, что понимаете: откатить нельзя';
+      return;
+    }
+    showBoot('Удаляю из каталога…');
+    try {
+      await callSoftDeleteTree({
+        treeDir: dir,
+        confirmTitle,
+        acknowledge: true,
+      });
+      if (status) status.textContent = `Удалено из каталога: ${dir}`;
+      await refresh();
+    } catch (error) {
+      if (status) {
+        status.textContent = error instanceof Error ? error.message : 'Не удалось удалить';
+      }
+    } finally {
+      hideBoot();
+    }
+  }
+
+  function onTreeListClick(event) {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const copyBtn = target.closest('[data-copy]');
+    if (copyBtn) {
+      void copyPath(copyBtn.getAttribute('data-copy') || '');
+      return;
+    }
+
+    const billingBtn = target.closest('[data-billing-action]');
+    if (billingBtn) {
+      const dir = billingBtn.getAttribute('data-dir') || '';
+      const action = billingBtn.getAttribute('data-billing-action') || '';
+      if (dir && action) void handleBillingAction(dir, action);
+      return;
+    }
+
+    const openDelete = target.closest('[data-billing-delete]');
+    if (openDelete) {
+      const dir = openDelete.getAttribute('data-billing-delete') || '';
+      const panel = document.querySelector(`[data-delete-panel="${CSS.escape(dir)}"]`);
+      if (panel) panel.hidden = false;
+      return;
+    }
+
+    const cancelDelete = target.closest('[data-delete-cancel]');
+    if (cancelDelete) {
+      const dir = cancelDelete.getAttribute('data-delete-cancel') || '';
+      const panel = document.querySelector(`[data-delete-panel="${CSS.escape(dir)}"]`);
+      if (panel) panel.hidden = true;
+      return;
+    }
+
+    const confirmDelete = target.closest('[data-delete-confirm]');
+    if (confirmDelete) {
+      const dir = confirmDelete.getAttribute('data-delete-confirm') || '';
+      const title = confirmDelete.getAttribute('data-title') || '';
+      void handleSoftDelete(dir, title);
+    }
+  }
+
   async function handleCreateTree(event) {
     event.preventDefault();
     const err = $('#create-tree-error');
@@ -800,9 +1032,7 @@
       void handleCreateTree(event);
     });
     $('#tree-list')?.addEventListener('click', (event) => {
-      const btn = event.target.closest('[data-copy]');
-      if (!btn) return;
-      void copyPath(btn.getAttribute('data-copy'));
+      onTreeListClick(event);
     });
 
     try {

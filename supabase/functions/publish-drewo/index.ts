@@ -23,6 +23,17 @@ import {
   type RegistryFile,
   type RegistryOwnership,
 } from './create-tree.ts';
+import {
+  applyBillingAction,
+  defaultExemptBilling,
+  parseBilling,
+  publicBillingView,
+  serializeBilling,
+  startTrialBilling,
+  type BillingAction,
+  type PaymentMethod,
+  type TreeBilling,
+} from './billing.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -501,6 +512,9 @@ type AccessState = {
   lockedReason: string;
   pinnedBackups: string[];
   visitCount: number;
+  /** Soft-delete stamp; tree folder may remain for recovery. */
+  deletedAt: string | null;
+  billing: TreeBilling;
 };
 
 type ManifestItem = {
@@ -552,7 +566,49 @@ function emptyAccess(): AccessState {
     lockedReason: '',
     pinnedBackups: [],
     visitCount: 0,
+    deletedAt: null,
+    billing: defaultExemptBilling(),
   };
+}
+
+function lockPresentation(access: AccessState) {
+  const billingView = publicBillingView(access.billing);
+  if (access.deletedAt) {
+    return {
+      locked: true,
+      lockedReason: 'Древо удалено из каталога.',
+      billing: billingView,
+      deletedAt: access.deletedAt,
+    };
+  }
+  if (access.locked) {
+    return {
+      locked: true,
+      lockedReason: access.lockedReason || 'Правки временно закрыты',
+      billing: billingView,
+      deletedAt: null,
+    };
+  }
+  if (billingView.editsBlocked) {
+    return {
+      locked: true,
+      lockedReason: billingView.editBlockReason,
+      billing: billingView,
+      deletedAt: null,
+    };
+  }
+  return {
+    locked: false,
+    lockedReason: '',
+    billing: billingView,
+    deletedAt: null,
+  };
+}
+
+function editsBlockedForRole(access: AccessState, role: AuthRole | null) {
+  if (role === 'super') return { blocked: false, reason: '' };
+  const presentation = lockPresentation(access);
+  return { blocked: presentation.locked, reason: presentation.lockedReason };
 }
 
 function normalizeVisitCount(value: unknown): number {
@@ -577,6 +633,11 @@ function parseAccess(raw?: string): AccessState {
       base.pinnedBackups = parsed.pinnedBackups.filter((n): n is string => typeof n === 'string');
     }
     base.visitCount = normalizeVisitCount(parsed.visitCount);
+    if (typeof parsed.deletedAt === 'string' && parsed.deletedAt.trim()) {
+      const t = Date.parse(parsed.deletedAt);
+      if (Number.isFinite(t)) base.deletedAt = new Date(t).toISOString();
+    }
+    base.billing = parseBilling(parsed.billing);
   } catch {
     return emptyAccess();
   }
@@ -591,11 +652,15 @@ function serializeAccess(access: AccessState) {
       lockedReason: access.lockedReason,
       pinnedBackups: access.pinnedBackups,
       visitCount: normalizeVisitCount(access.visitCount),
+      deletedAt: access.deletedAt,
+      billing: serializeBilling(access.billing),
     },
     null,
     2
   )}\n`;
 }
+
+type AuthRole = 'editor' | 'super';
 
 async function hashPassword(normalized: string) {
   return fingerprintText(`drewo-pw:${normalized}`);
@@ -933,6 +998,7 @@ Deno.serve(async (request) => {
             githubGetFile(githubToken, githubRepo, manifestPath(dir)),
           ]);
           const access = parseAccess(accessFile?.content);
+          const lock = lockPresentation(access);
           const manifest = parseManifest(manifestFile?.content);
           const latestWithPeople = manifest.find((item) => item.personCount > 0) ?? manifest[0] ?? null;
           const previousWithPeople =
@@ -960,8 +1026,10 @@ Deno.serve(async (request) => {
             note: meta.note,
             path: `/${dir}/`,
             invitePath: invitePathForCode(meta.code),
-            locked: access.locked,
-            lockedReason: access.lockedReason,
+            locked: lock.locked,
+            lockedReason: lock.lockedReason,
+            billing: lock.billing,
+            deletedAt: lock.deletedAt,
             superConfigured: Boolean(superPasswordValue(dir)),
             personCount,
             backupCount: manifest.length,
@@ -1068,6 +1136,7 @@ Deno.serve(async (request) => {
       const access: AccessState = {
         ...emptyAccess(),
         passwordHash,
+        billing: ownership === 'customer' ? startTrialBilling() : defaultExemptBilling(),
       };
       const entry: RegistryEntry = {
         treeDir,
@@ -1116,6 +1185,146 @@ Deno.serve(async (request) => {
         invitePath: invitePathForCode(code),
         inviteUrl: `https://waydean.ru${invitePathForCode(code)}`,
         createdAt: entry.createdAt,
+        billing: publicBillingView(access.billing),
+      });
+    }
+
+    if (action === 'set-billing' || action === 'soft-delete-tree') {
+      try {
+        await requireHubUser(request);
+      } catch (err) {
+        const status = (err as Error & { status?: number }).status || 401;
+        return jsonResponse(
+          { error: err instanceof Error ? err.message : 'Войдите в Trees' },
+          status
+        );
+      }
+
+      const targetDir = resolveTreeDir(body.treeDir, registry);
+      if (!targetDir) {
+        return jsonResponse(
+          { error: `Неизвестный treeDir. Допустимо: ${allowedDirs.join(', ')}` },
+          400
+        );
+      }
+      if (targetDir === DEMO_TREE_DIR && action === 'soft-delete-tree') {
+        return jsonResponse({ error: 'Демо-древо нельзя удалить' }, 403);
+      }
+
+      const accessFile = await githubGetFile(githubToken, githubRepo, accessPath(targetDir));
+      const access = parseAccess(accessFile?.content);
+      const meta = registryEntryFor(registry, targetDir);
+
+      if (action === 'soft-delete-tree') {
+        const confirmTitle =
+          typeof body.confirmTitle === 'string' ? body.confirmTitle.trim() : '';
+        const expectedTitle = meta?.title || targetDir;
+        if (access.billing.status !== 'disabled') {
+          return jsonResponse(
+            { error: 'Сначала отключите древо (деактивация), потом удаление' },
+            400
+          );
+        }
+        if (confirmTitle !== expectedTitle) {
+          return jsonResponse(
+            { error: `Для удаления введите точное название: ${expectedTitle}` },
+            400
+          );
+        }
+        if (body.acknowledge !== true) {
+          return jsonResponse({ error: 'Подтвердите, что понимаете: откатить нельзя' }, 400);
+        }
+
+        const nextAccess: AccessState = {
+          ...access,
+          locked: true,
+          lockedReason: 'Древо удалено из каталога',
+          deletedAt: new Date().toISOString(),
+          billing: applyBillingAction(access.billing, { action: 'deactivate' }),
+        };
+        const nextRegistry: RegistryFile = {
+          version: 1,
+          trees: registry.trees.filter((item) => item.treeDir !== targetDir),
+        };
+        const inviteCode = meta?.code;
+        const changes: TreeChange[] = [
+          { path: accessPath(targetDir), content: serializeAccess(nextAccess) },
+          { path: REGISTRY_PATH, content: serializeRegistry(nextRegistry) },
+        ];
+        if (inviteCode && isValidTreeCode(inviteCode)) {
+          changes.push({ path: `t/${inviteCode}/index.html`, delete: true });
+        }
+
+        await githubCommitChanges({
+          token: githubToken,
+          repo: githubRepo,
+          message: `Soft-delete family tree ${targetDir}`,
+          changes,
+        });
+
+        return jsonResponse({
+          ok: true,
+          treeDir: targetDir,
+          deleted: true,
+          deletedAt: nextAccess.deletedAt,
+        });
+      }
+
+      // set-billing
+      const billingAction = String(body.billingAction || '').trim() as BillingAction;
+      if (
+        billingAction !== 'extend' &&
+        billingAction !== 'activate_trial' &&
+        billingAction !== 'deactivate' &&
+        billingAction !== 'set_exempt'
+      ) {
+        return jsonResponse(
+          {
+            error:
+              'billingAction: extend | activate_trial | deactivate | set_exempt',
+          },
+          400
+        );
+      }
+
+      let paymentMethod: PaymentMethod = null;
+      if (body.paymentMethod === 'manual_whatsapp' || body.paymentMethod === 'sbp') {
+        paymentMethod = body.paymentMethod;
+      }
+
+      const nextBilling = applyBillingAction(access.billing, {
+        action: billingAction,
+        periods: Number(body.periods) || 1,
+        paymentAmount:
+          body.paymentAmount === undefined || body.paymentAmount === null || body.paymentAmount === ''
+            ? null
+            : Number(body.paymentAmount),
+        paymentId: typeof body.paymentId === 'string' ? body.paymentId : null,
+        paymentMethod,
+        note: typeof body.note === 'string' ? body.note : null,
+      });
+
+      // Extending / trial should clear a previous manual lock only when it was billing-related.
+      const nextAccess: AccessState = {
+        ...access,
+        billing: nextBilling,
+        deletedAt: billingAction === 'deactivate' ? access.deletedAt : null,
+      };
+
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Billing ${billingAction} for ${targetDir}`,
+        changes: [{ path: accessPath(targetDir), content: serializeAccess(nextAccess) }],
+      });
+
+      const lock = lockPresentation(nextAccess);
+      return jsonResponse({
+        ok: true,
+        treeDir: targetDir,
+        billing: lock.billing,
+        locked: lock.locked,
+        lockedReason: lock.lockedReason,
       });
     }
 
@@ -1142,11 +1351,14 @@ Deno.serve(async (request) => {
     const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
+      const lock = lockPresentation(access);
       return jsonResponse({
         ok: true,
         treeDir,
-        locked: access.locked,
-        lockedReason: access.lockedReason,
+        locked: lock.locked,
+        lockedReason: lock.lockedReason,
+        billing: lock.billing,
+        deletedAt: lock.deletedAt,
         superConfigured,
       });
     }
@@ -1182,12 +1394,15 @@ Deno.serve(async (request) => {
     clearAuthFailures(attemptKey);
 
     if (action === 'auth') {
+      const lock = lockPresentation(access);
       return jsonResponse({
         ok: true,
         treeDir,
         role,
-        locked: access.locked,
-        lockedReason: access.lockedReason,
+        locked: lock.locked,
+        lockedReason: lock.lockedReason,
+        billing: lock.billing,
+        deletedAt: lock.deletedAt,
         superConfigured,
       });
     }
@@ -1196,9 +1411,13 @@ Deno.serve(async (request) => {
       if (treeDir === DEMO_TREE_DIR) {
         return jsonResponse({ error: demoGuardMessage('photo') }, 403);
       }
-      if (access.locked && role !== 'super') {
+      if (editsBlockedForRole(access, role).blocked) {
         return jsonResponse(
-          { error: 'Правки заблокированы. Нужен суперпароль.', locked: true },
+          {
+            error: editsBlockedForRole(access, role).reason || 'Правки заблокированы. Нужен суперпароль.',
+            locked: true,
+            billing: publicBillingView(access.billing),
+          },
           403
         );
       }
@@ -1241,9 +1460,13 @@ Deno.serve(async (request) => {
       if (treeDir === DEMO_TREE_DIR) {
         return jsonResponse({ error: demoGuardMessage('photo') }, 403);
       }
-      if (access.locked && role !== 'super') {
+      if (editsBlockedForRole(access, role).blocked) {
         return jsonResponse(
-          { error: 'Правки заблокированы. Нужен суперпароль.', locked: true },
+          {
+            error: editsBlockedForRole(access, role).reason || 'Правки заблокированы. Нужен суперпароль.',
+            locked: true,
+            billing: publicBillingView(access.billing),
+          },
           403
         );
       }
@@ -1296,10 +1519,13 @@ Deno.serve(async (request) => {
     if (action === 'list-backups') {
       const backups = await listBackupFiles(githubToken, githubRepo, treeDir);
       const byName = new Map(manifest.map((item) => [item.name, item]));
+      const lock = lockPresentation(access);
       return jsonResponse({
         ok: true,
         treeDir,
-        locked: access.locked,
+        locked: lock.locked,
+        lockedReason: lock.lockedReason,
+        billing: lock.billing,
         role,
         backups: backups.map((b) => {
           const meta = byName.get(b.name);
@@ -1328,11 +1554,13 @@ Deno.serve(async (request) => {
         next,
         `${next.locked ? 'Lock' : 'Unlock'} ${treeDir} family tree edits`
       );
+      const lock = lockPresentation(next);
       return jsonResponse({
         ok: true,
         treeDir,
-        locked: next.locked,
-        lockedReason: next.lockedReason,
+        locked: lock.locked,
+        lockedReason: lock.lockedReason,
+        billing: lock.billing,
       });
     }
 
@@ -1418,8 +1646,12 @@ Deno.serve(async (request) => {
     };
 
     if (action === 'snapshot') {
-      if (access.locked && role !== 'super') {
-        return jsonResponse({ error: 'Правки заблокированы. Нужен суперпароль.' }, 403);
+      const block = editsBlockedForRole(access, role);
+      if (block.blocked) {
+        return jsonResponse(
+          { error: block.reason || 'Правки заблокированы. Нужен суперпароль.', locked: true },
+          403
+        );
       }
       const [jsonFile, current, existingBackups] = await Promise.all([
         githubGetFile(githubToken, githubRepo, jsonPath),
@@ -1552,8 +1784,16 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: `Неизвестное действие: ${action}` }, 400);
     }
 
-    if (access.locked && role !== 'super') {
-      return jsonResponse({ error: 'Правки заблокированы. Нужен суперпароль.' }, 403);
+    const publishBlock = editsBlockedForRole(access, role);
+    if (publishBlock.blocked) {
+      return jsonResponse(
+        {
+          error: publishBlock.reason || 'Правки заблокированы. Нужен суперпароль.',
+          locked: true,
+          billing: publicBillingView(access.billing),
+        },
+        403
+      );
     }
 
     const treeJson = typeof body.treeJson === 'string' ? body.treeJson.trim() : '';
@@ -1699,7 +1939,7 @@ Deno.serve(async (request) => {
         photosWritten: 0,
         photoDeletesWritten: 0,
         forced: force,
-        locked: access.locked,
+        locked: lockPresentation(access).locked,
       });
     }
 
@@ -1760,7 +2000,8 @@ Deno.serve(async (request) => {
       commitSha: commit.commitSha,
       repo: githubRepo,
       forced: force,
-      locked: access.locked,
+      locked: lockPresentation(access).locked,
+      billing: publicBillingView(access.billing),
       merged,
       mergeStats,
       treeJson: publishTreeJson,

@@ -19,7 +19,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./trees.css?v=6" />
+    <link rel="stylesheet" href="./trees.css?v=7" />
   </head>
   <body>
     <div class="bg-stage" aria-hidden="true">
@@ -52,7 +52,7 @@
     <div id="login-screen" class="login-shell">
       <div class="login-stage">
         <p class="brand-word brand-hero">Trees</p>
-        <p class="login-tagline">Пульт семейных древ — онлайн, визиты и состав. Ссылки родственников не меняются.</p>
+        <p class="login-tagline">Пульт разработчика: древа, оплаты, деактивация. Родственники сюда не заходят.</p>
         <p class="login-public">
           Родственникам — публичный вход
           <a href="/nek/">Некъ</a>
@@ -108,8 +108,8 @@
 
       <section class="hero-strip" aria-label="Сводка">
         <div class="hero-strip-copy">
-          <h1 class="hero-strip-title">Ваши древа</h1>
-          <p class="muted">Живой состав и сохранения — в одном месте.</p>
+          <h1 class="hero-strip-title">Админка древ</h1>
+          <p class="muted">Продление, trial, отключение и удаление — как в рассрочках. WhatsApp сейчас, СБП позже.</p>
         </div>
         <div class="summary" aria-label="Числа">
           <div class="summary-stat">
@@ -170,8 +170,8 @@
         <label>
           Чей род
           <select id="create-ownership" name="ownership">
-            <option value="mine">Мой / семья</option>
-            <option value="customer">Заказчик</option>
+            <option value="customer" selected>Заказчик (trial 30 дн.)</option>
+            <option value="mine">Моё / без оплаты</option>
           </select>
         </label>
         <label>
@@ -188,7 +188,9 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/auth-lock.js?v=1"></script>
+    <script src="./billing-config.js?v=1"></script>
+    <script src="../assets/drewo-billing.js?v=1"></script>
     <script src="./supabase-config.js?v=2"></script>
-    <script src="./trees.js?v=5"></script>
+    <script src="./trees.js?v=6"></script>
   </body>
 </html>

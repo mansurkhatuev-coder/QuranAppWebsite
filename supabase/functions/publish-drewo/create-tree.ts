@@ -163,6 +163,7 @@ export function buildRootTreeJson(rootName: string): string {
     {
       id,
       name: rootName.trim().slice(0, 80),
+      gender: 'male',
       sons: [],
     },
     null,
@@ -180,6 +181,13 @@ export function customizeTemplateHtml(options: {
   let html = options.html;
   const title = options.title.trim().slice(0, 80);
   const rootName = options.rootName.trim().slice(0, 80);
+  let rootId = slugifyRootId(rootName);
+  try {
+    const parsed = JSON.parse(options.treeJson) as { id?: unknown };
+    if (typeof parsed.id === 'string' && parsed.id.trim()) rootId = parsed.id.trim();
+  } catch {
+    // keep slug
+  }
 
   html = html.split(TEMPLATE_DIR).join(options.treeDir);
 
@@ -197,6 +205,9 @@ export function customizeTemplateHtml(options: {
   html = html.replace(/var DEMO_GATE_PERSON_ID = 'islam-a';/, "var DEMO_GATE_PERSON_ID = '';");
   html = html.replace(/var DEMO_GATE_PASSWORD = 'демо';/, "var DEMO_GATE_PASSWORD = '';");
   html = html.replace(/var DEMO_MODE = true;/, 'var DEMO_MODE = false;');
+  // Customer trees: add-person gate must be the new root, not demo «alkhan».
+  html = html.replace(/var NUTSU_ID = 'alkhan';/, `var NUTSU_ID = ${JSON.stringify(rootId)};`);
+  html = html.replace(/var KHOTU_ID = 'bersa';/, `var KHOTU_ID = ${JSON.stringify(rootId)};`);
   html = html.replace(/gateSubmit\.textContent = 'Войти в демо';/g, "gateSubmit.textContent = 'Войти';");
   html = html.replace(/<h1>Некъ<\/h1>/i, `<h1>${escapeHtml(title)}</h1>`);
   html = html.replace(/>Линия Берса</g, `>Линия ${escapeHtml(rootName)}<`);
@@ -224,6 +235,19 @@ export function customizeTemplateHtml(options: {
     })();
   </script>`
     );
+  }
+
+  if (!html.includes('drewo-billing-banner.js')) {
+    const billingScripts = `
+  <script src="/trees/billing-config.js?v=1"></script>
+  <script src="/assets/drewo-billing.js?v=1"></script>
+  <script src="/assets/drewo-billing-banner.js?v=1"></script>
+`;
+    if (/<\/body>/i.test(html)) {
+      html = html.replace(/<\/body>/i, `${billingScripts}</body>`);
+    } else {
+      html += billingScripts;
+    }
   }
 
   return html;

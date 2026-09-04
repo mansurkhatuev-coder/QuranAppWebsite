@@ -6,6 +6,11 @@ window.SUPABASE_CONFIG = {
   /** Project Settings → API → anon public key */
   anonKey: 'YOUR_ANON_KEY',
 
-  /** Edge Functions → publish-drewo → hub-overview + status */
+  /** Edge Functions → publish-drewo → hub-overview + status + set-billing */
   publishDrewoUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/publish-drewo',
 };
+
+/**
+ * WhatsApp / тариф — в billing-config.js (whatsappPhone, priceRub).
+ * См. docs/drewo-billing.md
+ */
