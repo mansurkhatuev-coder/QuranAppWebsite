@@ -32,6 +32,14 @@
       "ownership": "mine",
       "note": "Albika",
       "createdAt": "2026-09-03T16:34:37.640Z"
+    },
+    {
+      "treeDir": "drewo-shahiid-nek",
+      "code": "shahiid-nek",
+      "title": "ШахIид некъ",
+      "ownership": "customer",
+      "note": "Хадижат",
+      "createdAt": "2026-09-04T15:02:08.597Z"
     }
   ]
 }

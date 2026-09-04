@@ -1,0 +1,30 @@
+{
+  "passwordHash": "e2ced06fde76a53b71e1a3845e83d8729592cec7316a5081a62377bbf59bf5a2",
+  "locked": false,
+  "lockedReason": "",
+  "pinnedBackups": [],
+  "visitCount": 0,
+  "deletedAt": null,
+  "billing": {
+    "plan": "family_half_year",
+    "status": "trial",
+    "trialEndsAt": "2026-10-04T15:02:08.597Z",
+    "paidUntil": null,
+    "priceRub": 790,
+    "priceLocked": true,
+    "periodMonths": 6,
+    "paymentMethod": "manual_whatsapp",
+    "lastPaymentAt": null,
+    "lastPaymentAmount": null,
+    "lastPaymentId": null,
+    "revenueTotal": 0,
+    "notes": "",
+    "sbp": {
+      "customerId": null,
+      "subscriptionId": null,
+      "lastPaymentUrl": null,
+      "lastQrId": null,
+      "lastProviderStatus": null
+    }
+  }
+}
