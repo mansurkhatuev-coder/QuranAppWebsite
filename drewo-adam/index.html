@@ -2584,7 +2584,7 @@
     <div class="history-body">
       <strong id="history-dialog-title">История добавлений</strong>
       <p id="history-empty" hidden="">Пока пусто</p>
-      <ul id="history-list"><li><span class="hist-when">01.08.2026, 18:02</span><div class="hist-text"><strong>Гуно</strong> → сын <strong>Мухаммад</strong></div></li><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Аюб</strong></div></li></ul>
+      <ul id="history-list"><li><span class="hist-when">01.08.2026, 18:02</span><div class="hist-text"><strong>Мухаммад</strong> → сын <strong>Гуно</strong></div></li><li><span class="hist-when">01.08.2026, 18:01</span><div class="hist-text"><strong>Амина</strong> → дочь <strong>Гуно</strong></div></li></ul>
       <div class="dialog-actions">
         <button type="button" id="history-close">Закрыть</button>
       </div>
@@ -4417,41 +4417,76 @@
           when.textContent = formatActivityDate(entry.at);
           var text = document.createElement('div');
           text.className = 'hist-text';
-          if (entry.type === 'add') {
-            text.innerHTML =
-              '<strong>' +
-              escapeHtml(entry.son) +
-              '</strong> → сын <strong>' +
-              escapeHtml(entry.father) +
-              '</strong>';
-          } else if (entry.type === 'reparent') {
-            text.innerHTML =
-              '<strong>' +
-              escapeHtml(entry.son) +
-              '</strong> перенесён к <strong>' +
-              escapeHtml(entry.father) +
-              '</strong>';
-          } else if (entry.type === 'rename') {
-            text.innerHTML =
-              '<strong>' +
-              escapeHtml(entry.father) +
-              '</strong> → <strong>' +
-              escapeHtml(entry.son) +
-              '</strong>';
-          } else if (entry.type === 'delete') {
-            text.innerHTML =
-              'удалён <strong>' +
-              escapeHtml(entry.son) +
-              '</strong> (был у <strong>' +
-              escapeHtml(entry.father) +
-              '</strong>)';
-          } else {
-            text.textContent = entry.type || 'событие';
-          }
+          text.innerHTML = formatHistoryHtml(entry);
           li.appendChild(when);
           li.appendChild(text);
           historyList.appendChild(li);
         }
+      }
+
+      function isFemalePerson(nodeOrGender) {
+        if (!nodeOrGender) return false;
+        if (typeof nodeOrGender === 'string') return nodeOrGender === 'female';
+        return nodeOrGender.gender === 'female';
+      }
+
+      function genderFromActivity(entry) {
+        if (entry && entry.gender === 'female') return 'female';
+        if (entry && entry.gender === 'male') return 'male';
+        if (entry && entry.sonId) {
+          var node = TreeModel.findById(tree, entry.sonId);
+          if (node && node.gender === 'female') return 'female';
+        }
+        return 'male';
+      }
+
+      function formatHistoryHtml(entry) {
+        var g = genderFromActivity(entry);
+        var female = g === 'female';
+        if (entry.type === 'add') {
+          return (
+            '<strong>' +
+            escapeHtml(entry.son) +
+            '</strong> → ' +
+            (female ? 'дочь' : 'сын') +
+            ' <strong>' +
+            escapeHtml(entry.father) +
+            '</strong>'
+          );
+        }
+        if (entry.type === 'reparent') {
+          return (
+            '<strong>' +
+            escapeHtml(entry.son) +
+            '</strong> ' +
+            (female ? 'перенесена к' : 'перенесён к') +
+            ' <strong>' +
+            escapeHtml(entry.father) +
+            '</strong>'
+          );
+        }
+        if (entry.type === 'rename') {
+          return (
+            '<strong>' +
+            escapeHtml(entry.father) +
+            '</strong> → <strong>' +
+            escapeHtml(entry.son) +
+            '</strong>'
+          );
+        }
+        if (entry.type === 'delete') {
+          return (
+            (female ? 'удалена' : 'удалён') +
+            ' <strong>' +
+            escapeHtml(entry.son) +
+            '</strong> (' +
+            (female ? 'была у' : 'был у') +
+            ' <strong>' +
+            escapeHtml(entry.father) +
+            '</strong>)'
+          );
+        }
+        return escapeHtml(entry.type || 'событие');
       }
 
       function openHistoryDialog() {
@@ -4565,6 +4600,7 @@
           fatherId: newParent.id,
           fromId: info.parent.id,
           fromName: info.parent.name,
+          gender: child.gender === 'female' ? 'female' : 'male',
         });
         rebuildLineSets();
         expanded.add(newParentId);
@@ -4988,7 +5024,7 @@
         var info = findParentInfo(tree, id);
         if (!info) return { ok: false, reason: 'Не найден' };
         if ((info.child.sons || []).length) {
-          return { ok: false, reason: 'Сначала уберите или перенесите сыновей' };
+          return { ok: false, reason: 'Сначала уберите или перенесите детей' };
         }
         var removed = info.parent.sons.splice(info.index, 1)[0];
         persistTree();
@@ -4999,6 +5035,7 @@
           father: info.parent.name,
           sonId: removed.id,
           fatherId: info.parent.id,
+          gender: removed.gender === 'female' ? 'female' : 'male',
         });
         expanded.delete(id);
         matchIds.delete(id);
@@ -5031,12 +5068,18 @@
         personSheetTargetId = id;
         if (personSheetTitle) personSheetTitle.textContent = node.name || 'Человек';
         var father = findFatherName(id);
-        var sons = (node.sons || []).map(function (s) {
-          return s.name;
+        var kids = node.sons || [];
+        var sons = [];
+        var daughters = [];
+        kids.forEach(function (s) {
+          if (s.gender === 'female') daughters.push(s.name);
+          else sons.push(s.name);
         });
         var bits = [];
         if (father) bits.push('Отец: ' + father);
-        bits.push(sons.length ? 'Сыновья: ' + sons.join(', ') : 'Сыновей нет');
+        if (sons.length) bits.push('Сыновья: ' + sons.join(', '));
+        if (daughters.length) bits.push('Дочери: ' + daughters.join(', '));
+        if (!sons.length && !daughters.length) bits.push('Детей нет');
         if (personSheetMeta) personSheetMeta.textContent = bits.join(' · ');
         refreshPersonSheetDates(node);
         refreshPersonSheetPhoto(node);
