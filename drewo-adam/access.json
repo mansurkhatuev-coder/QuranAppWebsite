@@ -7,7 +7,7 @@
   "deletedAt": null,
   "billing": {
     "plan": "family_half_year",
-    "status": "trial",
+    "status": "exempt",
     "trialEndsAt": "2026-10-04T20:46:24.840Z",
     "paidUntil": null,
     "priceRub": 790,
