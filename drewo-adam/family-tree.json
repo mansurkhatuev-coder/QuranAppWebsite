@@ -102,7 +102,7 @@
                 },
                 {
                   "id": "added-1788554120809-nc43vl",
-                  "name": "Амир",
+                  "name": "Амин",
                   "gender": "male",
                   "sons": []
                 }
@@ -125,13 +125,39 @@
               "id": "added-1788554138998-62pka4",
               "name": "Бислан",
               "gender": "male",
-              "sons": []
+              "sons": [
+                {
+                  "id": "added-1788556317918-wptfie",
+                  "name": "Дени",
+                  "gender": "male",
+                  "sons": []
+                }
+              ]
             },
             {
               "id": "added-1788554146645-puzfk3",
               "name": "1ела",
               "gender": "male",
-              "sons": []
+              "sons": [
+                {
+                  "id": "added-1788556328517-kw951f",
+                  "name": "Дауд",
+                  "gender": "male",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788556338263-8m1dx0",
+                  "name": "Ильяс",
+                  "gender": "male",
+                  "sons": []
+                },
+                {
+                  "id": "added-1788556350211-wtyjge",
+                  "name": "Юнус",
+                  "gender": "male",
+                  "sons": []
+                }
+              ]
             },
             {
               "id": "added-1788554874719-9ufve6",
