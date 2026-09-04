@@ -432,46 +432,49 @@
       }) || '#';
 
     return `
-      <div class="billing-panel" data-dir="${dir}">
-        <p class="billing-line">
-          <span>${label}</span>
-          <span>${escapeHtml(String(price))} ₽ / ${billing?.periodMonths || cfg.periodMonths || 6} мес</span>
-          <span>Доход: ${revenue}</span>
-        </p>
-        <p class="billing-hint">WhatsApp сейчас · СБП заложено в API (paymentMethod=sbp)</p>
-        <div class="billing-actions">
-          <label class="billing-field">
-            <span>Периоды</span>
-            <input type="number" min="1" max="12" value="1" data-billing-periods="${dir}" />
-          </label>
-          <label class="billing-field">
-            <span>Оплата ₽</span>
-            <input type="number" min="0" step="1" placeholder="${escapeHtml(String(price))}" data-billing-pay="${dir}" />
-          </label>
-          <button type="button" class="btn btn-primary" data-billing-action="extend" data-dir="${dir}">Продлить 6 мес</button>
-          <button type="button" class="btn btn-quiet" data-billing-action="activate_trial" data-dir="${dir}">+30 дн. trial</button>
-          ${
-            row.meta.ownership === 'mine'
-              ? `<button type="button" class="btn btn-quiet" data-billing-action="set_exempt" data-dir="${dir}">Без оплаты</button>`
-              : ''
-          }
-          ${
-            !disabled
-              ? `<button type="button" class="btn btn-quiet billing-danger" data-billing-action="deactivate" data-dir="${dir}">Отключить</button>`
-              : `<button type="button" class="btn btn-quiet billing-danger" data-billing-delete="${dir}" data-title="${title}">Удалить</button>`
-          }
-          <a class="btn btn-quiet" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-        </div>
-        <div class="billing-delete" data-delete-panel="${dir}" hidden>
-          <p>Удаление из каталога: введите <strong>${title}</strong> и подтвердите. Файлы древа на сайте останутся для восстановления.</p>
-          <input type="text" data-delete-name="${dir}" placeholder="Название древа" autocomplete="off" />
-          <label class="billing-ack">
-            <input type="checkbox" data-delete-ack="${dir}" />
-            <span>Понимаю: откатить удаление из каталога нельзя</span>
-          </label>
+      <div class="billing-wrap" data-dir="${dir}">
+        <button type="button" class="btn btn-quiet billing-toggle" data-billing-toggle="${dir}" aria-expanded="false">
+          Биллинг · ${label}
+        </button>
+        <div class="billing-panel" data-billing-panel="${dir}" hidden>
+          <p class="billing-line">
+            <span>${escapeHtml(String(price))} ₽ / ${billing?.periodMonths || cfg.periodMonths || 6} мес</span>
+            <span>Доход: ${revenue}</span>
+          </p>
           <div class="billing-actions">
-            <button type="button" class="btn btn-primary billing-danger" data-delete-confirm="${dir}" data-title="${title}">Удалить навсегда</button>
-            <button type="button" class="btn btn-ghost" data-delete-cancel="${dir}">Отмена</button>
+            <label class="billing-field">
+              <span>Периоды</span>
+              <input type="number" min="1" max="12" value="1" inputmode="numeric" data-billing-periods="${dir}" />
+            </label>
+            <label class="billing-field">
+              <span>Оплата ₽</span>
+              <input type="number" min="0" step="1" inputmode="numeric" placeholder="${escapeHtml(String(price))}" data-billing-pay="${dir}" />
+            </label>
+            <button type="button" class="btn btn-primary" data-billing-action="extend" data-dir="${dir}">Продлить</button>
+            <button type="button" class="btn btn-quiet" data-billing-action="activate_trial" data-dir="${dir}">+30 дн.</button>
+            ${
+              row.meta.ownership === 'mine'
+                ? `<button type="button" class="btn btn-quiet" data-billing-action="set_exempt" data-dir="${dir}">Без оплаты</button>`
+                : ''
+            }
+            ${
+              !disabled
+                ? `<button type="button" class="btn btn-quiet billing-danger" data-billing-action="deactivate" data-dir="${dir}">Отключить</button>`
+                : `<button type="button" class="btn btn-quiet billing-danger" data-billing-delete="${dir}" data-title="${title}">Удалить</button>`
+            }
+            <a class="btn btn-quiet" href="${escapeHtml(waUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+          </div>
+          <div class="billing-delete" data-delete-panel="${dir}" hidden>
+            <p>Удаление из каталога: введите <strong>${title}</strong> и подтвердите.</p>
+            <input type="text" data-delete-name="${dir}" placeholder="Название древа" autocomplete="off" />
+            <label class="billing-ack">
+              <input type="checkbox" data-delete-ack="${dir}" />
+              <span>Понимаю: откатить нельзя</span>
+            </label>
+            <div class="billing-actions">
+              <button type="button" class="btn btn-primary billing-danger" data-delete-confirm="${dir}" data-title="${title}">Удалить</button>
+              <button type="button" class="btn btn-ghost" data-delete-cancel="${dir}">Отмена</button>
+            </div>
           </div>
         </div>
       </div>
@@ -514,11 +517,8 @@
         const yearsText =
           row.withYears != null ? `${formatNumber(row.withYears)} с годами` : '';
         const depthText = row.maxDepth != null ? `глубина ${formatNumber(row.maxDepth)}` : '';
-        const codeText = row.meta.code ? `код ${escapeHtml(row.meta.code)}` : '';
         const noteText = row.meta.note ? escapeHtml(row.meta.note) : '';
         const href = openHref(row.meta.path);
-        const invitePath = row.meta.invitePath || (row.meta.code ? `/t/${row.meta.code}` : row.meta.path);
-
         const accent = escapeHtml(row.meta.accent || 'moss');
         return `
           <article class="tree-card" data-i="${index}" data-dir="${escapeHtml(row.meta.dir)}" data-accent="${accent}">
@@ -527,7 +527,7 @@
               <div class="tree-card-head">
                 <div>
                   <h2>${escapeHtml(row.meta.title)}</h2>
-                  <p class="tree-slug">${escapeHtml(invitePath)}${codeText ? ` · ${codeText}` : ''}</p>
+                  ${noteText ? `<p class="tree-slug">${noteText}</p>` : ''}
                 </div>
                 ${badgeHtml(row)}
               </div>
@@ -554,15 +554,13 @@
               </div>
               <p class="tree-meta">
                 <span>Сохранено ${formatRelative(row.lastSavedAt)}</span>
-                ${noteText ? `<span>${noteText}</span>` : ''}
                 ${row.locked && row.lockedReason ? `<span>${escapeHtml(row.lockedReason)}</span>` : ''}
                 ${row.liveOk ? '' : '<span>статус недоступен</span>'}
               </p>
               ${billingPanelHtml(row)}
             </div>
             <div class="tree-actions">
-              <a class="btn btn-primary" href="${href}">Открыть древо</a>
-              <button type="button" class="btn btn-quiet" data-copy="${escapeHtml(invitePath)}">Копировать ссылку</button>
+              <a class="btn btn-primary" href="${href}">Открыть</a>
             </div>
           </article>
         `;
@@ -827,9 +825,9 @@
       err.hidden = true;
       err.textContent = '';
     }
+    syncCreateCodeFromTitle();
     if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
     else if (dialog) dialog.hidden = false;
-    updateCodePreview();
   }
 
   function closeCreateDialog() {
@@ -838,15 +836,61 @@
     else if (dialog) dialog.hidden = true;
   }
 
-  function updateCodePreview() {
-    const codeInput = $('#create-code');
-    const preview = $('#create-path-preview');
-    if (!preview) return;
-    const code = String(codeInput?.value || '')
+  function slugifyTreeCode(raw) {
+    const map = {
+      а: 'a',
+      б: 'b',
+      в: 'v',
+      г: 'g',
+      д: 'd',
+      е: 'e',
+      ё: 'e',
+      ж: 'zh',
+      з: 'z',
+      и: 'i',
+      й: 'y',
+      к: 'k',
+      л: 'l',
+      м: 'm',
+      н: 'n',
+      о: 'o',
+      п: 'p',
+      р: 'r',
+      с: 's',
+      т: 't',
+      у: 'u',
+      ф: 'f',
+      х: 'h',
+      ц: 'c',
+      ч: 'ch',
+      ш: 'sh',
+      щ: 'sch',
+      ъ: '',
+      ы: 'y',
+      ь: '',
+      э: 'e',
+      ю: 'yu',
+      я: 'ya',
+    };
+    let out = String(raw || '')
       .trim()
       .toLowerCase()
-      .replace(/_/g, '-');
-    preview.textContent = code ? `/t/${code}` : '/t/…';
+      .split('')
+      .map((ch) => map[ch] || ch)
+      .join('')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '')
+      .replace(/--+/g, '-');
+    if (!out || !/^[a-z]/.test(out)) {
+      out = `rod-${Date.now().toString(36).slice(-6)}`;
+    }
+    return out.slice(0, 25);
+  }
+
+  function syncCreateCodeFromTitle() {
+    const codeInput = $('#create-code');
+    if (!codeInput) return;
+    codeInput.value = slugifyTreeCode($('#create-title')?.value || '');
   }
 
   async function handleBillingAction(dir, action) {
@@ -927,6 +971,18 @@
     const target = event.target;
     if (!(target instanceof Element)) return;
 
+    const toggleBtn = target.closest('[data-billing-toggle]');
+    if (toggleBtn) {
+      const dir = toggleBtn.getAttribute('data-billing-toggle') || '';
+      const panel = document.querySelector(`[data-billing-panel="${CSS.escape(dir)}"]`);
+      if (!panel) return;
+      const open = panel.hasAttribute('hidden');
+      panel.hidden = !open;
+      toggleBtn.setAttribute('aria-expanded', open ? 'true' : 'false');
+      toggleBtn.classList.toggle('is-open', open);
+      return;
+    }
+
     const copyBtn = target.closest('[data-copy]');
     if (copyBtn) {
       void copyPath(copyBtn.getAttribute('data-copy') || '');
@@ -976,7 +1032,7 @@
 
     const payload = {
       title: $('#create-title')?.value.trim() || '',
-      code: $('#create-code')?.value.trim() || '',
+      code: slugifyTreeCode($('#create-title')?.value || $('#create-code')?.value || ''),
       password: $('#create-password')?.value || '',
       rootName: $('#create-root')?.value.trim() || '',
       ownership: $('#create-ownership')?.value || 'mine',
@@ -990,11 +1046,8 @@
       closeCreateDialog();
       const form = $('#create-tree-form');
       if (form) form.reset();
-      updateCodePreview();
-      await refresh();
-      const status = $('#status-line');
       if (status) {
-        status.textContent = `Создано: ${created.inviteUrl || created.invitePath || created.path || ''} · код ${created.code || ''}. Откройте и добавьте людей.`;
+        status.textContent = `Создано: ${created.title || created.path || ''}. Откройте и добавьте людей.`;
       }
       if (created.path) {
         window.setTimeout(() => {
