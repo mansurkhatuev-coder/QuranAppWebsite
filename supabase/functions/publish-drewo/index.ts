@@ -1071,6 +1071,7 @@ Deno.serve(async (request) => {
       };
       const entry: RegistryEntry = {
         treeDir,
+        login: code,
         code,
         title: title.slice(0, 80),
         ownership,
