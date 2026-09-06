@@ -30,7 +30,6 @@ jobs:
           DREWO_REKLAMA_SUPER_PASSWORD: ${{ secrets.DREWO_REKLAMA_SUPER_PASSWORD }}
           DREWO_SESSION_SECRET: ${{ secrets.DREWO_SESSION_SECRET }}
           DREWO_VAULT_KEY: ${{ secrets.DREWO_VAULT_KEY }}
-          DREWO_HUB_EMAILS: ${{ secrets.DREWO_HUB_EMAILS }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
             echo "Missing SUPABASE_ACCESS_TOKEN repository secret"
@@ -75,11 +74,9 @@ jobs:
           else
             echo "Warning: DREWO_VAULT_KEY is empty; the credential vault stays unreadable (hub-credentials shows no passwords)."
           fi
-          if [ -n "$DREWO_HUB_EMAILS" ]; then
-            SECRET_ARGS+=(DREWO_HUB_EMAILS="$DREWO_HUB_EMAILS")
-          else
-            echo "Warning: DREWO_HUB_EMAILS is empty; the allowlist fails closed and every hub action (create-tree, vault, billing) returns 403."
-          fi
+          # Hub uses the existing Supabase admin login (no email allowlist).
+          supabase secrets unset DREWO_HUB_EMAILS \
+            --project-ref rivjkiksknnesahrvamf 2>/dev/null || true
           supabase secrets set \
             --project-ref rivjkiksknnesahrvamf \
             "${SECRET_ARGS[@]}"

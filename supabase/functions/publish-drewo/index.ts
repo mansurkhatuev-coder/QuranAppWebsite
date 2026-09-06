@@ -214,30 +214,15 @@ function httpError(message: string, status: number) {
   return error;
 }
 
-/** Operator emails allowed to use hub actions (create trees, read the vault). */
-function hubEmailAllowlist(): string[] {
-  return (Deno.env.get('DREWO_HUB_EMAILS') ?? '')
-    .split(',')
-    .map((item) => item.trim().toLowerCase())
-    .filter(Boolean);
-}
-
 /**
- * Any Supabase account can sign up, so a valid token is not enough: the email
- * must also be listed in DREWO_HUB_EMAILS. Unset allowlist = nobody (fail closed).
+ * Trees / hub actions: same gate as before — signed-in Supabase user
+ * (the existing admin account). Keep Email signup disabled in Supabase Auth.
  */
 async function requireHubUser(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase env is not configured');
-  }
-  const allowlist = hubEmailAllowlist();
-  if (!allowlist.length) {
-    throw httpError(
-      'Список операторов не настроен. Задайте секрет DREWO_HUB_EMAILS и задеплойте функцию.',
-      403
-    );
   }
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
@@ -249,10 +234,6 @@ async function requireHubUser(request: Request) {
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
     throw httpError('Войдите в Trees', 401);
-  }
-  const email = String(data.user.email ?? '').trim().toLowerCase();
-  if (!email || !allowlist.includes(email)) {
-    throw httpError('Этот аккаунт не имеет доступа к управлению древами', 403);
   }
   return data.user;
 }
