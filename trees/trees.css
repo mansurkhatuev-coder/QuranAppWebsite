@@ -624,6 +624,156 @@ select {
   animation: rise 0.5s var(--ease) 0.2s both;
 }
 
+/* ---- Credential vault ---- */
+
+.credentials {
+  margin-top: 2.1rem;
+  padding-top: 1.35rem;
+  border-top: 1px solid var(--line);
+  animation: rise 0.6s var(--ease) 0.24s both;
+}
+
+.credentials-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.9rem;
+}
+
+.credentials-head-copy {
+  min-width: 0;
+}
+
+.credentials-title {
+  margin: 0 0 0.2rem;
+  font-family: var(--font-display);
+  font-size: clamp(1.45rem, 4vw, 1.8rem);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+
+.credentials-head .btn {
+  flex-shrink: 0;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.88rem;
+}
+
+.credentials-note {
+  margin: 0 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--ink-soft);
+  min-height: 1.2em;
+}
+
+.credentials-list {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.cred-card {
+  display: grid;
+  gap: 0.55rem;
+  padding: 1rem 1.1rem 1.05rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(14px);
+  transition: border-color 0.22s var(--ease), background 0.22s;
+}
+
+.cred-card:hover {
+  border-color: rgba(45, 106, 79, 0.28);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.cred-title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+}
+
+.cred-row {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+
+.cred-label {
+  flex-shrink: 0;
+  width: 4.2rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+
+.cred-value {
+  flex: 1 1 8rem;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 0.4rem 0.6rem;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.75);
+  border: 1px solid var(--line);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9rem;
+  color: var(--ink);
+}
+
+.cred-empty {
+  font-family: var(--font-body);
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+  background: transparent;
+  border-style: dashed;
+}
+
+.cred-row-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.cred-btn {
+  padding: 0.42rem 0.75rem;
+  font-size: 0.82rem;
+  border-radius: 10px;
+}
+
+.cred-set {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  padding-left: 4.8rem;
+}
+
+.cred-set-input {
+  flex: 1 1 9rem;
+  min-width: 0;
+  padding: 0.55rem 0.7rem;
+  border-radius: 10px;
+  border: 1.5px solid var(--line-strong);
+  background: #fff;
+  color: var(--ink);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s var(--ease), box-shadow 0.2s var(--ease);
+}
+
+.cred-set-input:focus {
+  border-color: var(--moss);
+  box-shadow: 0 0 0 3px var(--moss-soft);
+}
+
 /* ---- PWA / boot ---- */
 
 .pwa-banner {
@@ -807,6 +957,7 @@ select {
   .topbar,
   .hero-strip,
   .status-line,
+  .credentials,
   .pwa-banner {
     animation: none !important;
   }
@@ -858,6 +1009,23 @@ select {
     width: 44px;
     height: 44px;
     border-radius: 14px;
+  }
+
+  .credentials-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .cred-row-actions {
+    width: 100%;
+  }
+
+  .cred-row-actions .btn {
+    flex: 1 1 auto;
+  }
+
+  .cred-set {
+    padding-left: 0;
   }
 }
 

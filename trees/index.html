@@ -19,7 +19,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./trees.css?v=6" />
+    <link rel="stylesheet" href="./trees.css?v=7" />
   </head>
   <body>
     <div class="bg-stage" aria-hidden="true">
@@ -125,6 +125,18 @@
 
       <section id="tree-list" class="tree-list" aria-label="Древа"></section>
       <p id="status-line" class="status-line" aria-live="polite"></p>
+
+      <section id="credentials-section" class="credentials" aria-label="Доступы древ">
+        <div class="credentials-head">
+          <div class="credentials-head-copy">
+            <h2 class="credentials-title">Доступы древ</h2>
+            <p class="muted">Логин и пароль каждой семьи — для памятки родственникам.</p>
+          </div>
+          <button type="button" class="btn btn-ghost" id="credentials-refresh">Обновить</button>
+        </div>
+        <p id="credentials-note" class="credentials-note" aria-live="polite"></p>
+        <div id="credentials-list" class="credentials-list"></div>
+      </section>
     </div>
 
     <dialog id="create-tree-dialog" class="create-dialog">
@@ -145,20 +157,23 @@
           <input id="create-title" name="title" type="text" maxlength="80" required placeholder="Род Ахмада" />
         </label>
         <label>
-          Код ссылки
+          Логин семьи
           <input
-            id="create-code"
-            name="code"
+            id="create-login"
+            name="login"
             type="text"
             maxlength="25"
             required
-            pattern="[a-z][a-z0-9-]{1,24}"
-            placeholder="ahmad"
+            pattern="[A-Za-z][A-Za-z0-9_-]{1,24}"
+            title="Латиница, 2–25 символов, начинается с буквы (например hoti)"
+            placeholder="hoti"
             autocapitalize="off"
+            autocorrect="off"
+            autocomplete="off"
             spellcheck="false"
           />
         </label>
-        <p class="field-hint">Короткая ссылка <code id="create-path-preview">/t/…</code> (старый путь /drewo-…/ тоже останется)</p>
+        <p class="field-hint">Латиницей, как <code>hoti</code>. Короткая ссылка <code id="create-path-preview">/t/…</code> (старый путь /drewo-…/ тоже останется)</p>
         <label>
           Пароль семьи
           <input id="create-password" name="password" type="text" maxlength="64" required minlength="2" autocomplete="off" />
@@ -189,6 +204,6 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../assets/auth-lock.js?v=1"></script>
     <script src="./supabase-config.js?v=2"></script>
-    <script src="./trees.js?v=5"></script>
+    <script src="./trees.js?v=6"></script>
   </body>
 </html>
