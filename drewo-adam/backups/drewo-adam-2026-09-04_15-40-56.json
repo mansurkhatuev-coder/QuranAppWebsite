@@ -1,0 +1,8 @@
+{
+  "treeJson": "{\n  \"id\": \"hadzhimurad\",\n  \"name\": \"Гази\",\n  \"sons\": [\n    {\n      \"id\": \"added-1788536348710-thwbsv\",\n      \"name\": \"1али\",\n      \"gender\": \"male\",\n      \"sons\": [\n        {\n          \"id\": \"added-1788536371007-vzmj2y\",\n          \"name\": \"Адам\",\n          \"gender\": \"male\",\n          \"sons\": []\n        }\n      ]\n    }\n  ]\n}",
+  "activityJson": "[\n  {\n    \"type\": \"rename\",\n    \"at\": \"2026-09-04T15:38:52.550Z\",\n    \"son\": \"Гази\",\n    \"father\": \"Hadzhimurad\",\n    \"sonId\": \"hadzhimurad\"\n  },\n  {\n    \"type\": \"add\",\n    \"at\": \"2026-09-04T15:39:08.710Z\",\n    \"son\": \"1али\",\n    \"father\": \"Гази\",\n    \"sonId\": \"added-1788536348710-thwbsv\",\n    \"fatherId\": \"hadzhimurad\",\n    \"gender\": \"male\"\n  },\n  {\n    \"type\": \"add\",\n    \"at\": \"2026-09-04T15:39:31.007Z\",\n    \"son\": \"Адам\",\n    \"father\": \"1али\",\n    \"sonId\": \"added-1788536371007-vzmj2y\",\n    \"fatherId\": \"added-1788536348710-thwbsv\",\n    \"gender\": \"male\"\n  }\n]",
+  "savedAt": "2026-09-04T15:40:56.532Z",
+  "personCount": 3,
+  "kind": "auto",
+  "merged": false
+}

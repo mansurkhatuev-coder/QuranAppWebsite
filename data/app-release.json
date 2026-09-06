@@ -6,8 +6,8 @@
   },
   "android": {
     "rustore": {
-      "latestVersion": "1.0.13",
-      "versionCode": 15,
+      "latestVersion": "1.0.14",
+      "versionCode": 16,
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {

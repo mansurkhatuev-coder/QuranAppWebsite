@@ -2,10 +2,12 @@
 <html lang="ru">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Чеченский UI — workbench</title>
-    <link rel="stylesheet" href="./workbench.css?v=8" />
+    <link rel="stylesheet" href="./workbench.css?v=18" />
   </head>
   <body>
     <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
@@ -23,6 +25,7 @@
     </div>
 
     <div id="ce-app" hidden>
+    <div class="safe-area-top" aria-hidden="true"></div>
     <header>
       <div class="header-sticky">
         <div class="header-top">
@@ -37,12 +40,14 @@
         </div>
 
         <div class="toolbar toolbar-main">
+          <button type="button" class="secondary refresh-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA">↻ Обновить</button>
           <select id="pack" class="small pack-select"></select>
           <input id="pack-assignee" class="assignee-input" placeholder="Ответственный" title="Ответственный за пакет" />
           <input id="q" class="search" placeholder="Поиск…" />
           <select id="status" class="small">
             <option value="all">Все строки</option>
             <option value="needs-review">Нужна проверка</option>
+            <option value="uncertain">Пересмотреть (отмечено)</option>
             <option value="todo">Не проверено</option>
             <option value="reviewed">Проверено</option>
             <option value="translated">Переведено (≠ ru)</option>
@@ -53,6 +58,7 @@
           <select id="group" class="small">
             <option value="all">Все домены</option>
           </select>
+          <button type="button" class="ghost" id="reset-filters" title="Сбросить поиск и фильтры">Сброс фильтров</button>
           <button type="button" class="secondary" id="save">Сохранить</button>
           <button type="button" class="primary" id="save-reviewed">✓ проверено</button>
           <button type="button" class="secondary" id="next-unreviewed">Далее →</button>
@@ -111,8 +117,14 @@
     <div class="workbench-layout">
       <main><div id="table" class="table"></div></main>
 
-      <aside class="side-panel" aria-label="Превью и глоссарий">
-        <section class="preview-panel">
+      <aside class="side-panel" aria-label="Превью, глоссарий и история">
+        <div class="side-tabs" role="tablist" aria-label="Боковая панель">
+          <button type="button" class="side-tab active" data-side-tab="preview" role="tab" aria-selected="true">Превью</button>
+          <button type="button" class="side-tab" data-side-tab="glossary" role="tab" aria-selected="false">Глоссарий</button>
+          <button type="button" class="side-tab" data-side-tab="history" role="tab" aria-selected="false">Последние</button>
+        </div>
+
+        <section class="side-tab-panel preview-panel" data-side-panel="preview">
           <div class="panel-head">
             <h2>Превью</h2>
             <span id="preview-template" class="hint"></span>
@@ -122,7 +134,7 @@
           </div>
         </section>
 
-        <section class="glossary-panel">
+        <section class="side-tab-panel glossary-panel" data-side-panel="glossary" hidden>
           <div class="panel-head">
             <h2>Глоссарий</h2>
             <span class="hint">Клик → вставка</span>
@@ -130,12 +142,36 @@
           <input id="glossary-q" class="glossary-search" placeholder="маор, куран…" />
           <div id="glossary-host" class="glossary-host"></div>
         </section>
+
+        <section class="side-tab-panel history-panel" data-side-panel="history" hidden>
+          <div class="panel-head">
+            <h2>Последние изменения</h2>
+            <button type="button" class="link-btn inline" id="clear-history">Очистить</button>
+          </div>
+          <p class="hint history-hint">Переводы и отметки «Проверено» — кликните, чтобы вернуться к ключу.</p>
+          <div id="history-host" class="history-host"></div>
+        </section>
       </aside>
     </div>
 
     <div class="footerbar">
-      <span class="hint">Ctrl+S — сохранить · синхронизация, если вы вошли в админку</span>
+      <span class="hint">Ctrl+S — сохранить · <button type="button" class="link-btn inline" id="refresh-app-footer">↻ Обновить</button> — после обновлений на сайте</span>
       <div><span id="msg" class="hint"></span></div>
+    </div>
+
+    <div id="paste-dialog" class="paste-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="paste-dialog-title">
+      <form id="paste-dialog-form" class="paste-dialog-card">
+        <h2 id="paste-dialog-title">Вставить перевод</h2>
+        <p class="paste-dialog-hint">
+          Сначала пробуем буфер автоматически. Если перевода нет — скопируйте его в Яндексе и вставьте сюда (Ctrl+V).
+        </p>
+        <textarea id="paste-dialog-input" class="paste-dialog-input" rows="4" placeholder="Нохчийн текст…"></textarea>
+        <p id="paste-dialog-warn" class="paste-dialog-warn" hidden></p>
+        <div class="paste-dialog-actions">
+          <button type="button" class="secondary" id="paste-dialog-cancel">Отмена</button>
+          <button type="submit" class="primary">Применить</button>
+        </div>
+      </form>
     </div>
     </div>
 
@@ -143,9 +179,9 @@
     <script src="../supabase-config.js?v=6"></script>
     <script src="../admin-supabase.js?v=14"></script>
     <script src="../assets/auth-lock.js?v=1"></script>
-    <script src="./gate.js?v=1"></script>
+    <script src="./gate.js?v=2"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=9"></script>
+    <script src="./workbench.js?v=20"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
         window.CeWorkbench.boot();

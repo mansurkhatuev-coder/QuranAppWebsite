@@ -27,6 +27,24 @@
       "ownership": "mine",
       "note": "Витрина для рекламы",
       "createdAt": "2026-01-01T00:00:00.000Z"
+    },
+    {
+      "treeDir": "drewo-adam",
+      "login": "adam",
+      "code": "adam",
+      "title": "Hadzhimurad",
+      "ownership": "mine",
+      "note": "Albika",
+      "createdAt": "2026-09-03T16:34:37.640Z"
+    },
+    {
+      "treeDir": "drewo-shahiid-nek",
+      "login": "shahiid-nek",
+      "code": "shahiid-nek",
+      "title": "ШахIид некъ",
+      "ownership": "customer",
+      "note": "Хадижат",
+      "createdAt": "2026-09-04T15:02:08.597Z"
     }
   ]
 }
