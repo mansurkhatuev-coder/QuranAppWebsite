@@ -52,6 +52,8 @@ Re-check live counts immediately before any deploy (CDN / in-browser edits may h
 ### Short invite redirect
 
 - `t/index.html` — redirects to `/nek/?login=1`
+- `t/hoti|dada|demo/index.html` — redirect to `/nek/?login=1&u=<login>` (prefilled login form,
+  never straight to the tree)
 - `t/invite.js` — simplified; hub login is on Nek
 
 ### Tree HTML shells (auth gate only — **confirm counts first**)
@@ -76,10 +78,44 @@ Redeploy function after setting secrets (below).
 
 | Secret | Purpose |
 |--------|---------|
-| `DREWO_SESSION_SECRET` | Signs Trees hub session cookies (family login). Fallback: `GITHUB_TOKEN` — prefer a dedicated secret. |
-| `DREWO_VAULT_KEY` | Encrypts `trees/credentials.vault.json` so the hub can show family passwords. Without it, vault writes are skipped and the UI shows a “secret not configured” note. |
+| `DREWO_SESSION_SECRET` | Signs Nek family session tokens. Fallback: `GITHUB_TOKEN` — prefer a dedicated secret. |
+| `DREWO_VAULT_KEY` | Encrypts `_private/credentials.vault.json` so the hub can show family passwords. Without it, vault writes are skipped and the UI shows a “secret not configured” note. Use a long random string — it is the only thing protecting the vault. |
+| `DREWO_HUB_EMAILS` | **Required.** Comma-separated allowlist of operator emails allowed to call `create-tree`, `hub-credentials`, `hub-credentials-upsert`. Unset = every hub action returns 403 (fail closed). Example: `me@example.com,partner@example.com`. |
 
 Existing secrets (`GITHUB_TOKEN`, repo config) remain required for GitHub publish paths.
+
+---
+
+## The credential vault must never be published
+
+The vault holds **recoverable family passwords**. It is AES-GCM encrypted with a key derived
+from `DREWO_VAULT_KEY` via PBKDF2-SHA256 (210 000 iterations, random 16-byte salt stored in the
+file), but the repo is public, so the ciphertext must not be served either.
+
+Rules:
+
+1. Path is `_private/credentials.vault.json`. Never move it under a published directory.
+2. Every workflow that publishes the site deletes `_private/` and the old
+   `trees/credentials.vault.json` from the checkout **before** uploading:
+   - `.github/workflows/deploy.yml`
+   - `.github/workflows/deploy-pages-keepalive.yml`
+   - `.github/workflows/deploy-cloudflare-pages.yml` (currently disabled)
+   If you add another publish workflow, add the same strip step or the vault leaks.
+3. After deploy, confirm https://waydean.ru/_private/credentials.vault.json returns **404**
+   (and likewise `/trees/credentials.vault.json`).
+4. `publish-drewo` deletes any leftover `trees/credentials.vault.json` from GitHub the next time
+   it writes the vault. Older v1 (bare SHA-256) vault files are still readable and are rewritten
+   in the v2 PBKDF2 format on the next write.
+5. If the vault was ever served publicly, treat every family password in it as compromised:
+   rotate `DREWO_VAULT_KEY` **and** change each family password via `set-password`.
+
+---
+
+## Family session tokens
+
+Session tokens carry `pwdFp`, the first 8 hex chars of the tree's `access.passwordHash`.
+`set-password` changes the hash, so every previously issued token stops verifying and the family
+has to log in again with the new password. Sessions still expire after 14 days.
 
 ---
 
@@ -97,7 +133,7 @@ Historical incident: pushing stale local tree deleted people (147 → 140). Do n
 
 ## Suggested deploy order
 
-1. Set `DREWO_SESSION_SECRET` and `DREWO_VAULT_KEY` on Supabase.
+1. Set `DREWO_SESSION_SECRET`, `DREWO_VAULT_KEY` and `DREWO_HUB_EMAILS` on Supabase.
 2. Deploy `publish-drewo` Edge Function.
 3. Push static site files (nek, trees, t, tree index.html shells).
 4. Hard-refresh or wait for CDN if counts look wrong after deploy.
@@ -109,8 +145,14 @@ Create GitHub backup under `drewo/backups/` (and siblings) before replacing any 
 ## Post-deploy smoke tests
 
 - [ ] **Nek login** — https://waydean.ru/nek/ → “Войти” → family credentials → lands on correct tree.
+- [ ] **Vault is not public** — https://waydean.ru/_private/credentials.vault.json and
+      https://waydean.ru/trees/credentials.vault.json both return **404**.
+- [ ] **Hub allowlist** — an account outside `DREWO_HUB_EMAILS` gets 403 from the Trees hub.
+- [ ] **Password rotation invalidates sessions** — change a family password, then reload a tree
+      still holding the old `?nek=` token: it must fall back to the password gate.
 - [ ] **Trees hub credentials** — https://waydean.ru/trees/ → logged-in user sees registry entries; credential note works when vault is configured.
-- [ ] **`/t/` redirect** — https://waydean.ru/t/ → `/nek/?login=1`.
+- [ ] **`/t/` redirect** — https://waydean.ru/t/ → `/nek/?login=1`; https://waydean.ru/t/hoti →
+      `/nek/?login=1&u=hoti` with the login field prefilled.
 - [ ] **Spot-check known parent** — e.g. open drewo, find Рамзан (or another known node), confirm expected sons still present.
 - [ ] **Node counts** — live JSON counts still ≥ pre-deploy counts (157 / 134 / 81 at verification time).
 - [ ] **Protected trees** — unauthenticated visit to `/drewo/` shows login gate; authenticated session opens tree.
