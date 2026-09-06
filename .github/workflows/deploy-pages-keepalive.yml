@@ -25,6 +25,16 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # Keep in sync with deploy.yml: the credential vault must never be published.
+      - name: Strip private files from the published site
+        run: |
+          rm -rf _private
+          rm -f trees/credentials.vault.json
+          if find . -path ./.git -prune -o -name 'credentials.vault.json' -print | grep -q .; then
+            echo "::error::credential vault would be published; refusing to deploy"
+            exit 1
+          fi
+
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

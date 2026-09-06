@@ -3,6 +3,7 @@
   "trees": [
     {
       "treeDir": "drewo",
+      "login": "hoti",
       "code": "hoti",
       "title": "Хьоти некъ",
       "ownership": "mine",
@@ -11,6 +12,7 @@
     },
     {
       "treeDir": "drewo-dada-yurt",
+      "login": "dada",
       "code": "dada",
       "title": "Дади-Юрт",
       "ownership": "mine",
@@ -19,6 +21,7 @@
     },
     {
       "treeDir": "drewo-reklama",
+      "login": "demo",
       "code": "demo",
       "title": "Демо (реклама)",
       "ownership": "mine",
@@ -27,6 +30,7 @@
     },
     {
       "treeDir": "drewo-adam",
+      "login": "adam",
       "code": "adam",
       "title": "Hadzhimurad",
       "ownership": "mine",
@@ -35,6 +39,7 @@
     },
     {
       "treeDir": "drewo-shahiid-nek",
+      "login": "shahiid-nek",
       "code": "shahiid-nek",
       "title": "ШахIид некъ",
       "ownership": "customer",

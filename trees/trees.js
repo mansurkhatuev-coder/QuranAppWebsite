@@ -30,10 +30,19 @@
     },
   ];
 
+  const CYRILLIC_TO_LATIN = {
+    а: 'a', б: 'b', в: 'v', г: 'g', д: 'd', е: 'e', ё: 'yo', ж: 'zh', з: 'z',
+    и: 'i', й: 'y', к: 'k', л: 'l', м: 'm', н: 'n', о: 'o', п: 'p', р: 'r',
+    с: 's', т: 't', у: 'u', ф: 'f', х: 'h', ц: 'c', ч: 'ch', ш: 'sh', щ: 'sch',
+    ъ: '', ы: 'y', ь: '', э: 'e', ю: 'yu', я: 'ya', ӏ: '',
+  };
+
   const config = window.SUPABASE_CONFIG || {};
   let client = null;
   let pollTimer = null;
   let refreshInFlight = false;
+  let credentials = [];
+  let credentialsInFlight = false;
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -79,6 +88,11 @@
     $('#login-screen').hidden = false;
     $('#app-screen').hidden = true;
     stopPolling();
+    credentials = [];
+    const list = $('#credentials-list');
+    if (list) list.innerHTML = '';
+    const note = $('#credentials-note');
+    if (note) note.textContent = '';
   }
 
   function showApp() {
@@ -238,6 +252,19 @@
     return json;
   }
 
+  async function callHubCredentials() {
+    const response = await fetch(publishUrl(), {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ action: 'hub-credentials' }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `hub-credentials ${response.status}`);
+    }
+    return json;
+  }
+
   async function callSetBilling(payload) {
     const response = await fetch(publishUrl(), {
       method: 'POST',
@@ -247,6 +274,19 @@
     const json = await response.json().catch(() => ({}));
     if (!response.ok) {
       throw new Error(json.error || `set-billing ${response.status}`);
+    }
+    return json;
+  }
+
+  async function callCredentialsUpsert(payload) {
+    const response = await fetch(publishUrl(), {
+      method: 'POST',
+      headers: await authHeaders(),
+      body: JSON.stringify({ action: 'hub-credentials-upsert', ...payload }),
+    });
+    const json = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(json.error || `hub-credentials-upsert ${response.status}`);
     }
     return json;
   }
@@ -708,6 +748,7 @@
       }
       showApp();
       await refresh({ boot: true });
+      void loadCredentials();
       startPolling();
     } catch (error) {
       let message = error?.message?.includes('Invalid')
@@ -757,6 +798,7 @@
       }
       showApp();
       await refresh({ boot: true });
+      void loadCredentials();
       startPolling();
     } catch {
       showLogin();
@@ -827,6 +869,211 @@
     }
   }
 
+  function normalizeTreeLogin(value) {
+    return String(value ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/_/g, '-');
+  }
+
+  function isValidTreeLogin(login) {
+    return /^[a-z][a-z0-9-]{1,24}$/.test(login) && !login.includes('--');
+  }
+
+  /** Turn any family title into a login candidate the backend will accept. */
+  function slugifyTreeCode(value) {
+    return String(value ?? '')
+      .toLowerCase()
+      .split('')
+      .map((char) => (char in CYRILLIC_TO_LATIN ? CYRILLIC_TO_LATIN[char] : char))
+      .join('')
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/-{2,}/g, '-')
+      .replace(/^[^a-z]+/, '')
+      .slice(0, 25)
+      .replace(/-+$/, '');
+  }
+
+  /* ---- Credential vault («Доступы древ») ---- */
+
+  const PASSWORD_MASK = '••••••••';
+  let vaultConfigured = true;
+
+  function credentialNote(text) {
+    const note = $('#credentials-note');
+    if (note) note.textContent = text || '';
+  }
+
+  function credentialRowFor(treeDir) {
+    return credentials.find((item) => item.treeDir === treeDir) || null;
+  }
+
+  function credentialCardHtml(row) {
+    const dir = escapeHtml(row.treeDir);
+    const title = escapeHtml(row.title || row.treeDir);
+    const login = row.login ? escapeHtml(row.login) : '';
+    const passwordBlock = row.password
+      ? `
+          <div class="cred-row">
+            <span class="cred-label">Пароль</span>
+            <code class="cred-value cred-secret" data-secret-for="${dir}">${PASSWORD_MASK}</code>
+            <div class="cred-row-actions">
+              <button type="button" class="btn btn-quiet cred-btn" data-reveal="${dir}" aria-pressed="false">Показать</button>
+              <button type="button" class="btn btn-quiet cred-btn" data-copy-secret="${dir}">Копировать</button>
+            </div>
+          </div>`
+      : `
+          <div class="cred-row">
+            <span class="cred-label">Пароль</span>
+            <span class="cred-value cred-empty">не сохранён</span>
+            <div class="cred-row-actions">
+              <button type="button" class="btn btn-quiet cred-btn" data-set-open="${dir}"${vaultConfigured ? '' : ' disabled'}>Записать пароль в памятку</button>
+            </div>
+          </div>
+          <form class="cred-set" data-set-form="${dir}" hidden>
+            <input type="text" class="cred-set-input" maxlength="64" minlength="2" required placeholder="Текущий пароль семьи" autocomplete="off" spellcheck="false" />
+            <button type="submit" class="btn btn-primary cred-btn">Сохранить</button>
+            <button type="button" class="btn btn-ghost cred-btn" data-set-cancel="${dir}">Отмена</button>
+          </form>`;
+
+    return `
+      <article class="cred-card" data-dir="${dir}">
+        <h3 class="cred-title">${title}</h3>
+        <div class="cred-row">
+          <span class="cred-label">Логин</span>
+          <code class="cred-value">${login || '—'}</code>
+          <div class="cred-row-actions">
+            ${login ? `<button type="button" class="btn btn-quiet cred-btn" data-copy-login="${dir}">Копировать</button>` : ''}
+          </div>
+        </div>
+        ${passwordBlock}
+      </article>
+    `;
+  }
+
+  function renderCredentials() {
+    const list = $('#credentials-list');
+    if (!list) return;
+    list.innerHTML = credentials.map(credentialCardHtml).join('');
+  }
+
+  async function loadCredentials() {
+    if (credentialsInFlight) return;
+    credentialsInFlight = true;
+    const btn = $('#credentials-refresh');
+    if (btn) btn.disabled = true;
+    try {
+      const data = await callHubCredentials();
+      credentials = Array.isArray(data?.trees) ? data.trees : [];
+      vaultConfigured = data?.vaultConfigured !== false;
+      renderCredentials();
+      if (!credentials.length) {
+        credentialNote('Древ в реестре пока нет — доступы появятся после создания.');
+      } else if (!vaultConfigured) {
+        credentialNote('Памятка не настроена: задайте секрет DREWO_VAULT_KEY и передеплойте функцию.');
+      } else {
+        credentialNote('');
+      }
+    } catch (error) {
+      credentials = [];
+      renderCredentials();
+      credentialNote(
+        error instanceof Error ? error.message : 'Не удалось загрузить доступы древ'
+      );
+    } finally {
+      credentialsInFlight = false;
+      if (btn) btn.disabled = false;
+    }
+  }
+
+  async function copyText(value, label) {
+    try {
+      await navigator.clipboard.writeText(value);
+      credentialNote(`${label} скопирован`);
+    } catch {
+      credentialNote(`${label}: ${value}`);
+    }
+  }
+
+  function toggleSecret(treeDir, button) {
+    const row = credentialRowFor(treeDir);
+    const field = $(`.cred-secret[data-secret-for="${CSS.escape(treeDir)}"]`);
+    if (!row || !field) return;
+    const shown = button.getAttribute('aria-pressed') === 'true';
+    field.textContent = shown ? PASSWORD_MASK : row.password;
+    button.textContent = shown ? 'Показать' : 'Скрыть';
+    button.setAttribute('aria-pressed', shown ? 'false' : 'true');
+  }
+
+  function toggleSetForm(treeDir, open) {
+    const form = $(`.cred-set[data-set-form="${CSS.escape(treeDir)}"]`);
+    if (!form) return;
+    form.hidden = !open;
+    if (open) form.querySelector('.cred-set-input')?.focus();
+  }
+
+  async function saveCredentialPassword(form) {
+    const treeDir = form.getAttribute('data-set-form') || '';
+    const input = form.querySelector('.cred-set-input');
+    const password = String(input?.value || '');
+    if (password.length < 2 || password.length > 64) {
+      credentialNote('Пароль семьи: от 2 до 64 символов');
+      input?.focus();
+      return;
+    }
+
+    const submit = form.querySelector('button[type="submit"]');
+    if (submit) submit.disabled = true;
+    try {
+      await callCredentialsUpsert({ treeDir, password });
+      const row = credentialRowFor(treeDir);
+      if (row) row.password = password;
+      renderCredentials();
+      credentialNote('Пароль записан в памятку.');
+    } catch (error) {
+      if (submit) submit.disabled = false;
+      credentialNote(
+        error instanceof Error ? error.message : 'Не удалось сохранить пароль'
+      );
+    }
+  }
+
+  function handleCredentialsClick(event) {
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+
+    const revealBtn = target.closest('[data-reveal]');
+    if (revealBtn) {
+      toggleSecret(revealBtn.getAttribute('data-reveal'), revealBtn);
+      return;
+    }
+
+    const copyLoginBtn = target.closest('[data-copy-login]');
+    if (copyLoginBtn) {
+      const row = credentialRowFor(copyLoginBtn.getAttribute('data-copy-login'));
+      if (row?.login) void copyText(row.login, 'Логин');
+      return;
+    }
+
+    const copySecretBtn = target.closest('[data-copy-secret]');
+    if (copySecretBtn) {
+      const row = credentialRowFor(copySecretBtn.getAttribute('data-copy-secret'));
+      if (row?.password) void copyText(row.password, 'Пароль');
+      return;
+    }
+
+    const openBtn = target.closest('[data-set-open]');
+    if (openBtn) {
+      toggleSetForm(openBtn.getAttribute('data-set-open'), true);
+      return;
+    }
+
+    const cancelBtn = target.closest('[data-set-cancel]');
+    if (cancelBtn) {
+      toggleSetForm(cancelBtn.getAttribute('data-set-cancel'), false);
+    }
+  }
+
   function openCreateDialog() {
     const dialog = $('#create-tree-dialog');
     const err = $('#create-tree-error');
@@ -834,7 +1081,7 @@
       err.hidden = true;
       err.textContent = '';
     }
-    syncCreateCodeFromTitle();
+    updateCodePreview();
     if (dialog && typeof dialog.showModal === 'function') dialog.showModal();
     else if (dialog) dialog.hidden = false;
   }
@@ -845,61 +1092,21 @@
     else if (dialog) dialog.hidden = true;
   }
 
-  function slugifyTreeCode(raw) {
-    const map = {
-      а: 'a',
-      б: 'b',
-      в: 'v',
-      г: 'g',
-      д: 'd',
-      е: 'e',
-      ё: 'e',
-      ж: 'zh',
-      з: 'z',
-      и: 'i',
-      й: 'y',
-      к: 'k',
-      л: 'l',
-      м: 'm',
-      н: 'n',
-      о: 'o',
-      п: 'p',
-      р: 'r',
-      с: 's',
-      т: 't',
-      у: 'u',
-      ф: 'f',
-      х: 'h',
-      ц: 'c',
-      ч: 'ch',
-      ш: 'sh',
-      щ: 'sch',
-      ъ: '',
-      ы: 'y',
-      ь: '',
-      э: 'e',
-      ю: 'yu',
-      я: 'ya',
-    };
-    let out = String(raw || '')
-      .trim()
-      .toLowerCase()
-      .split('')
-      .map((ch) => map[ch] || ch)
-      .join('')
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '')
-      .replace(/--+/g, '-');
-    if (!out || !/^[a-z]/.test(out)) {
-      out = `rod-${Date.now().toString(36).slice(-6)}`;
-    }
-    return out.slice(0, 25);
+  function updateCodePreview() {
+    const preview = $('#create-path-preview');
+    if (!preview) return;
+    const login = normalizeTreeLogin($('#create-login')?.value);
+    preview.textContent = login ? `/t/${login}` : '/t/…';
   }
 
-  function syncCreateCodeFromTitle() {
-    const codeInput = $('#create-code');
-    if (!codeInput) return;
-    codeInput.value = slugifyTreeCode($('#create-title')?.value || '');
+  /** Fill the login only while it is untouched — never overwrite what was typed. */
+  function suggestLoginFromTitle() {
+    const loginInput = $('#create-login');
+    if (!loginInput || loginInput.value.trim()) return;
+    const suggested = slugifyTreeCode($('#create-title')?.value);
+    if (suggested.length < 2) return;
+    loginInput.value = suggested;
+    updateCodePreview();
   }
 
   async function handleBillingAction(dir, action) {
@@ -1070,9 +1277,21 @@
       err.textContent = '';
     }
 
+    const login = normalizeTreeLogin($('#create-login')?.value);
+    if (!isValidTreeLogin(login)) {
+      if (err) {
+        err.hidden = false;
+        err.textContent =
+          'Логин: латиница, 2–25 символов, начинается с буквы (например hoti или rod-ali)';
+      }
+      $('#create-login')?.focus();
+      return;
+    }
+
     const payload = {
       title: $('#create-title')?.value.trim() || '',
-      code: slugifyTreeCode($('#create-title')?.value || $('#create-code')?.value || ''),
+      login,
+      code: login,
       password: $('#create-password')?.value || '',
       rootName: $('#create-root')?.value.trim() || '',
       ownership: $('#create-ownership')?.value || 'mine',
@@ -1087,9 +1306,10 @@
       const form = $('#create-tree-form');
       if (form) form.reset();
       await refresh();
+      void loadCredentials();
       const status = $('#status-line');
       if (status) {
-        status.textContent = `Создано: ${created.title || created.path || ''}. Откройте и добавьте людей.`;
+        status.textContent = `Создано: ${created.inviteUrl || created.invitePath || created.path || ''} · логин ${created.login || created.code || ''}. Откройте и добавьте людей.`;
       }
       if (created.path) {
         const readyHref = await waitUntilPageReady(created.path);
@@ -1125,12 +1345,23 @@
     });
     $('#create-tree-close')?.addEventListener('click', () => closeCreateDialog());
     $('#create-tree-cancel')?.addEventListener('click', () => closeCreateDialog());
-    $('#create-title')?.addEventListener('input', () => syncCreateCodeFromTitle());
+    $('#create-login')?.addEventListener('input', updateCodePreview);
+    $('#create-title')?.addEventListener('blur', suggestLoginFromTitle);
     $('#create-tree-form')?.addEventListener('submit', (event) => {
       void handleCreateTree(event);
     });
     $('#tree-list')?.addEventListener('click', (event) => {
       onTreeListClick(event);
+    });
+    $('#credentials-refresh')?.addEventListener('click', () => {
+      void loadCredentials();
+    });
+    $('#credentials-list')?.addEventListener('click', handleCredentialsClick);
+    $('#credentials-list')?.addEventListener('submit', (event) => {
+      const form = event.target.closest('.cred-set');
+      if (!form) return;
+      event.preventDefault();
+      void saveCredentialPassword(form);
     });
 
     try {

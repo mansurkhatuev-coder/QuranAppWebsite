@@ -4,6 +4,8 @@ export type RegistryOwnership = 'mine' | 'customer';
 
 export type RegistryEntry = {
   treeDir: string;
+  login: string;
+  /** @deprecated alias of login; still written for old readers */
   code: string;
   title: string;
   ownership: RegistryOwnership;
@@ -52,6 +54,7 @@ export function defaultRegistry(): RegistryFile {
     trees: [
       {
         treeDir: 'drewo',
+        login: 'hoti',
         code: 'hoti',
         title: 'Хьоти некъ',
         ownership: 'mine',
@@ -60,6 +63,7 @@ export function defaultRegistry(): RegistryFile {
       },
       {
         treeDir: 'drewo-dada-yurt',
+        login: 'dada',
         code: 'dada',
         title: 'Дади-Юрт',
         ownership: 'mine',
@@ -68,6 +72,7 @@ export function defaultRegistry(): RegistryFile {
       },
       {
         treeDir: 'drewo-reklama',
+        login: 'demo',
         code: 'demo',
         title: 'Демо (реклама)',
         ownership: 'mine',
@@ -99,13 +104,20 @@ function normalizeRegistryEntry(raw: unknown): RegistryEntry | null {
   if (!raw || typeof raw !== 'object') return null;
   const item = raw as Record<string, unknown>;
   const treeDir = typeof item.treeDir === 'string' ? item.treeDir.trim() : '';
-  const code = typeof item.code === 'string' ? item.code.trim().toLowerCase() : '';
+  const loginRaw =
+    typeof item.login === 'string' && item.login.trim()
+      ? item.login
+      : typeof item.code === 'string'
+        ? item.code
+        : '';
+  const login = normalizeTreeCode(loginRaw);
   const title = typeof item.title === 'string' ? item.title.trim() : '';
-  if (!treeDir || !code || !title) return null;
+  if (!treeDir || !isValidTreeCode(login) || !title) return null;
   const ownership = item.ownership === 'customer' ? 'customer' : 'mine';
   return {
     treeDir,
-    code,
+    login,
+    code: login,
     title: title.slice(0, 80),
     ownership,
     note: typeof item.note === 'string' ? item.note.trim().slice(0, 200) : '',
@@ -137,13 +149,13 @@ export function treeDirFromCode(code: string): string {
 
 export function assertCreatableTreeDir(treeDir: string, existingDirs: Iterable<string>) {
   if (RESERVED_DIRS.has(treeDir)) {
-    throw new Error('Этот код занят системным древом');
+    throw new Error('Этот логин занят системным древом');
   }
   if (!treeDir.startsWith('drewo-') || treeDir === 'drewo-') {
     throw new Error('Некорректный путь древа');
   }
   for (const dir of existingDirs) {
-    if (dir === treeDir) throw new Error('Древо с таким кодом уже есть');
+    if (dir === treeDir) throw new Error('Древо с таким логином уже есть');
   }
 }
 
@@ -278,11 +290,16 @@ export function buildManifest(title: string): string {
   )}\n`;
 }
 
-export function buildInviteStubHtml(options: {
-  title: string;
-  treeDir: string;
-}): string {
-  const target = `/${options.treeDir}/`;
+/**
+ * Invite links land on the Nek login form (prefilled with the tree login), never
+ * straight on the tree — the tree itself is behind the family password.
+ */
+export function buildInviteStubHtml(options: { title: string; code: string }): string {
+  const code = normalizeTreeCode(options.code);
+  const target = isValidTreeCode(code)
+    ? `/nek/?login=1&u=${encodeURIComponent(code)}`
+    : '/nek/?login=1';
+  const safeTarget = target.replace(/&/g, '&amp;');
   const title = options.title.trim().slice(0, 80) || 'Древо';
   const safeTitle = title
     .replace(/&/g, '&amp;')
@@ -293,14 +310,14 @@ export function buildInviteStubHtml(options: {
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta http-equiv="refresh" content="0;url=${target}" />
-    <link rel="canonical" href="https://waydean.ru${target}" />
+    <meta http-equiv="refresh" content="0;url=${safeTarget}" />
     <title>${safeTitle}</title>
     <script>location.replace(${JSON.stringify(target)});</script>
   </head>
   <body>
-    <p><a href="${target}">Открыть «${safeTitle}»</a></p>
+    <p><a href="${safeTarget}">Войти в «${safeTitle}»</a></p>
   </body>
 </html>
 `;
