@@ -264,11 +264,16 @@ export function buildManifest(title: string): string {
   )}\n`;
 }
 
-export function buildInviteStubHtml(options: {
-  title: string;
-  treeDir: string;
-}): string {
-  const target = `/${options.treeDir}/`;
+/**
+ * Invite links land on the Nek login form (prefilled with the tree login), never
+ * straight on the tree — the tree itself is behind the family password.
+ */
+export function buildInviteStubHtml(options: { title: string; code: string }): string {
+  const code = normalizeTreeCode(options.code);
+  const target = isValidTreeCode(code)
+    ? `/nek/?login=1&u=${encodeURIComponent(code)}`
+    : '/nek/?login=1';
+  const safeTarget = target.replace(/&/g, '&amp;');
   const title = options.title.trim().slice(0, 80) || 'Древо';
   const safeTitle = title
     .replace(/&/g, '&amp;')
@@ -279,14 +284,14 @@ export function buildInviteStubHtml(options: {
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
-    <meta http-equiv="refresh" content="0;url=${target}" />
-    <link rel="canonical" href="https://waydean.ru${target}" />
+    <meta http-equiv="refresh" content="0;url=${safeTarget}" />
     <title>${safeTitle}</title>
     <script>location.replace(${JSON.stringify(target)});</script>
   </head>
   <body>
-    <p><a href="${target}">Открыть «${safeTitle}»</a></p>
+    <p><a href="${safeTarget}">Войти в «${safeTitle}»</a></p>
   </body>
 </html>
 `;

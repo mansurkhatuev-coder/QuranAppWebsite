@@ -1,7 +1,6 @@
 (function initNek() {
   const RECENT_KEY = 'nek:lastTree';
   const REMEMBER_KEY = 'nek:remember';
-  const SESSION_KEY = 'nek:session';
   const PWA_DISMISS_KEY = 'nek:pwaDismissed';
   const PUBLISH_URL =
     (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.publishDrewoUrl) ||
@@ -125,24 +124,6 @@
     }
   }
 
-  function saveSession(data, path) {
-    try {
-      localStorage.setItem(
-        SESSION_KEY,
-        JSON.stringify({
-          login: String(data.login || ''),
-          title: String(data.title || ''),
-          treeDir: String(data.treeDir || ''),
-          path,
-          token: String(data.sessionToken || ''),
-          at: Date.now(),
-        })
-      );
-    } catch (err) {
-      /* private mode */
-    }
-  }
-
   function treePathOf(data) {
     const raw = String(data.path || '').trim() || '/' + String(data.treeDir || '') + '/';
     try {
@@ -161,7 +142,6 @@
     if (!path || !token) return false;
 
     saveRemembered(rememberInput?.checked ? normalizeLogin(data.login || loginInput?.value) : '');
-    saveSession(data, path);
     if (typeof window.NekRemember === 'function') {
       window.NekRemember(path, String(data.title || ''));
     }
@@ -253,7 +233,15 @@
     if (rememberInput) rememberInput.checked = true;
   }
 
-  if (new URLSearchParams(window.location.search).get('login') === '1') {
+  const params = new URLSearchParams(window.location.search);
+
+  // Invite links (/t/<code>) land here as ?login=1&u=<code> to prefill the login.
+  const invited = normalizeLogin(params.get('u') || params.get('c') || params.get('code'));
+  if (invited && loginInput) {
+    loginInput.value = invited;
+  }
+
+  if (params.get('login') === '1' || invited) {
     showLoginMode(true);
   }
 
