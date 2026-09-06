@@ -8290,6 +8290,11 @@
             saveError.textContent = '';
           }
           hideCenterBanner();
+          if (nekSessionActive) {
+            // Вход через Некъ уже подтверждён токеном — пароль спрашивать незачем.
+            startSavePublish('');
+            return;
+          }
           if (savePasswordInput) {
             savePasswordInput.disabled = false;
             savePasswordInput.value = '';
@@ -8305,108 +8310,116 @@
           if (saveDialog && saveDialog.open) saveDialog.close();
         });
       }
-      if (saveForm) {
-        saveForm.addEventListener('submit', function (e) {
-          e.preventDefault();
-          var pass = savePasswordInput.value;
-          saveError.hidden = true;
-          if (saveDialog && saveDialog.open) saveDialog.close();
-          if (saveRemoteBtn) saveRemoteBtn.disabled = true;
-          if (saveSubmitBtn) saveSubmitBtn.disabled = true;
-          if (saveCancelBtn) saveCancelBtn.disabled = true;
-          if (savePasswordInput) savePasswordInput.disabled = true;
-          showBusyBanner('Готовлю данные…');
-          var progressTimer = window.setTimeout(function () {
-            showBusyBanner('Отправляю на GitHub…');
-          }, 450);
+      /**
+       * Единый путь публикации. Пустой pass — это Некъ-сессия:
+       * callPublishApi сам подставит sessionToken вместо пароля.
+       */
+      function startSavePublish(pass) {
+        if (saveError) saveError.hidden = true;
+        if (saveDialog && saveDialog.open) saveDialog.close();
+        if (saveRemoteBtn) saveRemoteBtn.disabled = true;
+        if (saveSubmitBtn) saveSubmitBtn.disabled = true;
+        if (saveCancelBtn) saveCancelBtn.disabled = true;
+        if (savePasswordInput) savePasswordInput.disabled = true;
+        showBusyBanner('Готовлю данные…');
+        var progressTimer = window.setTimeout(function () {
+          showBusyBanner('Отправляю на GitHub…');
+        }, 450);
 
-          function unlockSaveForm() {
-            if (saveSubmitBtn) saveSubmitBtn.disabled = false;
-            if (saveCancelBtn) saveCancelBtn.disabled = false;
-            if (savePasswordInput) {
-              savePasswordInput.disabled = false;
-              savePasswordInput.value = '';
+        function unlockSaveForm() {
+          if (saveSubmitBtn) saveSubmitBtn.disabled = false;
+          if (saveCancelBtn) saveCancelBtn.disabled = false;
+          if (savePasswordInput) {
+            savePasswordInput.disabled = false;
+            savePasswordInput.value = '';
+          }
+        }
+
+        function runPublish(force, mergeAttempt) {
+          mergeAttempt = mergeAttempt || 0;
+          return publishToGitHub(pass, { force: !!force }).then(function (data) {
+            window.clearTimeout(progressTimer);
+            setTreeDirty(false);
+            hideCenterBanner();
+            if (data && data.merged) {
+              try {
+                rebuildLineSets();
+                render(false);
+              } catch (renderErr) {}
             }
-          }
+            showToast(
+              data && data.merged
+                ? 'Сохранено вместе с правками с сайта'
+                : 'Сохранено на waydean.ru/drewo-dada-yurt',
+              'success',
+              3200
+            );
+            unlockSaveForm();
+          }).catch(function (err) {
+            if (err) err.mergeAttempt = mergeAttempt;
+            throw err;
+          });
+        }
 
-          function runPublish(force, mergeAttempt) {
-            mergeAttempt = mergeAttempt || 0;
-            return publishToGitHub(pass, { force: !!force }).then(function (data) {
-              window.clearTimeout(progressTimer);
-              setTreeDirty(false);
-              hideCenterBanner();
-              if (data && data.merged) {
-                try {
-                  rebuildLineSets();
-                  render(false);
-                } catch (renderErr) {}
-              }
-              showToast(
-                data && data.merged
-                  ? 'Сохранено вместе с правками с сайта'
-                  : 'Сохранено на waydean.ru/drewo-dada-yurt',
-                'success',
-                3200
-              );
-              unlockSaveForm();
-            }).catch(function (err) {
-              if (err) err.mergeAttempt = mergeAttempt;
-              throw err;
-            });
-          }
-
-          runPublish(false)
-            .catch(function handleSaveError(err) {
-              window.clearTimeout(progressTimer);
-              hideCenterBanner();
-              if (err && err.conflict) {
-                var attempt = (err.mergeAttempt || 0) + 1;
-                if (attempt > 2) {
-                  showToast('Не удалось объединить правки. Обновите страницу.', 'error', 5000);
-                  unlockSaveForm();
-                  return;
-                }
-                var serverJson = err.data && err.data.serverTreeJson;
-                var serverFp = err.data && err.data.serverFingerprint;
-                if (serverJson && TreeModel.mergeConcurrentEdits) {
-                  try {
-                    var serverTree =
-                      typeof serverJson === 'string' ? JSON.parse(serverJson) : serverJson;
-                    var baseForMerge = null;
-                    try {
-                      baseForMerge = baseTreeJson ? JSON.parse(baseTreeJson) : null;
-                    } catch (baseErr) {
-                      baseForMerge = null;
-                    }
-                    var merged = TreeModel.mergeConcurrentEdits(serverTree, tree, baseForMerge);
-                    tree = TreeModel.markAllowAdd(merged.tree, NUTSU_ID);
-                    if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
-                    if (serverFp) baseFingerprint = serverFp;
-                    try {
-                      baseTreeJson = JSON.stringify(serverTree);
-                    } catch (baseSetErr) {}
-                    setTreeDirty(true);
-                    rebuildLineSets();
-                    render(false);
-                    showBusyBanner('Сохраняю вместе с правками с сайта…');
-                    return runPublish(false, attempt).catch(handleSaveError);
-                  } catch (mergeErr) {
-                    showToast('Не удалось объединить правки', 'error', 5000);
-                    unlockSaveForm();
-                    return;
-                  }
-                }
-                showToast((err && err.message) || 'На сайте уже другая версия', 'error', 5000);
+        runPublish(false)
+          .catch(function handleSaveError(err) {
+            window.clearTimeout(progressTimer);
+            hideCenterBanner();
+            if (err && err.conflict) {
+              var attempt = (err.mergeAttempt || 0) + 1;
+              if (attempt > 2) {
+                showToast('Не удалось объединить правки. Обновите страницу.', 'error', 5000);
                 unlockSaveForm();
                 return;
               }
-              showToast(err.message || String(err), 'error', 5000);
+              var serverJson = err.data && err.data.serverTreeJson;
+              var serverFp = err.data && err.data.serverFingerprint;
+              if (serverJson && TreeModel.mergeConcurrentEdits) {
+                try {
+                  var serverTree =
+                    typeof serverJson === 'string' ? JSON.parse(serverJson) : serverJson;
+                  var baseForMerge = null;
+                  try {
+                    baseForMerge = baseTreeJson ? JSON.parse(baseTreeJson) : null;
+                  } catch (baseErr) {
+                    baseForMerge = null;
+                  }
+                  var merged = TreeModel.mergeConcurrentEdits(serverTree, tree, baseForMerge);
+                  tree = TreeModel.markAllowAdd(merged.tree, NUTSU_ID);
+                  if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
+                  if (serverFp) baseFingerprint = serverFp;
+                  try {
+                    baseTreeJson = JSON.stringify(serverTree);
+                  } catch (baseSetErr) {}
+                  setTreeDirty(true);
+                  rebuildLineSets();
+                  render(false);
+                  showBusyBanner('Сохраняю вместе с правками с сайта…');
+                  return runPublish(false, attempt).catch(handleSaveError);
+                } catch (mergeErr) {
+                  showToast('Не удалось объединить правки', 'error', 5000);
+                  unlockSaveForm();
+                  return;
+                }
+              }
+              showToast((err && err.message) || 'На сайте уже другая версия', 'error', 5000);
               unlockSaveForm();
-              if (saveDialog && saveDialog.showModal) saveDialog.showModal();
-            })
-            .finally(function () {
-              if (saveRemoteBtn) saveRemoteBtn.disabled = false;
-            });
+              return;
+            }
+            showToast(err.message || String(err), 'error', 5000);
+            unlockSaveForm();
+            // Диалог нужен только чтобы переспросить пароль — с Некъ-сессией он ни к чему.
+            if (!nekSessionActive && saveDialog && saveDialog.showModal) saveDialog.showModal();
+          })
+          .finally(function () {
+            if (saveRemoteBtn) saveRemoteBtn.disabled = false;
+          });
+      }
+
+      if (saveForm) {
+        saveForm.addEventListener('submit', function (e) {
+          e.preventDefault();
+          startSavePublish(savePasswordInput ? savePasswordInput.value : '');
         });
       }
 
