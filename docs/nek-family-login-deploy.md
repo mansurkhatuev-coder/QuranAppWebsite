@@ -80,7 +80,8 @@ Redeploy function after setting secrets (below).
 |--------|---------|
 | `DREWO_SESSION_SECRET` | Signs Nek family session tokens. Fallback: `GITHUB_TOKEN` — prefer a dedicated secret. |
 | `DREWO_VAULT_KEY` | Encrypts `_private/credentials.vault.json` so the hub can show family passwords. Without it, vault writes are skipped and the UI shows a “secret not configured” note. Use a long random string — it is the only thing protecting the vault. |
-| `DREWO_HUB_EMAILS` | **Required.** Comma-separated allowlist of operator emails allowed to call `create-tree`, `hub-credentials`, `hub-credentials-upsert`. Unset = every hub action returns 403 (fail closed). Example: `me@example.com,partner@example.com`. |
+
+Trees / hub: вход тем же Supabase-аккаунтом, что и админка (`waydean.ru/admin/`, `waydean.ru/trees/`). Отдельный allowlist email **не** используется.
 
 Existing secrets (`GITHUB_TOKEN`, repo config) remain required for GitHub publish paths.
 
@@ -133,7 +134,7 @@ Historical incident: pushing stale local tree deleted people (147 → 140). Do n
 
 ## Suggested deploy order
 
-1. Set `DREWO_SESSION_SECRET`, `DREWO_VAULT_KEY` and `DREWO_HUB_EMAILS` on Supabase.
+1. Set `DREWO_SESSION_SECRET` and `DREWO_VAULT_KEY` on Supabase.
 2. Deploy `publish-drewo` Edge Function.
 3. Push static site files (nek, trees, t, tree index.html shells).
 4. Hard-refresh or wait for CDN if counts look wrong after deploy.
@@ -147,7 +148,7 @@ Create GitHub backup under `drewo/backups/` (and siblings) before replacing any 
 - [ ] **Nek login** — https://waydean.ru/nek/ → “Войти” → family credentials → lands on correct tree.
 - [ ] **Vault is not public** — https://waydean.ru/_private/credentials.vault.json and
       https://waydean.ru/trees/credentials.vault.json both return **404**.
-- [ ] **Hub allowlist** — an account outside `DREWO_HUB_EMAILS` gets 403 from the Trees hub.
+- [ ] **Trees hub login** — https://waydean.ru/trees/ → вход тем же аккаунтом, что и `/admin/`.
 - [ ] **Password rotation invalidates sessions** — change a family password, then reload a tree
       still holding the old `?nek=` token: it must fall back to the password gate.
 - [ ] **Trees hub credentials** — https://waydean.ru/trees/ → logged-in user sees registry entries; credential note works when vault is configured.
