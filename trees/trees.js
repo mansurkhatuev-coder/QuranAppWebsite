@@ -804,11 +804,11 @@
             <span class="cred-label">Пароль</span>
             <span class="cred-value cred-empty">не сохранён</span>
             <div class="cred-row-actions">
-              <button type="button" class="btn btn-quiet cred-btn" data-set-open="${dir}"${vaultConfigured ? '' : ' disabled'}>Задать пароль в памятке</button>
+              <button type="button" class="btn btn-quiet cred-btn" data-set-open="${dir}"${vaultConfigured ? '' : ' disabled'}>Записать пароль в памятку</button>
             </div>
           </div>
           <form class="cred-set" data-set-form="${dir}" hidden>
-            <input type="text" class="cred-set-input" maxlength="64" minlength="2" required placeholder="Пароль семьи" autocomplete="off" spellcheck="false" />
+            <input type="text" class="cred-set-input" maxlength="64" minlength="2" required placeholder="Текущий пароль семьи" autocomplete="off" spellcheck="false" />
             <button type="submit" class="btn btn-primary cred-btn">Сохранить</button>
             <button type="button" class="btn btn-ghost cred-btn" data-set-cancel="${dir}">Отмена</button>
           </form>`;

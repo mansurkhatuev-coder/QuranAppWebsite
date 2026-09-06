@@ -28,7 +28,18 @@ export type NekSessionPayload = {
   treeDir: string;
   role: 'editor' | 'super';
   exp: number; // unix ms
+  /** Short fingerprint of the family password at sign time — see passwordFingerprint. */
+  pwdFp: string;
 };
+
+/**
+ * Ties a session to the password that created it: changing the family password
+ * changes the fingerprint, so old tokens stop verifying.
+ */
+export function passwordFingerprint(passwordHash?: string | null): string {
+  const hash = String(passwordHash ?? '').toLowerCase();
+  return /^[a-f0-9]{8,}$/.test(hash) ? hash.slice(0, 8) : 'nopwhash';
+}
 
 export async function signNekSession(
   payload: NekSessionPayload,
@@ -40,9 +51,14 @@ export async function signNekSession(
   return `${body}.${b64url(sig)}`;
 }
 
+/**
+ * `expectedPwdFp` must be the fingerprint of the tree's current access.passwordHash;
+ * tokens signed under an older password are rejected.
+ */
 export async function verifyNekSession(
   token: string,
-  secret: string
+  secret: string,
+  expectedPwdFp: string
 ): Promise<NekSessionPayload | null> {
   const parts = String(token || '').split('.');
   if (parts.length !== 2) return null;
@@ -59,6 +75,7 @@ export async function verifyNekSession(
     const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body))) as NekSessionPayload;
     if (!payload?.treeDir || !payload.exp || payload.exp < Date.now()) return null;
     if (payload.role !== 'editor' && payload.role !== 'super') return null;
+    if (!payload.pwdFp || payload.pwdFp !== expectedPwdFp) return null;
     return payload;
   } catch {
     return null;

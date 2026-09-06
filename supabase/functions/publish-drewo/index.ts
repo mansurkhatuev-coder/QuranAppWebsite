@@ -24,9 +24,15 @@ import {
   type RegistryOwnership,
 } from './create-tree.ts';
 
-import { NEK_SESSION_TTL_MS, signNekSession, verifyNekSession } from './session.ts';
+import {
+  NEK_SESSION_TTL_MS,
+  passwordFingerprint,
+  signNekSession,
+  verifyNekSession,
+} from './session.ts';
 
 import {
+  LEGACY_VAULT_PATH,
   VAULT_PATH,
   decryptVault,
   emptyVaultMap,
@@ -191,26 +197,51 @@ type GithubDirItem = {
   type: string;
 };
 
+function httpError(message: string, status: number) {
+  const error = new Error(message) as Error & { status?: number };
+  error.status = status;
+  return error;
+}
+
+/** Operator emails allowed to use hub actions (create trees, read the vault). */
+function hubEmailAllowlist(): string[] {
+  return (Deno.env.get('DREWO_HUB_EMAILS') ?? '')
+    .split(',')
+    .map((item) => item.trim().toLowerCase())
+    .filter(Boolean);
+}
+
+/**
+ * Any Supabase account can sign up, so a valid token is not enough: the email
+ * must also be listed in DREWO_HUB_EMAILS. Unset allowlist = nobody (fail closed).
+ */
 async function requireHubUser(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
   if (!supabaseUrl || !supabaseAnonKey) {
     throw new Error('Supabase env is not configured');
   }
+  const allowlist = hubEmailAllowlist();
+  if (!allowlist.length) {
+    throw httpError(
+      'Список операторов не настроен. Задайте секрет DREWO_HUB_EMAILS и задеплойте функцию.',
+      403
+    );
+  }
   const authHeader = request.headers.get('Authorization');
   if (!authHeader || !authHeader.toLowerCase().startsWith('bearer ')) {
-    const error = new Error('Войдите в Trees');
-    (error as Error & { status?: number }).status = 401;
-    throw error;
+    throw httpError('Войдите в Trees', 401);
   }
   const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     global: { headers: { Authorization: authHeader } },
   });
   const { data, error } = await supabase.auth.getUser();
   if (error || !data.user) {
-    const err = new Error('Войдите в Trees');
-    (err as Error & { status?: number }).status = 401;
-    throw err;
+    throw httpError('Войдите в Trees', 401);
+  }
+  const email = String(data.user.email ?? '').trim().toLowerCase();
+  if (!email || !allowlist.includes(email)) {
+    throw httpError('Этот аккаунт не имеет доступа к управлению древами', 403);
   }
   return data.user;
 }
@@ -475,34 +506,40 @@ function vaultKeyMaterial(): string {
   return Deno.env.get('DREWO_VAULT_KEY') ?? '';
 }
 
+type VaultState = { map: VaultMap; available: boolean; legacyPresent: boolean };
+
 /**
- * Plaintext credentials for the Trees hub, kept encrypted in the repo.
- * `available: false` means DREWO_VAULT_KEY is unset — callers then skip vault
- * writes instead of failing the whole action.
+ * Plaintext credentials for the Trees hub, kept encrypted under `_private/`
+ * (stripped by the Pages deploy). `available: false` means DREWO_VAULT_KEY is
+ * unset — callers then skip vault writes instead of failing the whole action.
  */
-async function loadVault(
-  token: string,
-  repo: string
-): Promise<{ map: VaultMap; available: boolean }> {
-  if (!vaultKeyMaterial()) return { map: emptyVaultMap(), available: false };
-  const file = await githubGetFile(token, repo, VAULT_PATH);
-  const parsed = parseVaultFile(file?.content);
-  if (!parsed) return { map: emptyVaultMap(), available: true };
+async function loadVault(token: string, repo: string): Promise<VaultState> {
+  if (!vaultKeyMaterial()) {
+    return { map: emptyVaultMap(), available: false, legacyPresent: false };
+  }
+  const [file, legacyFile] = await Promise.all([
+    githubGetFile(token, repo, VAULT_PATH),
+    githubGetFile(token, repo, LEGACY_VAULT_PATH),
+  ]);
+  const legacyPresent = Boolean(legacyFile);
+  const parsed = parseVaultFile(file?.content) ?? parseVaultFile(legacyFile?.content);
+  if (!parsed) return { map: emptyVaultMap(), available: true, legacyPresent };
   try {
-    return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true };
+    return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true, legacyPresent };
   } catch {
     // Rotated key or corrupted file: start over rather than locking out writes.
-    return { map: emptyVaultMap(), available: true };
+    return { map: emptyVaultMap(), available: true, legacyPresent };
   }
 }
 
-async function vaultFileChange(map: VaultMap): Promise<TreeChange | null> {
+/** Writes the vault to `_private/` and removes any copy left in the published tree. */
+async function vaultFileChanges(map: VaultMap, state: VaultState): Promise<TreeChange[]> {
   const keyMaterial = vaultKeyMaterial();
-  if (!keyMaterial) return null;
-  return {
-    path: VAULT_PATH,
-    content: serializeVaultFile(await encryptVault(map, keyMaterial)),
-  };
+  if (!keyMaterial) return [];
+  return [
+    { path: VAULT_PATH, content: serializeVaultFile(await encryptVault(map, keyMaterial)) },
+    ...(state.legacyPresent ? [{ path: LEGACY_VAULT_PATH, delete: true as const }] : []),
+  ];
 }
 
 function sessionSecret(): string {
@@ -1029,7 +1066,12 @@ Deno.serve(async (request) => {
       clearAuthFailures(attemptKey);
 
       const sessionToken = await signNekSession(
-        { treeDir: hit.treeDir, role, exp: Date.now() + NEK_SESSION_TTL_MS },
+        {
+          treeDir: hit.treeDir,
+          role,
+          exp: Date.now() + NEK_SESSION_TTL_MS,
+          pwdFp: passwordFingerprint(access?.passwordHash),
+        },
         sessionSecret()
       );
       return jsonResponse({
@@ -1207,13 +1249,14 @@ Deno.serve(async (request) => {
       // Vault keeps the readable password for the hub. Without DREWO_VAULT_KEY the
       // tree is still created, just without a recoverable copy of the password.
       const vault = await loadVault(githubToken, githubRepo);
-      const vaultChange = await vaultFileChange(
+      const vaultChanges = await vaultFileChanges(
         upsertVaultEntry(vault.map, treeDir, {
           login: code,
           password,
           title: entry.title,
           updatedAt: entry.createdAt,
-        })
+        }),
+        vault
       );
 
       await githubCommitChanges({
@@ -1222,7 +1265,7 @@ Deno.serve(async (request) => {
         message: `Create family tree ${treeDir} (${title})`,
         changes: [
           ...assetCopies,
-          ...(vaultChange ? [vaultChange] : []),
+          ...vaultChanges,
           { path: `${treeDir}/index.html`, content: html },
           { path: `${treeDir}/family-tree.json`, content: treeJson },
           { path: `${treeDir}/access.json`, content: serializeAccess(access) },
@@ -1234,7 +1277,7 @@ Deno.serve(async (request) => {
           { path: `${treeDir}/README.md`, content: buildReadme(title, treeDir, code) },
           {
             path: `t/${code}/index.html`,
-            content: buildInviteStubHtml({ title, treeDir }),
+            content: buildInviteStubHtml({ title, code }),
           },
           { path: REGISTRY_PATH, content: serializeRegistry(nextRegistry) },
         ],
@@ -1252,7 +1295,7 @@ Deno.serve(async (request) => {
         invitePath: invitePathForCode(code),
         inviteUrl: `https://waydean.ru${invitePathForCode(code)}`,
         createdAt: entry.createdAt,
-        vaultSaved: Boolean(vaultChange),
+        vaultSaved: vaultChanges.length > 0,
       });
     }
 
@@ -1289,6 +1332,24 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
       }
 
+      // The vault only records a password that already works for the tree; it is
+      // never a way to set one. Password changes go through `set-password`.
+      const targetAccess = parseAccess(
+        (await githubGetFile(githubToken, githubRepo, accessPath(targetDir)))?.content
+      );
+      const verifiedRole = await resolveRole(password, targetDir, targetAccess);
+      if (verifiedRole !== 'editor') {
+        return jsonResponse(
+          {
+            error:
+              verifiedRole === 'super'
+                ? 'Это суперпароль, а не пароль семьи. Смените пароль через «сменить пароль».'
+                : 'Пароль не совпадает с текущим паролем семьи',
+          },
+          400
+        );
+      }
+
       const vault = await loadVault(githubToken, githubRepo);
       if (!vault.available) {
         return jsonResponse(
@@ -1309,13 +1370,16 @@ Deno.serve(async (request) => {
         title: titleOverride || previous?.title || meta.title,
         updatedAt: new Date().toISOString(),
       };
-      const change = await vaultFileChange(upsertVaultEntry(vault.map, targetDir, nextEntry));
-      if (change) {
+      const changes = await vaultFileChanges(
+        upsertVaultEntry(vault.map, targetDir, nextEntry),
+        vault
+      );
+      if (changes.length) {
         await githubCommitChanges({
           token: githubToken,
           repo: githubRepo,
           message: `Update credential vault for ${targetDir}`,
-          changes: [change],
+          changes,
         });
       }
       return jsonResponse({
@@ -1366,10 +1430,15 @@ Deno.serve(async (request) => {
     const attemptKey = authAttemptKey(treeDir, request);
 
     // A valid session token from `login-tree` replaces the password for this tree.
-    // Anything else (missing, expired, wrong tree) falls back to the password check.
+    // Anything else (missing, expired, wrong tree, password changed since) falls
+    // back to the password check.
     const rawSessionToken = typeof body.sessionToken === 'string' ? body.sessionToken.trim() : '';
     const sessionPayload = rawSessionToken
-      ? await verifyNekSession(rawSessionToken, sessionSecret())
+      ? await verifyNekSession(
+          rawSessionToken,
+          sessionSecret(),
+          passwordFingerprint(access.passwordHash)
+        )
       : null;
     let role: AuthRole | null =
       sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
@@ -1409,7 +1478,12 @@ Deno.serve(async (request) => {
         lockedReason: access.lockedReason,
         superConfigured,
         sessionToken: await signNekSession(
-          { treeDir, role, exp: Date.now() + NEK_SESSION_TTL_MS },
+          {
+            treeDir,
+            role,
+            exp: Date.now() + NEK_SESSION_TTL_MS,
+            pwdFp: passwordFingerprint(access.passwordHash),
+          },
           sessionSecret()
         ),
       });
@@ -1580,13 +1654,14 @@ Deno.serve(async (request) => {
       const meta = registryEntryFor(registry, treeDir);
       const vault = await loadVault(githubToken, githubRepo);
       const previous = vault.map[treeDir];
-      const vaultChange = await vaultFileChange(
+      const vaultChanges = await vaultFileChanges(
         upsertVaultEntry(vault.map, treeDir, {
           login: meta?.login || previous?.login || '',
           password: nextPassword,
           title: meta?.title || previous?.title || treeDir,
           updatedAt: new Date().toISOString(),
-        })
+        }),
+        vault
       );
 
       await githubCommitChanges({
@@ -1595,14 +1670,24 @@ Deno.serve(async (request) => {
         message: `Change ${treeDir} editor password`,
         changes: [
           { path: accessPath(treeDir), content: serializeAccess(next) },
-          ...(vaultChange ? [vaultChange] : []),
+          ...vaultChanges,
         ],
       });
       return jsonResponse({
         ok: true,
         treeDir,
         passwordChanged: true,
-        vaultSaved: Boolean(vaultChange),
+        vaultSaved: vaultChanges.length > 0,
+        // Old family sessions stop working: the fingerprint they carry is stale.
+        sessionToken: await signNekSession(
+          {
+            treeDir,
+            role,
+            exp: Date.now() + NEK_SESSION_TTL_MS,
+            pwdFp: passwordFingerprint(next.passwordHash),
+          },
+          sessionSecret()
+        ),
       });
     }
 
