@@ -1,21 +1,21 @@
 {
-  "ios": {
-    "latestVersion": "1.0.14",
-    "buildNumber": 19,
-    "appStoreUrl": "https://apps.apple.com/app/id6782619598"
-  },
-  "android": {
-    "rustore": {
-      "latestVersion": "1.0.15",
-      "versionCode": 17,
-      "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
-    },
-    "apk": {
-      "latestVersion": "1.0.14",
-      "versionCode": 16,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.14/koran-i-azkary-1.0.14.apk"
-    }
-  },
-  "messageRu": "Версия 1.0.14: полный дневной аят на главной, удобнее плееры и скорость чтения, мусхаф Plain WebView (должна уйти давняя проблема обрезки текста по краям), карточка для шаринга азкаров и аятов (Азкарш т1ехь керла кнопка ю — статусе кхосс кийча сурт кеч до), точнее намаз и азкары, правки стабильности. Керла хIум далахь дан дезаш зIене довла. Лерамца, Мансур!",
-  "messageEn": "Version 1.0.14: expandable daily ayah on Home, better players and playback speed, Mushaf Plain WebView (should fix long-standing edge clipping), share cards for azkar and ayahs (new button in Azkar to prepare a status), prayer and azkar polish, stability fixes. If something needs fixing, write to us. With respect, Mansur!"
+    "ios":  {
+                "latestVersion":  "1.0.14",
+                "buildNumber":  19,
+                "appStoreUrl":  "https://apps.apple.com/app/id6782619598"
+            },
+    "android":  {
+                    "rustore":  {
+                                    "latestVersion":  "1.0.15",
+                                    "versionCode":  17,
+                                    "url":  "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
+                                },
+                    "apk":  {
+                                "latestVersion":  "1.0.16",
+                                "versionCode":  18,
+                                "url":  "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.16/koran-i-azkary-1.0.16.apk"
+                            }
+                },
+    "messageRu":  "Версия 1.0.16: плавнее компас Киблы на Android, плюс улучшения 1.0.15 (Калям Шариф, чтецы, намаз по СНГ, азкары и мусхаф). Если что-то нужно поправить — напишите. Лерамца, Мансур!",
+    "messageEn":  "Version 1.0.16: smoother Qibla compass on Android, plus 1.0.15 updates (Kalam Sharif, reciters, CIS prayer schedules, azkar and mushaf). If something needs fixing, write to us. With respect, Mansur!"
 }
