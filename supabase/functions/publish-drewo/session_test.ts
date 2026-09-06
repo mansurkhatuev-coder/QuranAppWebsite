@@ -31,3 +31,7 @@ Deno.test('bad signature returns null', async () => {
   const tampered = `${body}.${sig.slice(0, -1)}${last}`;
   assertEquals(await verifyNekSession(tampered, secret), null);
 });
+
+Deno.test('malformed token returns null', async () => {
+  assertEquals(await verifyNekSession('!!!.!!!', 'test-secret'), null);
+});

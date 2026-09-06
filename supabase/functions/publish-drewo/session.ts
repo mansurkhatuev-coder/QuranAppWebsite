@@ -46,16 +46,16 @@ export async function verifyNekSession(
 ): Promise<NekSessionPayload | null> {
   const parts = String(token || '').split('.');
   if (parts.length !== 2) return null;
-  const [body, sigPart] = parts;
-  const key = await hmacKey(secret);
-  const ok = await crypto.subtle.verify(
-    'HMAC',
-    key,
-    new Uint8Array(b64urlToBytes(sigPart)),
-    encoder.encode(body)
-  );
-  if (!ok) return null;
   try {
+    const [body, sigPart] = parts;
+    const key = await hmacKey(secret);
+    const ok = await crypto.subtle.verify(
+      'HMAC',
+      key,
+      new Uint8Array(b64urlToBytes(sigPart)),
+      encoder.encode(body)
+    );
+    if (!ok) return null;
     const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body))) as NekSessionPayload;
     if (!payload?.treeDir || !payload.exp || payload.exp < Date.now()) return null;
     if (payload.role !== 'editor' && payload.role !== 'super') return null;
