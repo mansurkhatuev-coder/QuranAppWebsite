@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta
       name="description"
-      content="Некъ — семейное древо онлайн. Посмотрите демо, откройте своё по коду или закажите новое."
+      content="Некъ — семейное древо онлайн. Посмотрите демо, войдите с логином и паролем семьи или закажите своё."
     />
     <meta name="theme-color" content="#121a14" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -23,7 +23,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./nek.css?v=7" />
+    <link rel="stylesheet" href="./nek.css?v=8" />
   </head>
   <body>
     <div class="hero-plane" aria-hidden="true">
@@ -36,12 +36,12 @@
       <p class="brand" id="brand">Некъ</p>
       <h1 class="headline" id="headline">Семейное древо — одним взглядом</h1>
       <p class="lead" id="lead">
-        Родственники входят по ссылке и паролю семьи. Без регистрации.
+        Родственники входят по логину и паролю семьи. Без регистрации.
       </p>
 
       <div class="cta" id="cta" role="group" aria-label="Что сделать">
         <a class="btn btn-demo" href="/drewo-reklama/">Посмотреть демо</a>
-        <button type="button" class="btn btn-code" id="have-code-btn">У меня есть код</button>
+        <button type="button" class="btn btn-enter" id="login-open">Войти</button>
         <a
           class="btn btn-order"
           href="https://wa.me/79288867854?text=%D0%97%D0%B4%D1%80%D0%B0%D0%B2%D1%81%D1%82%D0%B2%D1%83%D0%B9%D1%82%D0%B5!%20%D0%A5%D0%BE%D1%87%D1%83%20%D0%B7%D0%B0%D0%BA%D0%B0%D0%B7%D0%B0%D1%82%D1%8C%20%D1%81%D0%B5%D0%BC%D0%B5%D0%B9%D0%BD%D0%BE%D0%B5%20%D0%B4%D1%80%D0%B5%D0%B2%D0%BE%20%D0%9D%D0%B5%D0%BA%D1%8A."
@@ -51,28 +51,53 @@
         >
       </div>
 
-      <form id="code-panel" class="code-panel" hidden>
-        <label for="code-input">Код из ссылки <span class="hint-inline">(не пароль семьи)</span></label>
-        <div class="code-row">
+      <form id="login-panel" class="login-panel" hidden>
+        <div class="login-field">
+          <label for="login-input">Логин семьи</label>
           <input
-            id="code-input"
-            name="code"
+            id="login-input"
+            name="username"
             type="text"
-            maxlength="80"
-            autocomplete="off"
+            maxlength="40"
+            autocomplete="username"
             autocapitalize="off"
             spellcheck="false"
-            placeholder="например hoti или dada"
+            placeholder="например hoti"
             required
           />
-          <button type="submit" class="btn btn-code" id="code-submit">Открыть</button>
         </div>
-        <p id="code-hint" class="code-hint">
-          Код — это короткое слово из ссылки <code>waydean.ru/t/…</code>. Пароль семьи вводится уже на экране
-          входа в древо.
-        </p>
-        <p id="code-error" class="code-error" hidden>Нет такого древа</p>
-        <button type="button" class="linkish" id="code-cancel">Назад</button>
+
+        <div class="login-field">
+          <label for="password-input">Пароль семьи</label>
+          <div class="password-row">
+            <input
+              id="password-input"
+              name="password"
+              type="password"
+              maxlength="64"
+              autocomplete="current-password"
+              required
+            />
+            <button
+              type="button"
+              class="password-toggle"
+              id="password-toggle"
+              aria-controls="password-input"
+              aria-pressed="false"
+            >
+              Показать
+            </button>
+          </div>
+        </div>
+
+        <label class="remember-row">
+          <input type="checkbox" id="login-remember" />
+          <span>Запомнить на этом устройстве</span>
+        </label>
+
+        <button type="submit" class="btn btn-enter" id="login-submit">Войти</button>
+        <p id="login-error" class="login-error" role="alert" hidden></p>
+        <button type="button" class="linkish" id="login-cancel">Назад</button>
       </form>
 
       <p id="recent" class="recent" hidden>
@@ -85,12 +110,12 @@
           <p>На экран Домой — как приложение</p>
         </div>
         <div class="pwa-banner-actions">
-          <button type="button" id="pwa-install" class="btn btn-code btn-compact">Установить</button>
+          <button type="button" id="pwa-install" class="btn btn-enter btn-compact">Установить</button>
           <button type="button" id="pwa-dismiss" class="linkish">Позже</button>
         </div>
       </div>
     </main>
 
-    <script src="./nek.js?v=7"></script>
+    <script src="./nek.js?v=8"></script>
   </body>
 </html>

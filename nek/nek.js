@@ -1,12 +1,22 @@
 (function initNek() {
   const RECENT_KEY = 'nek:lastTree';
+  const REMEMBER_KEY = 'nek:remember';
+  const SESSION_KEY = 'nek:session';
   const PWA_DISMISS_KEY = 'nek:pwaDismissed';
+  const PUBLISH_URL =
+    (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.publishDrewoUrl) ||
+    'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
+
   const stage = document.querySelector('.stage');
-  const haveCodeBtn = document.getElementById('have-code-btn');
-  const codePanel = document.getElementById('code-panel');
-  const codeInput = document.getElementById('code-input');
-  const codeError = document.getElementById('code-error');
-  const codeCancel = document.getElementById('code-cancel');
+  const loginOpen = document.getElementById('login-open');
+  const loginPanel = document.getElementById('login-panel');
+  const loginInput = document.getElementById('login-input');
+  const passwordInput = document.getElementById('password-input');
+  const passwordToggle = document.getElementById('password-toggle');
+  const rememberInput = document.getElementById('login-remember');
+  const loginSubmit = document.getElementById('login-submit');
+  const loginError = document.getElementById('login-error');
+  const loginCancel = document.getElementById('login-cancel');
   const lead = document.getElementById('lead');
   const recent = document.getElementById('recent');
   const recentLink = document.getElementById('recent-link');
@@ -15,13 +25,20 @@
   const pwaDismiss = document.getElementById('pwa-dismiss');
 
   const leadDefault =
-    'Родственники входят по ссылке и паролю семьи. Без регистрации.';
-  const leadCode =
-    'Код — из ссылки родственника. Пароль семьи вводите уже на экране входа.';
+    'Родственники входят по логину и паролю семьи. Без регистрации.';
+  const leadLogin =
+    'Логин и пароль семьи — те, что прислал родственник. Доступ откроется сразу.';
+  const submitLabel = 'Войти';
 
   let deferredInstall = null;
+  let busy = false;
 
-  function normalizeCode(raw) {
+  function reducedMotion() {
+    return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  }
+
+  /** Accepts a bare login or a pasted tree link and keeps only the login part. */
+  function normalizeLogin(raw) {
     let value = String(raw || '').trim();
     try {
       if (/^https?:\/\//i.test(value) || value.includes('waydean.ru') || value.includes('/t/')) {
@@ -46,53 +63,199 @@
       .replace(/^\/+|\/+$/g, '');
   }
 
-  function looksLikeFamilyPassword(raw) {
-    const value = String(raw || '').trim();
-    if (!value) return false;
-    // Cyrillic / mixed family passwords are not invite codes
-    return /[а-яёА-ЯЁ]/.test(value);
+  function clearError() {
+    if (!loginError) return;
+    loginError.hidden = true;
+    loginError.textContent = '';
+    loginPanel?.classList.remove('is-error');
   }
 
-  function showCodeMode(on) {
-    if (!stage || !codePanel) return;
-    stage.classList.toggle('is-code', on);
-    codePanel.hidden = !on;
-    if (lead) lead.textContent = on ? leadCode : leadDefault;
-    if (codeError) codeError.hidden = true;
-    if (on && codeInput) {
-      codeInput.focus();
-      codeInput.select();
+  function showError(message) {
+    if (!loginError) return;
+    loginError.textContent = message;
+    loginError.hidden = false;
+    if (!loginPanel || reducedMotion()) return;
+    loginPanel.classList.remove('is-error');
+    // Restart the class-driven keyframes even when the same error repeats.
+    void loginPanel.offsetWidth;
+    loginPanel.classList.add('is-error');
+  }
+
+  function setBusy(on) {
+    busy = on;
+    if (loginSubmit) {
+      loginSubmit.disabled = on;
+      loginSubmit.textContent = on ? 'Проверяем…' : submitLabel;
+    }
+    if (loginInput) loginInput.disabled = on;
+    if (passwordInput) passwordInput.disabled = on;
+  }
+
+  function showLoginMode(on) {
+    if (!stage || !loginPanel) return;
+    stage.classList.toggle('is-login', on);
+    loginPanel.hidden = !on;
+    if (lead) lead.textContent = on ? leadLogin : leadDefault;
+    clearError();
+    if (!on) return;
+    const target = loginInput?.value.trim() ? passwordInput : loginInput;
+    target?.focus();
+  }
+
+  function readRemembered() {
+    try {
+      const raw = localStorage.getItem(REMEMBER_KEY);
+      if (!raw) return '';
+      const data = JSON.parse(raw);
+      return normalizeLogin(data?.login || '');
+    } catch (err) {
+      return '';
     }
   }
 
-  function openInvite(raw) {
-    if (looksLikeFamilyPassword(raw)) {
-      if (codeError) {
-        codeError.hidden = false;
-        codeError.textContent =
-          'Это похоже на пароль семьи, а не на код. Для Хоты код hoti, для Дади — dada. Пароль введёте на следующем экране.';
+  function saveRemembered(login) {
+    try {
+      if (login) {
+        localStorage.setItem(REMEMBER_KEY, JSON.stringify({ login, at: Date.now() }));
+      } else {
+        localStorage.removeItem(REMEMBER_KEY);
       }
+    } catch (err) {
+      /* private mode */
+    }
+  }
+
+  function saveSession(data, path) {
+    try {
+      localStorage.setItem(
+        SESSION_KEY,
+        JSON.stringify({
+          login: String(data.login || ''),
+          title: String(data.title || ''),
+          treeDir: String(data.treeDir || ''),
+          path,
+          token: String(data.sessionToken || ''),
+          at: Date.now(),
+        })
+      );
+    } catch (err) {
+      /* private mode */
+    }
+  }
+
+  function treePathOf(data) {
+    const raw = String(data.path || '').trim() || '/' + String(data.treeDir || '') + '/';
+    try {
+      const url = new URL(raw, window.location.origin);
+      if (url.origin !== window.location.origin) return '';
+      return url.pathname;
+    } catch (err) {
+      return '';
+    }
+  }
+
+  /** Returns false when the answer is unusable, so the caller can re-enable the form. */
+  function enterTree(data) {
+    const path = treePathOf(data);
+    const token = String(data.sessionToken || '');
+    if (!path || !token) return false;
+
+    saveRemembered(rememberInput?.checked ? normalizeLogin(data.login || loginInput?.value) : '');
+    saveSession(data, path);
+    if (typeof window.NekRemember === 'function') {
+      window.NekRemember(path, String(data.title || ''));
+    }
+
+    const target = path + '?nek=' + encodeURIComponent(token);
+    if (reducedMotion()) {
+      window.location.assign(target);
+      return true;
+    }
+    loginPanel?.classList.add('is-done');
+    stage?.classList.add('is-done');
+    window.setTimeout(() => window.location.assign(target), 400);
+    return true;
+  }
+
+  async function login() {
+    if (busy) return;
+    const loginValue = normalizeLogin(loginInput?.value);
+    const password = String(passwordInput?.value || '');
+    if (loginInput) loginInput.value = loginValue;
+
+    if (!loginValue || !password) {
+      showError('Введите логин и пароль семьи');
+      (!loginValue ? loginInput : passwordInput)?.focus();
       return;
     }
 
-    const normalized = normalizeCode(raw);
-    if (!/^[a-z][a-z0-9-]{1,24}$/.test(normalized)) {
-      if (codeError) {
-        codeError.hidden = false;
-        codeError.textContent = 'Проверьте код из ссылки (например hoti, dada или demo)';
+    clearError();
+    setBusy(true);
+
+    let session = null;
+    let failure = '';
+    let wrongCredentials = false;
+    try {
+      const response = await fetch(PUBLISH_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login-tree', login: loginValue, password }),
+      });
+      const data = await response.json().catch(() => ({}));
+      const apiError = String(data.error || '').trim();
+
+      if (response.status === 429) {
+        // Wait time is decided by the server; show its text as is.
+        failure = apiError || 'Попробуйте позже';
+      } else if (!response.ok || !data.ok) {
+        failure = apiError || 'Неверный логин или пароль';
+        wrongCredentials = true;
+      } else {
+        session = data;
       }
-      return;
+    } catch (err) {
+      failure = 'Нет связи с сервером. Проверьте интернет и попробуйте снова.';
     }
-    window.location.assign('/t/?c=' + encodeURIComponent(normalized));
+
+    if (session && enterTree(session)) return;
+
+    setBusy(false);
+    showError(failure || 'Не удалось открыть древо. Попробуйте ещё раз.');
+    if (wrongCredentials && passwordInput) {
+      passwordInput.value = '';
+      passwordInput.focus();
+    }
   }
 
-  haveCodeBtn?.addEventListener('click', () => showCodeMode(true));
-  codeCancel?.addEventListener('click', () => showCodeMode(false));
+  loginOpen?.addEventListener('click', () => showLoginMode(true));
+  loginCancel?.addEventListener('click', () => showLoginMode(false));
 
-  codePanel?.addEventListener('submit', (event) => {
+  loginPanel?.addEventListener('submit', (event) => {
     event.preventDefault();
-    openInvite(codeInput?.value || '');
+    void login();
   });
+
+  loginInput?.addEventListener('input', clearError);
+  passwordInput?.addEventListener('input', clearError);
+
+  passwordToggle?.addEventListener('click', () => {
+    if (!passwordInput) return;
+    const show = passwordInput.type === 'password';
+    passwordInput.type = show ? 'text' : 'password';
+    passwordToggle.textContent = show ? 'Скрыть' : 'Показать';
+    passwordToggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+    passwordInput.focus();
+  });
+
+  const remembered = readRemembered();
+  if (remembered && loginInput) {
+    loginInput.value = remembered;
+    if (rememberInput) rememberInput.checked = true;
+  }
+
+  if (new URLSearchParams(window.location.search).get('login') === '1') {
+    showLoginMode(true);
+  }
 
   try {
     const raw = localStorage.getItem(RECENT_KEY);
