@@ -24,6 +24,20 @@ import {
   type RegistryOwnership,
 } from './create-tree.ts';
 
+import { NEK_SESSION_TTL_MS, signNekSession, verifyNekSession } from './session.ts';
+
+import {
+  VAULT_PATH,
+  decryptVault,
+  emptyVaultMap,
+  encryptVault,
+  parseVaultFile,
+  serializeVaultFile,
+  upsertVaultEntry,
+  type VaultEntry,
+  type VaultMap,
+} from './vault.ts';
+
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
@@ -457,6 +471,55 @@ function registryEntryFor(registry: RegistryFile, treeDir: string): RegistryEntr
   return registry.trees.find((item) => item.treeDir === treeDir) || null;
 }
 
+function vaultKeyMaterial(): string {
+  return Deno.env.get('DREWO_VAULT_KEY') ?? '';
+}
+
+/**
+ * Plaintext credentials for the Trees hub, kept encrypted in the repo.
+ * `available: false` means DREWO_VAULT_KEY is unset — callers then skip vault
+ * writes instead of failing the whole action.
+ */
+async function loadVault(
+  token: string,
+  repo: string
+): Promise<{ map: VaultMap; available: boolean }> {
+  if (!vaultKeyMaterial()) return { map: emptyVaultMap(), available: false };
+  const file = await githubGetFile(token, repo, VAULT_PATH);
+  const parsed = parseVaultFile(file?.content);
+  if (!parsed) return { map: emptyVaultMap(), available: true };
+  try {
+    return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true };
+  } catch {
+    // Rotated key or corrupted file: start over rather than locking out writes.
+    return { map: emptyVaultMap(), available: true };
+  }
+}
+
+async function vaultFileChange(map: VaultMap): Promise<TreeChange | null> {
+  const keyMaterial = vaultKeyMaterial();
+  if (!keyMaterial) return null;
+  return {
+    path: VAULT_PATH,
+    content: serializeVaultFile(await encryptVault(map, keyMaterial)),
+  };
+}
+
+function sessionSecret(): string {
+  return Deno.env.get('DREWO_SESSION_SECRET') || Deno.env.get('GITHUB_TOKEN') || '';
+}
+
+/** 401/403 Response when the caller is not a signed-in Trees hub user, else null. */
+async function hubUserGuard(request: Request): Promise<Response | null> {
+  try {
+    await requireHubUser(request);
+    return null;
+  } catch (err) {
+    const status = (err as Error & { status?: number }).status || 401;
+    return jsonResponse({ error: err instanceof Error ? err.message : 'Войдите в Trees' }, status);
+  }
+}
+
 const DEMO_TREE_DIR = 'drewo-reklama';
 /** Hard cap so the ad demo cannot grow into someone's real family tree. */
 const DEMO_MAX_PEOPLE = 90;
@@ -600,6 +663,8 @@ function serializeAccess(access: AccessState) {
 async function hashPassword(normalized: string) {
   return fingerprintText(`drewo-pw:${normalized}`);
 }
+
+type AuthRole = 'editor' | 'super';
 
 async function resolveRole(
   password: unknown,
@@ -916,6 +981,67 @@ Deno.serve(async (request) => {
       });
     }
 
+    /**
+     * Family login: tree login + family password → session token for that tree.
+     * The error text never says which half was wrong, so logins stay unguessable.
+     */
+    if (action === 'login-tree') {
+      const login = normalizeTreeCode(
+        typeof body.login === 'string' && body.login.trim() ? body.login : body.code
+      );
+      const loginFailed = 'Неверный логин или пароль';
+      if (!isValidTreeCode(login)) {
+        return jsonResponse({ error: loginFailed }, 401);
+      }
+
+      const attemptKey = `login:${login}:${clientIp(request)}`;
+      const attemptState = getAuthAttempt(attemptKey);
+      if (attemptState.lockedUntil > Date.now()) {
+        return authLockResponse(attemptState);
+      }
+
+      const hit =
+        registry.trees.find((item) => item.login === login || item.code === login) || null;
+      const access = hit
+        ? parseAccess(
+            (await githubGetFile(githubToken, githubRepo, accessPath(hit.treeDir)))?.content
+          )
+        : null;
+      const role = hit && access ? await resolveRole(body.password, hit.treeDir, access) : null;
+
+      if (!hit || !role) {
+        const failed = recordAuthFailure(attemptKey);
+        if (failed.lockedUntil > Date.now()) {
+          return authLockResponse(failed);
+        }
+        const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
+        return jsonResponse(
+          {
+            error:
+              attemptsLeft > 0
+                ? `${loginFailed}. Осталось попыток: ${attemptsLeft}`
+                : loginFailed,
+            attemptsLeft,
+          },
+          401
+        );
+      }
+      clearAuthFailures(attemptKey);
+
+      const sessionToken = await signNekSession(
+        { treeDir: hit.treeDir, role, exp: Date.now() + NEK_SESSION_TTL_MS },
+        sessionSecret()
+      );
+      return jsonResponse({
+        ok: true,
+        login: hit.login,
+        title: hit.title,
+        treeDir: hit.treeDir,
+        path: `/${hit.treeDir}/`,
+        sessionToken,
+      });
+    }
+
     /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
     if (action === 'hub-overview') {
       const trees = await Promise.all(
@@ -980,17 +1106,12 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'create-tree') {
-      try {
-        await requireHubUser(request);
-      } catch (err) {
-        const status = (err as Error & { status?: number }).status || 401;
-        return jsonResponse(
-          { error: err instanceof Error ? err.message : 'Войдите в Trees' },
-          status
-        );
-      }
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
 
-      const code = normalizeTreeCode(body.code);
+      const code = normalizeTreeCode(
+        typeof body.login === 'string' && body.login.trim() ? body.login : body.code
+      );
       const title = typeof body.title === 'string' ? body.title.trim() : '';
       const rootName = typeof body.rootName === 'string' ? body.rootName.trim() : '';
       const note = typeof body.note === 'string' ? body.note.trim().slice(0, 200) : '';
@@ -1001,7 +1122,7 @@ Deno.serve(async (request) => {
         return jsonResponse(
           {
             error:
-              'Код: латиница, 2–25 символов, начинается с буквы (например ahmad или rod-ali)',
+              'Логин: латиница, 2–25 символов, начинается с буквы (например ahmad или rod-ali)',
           },
           400
         );
@@ -1021,7 +1142,7 @@ Deno.serve(async (request) => {
         assertCreatableTreeDir(treeDir, allowedDirs);
       } catch (err) {
         return jsonResponse(
-          { error: err instanceof Error ? err.message : 'Код занят' },
+          { error: err instanceof Error ? err.message : 'Логин занят' },
           400
         );
       }
@@ -1083,12 +1204,25 @@ Deno.serve(async (request) => {
         trees: [...registry.trees.filter((item) => item.treeDir !== treeDir), entry],
       };
 
+      // Vault keeps the readable password for the hub. Without DREWO_VAULT_KEY the
+      // tree is still created, just without a recoverable copy of the password.
+      const vault = await loadVault(githubToken, githubRepo);
+      const vaultChange = await vaultFileChange(
+        upsertVaultEntry(vault.map, treeDir, {
+          login: code,
+          password,
+          title: entry.title,
+          updatedAt: entry.createdAt,
+        })
+      );
+
       await githubCommitChanges({
         token: githubToken,
         repo: githubRepo,
         message: `Create family tree ${treeDir} (${title})`,
         changes: [
           ...assetCopies,
+          ...(vaultChange ? [vaultChange] : []),
           { path: `${treeDir}/index.html`, content: html },
           { path: `${treeDir}/family-tree.json`, content: treeJson },
           { path: `${treeDir}/access.json`, content: serializeAccess(access) },
@@ -1109,6 +1243,7 @@ Deno.serve(async (request) => {
       return jsonResponse({
         ok: true,
         treeDir,
+        login: code,
         code,
         title: entry.title,
         ownership: entry.ownership,
@@ -1117,6 +1252,78 @@ Deno.serve(async (request) => {
         invitePath: invitePathForCode(code),
         inviteUrl: `https://waydean.ru${invitePathForCode(code)}`,
         createdAt: entry.createdAt,
+        vaultSaved: Boolean(vaultChange),
+      });
+    }
+
+    /** Hub-only: readable login/password pairs for every registry tree. */
+    if (action === 'hub-credentials') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
+
+      const vault = await loadVault(githubToken, githubRepo);
+      return jsonResponse({
+        ok: true,
+        vaultConfigured: vault.available,
+        trees: registry.trees.map((item) => ({
+          treeDir: item.treeDir,
+          title: item.title,
+          login: item.login,
+          password: vault.map[item.treeDir]?.password || '',
+        })),
+      });
+    }
+
+    /** Hub-only: store or replace the readable password for one tree. */
+    if (action === 'hub-credentials-upsert') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
+
+      const targetDir = typeof body.treeDir === 'string' ? body.treeDir.trim() : '';
+      const meta = targetDir ? registryEntryFor(registry, targetDir) : null;
+      if (!meta) {
+        return jsonResponse({ error: 'Нет такого древа в реестре' }, 404);
+      }
+      const password = normalizePassword(body.password);
+      if (password.length < 2 || password.length > 64) {
+        return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
+      }
+
+      const vault = await loadVault(githubToken, githubRepo);
+      if (!vault.available) {
+        return jsonResponse(
+          { error: 'Секрет DREWO_VAULT_KEY не настроен. Задайте его и задеплойте функцию.' },
+          503
+        );
+      }
+      const previous = vault.map[targetDir];
+      const loginOverride =
+        typeof body.login === 'string' && body.login.trim() ? normalizeTreeCode(body.login) : '';
+      const titleOverride =
+        typeof body.title === 'string' && body.title.trim()
+          ? body.title.trim().slice(0, 80)
+          : '';
+      const nextEntry: VaultEntry = {
+        login: loginOverride || previous?.login || meta.login,
+        password,
+        title: titleOverride || previous?.title || meta.title,
+        updatedAt: new Date().toISOString(),
+      };
+      const change = await vaultFileChange(upsertVaultEntry(vault.map, targetDir, nextEntry));
+      if (change) {
+        await githubCommitChanges({
+          token: githubToken,
+          repo: githubRepo,
+          message: `Update credential vault for ${targetDir}`,
+          changes: [change],
+        });
+      }
+      return jsonResponse({
+        ok: true,
+        treeDir: targetDir,
+        login: nextEntry.login,
+        title: nextEntry.title,
+        updatedAt: nextEntry.updatedAt,
       });
     }
 
@@ -1157,30 +1364,41 @@ Deno.serve(async (request) => {
     }
 
     const attemptKey = authAttemptKey(treeDir, request);
-    const attemptState = getAuthAttempt(attemptKey);
-    if (attemptState.lockedUntil > Date.now()) {
-      return authLockResponse(attemptState);
-    }
 
-    const role = await resolveRole(body.password, treeDir, access);
+    // A valid session token from `login-tree` replaces the password for this tree.
+    // Anything else (missing, expired, wrong tree) falls back to the password check.
+    const rawSessionToken = typeof body.sessionToken === 'string' ? body.sessionToken.trim() : '';
+    const sessionPayload = rawSessionToken
+      ? await verifyNekSession(rawSessionToken, sessionSecret())
+      : null;
+    let role: AuthRole | null =
+      sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
+
     if (!role) {
-      const failed = recordAuthFailure(attemptKey);
-      if (failed.lockedUntil > Date.now()) {
-        return authLockResponse(failed);
+      const attemptState = getAuthAttempt(attemptKey);
+      if (attemptState.lockedUntil > Date.now()) {
+        return authLockResponse(attemptState);
       }
-      const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
-      return jsonResponse(
-        {
-          error:
-            attemptsLeft > 0
-              ? `Неверный пароль. Осталось попыток: ${attemptsLeft}`
-              : 'Неверный пароль',
-          attemptsLeft,
-        },
-        401
-      );
+      role = await resolveRole(body.password, treeDir, access);
+      if (!role) {
+        const failed = recordAuthFailure(attemptKey);
+        if (failed.lockedUntil > Date.now()) {
+          return authLockResponse(failed);
+        }
+        const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
+        return jsonResponse(
+          {
+            error:
+              attemptsLeft > 0
+                ? `Неверный пароль. Осталось попыток: ${attemptsLeft}`
+                : 'Неверный пароль',
+            attemptsLeft,
+          },
+          401
+        );
+      }
+      clearAuthFailures(attemptKey);
     }
-    clearAuthFailures(attemptKey);
 
     if (action === 'auth') {
       return jsonResponse({
@@ -1190,6 +1408,10 @@ Deno.serve(async (request) => {
         locked: access.locked,
         lockedReason: access.lockedReason,
         superConfigured,
+        sessionToken: await signNekSession(
+          { treeDir, role, exp: Date.now() + NEK_SESSION_TTL_MS },
+          sessionSecret()
+        ),
       });
     }
 
@@ -1354,8 +1576,34 @@ Deno.serve(async (request) => {
         ...access,
         passwordHash: await hashPassword(nextPassword),
       };
-      await writeAccess(next, `Change ${treeDir} editor password`);
-      return jsonResponse({ ok: true, treeDir, passwordChanged: true });
+
+      const meta = registryEntryFor(registry, treeDir);
+      const vault = await loadVault(githubToken, githubRepo);
+      const previous = vault.map[treeDir];
+      const vaultChange = await vaultFileChange(
+        upsertVaultEntry(vault.map, treeDir, {
+          login: meta?.login || previous?.login || '',
+          password: nextPassword,
+          title: meta?.title || previous?.title || treeDir,
+          updatedAt: new Date().toISOString(),
+        })
+      );
+
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Change ${treeDir} editor password`,
+        changes: [
+          { path: accessPath(treeDir), content: serializeAccess(next) },
+          ...(vaultChange ? [vaultChange] : []),
+        ],
+      });
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        passwordChanged: true,
+        vaultSaved: Boolean(vaultChange),
+      });
     }
 
     if (action === 'pin-backup') {
