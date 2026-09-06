@@ -4199,6 +4199,9 @@
       var DEMO_MODE = true;
       var DEMO_MAX_PEOPLE = 90;
       var VIEW_SESSION_KEY = 'drewo-reklama-view-session';
+      var NEK_SESSION_KEY = 'nek-session:' + TREE_DIR;
+      var nekSessionToken = '';
+      var nekSessionActive = false;
       var PHOTO_PUBLIC_BASE = 'photos';
       var PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
       var editorPasswordHash = '';
@@ -4504,6 +4507,67 @@
         return hashEditorPassword(given).then(function (h) {
           return h === editorPasswordHash;
         });
+      }
+
+      /**
+       * Некъ-сессия: токен из ?nek=… открывает древо без пароля-гейта.
+       * Живёт в sessionStorage вкладки; если сервер его не принял — чистим и показываем гейт.
+       */
+      function readNekToken() {
+        if (nekSessionToken) return nekSessionToken;
+        try {
+          nekSessionToken = sessionStorage.getItem(NEK_SESSION_KEY) || '';
+        } catch (err) {
+          nekSessionToken = '';
+        }
+        return nekSessionToken;
+      }
+
+      function storeNekToken(token) {
+        nekSessionToken = String(token || '');
+        try {
+          if (nekSessionToken) sessionStorage.setItem(NEK_SESSION_KEY, nekSessionToken);
+          else sessionStorage.removeItem(NEK_SESSION_KEY);
+        } catch (err) {}
+      }
+
+      function clearNekToken() {
+        storeNekToken('');
+      }
+
+      /** Забирает ?nek=… и убирает его из адресной строки, чтобы токен не остался в истории. */
+      function consumeNekTokenFromUrl() {
+        try {
+          var url = new URL(window.location.href);
+          var token = String(url.searchParams.get('nek') || '').trim();
+          if (!token) return '';
+          url.searchParams.delete('nek');
+          history.replaceState(null, '', url.pathname + url.search + url.hash);
+          return token;
+        } catch (err) {
+          return '';
+        }
+      }
+
+      /** Проверяет токен на сервере; resolve(true) — вход без пароля разрешён. */
+      function applyNekSession() {
+        var token = readNekToken();
+        if (!token) return Promise.resolve(false);
+        setGateBusy('Входим по ссылке…');
+        return callPublishApi({ action: 'auth', treeDir: TREE_DIR, sessionToken: token })
+          .then(function (data) {
+            if (data) data.fromServer = true;
+            rememberSession('', data);
+            storeNekToken((data && data.sessionToken) || token);
+            nekSessionActive = true;
+            setViewLocked(false);
+            return true;
+          })
+          .catch(function () {
+            clearNekToken();
+            nekSessionActive = false;
+            return false;
+          });
       }
 
       function verifyAuth(password) {
@@ -6086,7 +6150,7 @@
       }
 
       function requestBackups() {
-        if (sessionPassword) {
+        if (sessionPassword || readNekToken()) {
           openBackupDialog();
           loadBackupList(sessionPassword);
           return;
@@ -6451,10 +6515,20 @@
       }
 
       function callPublishApi(payload) {
+        var body = payload;
+        var nekToken = readNekToken();
+        // Без пароля в памяти сервер пустит по Некъ-токену той же семьи.
+        if (nekToken && body && !body.password && !body.sessionToken) {
+          body = {};
+          for (var key in payload) {
+            if (Object.prototype.hasOwnProperty.call(payload, key)) body[key] = payload[key];
+          }
+          body.sessionToken = nekToken;
+        }
         return fetchWithTimeout(PUBLISH_URL, 12000, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload),
+          body: JSON.stringify(body),
         }).then(function (res) {
           return res.json().catch(function () {
             return {};
@@ -8476,6 +8550,8 @@
         sessionPassword = '';
         sessionRole = '';
         editUnlocked = false;
+        clearNekToken();
+        nekSessionActive = false;
         setEditMode(false);
         applyDemoUiLimits();
         showViewGate();
@@ -8822,7 +8898,7 @@
           return Promise.resolve();
         }
         var password = sessionPassword;
-        if (!password) {
+        if (!password && !readNekToken()) {
           showToast('Сначала введите пароль', 'error');
           return Promise.resolve();
         }
@@ -8848,7 +8924,7 @@
           return;
         }
         var password = sessionPassword;
-        if (!password) {
+        if (!password && !readNekToken()) {
           showToast('Сначала введите пароль', 'error');
           return;
         }
@@ -8880,7 +8956,7 @@
 
       function finishBoot() {
         var session = readViewSession();
-        if (!session) {
+        if (!session && !nekSessionActive) {
           clearGateBusy();
           showViewGate();
           updateViewButtons();
@@ -8891,11 +8967,15 @@
         }
         clearGateBusy();
         setViewLocked(false);
-        if (!myPersonId) {
+        if (!myPersonId && session) {
           myPersonId = session.personId;
           try {
             localStorage.setItem(MY_PERSON_KEY, myPersonId);
           } catch (err) {}
+        }
+        // Вход по Некъ-ссылке: запоминаем человека, иначе гейт вернётся в новой вкладке.
+        if (!session && myPersonId && TreeModel.findById(tree, myPersonId)) {
+          writeViewSession(myPersonId);
         }
         setViewFilter('all', false);
         updateViewButtons();
@@ -9207,6 +9287,10 @@
 
       initChrome();
 
+      // Некъ передаёт токен в ?nek=… — забираем и чистим адресную строку.
+      var nekUrlToken = consumeNekTokenFromUrl();
+      if (nekUrlToken) storeNekToken(nekUrlToken);
+
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
       setGateBusy('Загружаем древо…');
       Promise.all([fetchRemoteTree(), fetchAccessFile()]).then(function (pair) {
@@ -9220,10 +9304,16 @@
       }).then(function () {
         return hydratePendingPhotos();
       }).then(function () {
+        return applyNekSession();
+      }).then(function () {
         finishBoot();
       }).catch(function () {
         setGateBusy('Открываем…');
-        rememberFingerprintFromTree().then(hydratePendingPhotos).finally(finishBoot);
+        rememberFingerprintFromTree()
+          .then(hydratePendingPhotos)
+          .catch(function () {})
+          .then(applyNekSession)
+          .finally(finishBoot);
       });
     })();
   </script>
