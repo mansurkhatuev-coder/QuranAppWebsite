@@ -2,5 +2,12 @@
   "id": "цiовза",
   "name": "ЦIовза",
   "gender": "male",
-  "sons": []
+  "sons": [
+    {
+      "id": "added-1788778489507-8b8e94",
+      "name": "Алихан",
+      "gender": "male",
+      "sons": []
+    }
+  ]
 }

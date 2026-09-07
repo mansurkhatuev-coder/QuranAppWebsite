@@ -1,0 +1,8 @@
+{
+  "treeJson": "{\n  \"id\": \"цiовза\",\n  \"name\": \"ЦIовза\",\n  \"gender\": \"male\",\n  \"sons\": [\n    {\n      \"id\": \"added-1788778489507-8b8e94\",\n      \"name\": \"Алихан\",\n      \"gender\": \"male\",\n      \"sons\": []\n    }\n  ]\n}",
+  "activityJson": "[\n  {\n    \"type\": \"add\",\n    \"at\": \"2026-09-07T10:54:49.508Z\",\n    \"son\": \"Алихан\",\n    \"father\": \"ЦIовза\",\n    \"sonId\": \"added-1788778489507-8b8e94\",\n    \"fatherId\": \"цiовза\",\n    \"gender\": \"male\"\n  }\n]",
+  "savedAt": "2026-09-07T10:55:05.379Z",
+  "personCount": 2,
+  "kind": "auto",
+  "merged": false
+}
