@@ -1,0 +1,30 @@
+{
+  "passwordHash": "388c067ec79132bac90be5716a09521557cd1a262c28414fee7f22d0acdc064d",
+  "locked": false,
+  "lockedReason": "",
+  "pinnedBackups": [],
+  "visitCount": 0,
+  "deletedAt": null,
+  "billing": {
+    "plan": "family_half_year",
+    "status": "exempt",
+    "trialEndsAt": null,
+    "paidUntil": null,
+    "priceRub": 790,
+    "priceLocked": true,
+    "periodMonths": 6,
+    "paymentMethod": null,
+    "lastPaymentAt": null,
+    "lastPaymentAmount": null,
+    "lastPaymentId": null,
+    "revenueTotal": 0,
+    "notes": "",
+    "sbp": {
+      "customerId": null,
+      "subscriptionId": null,
+      "lastPaymentUrl": null,
+      "lastQrId": null,
+      "lastProviderStatus": null
+    }
+  }
+}
