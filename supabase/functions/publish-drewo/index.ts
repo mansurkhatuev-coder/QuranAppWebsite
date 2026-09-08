@@ -26,6 +26,7 @@ import {
 import {
   applyBillingAction,
   defaultExemptBilling,
+  getBillingAccess,
   parseBilling,
   publicBillingView,
   serializeBilling,
@@ -35,6 +36,9 @@ import {
   type TreeBilling,
 } from './billing.ts';
 
+import { listAddedPeople } from './added-people.ts';
+import { configureWebPushFromEnv, notifyAddedPeople } from './push-send.ts';
+import type { DrewoTreeRow, PushSubRow } from './push-notify.ts';
 import {
   NEK_SESSION_TTL_MS,
   passwordFingerprint,
@@ -236,6 +240,15 @@ async function requireHubUser(request: Request) {
     throw httpError('Войдите в Trees', 401);
   }
   return data.user;
+}
+
+function supabaseService() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Supabase service role is not configured');
+  }
+  return createClient(supabaseUrl, serviceKey);
 }
 
 async function githubListDir(
@@ -1819,6 +1832,57 @@ Deno.serve(async (request) => {
       });
     }
 
+    if (action === 'vapid-public') {
+      const publicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? '';
+      if (!publicKey) return jsonResponse({ error: 'VAPID_PUBLIC_KEY missing' }, 500);
+      return jsonResponse({ ok: true, publicKey, treeDir });
+    }
+
+    if (action === 'subscribe') {
+      const sub = body.subscription;
+      const endpoint = sub && typeof sub.endpoint === 'string' ? sub.endpoint : '';
+      const p256dh = sub?.keys?.p256dh;
+      const auth = sub?.keys?.auth;
+      if (!endpoint || !p256dh || !auth) {
+        return jsonResponse({ error: 'Нужна subscription' }, 400);
+      }
+      const sb = supabaseService();
+      const title = registryEntryFor(registry, treeDir)?.title || treeDir;
+      await sb.from('drewo_trees').upsert(
+        {
+          tree_id: treeDir,
+          name: title,
+          premium: true,
+          notifications_enabled: true,
+        },
+        { onConflict: 'tree_id' }
+      );
+      const { error } = await sb.from('drewo_push_subscriptions').upsert(
+        {
+          tree_id: treeDir,
+          endpoint,
+          p256dh: String(p256dh),
+          auth: String(auth),
+        },
+        { onConflict: 'tree_id,endpoint' }
+      );
+      if (error) return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ ok: true, treeDir });
+    }
+
+    if (action === 'unsubscribe') {
+      const endpoint = typeof body.endpoint === 'string' ? body.endpoint : '';
+      if (!endpoint) return jsonResponse({ error: 'Нужен endpoint' }, 400);
+      const sb = supabaseService();
+      const { error } = await sb
+        .from('drewo_push_subscriptions')
+        .delete()
+        .eq('tree_id', treeDir)
+        .eq('endpoint', endpoint);
+      if (error) return jsonResponse({ error: error.message }, 500);
+      return jsonResponse({ ok: true, treeDir });
+    }
+
     if (action === 'set-lock') {
       const denied = requireSuper('set-lock');
       if (denied) return denied;
@@ -2300,6 +2364,79 @@ Deno.serve(async (request) => {
     });
 
     const fingerprint = await fingerprintText(publishNormalized);
+
+    let pushNotify: Record<string, unknown> | undefined;
+    try {
+      let serverBefore: unknown = null;
+      try {
+        serverBefore = serverTreeRaw ? JSON.parse(serverTreeRaw) : null;
+      } catch {
+        serverBefore = null;
+      }
+      const afterTree = JSON.parse(publishTreeJson);
+      const added = listAddedPeople(serverBefore as never, afterTree);
+      if (!added.length) {
+        pushNotify = { skippedReason: 'no-additions' };
+      } else {
+        const requirePremium = (Deno.env.get('DREWO_PUSH_REQUIRE_PREMIUM') || '') === '1';
+        const billingAccess = getBillingAccess(access.billing);
+        const vapidOk = configureWebPushFromEnv({
+          publicKey: Deno.env.get('VAPID_PUBLIC_KEY') ?? undefined,
+          privateKey: Deno.env.get('VAPID_PRIVATE_KEY') ?? undefined,
+          subject: Deno.env.get('VAPID_SUBJECT') ?? undefined,
+        });
+        const sb = supabaseService();
+        const title = registryEntryFor(registry, treeDir)?.title || treeDir;
+        await sb.from('drewo_trees').upsert(
+          {
+            tree_id: treeDir,
+            name: title,
+            premium: billingAccess.hasPremium,
+            notifications_enabled: true,
+          },
+          { onConflict: 'tree_id' }
+        );
+        const { data: treeRows } = await sb
+          .from('drewo_trees')
+          .select('*')
+          .eq('tree_id', treeDir)
+          .limit(1);
+        const dbTree = (treeRows && treeRows[0]) as DrewoTreeRow | undefined;
+        const treeRow: DrewoTreeRow = {
+          tree_id: treeDir,
+          name: dbTree?.name || title,
+          premium: requirePremium ? billingAccess.hasPremium : Boolean(dbTree?.premium ?? true),
+          notifications_enabled: dbTree?.notifications_enabled !== false,
+        };
+        if (!vapidOk) {
+          pushNotify = { skippedReason: 'vapid-missing' };
+        } else {
+          const { data: subs } = await sb
+            .from('drewo_push_subscriptions')
+            .select('*')
+            .eq('tree_id', treeDir);
+          const result = await notifyAddedPeople({
+            tree: treeRow,
+            added,
+            subscriptions: (subs || []) as PushSubRow[],
+            baseUrl: `https://waydean.ru/${treeDir}/`,
+            requirePremium,
+            deleteEndpoint: async (endpoint) => {
+              await sb
+                .from('drewo_push_subscriptions')
+                .delete()
+                .eq('tree_id', treeDir)
+                .eq('endpoint', endpoint);
+            },
+          });
+          pushNotify = { ...result };
+        }
+      }
+    } catch (pushErr) {
+      console.error('push notify failed', pushErr);
+      pushNotify = { skippedReason: 'error' };
+    }
+
     return jsonResponse({
       ok: true,
       publishedAt: new Date().toISOString(),
@@ -2321,6 +2458,7 @@ Deno.serve(async (request) => {
       mergeStats,
       treeJson: publishTreeJson,
       activityJson: publishActivityJson,
+      pushNotify,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';

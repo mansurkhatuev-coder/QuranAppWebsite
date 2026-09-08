@@ -30,6 +30,9 @@ jobs:
           DREWO_REKLAMA_SUPER_PASSWORD: ${{ secrets.DREWO_REKLAMA_SUPER_PASSWORD }}
           DREWO_SESSION_SECRET: ${{ secrets.DREWO_SESSION_SECRET }}
           DREWO_VAULT_KEY: ${{ secrets.DREWO_VAULT_KEY }}
+          VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
+          VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
+          VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
         run: |
           if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
             echo "Missing SUPABASE_ACCESS_TOKEN repository secret"
@@ -74,12 +77,43 @@ jobs:
           else
             echo "Warning: DREWO_VAULT_KEY is empty; the credential vault stays unreadable (hub-credentials shows no passwords)."
           fi
+          if [ -n "$VAPID_PUBLIC_KEY" ] && [ -n "$VAPID_PRIVATE_KEY" ]; then
+            SECRET_ARGS+=(
+              VAPID_PUBLIC_KEY="$VAPID_PUBLIC_KEY"
+              VAPID_PRIVATE_KEY="$VAPID_PRIVATE_KEY"
+              VAPID_SUBJECT="${VAPID_SUBJECT:-mailto:drewo@waydean.ru}"
+            )
+          else
+            echo "Warning: VAPID keys empty; Web Push will stay disabled until secrets are set."
+          fi
           # Hub uses the existing Supabase admin login (no email allowlist).
           supabase secrets unset DREWO_HUB_EMAILS \
             --project-ref rivjkiksknnesahrvamf 2>/dev/null || true
           supabase secrets set \
             --project-ref rivjkiksknnesahrvamf \
             "${SECRET_ARGS[@]}"
+
+      - name: Apply drewo push SQL migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          # Management API SQL (idempotent CREATE IF NOT EXISTS)
+          python3 - <<'PY'
+          import json, os, urllib.request
+          sql = open("supabase/migrations/20260908_drewo_push.sql", encoding="utf-8").read()
+          req = urllib.request.Request(
+              "https://api.supabase.com/v1/projects/rivjkiksknnesahrvamf/database/query",
+              data=json.dumps({"query": sql}).encode("utf-8"),
+              headers={
+                  "Authorization": f"Bearer {os.environ['SUPABASE_ACCESS_TOKEN']}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          with urllib.request.urlopen(req) as resp:
+              body = resp.read().decode("utf-8", errors="replace")
+              print(body[:2000])
+          PY
 
       - name: Deploy publish-drewo Edge Function
         env:
