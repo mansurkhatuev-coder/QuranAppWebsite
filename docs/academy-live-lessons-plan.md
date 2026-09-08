@@ -6,16 +6,22 @@
 
 Уже есть в экосистеме: Академия в приложении (курсы/уроки/аналитика), админка на Supabase Auth, отзывы и розыгрыш Академии. Live-уроки — **новый контур** рядом, не замена курсов таджвида.
 
+Закладываем сразу (даже если MVP узкий):
+
+1. **Расширяемые типы вопросов/ответов** — новые типы добавляются без ломки старых сессий.
+2. **Много учителей и параллельных сессий** — не модель «один ведущий на весь продукт».
+3. **Устойчивая session** — F5 / обрыв сети / вкладка убита → человек возвращается туда же, не «вылетает на join».
+
 ---
 
 ## 1. Что взять у популярных решений
 
 | Откуда | Что берём | Зачем нам |
 |---|---|---|
-| **Kahoot** | PIN + QR, lobby «ждём всех», teacher-paced live, экран учителя на доске, отчёт после сессии | Класс медресе: один ведущий, много телефонов |
-| **Quizizz / Wayground** | Вопросы и на телефоне ученика (не только на доске), опциональный рейтинг, self-paced / «домашка» позже | WhatsApp-группа и удалённые ученики без общей доски |
-| **Microsoft Forms** | Ссылка + QR + embedable join, типы вопросов с автопроверкой и ручной проверкой, разбор по вопросам | Простой вход и серьёзный разбор ошибок |
-| **Не берём** | Обязательный геймификационный шум (мемы, power-ups), публичный маркетплейс чужих квизов, обязательный рейтинг | В медресе важнее проверка знания, чем шоу |
+| **Kahoot** | PIN + QR, lobby «ждём всех», teacher-paced live, экран учителя на доске, отчёт после сессии, rejoin по тому же PIN | Класс медресе: ведущий + много телефонов |
+| **Quizizz / Wayground** | Вопросы на телефоне ученика, опциональный рейтинг, self-paced / «домашка» позже | WhatsApp-группа без общей доски |
+| **Microsoft Forms** | Ссылка + QR, авто- и ручная проверка, разбор по вопросам | Простой вход и серьёзный разбор ошибок |
+| **Не берём** | Мемы/power-ups, публичный маркетплейс квизов, обязательный рейтинг | В медресе важнее знание, чем шоу |
 
 Дифференциация: три режима сессии — **Обучение** (сразу правильный ответ + пояснение), **Викторина** (рейтинг опционален), **Контроль** (без подсказок, отчёт учителю).
 
@@ -23,79 +29,102 @@
 
 ## 2. Продукт MVP (сайт)
 
-### Роли
+### Роли и масштаб людей
 
-- **Учитель** — аккаунт (Supabase Auth, как в `/admin/`).
-- **Ученик** — гость: только имя (+ опционально класс). Регистрация не нужна.
+Не «один учитель в системе», а:
 
-### Экраны учителя (web, desktop/планшет в приоритете)
+| Роль | Кто | Права |
+|---|---|---|
+| **platform_admin** | вы / админка waydean | глобальные настройки, блокировки |
+| **org_admin** | завуч / директор медресе (позже) | учителя и классы своей org |
+| **teacher** | учитель | свои уроки + сессии; co-teacher на чужих |
+| **co_host** | второй учитель на конкретной сессии | вести live (Далее / Завершить), без права удалить урок |
+| **student (guest)** | ученик | join по коду, имя, ответы |
+| **student (account)** | позже | история, классы |
 
-1. Мои уроки / избранные / создать.
-2. Редактор урока: название, предмет (фикх, акыда, сира, Коран, хадисы, арабский…), уровень, список вопросов.
+MVP: `teacher` + `student(guest)` + простой `platform_admin` allowlist.  
+Схема сразу: `org_id`, `lesson_teachers`, `session_hosts` — чтобы потом не мигрировать «с нуля».
+
+Параллельность с дня 1:
+
+- У учителя A и учителя B могут идти **две live-сессии одновременно**.
+- Коды сессий уникальны среди активных (`lobby` / `live`).
+- Один учитель может иметь несколько черновиков уроков; **активный host** — обычно одна live-сессия (мягкий лимит), не жёсткий запрет на уровне продукта навсегда.
+
+### Экраны учителя (web, desktop/планшет)
+
+1. Мои уроки / избранные / создать / (позже) общие уроки org.
+2. Редактор: название, предмет, уровень, список вопросов.
 3. Запуск: настройки → код + QR + ссылка → lobby → ведение → итог.
-4. Результаты сессии: сводка, сложные вопросы, карточка ученика.
+4. «Продолжить сессию» если вкладка закрылась.
+5. Результаты: сводка, сложные вопросы, карточка ученика.
 
 ### Экраны ученика (web, **mobile-first**)
 
-1. `/join` или `/join/{code}` — код / открытие по ссылке.
-2. Имя → lobby «ожидание».
-3. Вопрос → ответ → короткое состояние «ответил» / feedback по режиму.
-4. Финал: свой результат (без чужих баллов, если рейтинг выключен).
+1. `/join` или `/join/{code}`.
+2. Имя → lobby.
+3. Вопрос → ответ → «ответил» / feedback по режиму.
+4. Финал: свой итог.
+5. После F5 — **возврат в ту же точку сессии** (см. §8).
 
-### Типы вопросов в MVP
+### Типы вопросов: MVP vs реестр на будущее
 
-| Тип | Автопроверка | Источник паттерна |
-|---|---|---|
-| Один из вариантов | да | Kahoot / Forms |
-| Несколько вариантов | да | Forms / Quizizz |
-| Верно / неверно | да | все |
-| Короткий ввод (число/слово) | да, нормализация регистра/пробелов | Quizizz / Forms |
-| Развёрнутый ответ | нет — оценка учителем после | Forms |
+В UI на старте включаем мало. В архитектуре — **реестр типов**, не `if type === 'single'` по всему коду.
 
-Позже (не MVP): порядок, соответствие, картинка как ответ, банк вопросов с переиспользованием, AI-черновики.
+| `question_type` | Форма ответа (`answer_shape`) | Проверка | В MVP UI |
+|---|---|---|---|
+| `single_choice` | `{ option_id }` | auto | да |
+| `true_false` | `{ value: bool }` | auto | да |
+| `short_text` | `{ text }` | auto (normalize) | да |
+| `multi_choice` | `{ option_ids[] }` | auto | сразу после пилота |
+| `free_text` | `{ text }` | manual | сразу после пилота |
+| `order` | `{ ordered_ids[] }` | auto | позже |
+| `match` | `{ pairs: [[a,b],…] }` | auto | позже |
+| `image_choice` | `{ option_id }` | auto | позже |
+| `audio_prompt` + любой ответ | зависит | зависит | позже |
 
-### Настройки запуска (минимум)
+Правило масштабирования типов: **новый тип = новый scorer + редактор + renderer**, без миграции старых answers. Неизвестный тип на старом клиенте → «обновите страницу / тип пока не поддерживается», сессия не падает.
+
+### Настройки запуска
 
 - Режим: обучение / викторина / контроль.
 - Таймер на вопрос: выкл / N секунд.
 - Рейтинг: вкл / выкл.
 - Перемешать вопросы / варианты.
-- Показывать правильный ответ после вопроса: да / нет / только в обучении.
+- Показывать правильный ответ: да / нет / только в обучении.
+- Разрешить поздний join после старта: да / нет.
 
-### Вход в урок (как у Kahoot + Forms)
-
-Один код сессии → три канала:
+### Вход (Kahoot + Forms)
 
 ```text
 QR  →  waydean.ru/join/482719
 Ссылка (WhatsApp)  →  тот же URL
-PIN вручную  →  waydean.ru/join + ввод кода
+PIN вручную  →  waydean.ru/join + код
 ```
 
-На экране учителя (доска / Android-панель): крупный код, QR, счётчик «в лобби: N», кнопка «Начать».
+На доске: крупный код, QR, «в лобби: N», «Начать».
 
 ---
 
 ## 3. Потоки
 
-### Live (teacher-paced) — основной сценарий MVP
+### Live (teacher-paced) — основной MVP
 
 ```text
-Учитель: создать/выбрать урок → Запустить
-       → настройки → lobby (код/QR)
+Учитель: урок → Запустить → настройки → lobby (код/QR)
 Ученики: join → имя → lobby
 Учитель: Начать
 Для каждого вопроса:
-  сервер: current_question = k, status = answering
-  ученики: видят вопрос, шлют ответ
-  учитель: видит % ответивших (без правильных ответов до закрытия)
-  учитель: Далее / истек таймер → reveal (опционально) → следующий
-Учитель: Завершить → расчёт → отчёт
+  сервер: phase=answering, current_index=k
+  ученики отвечают
+  учитель видит answered_count / total
+  Далее или таймер → phase=reveal (опц.) → следующий
+Учитель: Завершить → results
 ```
 
-### Self-paced (фаза 2, паттерн Quizizz homework)
+### Self-paced — фаза позже
 
-Тот же урок, другая сессия: `mode = async`, дедлайн, ученик идёт в своём темпе. В MVP **не делаем**, но схему БД не блокируем (поле `pacing`).
+То же ядро, `pacing = async`. Поле в схеме сразу, продукт — нет.
 
 ---
 
@@ -105,206 +134,407 @@ PIN вручную  →  waydean.ru/join + ввод кода
                     Supabase
         ┌─────────────────────────────┐
         │ Postgres + RLS              │
-        │ Auth (учителя)              │
-        │ Realtime (состояние сессии) │
-        │ Storage (картинки вопросов) │
+        │ Auth (teachers / org)       │
+        │ Realtime (session state)    │
+        │ Storage (media)             │
         │ Edge Functions (мутации)    │
         └─────────────┬───────────────┘
                       │
         ┌─────────────┼─────────────┐
         ▼             ▼             ▼
   Teacher Web    Student Web    Expo App
-  /academy/...   /join/...      (фаза 3)
-  Cloudflare/    mobile-first   тот же API
-  Pages          публичный
+  /academy/      /join/         фаза позже
 ```
 
-Правило: **клиент не пишет правильность ответа сам.** Проверка и смена вопроса — Edge Functions (или RPC с security definer). Realtime только читает состояние сессии и агрегаты, которые сервер уже записал.
+Правила:
+
+- Клиент **не** считает правильность и **не** двигает `current_index`.
+- Realtime = подписка на уже записанное состояние.
+- Любая мутация сессии — Edge Function / RPC, идемпотентная где нужно.
 
 ### Почему не новый backend
 
-Уже есть Postgres, Auth, Edge Functions (`publish-*`, `academy-giveaway-enter`, …). Realtime закрывает live без Socket.io. QR — локальная генерация на клиенте.
+Postgres + Auth + Realtime + Functions уже есть. QR локально.
 
 ### РФ / Cloudflare
 
-Урок и join отдают **статикой с waydean.ru** (как `/drewo/`). Вызовы идут в Supabase — тот же класс риска, что у админки/древ. Для MVP принять; при массовых проблемах без VPN — отдельный прокси-план по аналогии с drewo-optimization, не смешивать с продуктовым MVP.
+Статика с waydean.ru; API в Supabase — тот же класс риска, что админка/древа. Прокси — отдельный план, не блокирует MVP.
 
 ---
 
-## 5. Модель данных (черновик)
+## 5. Расширяемая модель вопросов (важно для будущего)
+
+### Принцип
+
+Хранить **тип + JSON payload**, а не плоские колонки «под каждый тип».
 
 ```text
-academy_teachers          -- profile ↔ auth.users
-academy_lessons           -- owner, title, subject, level, meta
-academy_questions         -- lesson_id, type, prompt, payload, position
-academy_question_options  -- question_id, label, is_correct, position
+academy_questions
+  id
+  lesson_id
+  type              -- 'single_choice' | 'short_text' | ...
+  prompt            -- текст / богатый контент ref
+  prompt_media      -- jsonb nullable { kind, url }
+  payload           -- jsonb: структура зависит от type
+  scoring           -- jsonb: { method, points, accept, normalize… }
+  position
+  version
 
-academy_sessions          -- lesson_id, code, status, pacing, settings, current_index
-academy_participants      -- session_id, display_name, user_id nullable, joined_at
-academy_answers           -- session_id, participant_id, question_id, payload, is_correct, scored_at
+academy_answers
+  … 
+  answer_payload    -- jsonb по answer_shape типа
+  is_correct        -- nullable (manual ещё не оценён)
+  score             -- numeric
+  scored_by         -- 'auto' | teacher_id
+```
+
+Примеры `payload`:
+
+```json
+// single_choice
+{ "options": [{ "id": "a", "label": "4" }, { "id": "b", "label": "3" }], "correct_option_id": "a" }
+
+// short_text
+{ "accepted": ["4", "четыре"], "normalize": ["trim", "lower", "yo_to_e"] }
+
+// free_text
+{ "rubric_hint": "Кратко: условие и доказательство" }
+```
+
+В **session snapshot** копируется весь вопрос (type + payload + scoring) как на момент старта. Правки шаблона урока mid-flight сессию не меняют.
+
+### Реестр на клиенте и сервере
+
+```text
+QuestionTypeRegistry[type] = {
+  validatePayload(payload)
+  score(payload, answer) -> { is_correct, score } | { pending: true }
+  TeacherEditor
+  StudentRenderer
+  ResultsRenderer
+}
+```
+
+Серверный scorer — source of truth. Клиентский registry только UI. Новый тип в проде: задеплоили function + подключили renderer; старые сессии со старым snapshot продолжают жить.
+
+`academy_question_options` как отдельная таблица — **опционально** для удобства SQL-отчётов; для гибкости можно держать options внутри `payload` в MVP и нормализовать позже. Решение по умолчанию: **options в payload** на старте (меньше join’ов), отчёты через jsonb.
+
+---
+
+## 6. Модель данных (масштаб + сессии)
+
+```text
+academy_orgs
+academy_org_members       -- org_id, user_id, role (org_admin|teacher)
+
+academy_teachers          -- user_id, display_name, org_id nullable
+academy_lessons           -- owner_id, org_id nullable, title, subject, level, meta
+academy_lesson_teachers   -- lesson_id, user_id, role (owner|editor|viewer)
+
+academy_questions         -- type, prompt, payload, scoring, position, version
+
+academy_sessions
+  id
+  org_id nullable
+  lesson_id
+  host_user_id            -- кто создал
+  code                    -- PIN
+  status                  -- lobby | live | paused | finished | abandoned
+  phase                   -- lobby | answering | reveal | results
+  pacing                  -- live | async
+  settings jsonb
+  current_index int
+  question_snapshot jsonb -- полный массив вопросов на старт
+  version int             -- optimistic concurrency для control
+  started_at, finished_at
+  last_activity_at
+
+academy_session_hosts     -- session_id, user_id (co-host)
+
+academy_participants
+  id
+  session_id
+  display_name
+  user_id nullable
+  resume_token_hash       -- для восстановления после F5
+  client_fingerprint nullable  -- доп. якорь, не единственный
+  joined_at, last_seen_at
+  status                  -- active | left | kicked
+
+academy_answers
+  session_id, participant_id, question_id (snapshot id / index)
+  answer_payload jsonb
+  is_correct, score, scored_at, scored_by
+  UNIQUE (participant_id, question_index)
 ```
 
 Инварианты:
 
-- `code` — короткий числовой, уникален среди `status in (lobby, live)`.
-- Ответы неизменяемы после `scored_at` (кроме ручной оценки развёрнутых).
-- Итоги **считаются из answers**, не хранить только финальный score как единственный источник правды.
-- RLS: учитель видит свои уроки/сессии; участник — только свою сессию по токену участия; правильные ключи не отдавать клиенту до reveal / конца контроля.
-
-Участие гостя: Edge Function выдаёт `participant_token` (signed / row id + secret), Realtime channel ограничен session id.
+- Активный `code` уникален среди `status in (lobby, live, paused)`.
+- Итоги считаются из `answers`, не из одного cached score.
+- RLS: учитель/hosts — свои org/сессии; участник — только по resume/participant token; `correct_*` не в клиент до reveal/конца контроля.
+- `version` на session: `control` шлёт `expected_version`, при конфликте — 409 + актуальный state (два co-host не ломают индекс вопроса).
 
 ---
 
-## 6. Edge Functions (MVP)
+## 7. Edge Functions
 
 | Функция | Зачем |
 |---|---|
-| `academy-session-create` | Создать сессию, код, snapshot настроек |
-| `academy-session-join` | Имя → participant + token |
-| `academy-session-control` | start / next / reveal / finish (только учитель) |
-| `academy-answer-submit` | Принять ответ, проверить, записать |
-| `academy-session-results` | Сводка для учителя; личный итог для ученика |
+| `academy-session-create` | Сессия + code + **question_snapshot** + settings |
+| `academy-session-join` | Имя → participant + **resume_token** |
+| `academy-session-resume` | token/code → полный state для клиента |
+| `academy-session-control` | start / next / reveal / pause / finish / abandon |
+| `academy-answer-submit` | принять + score через registry |
+| `academy-session-heartbeat` | last_seen (учитель и ученик) |
+| `academy-session-results` | сводка / личный итог |
+| `academy-session-add-host` | co-host (после MVP ok) |
 
-Идемпотентность submit: уникальный `(participant_id, question_id)`.
+Идемпотентность: submit по `(participant_id, question_index)`; повторный submit того же ответа → 200 same; другой ответ после score → 409.
 
 ---
 
-## 7. Фазы поставки
+## 8. Устойчивая session (чтобы не вылетало / не зависало / F5 не сбрасывал)
 
-### Фаза 0 — каркас на сайте
+Это не «фича на потом», а **обязательный слой MVP**. Паттерн как у Kahoot rejoin + обычный resume token SPA.
 
-- Маршруты: `/academy/` (учитель), `/join/` (ученик).
-- Auth учителя через существующий Supabase Auth (отдельная роль/allowlist учителей Академии, не смешивать слепо со всей админкой контента).
-- Пустые экраны + схема SQL + RLS.
+### 8.1. Источник истины
 
-### Фаза 1 — редактор + банк на уровне урока
+Состояние урока **только в Postgres** (`academy_sessions` + answers).  
+Клиент после любого сбоя делает `resume`, не восстанавливает «из памяти React».
 
-- CRUD урока и вопросов (4–5 типов MVP).
-- Превью «как у ученика».
+### 8.2. Resume ученика
+
+При join сервер выдаёт `resume_token` (случайный, храним hash).
+
+Клиент кладёт в `localStorage`:
+
+```text
+academy_join:{code} = { participant_id, resume_token, saved_at }
+```
+
+При открытии `/join/{code}` или F5:
+
+1. Есть сохранённый token → `academy-session-resume`.
+2. Ок → сразу lobby / текущий вопрос / results — **без повторного ввода имени**.
+3. Token невалиден → мягко «войдите снова», не белый экран.
+
+Дополнительно URL может нести короткий `?p=` только как hint; секретом остаётся token в storage.
+
+### 8.3. Resume учителя
+
+Учитель авторизован. F5 на host:
+
+1. `GET` активной сессии по `host_user_id` / `session_id` в URL (`/academy/session/{id}`).
+2. Подписка Realtime заново.
+3. UI по `status + phase + current_index`.
+4. Кнопка «Продолжить» на списке уроков, если есть `live|lobby|paused`.
+
+Маршрут host **всегда** с `session_id` в URL — чтобы обновление страницы не уводило на «создать урок».
+
+### 8.4. Машина состояний (не зависнуть)
+
+```text
+lobby → live/answering ⇄ reveal → answering → … → results
+              ↓
+           paused → answering
+              ↓
+           abandoned / finished
+```
+
+- Каждая control-команда: проверка перехода + `version`.
+- Неизвестная команда / устаревшая version → понятная ошибка, UI подтягивает state.
+- Таймер вопроса: **серверный deadline** (`phase_ends_at`), не только `setTimeout` в браузере. Клиент отображает; истечение подтверждает control/cron или следующий next учителя. Так вкладка в фоне не «ломает» урок.
+
+### 8.5. Сеть и «не крутить вечно»
+
+| Ситуация | Поведение |
+|---|---|
+| Submit при 3G/обрыве | retry с backoff, кнопка «Отправить ещё раз», статус «не дошло» |
+| Realtime отвалился | banner «нет живого канала», polling `resume` каждые N с как fallback |
+| Edge function > X с | abort + «повторите», не бесконечный spinner |
+| Двойной клик «Далее» | disable + version concurrency |
+| Ученик ответил, teacher ещё на том же вопросе | ок; смена вопроса приходит event’ом |
+| Сессия finished, ученик F5 | экран результатов, не lobby |
+
+### 8.6. Heartbeat и «мертвые» участники
+
+- Клиент шлёт `last_seen` раз в ~30 с пока вкладка видима.
+- На host: «онлайн» ≈ seen < 60–90 с.
+- Не кикать агрессивно за сеть — только пометка offline; ответ всё ещё принимается, пока phase=answering.
+- Сессии в `lobby|live` без activity хозяина N часов → `abandoned` (job / при следующем create).
+
+### 8.7. Co-host и вторая вкладка
+
+- Два устройства учителя: оба делают resume одного `session_id`.
+- Control через `version` — побеждает первый успешный; второй получает актуальный state.
+- Явный co-host в `session_hosts` для напарника.
+
+### 8.8. Идемпотентность и анти-зависание UI
+
+Глобально на join/host:
+
+- любой экран сессии умеет `reloadState()`;
+- ошибка boundary: «Не удалось синхронизировать» + кнопка «Обновить состояние» (не «перезагрузить сайт с потерей context»);
+- после `finished` ответы не принимаются;
+- после `abandoned` — экран «урок завершён учителем».
+
+---
+
+## 9. Масштабирование нагрузки и продукта
+
+| Рост | Как держим |
+|---|---|
+| Много учителей | `org` + RLS по `org_id` / ownership; индексы `(host_user_id, status)`, `(code) WHERE active` |
+| Много учеников в одной сессии | teacher UI слушает агрегаты (`answered_count`), не каждую строку ответа в полном виде; answers пишет participant |
+| Много параллельных сессий | короткие PIN + проверка коллизий; Realtime channel на `session_id` |
+| Новые типы вопросов | registry + jsonb; без ALTER на каждый тип |
+| Приложение | те же resume_token и functions |
+| Классы / семестр | отдельные таблицы поверх `answers`, не ломая live |
+| Медиа | Supabase Storage, в payload только url/id |
+
+Ориентир MVP по нагрузке: класс ~30–40 участников на сессию. Выше — сначала оптимизация агрегатов, не смена архитектуры.
+
+---
+
+## 10. Фазы поставки
+
+### Фаза 0 — каркас
+
+- `/academy/`, `/join/`.
+- SQL: orgs/teachers/lessons/questions/sessions/participants/answers + snapshot + resume_token.
+- RLS + registry stub (3 типа).
+
+### Фаза 1 — редактор
+
+- CRUD урока; UI типов: single / true_false / short_text.
+- Превью ученика.
 - Без live.
 
-### Фаза 2 — live MVP
+### Фаза 2 — live + устойчивость
 
-- Create/join/control/submit.
+- create/join/control/submit/resume/heartbeat.
 - Lobby, QR, ссылка, PIN.
-- Teacher-paced один вопрос за раз.
-- Отчёт сессии.
-- Режим обучение + контроль; рейтинг выключаемый.
+- Host URL со `session_id`; F5 teacher/student = resume.
+- Realtime + polling fallback.
+- Отчёт; режимы обучение/контроль; рейтинг выкл.
+- Серверный `phase_ends_at` если таймер включён.
 
-### Фаза 3 — полировка класса
+### Фаза 3 — класс и типы
 
-- Ручная оценка развёрнутых.
-- «Сложные вопросы» и «повторить ошибки».
-- Избранные уроки, дублировать урок.
-- Доска учителя: полноэкранный TV-layout.
+- multi_choice, free_text + ручная оценка.
+- Co-host.
+- Сложные вопросы, повторить ошибки, duplicate lesson, TV-layout.
 
 ### Фаза 4 — приложение
 
-- Expo: join + ответ + «мои результаты».
-- Учитель в приложении: список уроков и «Запустить» (глубокая ссылка на web-host или нативный host).
-- Те же Edge Functions; никаких вторых таблиц.
+- Expo join/resume теми же token’ами.
+- Запуск урока → web host или native later.
 
-### Фаза 5 — позже по желанию
+### Фаза 5 — рост
 
-- Self-paced домашние задания.
-- Классы и накопительная успеваемость.
-- AI-черновик вопросов (только draft → правки учителя).
-- Публичные шаблонные уроки медресе.
+- org_admin, классы, async homework, AI-draft, шаблоны, order/match/image.
 
 ---
 
-## 8. Критерии готовности MVP (фаза 2)
+## 11. Критерии готовности MVP (фаза 2)
 
-1. Учитель создаёт урок из 5 вопросов и запускает сессию.
-2. 10 учеников с телефонов заходят по ссылке без установки приложения.
-3. Все видят один и тот же текущий вопрос без ручного обновления.
-4. После финиша учитель видит: кто ошибся на каком вопросе; ученик — свой итог.
-5. Рейтинг можно выключить; в режиме контроль правильные ответы ученику во время сессии не светятся.
-6. Нет отдельного Firebase/Socket-сервера.
+1. Два разных учителя параллельно ведут свои сессии.
+2. Урок из 5 вопросов, 10 учеников с телефонов по ссылке.
+3. Ученик обновляет страницу mid-question → остаётся собой, видит тот же вопрос, ответ не потерян если уже ушёл на сервер.
+4. Учитель обновляет host → не создаётся новая сессия, тот же PIN/index.
+5. Realtime обрыв → polling подхватывает; нет вечного спиннера.
+6. После finish — отчёт; рейтинг можно выключить.
+7. Нет Firebase/Socket-сервера.
+8. Неизвестный/будущий question type в snapshot не роняет клиент.
 
 ---
 
-## 9. Риски и решения
+## 12. Риски и решения
 
 | Риск | Решение |
 |---|---|
-| Читерство (правильные ответы в Network) | Проверка на сервере; options без `is_correct` до reveal |
-| Двойной submit / гонки | Unique constraint + идемпотентная function |
-| Учитель случайно закрыл вкладку | Session state в БД; «продолжить сессию» |
-| Гостевые ники-клоны | Разрешить дубликаты имён + внутренний id; опционально запрет в настройках |
-| Перегруз Realtime | На teacher UI: агрегаты (answered_count), не полный stream каждого keystroke |
-| Смешение с админкой дуа | Отдельный раздел `/academy/`, отдельные таблицы `academy_*`, отдельный allowlist учителей |
-| Слишком большой scope | Жёсткий MVP: без AI, без async, без соответствия/порядка |
+| Читерство | score на сервере; correct не в клиент до reveal |
+| Гонки / двойной submit | UNIQUE + идемпотентность |
+| F5 «выбросило» | resume_token + session_id в URL |
+| Зависание UI | timeout, reloadState, error boundary |
+| Таймер в фоне вкладки | `phase_ends_at` на сервере |
+| Два co-host жмут Далее | `version` optimistic lock |
+| Правка урока во время live | question_snapshot |
+| Новый тип ломает старое | registry + jsonb snapshot |
+| Любой admin = учитель | academy_teachers / org roles |
+| Смешение с курсами таджвида | отдельные events `academy_live_*` |
+| Мёртвые lobby навсегда | abandoned по inactivity |
+| Перегруз teacher UI | агрегаты, не full answer stream |
+| Публичная галерея без модерации | не в MVP |
 
 ---
 
-## 10. Решение «сайт → приложение»
+## 13. Сайт → приложение
 
 | Слой | Сайт | Приложение |
 |---|---|---|
-| Уроки, вопросы, сессии, ответы | источник истины | читает/пишет то же |
-| Host урока (доска) | web | позже deep link / webview / native |
-| Join ученика | mobile web обязателен | native join тем же code |
-| Редактор | web | простой create позже |
+| Уроки/сессии/answers | source of truth | то же API |
+| Host | web | deep link / native позже |
+| Join + resume | mobile web обязателен | SecureStore для resume_token |
+| Редактор | web | упрощённый later |
 
-Итог: web-join — не временный костыль, а **постоянный канал** (WhatsApp, нет приложения, Android-доска сканирует QR).
+Web-join — постоянный канал (WhatsApp, нет приложения, QR на доску).
 
 ---
 
 # Ревью плана
 
-Дата ревью: 2026-09-08. Автор ревью = автор плана (самопроверка перед реализацией).
+Дата ревью: 2026-09-08 (обновлено тем же днём: типы, масштаб учителей, session resilience).
 
 ## Вердикт
 
-План **годный к старту фазы 0–2**. Стратегия web-first и отказ от новых сервисов верные. Главная опасность — расползание scope (режимы, типы вопросов, классы, AI) до первого живого урока в медресе.
+План **готов к фазе 0–2** с усиленным контуром устойчивости и расширяемости. Без resume/F5 и registry типов запускать live нельзя — иначе первый же класс в медресе получит «обновил страницу и вылетел».
 
 ## Что сильно
 
-1. **Заимствования приземлены:** PIN/QR/lobby из Kahoot, вопрос на устройстве и выключаемый рейтинг из Quizizz, отчёт по вопросам из Forms — без копирования шоу-механик.
-2. **Один backend-контур** под сайт и будущее приложение: не будет второй БД «для мобилки».
-3. **Серверная проверка ответов** заложена сразу — иначе live потом придётся ломать.
-4. **Гость без аккаунта** — правильно для детей/группы в WhatsApp.
-5. **Критерии MVP измеримы** (10 учеников, один вопрос, отчёт) — можно сказать «готово» без вкусовщины.
+1. Web-first + один backend под сайт и Expo.
+2. **Registry типов + jsonb payload/snapshot** — правильный ответ на «добавим типы потом».
+3. **org / co-host / параллельные сессии** заложены в схеме, даже если UI MVP про одного учителя.
+4. **Resume token + session_id в URL + version + phase_ends_at** — нормальная session, не игрушечный demo.
+5. Realtime с polling fallback — реалистично для РФ/мобильного интернета.
+6. Критерии MVP включают multi-teacher и F5 — проверяемо.
 
-## Что ослабить / поправить до кода
+## Что поправить / держать в узде при реализации
 
-1. **Не делать «идеальный редактор» в фазе 1.** Хватит: single choice + true/false + short text. Multiple + freeform можно сразу после первого пилота. Иначе редактор съест месяц до первого live.
-2. **Allowlist учителей уточнить.** «Как админка» удобно, но редакторы дуа ≠ учителя медресе. Нужна явная модель: `academy_teachers` или claim в JWT / таблица ролей. Иначе любой admin-user станет ведущим уроков.
-3. **Snapshot урока в сессию.** При запуске копировать вопросы в `session_questions` (или JSON snapshot). Иначе правка урока mid-flight ломает отчёт. В плане сказано «settings snapshot» — **явно добавить snapshot вопросов**.
-4. **Оффлайн/плохой интернет ученика.** Минимум: retry submit, статус «не дошло»; не зависать на спиннере. В плане рисков нет — добавить в фазу 2.
-5. **Контент и модерация.** Учитель пишет тексты про религию — ок; публичная галерея уроков (фаза 5) потребует модерации. Не открывать share «всем в интернете» в MVP.
-6. **Аналитика.** Не смешивать сразу с `academy_lesson_completed` курсов таджвида. Отдельные события: `academy_live_session_started`, `academy_live_join`, … — иначе дашборд админки врёт.
+1. **Не реализовывать org_admin UI в MVP** — только колонки и RLS-заготовки. Иначе снова scope creep.
+2. **Не плодить 8 типов в редакторе** — registry да, UI только 3.
+3. **resume_token только hash в БД**; raw token один раз клиенту. Иначе утечка из Table Editor = угон участника.
+4. **Не делать fingerprint единственным ключом resume** — только доп. сигнал; основной — token.
+5. **Heartbeat не должен быть отдельным SPOF** — если heartbeat падает, урок всё равно идёт; offline — косметика.
+6. **question_snapshot размер** — лимит медиа (сжимать, не base64 в jsonb); в snapshot url, не blob.
+7. **PIN коллизии** при росте — 6 цифр + retry; при необходимости код длиннее или буквенно-цифровой без путаницы (`0/O`).
+8. **Отдельные analytics** `academy_live_*`, не смешивать с `academy_lesson_completed`.
 
-## Что сознательно отложить (подтверждаю)
+## Сознательно откладываем
 
-- Self-paced homework  
-- AI генерация  
-- Классы и семестровая успеваемость  
-- Нативный host в Expo  
-- Порядок / matching / image answers  
+Self-paced, AI, классы/семестр, native host, order/match/image, полноценный org_admin UI.
 
-Откладывать правильно: они не нужны, чтобы проверить гипотезу «учитель в классе / в группе запускает урок».
-
-## Альтернативы, которые отвергаем
+## Отвергаем
 
 | Идея | Почему нет |
 |---|---|
-| Сначала только приложение | Ломает WhatsApp-ссылку и доску; дольше пилот |
-| Встроить готовый Kahoot | Нет контроля данных, бренда, режимов медресе, офлайн-рисков РФ |
-| FirebaseRealtime «рядом с Supabase» | Два мира auth/данных |
-| Делать сразу async + live | Два продукта в одном MVP |
+| Состояние сессии только в памяти клиента / Realtime presence | F5 и второй учитель сломают урок |
+| Отдельная таблица колонок на каждый тип вопроса | Не масштабируется |
+| Один глобальный «текущий урок» без session_id | Нельзя нескольким учителям |
+| Firebase «рядом» | Два мира данных |
+| Сначала только приложение | Режет WhatsApp и доску |
 
-## Рекомендуемый порядок работ после апрува
+## Порядок работ после апрува
 
-1. SQL-миграция `academy_*` + snapshot-сессии + RLS.  
-2. Edge: join/create/control/submit (без UI polish).  
-3. Student `/join` mobile-first (самый важный UX).  
-4. Teacher host + простой редактор 3 типов вопросов.  
-5. Пилот на 1 реальном уроке медресе → только потом multiple/freeform/рейтинг-анимации.  
-6. Экран результатов.  
-7. Связка в Expo.
+1. SQL: teachers/orgs stubs + lessons + questions(jsonb) + sessions(snapshot, version, phase) + participants(resume_token_hash) + answers.  
+2. Registry server: 3 scorers.  
+3. Edge: create/join/**resume**/control/submit/heartbeat.  
+4. Student `/join` mobile-first + localStorage resume.  
+5. Teacher host на `/academy/session/{id}` + F5 resume.  
+6. Realtime + polling fallback + UI timeouts.  
+7. Пилот → multi_choice/free_text → Expo.
 
 ## Итог ревью
 
-План утверждать с поправками: **узкий набор типов вопросов на старт**, **snapshot вопросов в сессию**, **отдельная роль учителя**, **отдельные analytics events**, **retry на плохом сети**. С этими правками можно переходить к фазе 0 без перепроектирования.
+Утверждать план с акцентом: **расширяемые типы через registry**, **мультиучитель через session/org**, **session = БД + resume + version**. Это как раз те места, где потом «дорого чинить», если забыть на старте.
