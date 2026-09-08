@@ -1,0 +1,11 @@
+{
+  "notifications_enabled": true,
+  "subscriptions": [
+    {
+      "endpoint": "https://wns2-db5p.notify.windows.com/w/?token=BQYAAACcjUV8EbpLZhXT0wMG3YIYcW5Yy%2fW%2fWFHjEerLMN4B230ve5%2bUbrPluEE3dY1dvkx1fRZWV1ZwUf2CzxusS5RUT044LqhY5War275eWP1gkjs89wXL%2bZEB2ZYyDE34GzcU3oZH54QqyYT4c0FP79x04v%2bOH4loYnVWRjFNMOWH22Q6UuLp%2fVka1Qk2jLC9w5kjppDYozFwOwMMbPXKhLYksEl%2ffcOIMzbElqbRY7kY69UOX%2fB9fs%2fbLlzJeqlBwrD525a5bBZAa3W9tL05WLStuNZj6qGfBRNjbnBfex9wL%2bU2oszKJGwzEIslxX2%2f0Eg%3d",
+      "p256dh": "BMKRX-sMjRXqbicCVEF2INwd4zKoTBpvtwC-bu2Cmm0rNA53n5fxiNBwlo_xq7LxGTwQStPjSfmaI57XisupCGY",
+      "auth": "MRTG0yrt1MMaEMuI8LAYig",
+      "created_at": "2026-09-08T19:32:10.833Z"
+    }
+  ]
+}
