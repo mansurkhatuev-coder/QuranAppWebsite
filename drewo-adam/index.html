@@ -1984,9 +1984,6 @@
       max-height: none;
       width: min(100%, 26rem);
     }
-    .view-gate.keyboard-open #gate-results {
-      max-height: min(28vh, 7rem);
-    }
     body:not(.view-locked) .view-gate {
       display: none !important;
     }
@@ -2015,50 +2012,6 @@
     }
     .view-gate-card .install-steps {
       margin: 0;
-    }
-    #gate-results {
-      list-style: none;
-      margin: 0;
-      padding: 0;
-      max-height: 11rem;
-      overflow: auto;
-      border-radius: 10px;
-      border: 1px solid color-mix(in srgb, var(--sand) 22%, transparent);
-      background: color-mix(in srgb, var(--bg0) 55%, transparent);
-    }
-    #gate-results:empty {
-      display: none;
-    }
-    #gate-results button {
-      width: 100%;
-      text-align: left;
-      padding: 0.55rem 0.7rem;
-      border: 0;
-      border-bottom: 1px solid color-mix(in srgb, var(--sand) 12%, transparent);
-      background: transparent;
-      color: var(--text);
-      font: inherit;
-      cursor: pointer;
-    }
-    #gate-results button:hover,
-    #gate-results button.is-selected {
-      background: color-mix(in srgb, var(--sand) 18%, transparent);
-    }
-    #gate-results .whoami-father {
-      display: block;
-      margin-top: 0.15rem;
-      font-size: 0.78rem;
-      color: var(--text-dim);
-      font-weight: 500;
-    }
-    #gate-selected {
-      margin: 0;
-      padding: 0.45rem 0.65rem;
-      border-radius: 8px;
-      border: 1px dashed color-mix(in srgb, var(--sand) 40%, transparent);
-      color: color-mix(in srgb, #f7ecc0 90%, white);
-      font-weight: 600;
-      font-size: 0.92rem;
     }
     .gate-demo-hint {
       margin: 0;
@@ -2448,21 +2401,18 @@
   <div id="view-gate" class="view-gate" role="dialog" aria-modal="true" aria-labelledby="gate-title">
     <form id="gate-form" class="view-gate-card">
       <strong id="gate-title">Вход в Hadzhimurad</strong>
-      
+      <p class="install-steps">Логин и пароль семьи. После входа можно отметить себя в меню «Кто я».</p>
       <label>
-        Кто вы
-        <input id="gate-search" type="search" placeholder="Или введите другое имя…" autocomplete="off">
+        Логин
+        <input id="gate-login" type="text" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
       </label>
-      <ul id="gate-results"></ul>
-      <p id="gate-selected" hidden></p>
-      <input type="hidden" id="gate-person-id" value="">
       <label>
         Пароль
-        <input id="gate-password" type="text" name="password" inputmode="text" autocomplete="off" spellcheck="false" required>
+        <input id="gate-password" type="password" name="password" autocomplete="current-password" required>
       </label>
       <p id="gate-error" class="dialog-error" hidden></p>
       <p id="gate-status" class="gate-status" hidden></p>
-      <p class="install-steps gate-net-hint">Нужен интернет. Если долго не входит — включите VPN и попробуйте снова.</p>
+      <p class="install-steps gate-net-hint">Пароль проверяется через интернет. Если долго не входит — VPN.</p>
       <button type="submit" id="gate-submit">Войти</button>
     </form>
   </div>
@@ -4127,10 +4077,7 @@
       var whoamiClose = document.getElementById('whoami-close');
       var logoutBtn = document.getElementById('logout-btn');
       var gateForm = document.getElementById('gate-form');
-      var gateSearch = document.getElementById('gate-search');
-      var gateResults = document.getElementById('gate-results');
-      var gateSelected = document.getElementById('gate-selected');
-      var gatePersonId = document.getElementById('gate-person-id');
+      var gateLogin = document.getElementById('gate-login');
       var gatePassword = document.getElementById('gate-password');
       var gateError = document.getElementById('gate-error');
       var gateSubmit = document.getElementById('gate-submit');
@@ -4227,6 +4174,7 @@
       var baseTreeJson = '';
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo-adam';
+      var TREE_LOGIN = 'adam';
       var SHOW_WOMEN_KEY = 'drewo-show-women:' + TREE_DIR;
       try {
         showWomen = localStorage.getItem(SHOW_WOMEN_KEY) === '1';
@@ -4421,8 +4369,6 @@
       }
 
       var NODE_H_PHOTO = 40;
-      var gateSelectedId = null;
-      var gateSelectedLabel = '';
       var viewUnlocked = false;
 
       var isAppleTouch =
@@ -4589,7 +4535,7 @@
       function applyNekSession() {
         var token = readNekToken();
         if (!token) return Promise.resolve(false);
-        setGateBusy('Входим по ссылке…');
+        setGateBusy('Входим…');
         return callPublishApi({ action: 'auth', treeDir: TREE_DIR, sessionToken: token })
           .then(function (data) {
             if (data) data.fromServer = true;
@@ -4604,6 +4550,33 @@
             nekSessionActive = false;
             return false;
           });
+      }
+
+      /**
+       * Вход семьи: логин древа + пароль → токен сессии.
+       * Тот же action, что у портала Некъ, поэтому пароль один и там, и тут.
+       */
+      function loginTreeSession(login, password) {
+        return callPublishApi({
+          action: 'login-tree',
+          login: login,
+          password: password,
+        }).then(function (data) {
+          var token = String((data && data.sessionToken) || '');
+          if (!token) throw new Error('Неверный логин или пароль');
+          var treeDir = String((data && data.treeDir) || '');
+          if (treeDir && treeDir !== TREE_DIR) {
+            // Логин другой семьи — отдаём сессию её древу.
+            var path = String((data && data.path) || '/' + treeDir + '/');
+            window.location.assign(path + '?nek=' + encodeURIComponent(token));
+            return 'redirect';
+          }
+          storeNekToken(token);
+          return applyNekSession().then(function (ok) {
+            if (!ok) throw new Error('Не удалось открыть древо. Попробуйте ещё раз.');
+            return 'ok';
+          });
+        });
       }
 
       function verifyAuth(password) {
@@ -4868,6 +4841,8 @@
           localStorage.setItem(MY_PERSON_KEY, myPersonId);
           localStorage.removeItem(WHOAMI_SKIP_KEY);
         } catch (err) {}
+        // Отметка «Кто я» после входа продлевает сессию: гейт не вернётся в следующий раз.
+        if (!document.body.classList.contains('view-locked')) writeViewSession(myPersonId);
         rebuildLineSets();
         if (
           viewFilter === 'khotu' &&
@@ -8709,117 +8684,10 @@
       var DEMO_GATE_PERSON_ID = '';
       var DEMO_GATE_PASSWORD = '';
 
-      function gateMatchForId(personId) {
-        var node = TreeModel.findById(tree, personId);
-        if (!node) return null;
-        var path = findPathToId(tree, node.id) || [];
-        var parent = path.length >= 2 ? TreeModel.findById(tree, path[path.length - 2]) : null;
-        var grand = path.length >= 3 ? TreeModel.findById(tree, path[path.length - 3]) : null;
-        var lineageNames = [];
-        for (var i = 0; i < path.length - 1; i++) {
-          var anc = TreeModel.findById(tree, path[i]);
-          if (anc && anc.name) lineageNames.push(anc.name);
-        }
-        var lineageHint = '';
-        if (lineageNames.length >= 2) {
-          var tail = lineageNames.slice(-2);
-          lineageHint = (lineageNames.length > 2 ? '… → ' : '') + tail.join(' → ');
-        } else if (lineageNames.length === 1) {
-          lineageHint = lineageNames[0];
-        }
-        return {
-          id: node.id,
-          name: node.name || '',
-          fatherName: parent ? parent.name || '' : '',
-          fatherId: parent ? parent.id : null,
-          grandfatherName: grand ? grand.name || '' : '',
-          lineageHint: lineageHint,
-          born: Number.isFinite(Number(node.born)) ? Number(node.born) : null,
-          died: Number.isFinite(Number(node.died)) ? Number(node.died) : null,
-          years: TreeModel.formatLifeYears(node, 'g') || '',
-        };
-      }
-
-      function selectGatePerson(m, opts) {
-        opts = opts || {};
-        gateSelectedId = m.id;
-        gateSelectedLabel = m.name + (formatMatchLabel(m) ? ' · ' + formatMatchLabel(m) : '');
-        if (gatePersonId) gatePersonId.value = String(m.id);
-        if (gateSelected) {
-          gateSelected.hidden = false;
-          gateSelected.textContent = 'Выбрано: ' + gateSelectedLabel;
-        }
-        if (gateSearch) gateSearch.value = m.name;
-        if (gateResults) gateResults.replaceChildren();
-        if (opts.focusPassword !== false && gatePassword) {
-          try {
-            gatePassword.focus();
-          } catch (err) {}
-          ensureGateFieldVisible(gatePassword);
-        }
-      }
-
-      function prefillDemoGate() {
-        var match = gateMatchForId(DEMO_GATE_PERSON_ID);
-        if (match) selectGatePerson(match, { focusPassword: false });
-        if (gatePassword) gatePassword.value = DEMO_GATE_PASSWORD;
-        if (gateSubmit) {
-          window.setTimeout(function () {
-            try {
-              gateSubmit.focus();
-            } catch (err) {}
-          }, 80);
-        }
-      }
-
-      function renderGateResults(query) {
-        if (!gateResults) return;
-        gateResults.replaceChildren();
-        var q = String(query || '').trim();
-        if (!q) return;
-        var matches = collectNameMatches(q).slice(0, 40);
-        if (!matches.length) {
-          var none = document.createElement('li');
-          none.style.listStyle = 'none';
-          none.style.padding = '0.45rem 0.65rem';
-          none.style.color = 'var(--text-dim)';
-          none.textContent = 'Никого не найдено';
-          gateResults.appendChild(none);
-          return;
-        }
-        matches.forEach(function (m) {
-          var li = document.createElement('li');
-          li.style.listStyle = 'none';
-          var btn = document.createElement('button');
-          btn.type = 'button';
-          btn.textContent = m.name;
-          if (String(m.id) === String(gateSelectedId)) btn.classList.add('is-selected');
-          var subText = formatMatchLabel(m);
-          if (subText) {
-            var sub = document.createElement('span');
-            sub.className = 'whoami-father';
-            sub.textContent = subText;
-            btn.appendChild(document.createElement('br'));
-            btn.appendChild(sub);
-          }
-          btn.addEventListener('click', function () {
-            selectGatePerson(m);
-          });
-          li.appendChild(btn);
-          gateResults.appendChild(li);
-        });
-      }
-
       function showViewGate() {
         applyDemoUiLimits();
         setViewLocked(true);
-        gateSelectedId = null;
-        gateSelectedLabel = '';
-        if (gatePersonId) gatePersonId.value = '';
-        if (gateSelected) {
-          gateSelected.hidden = true;
-          gateSelected.textContent = '';
-        }
+        if (gateLogin && !gateLogin.value) gateLogin.value = TREE_LOGIN;
         if (gatePassword) gatePassword.value = '';
         if (gateError) {
           gateError.hidden = true;
@@ -8832,11 +8700,16 @@
         }
         if (gateSubmit) {
           gateSubmit.disabled = false;
-          gateSubmit.textContent = 'Войти в демо';
+          gateSubmit.textContent = 'Войти';
         }
-        if (gateSearch) gateSearch.value = '';
-        renderGateResults('');
-        prefillDemoGate();
+        var focusTarget = gatePassword || gateLogin;
+        if (focusTarget) {
+          window.setTimeout(function () {
+            try {
+              focusTarget.focus();
+            } catch (err) {}
+          }, 80);
+        }
       }
 
       function setGateBusy(message) {
@@ -8853,15 +8726,28 @@
         gateStatus.textContent = '';
       }
 
-      function unlockViewWithPerson(personId, password, authData) {
-        writeViewSession(personId);
-        rememberSession(password, authData);
+      /**
+       * После входа по логину семьи: открываем древо.
+       * «Кто я» необязателен — его предложит диалог whoami уже внутри.
+       */
+      function unlockViewAfterLogin() {
         clearGateBusy();
         setViewLocked(false);
-        // One whoami path, deferred so unlock UI can paint; banner covers the paint hitch.
+        var known = !!(myPersonId && TreeModel.findById(tree, myPersonId));
+        if (known) writeViewSession(myPersonId);
+        // Banner covers the paint hitch while the map opens.
         showBusyBanner('Открываем древо…');
         window.requestAnimationFrame(function () {
-          setMyPerson(personId, { silent: true });
+          if (known) {
+            rebuildLineSets();
+            updateWhoamiUi();
+            whoamiFocusAfterReveal = false;
+            finishWhoamiReveal();
+            goToPerson(myPersonId);
+          } else {
+            render(true);
+            maybeAskWhoami();
+          }
           hideCenterBanner();
         });
       }
@@ -9289,11 +9175,15 @@
         }
         clearGateBusy();
         setViewLocked(false);
-        if (!myPersonId) {
+        if (!myPersonId && session) {
           myPersonId = session.personId;
           try {
             localStorage.setItem(MY_PERSON_KEY, myPersonId);
           } catch (err) {}
+        }
+        // Вход по логину/ссылке: запоминаем человека, иначе гейт вернётся в новой вкладке.
+        if (!session && myPersonId && TreeModel.findById(tree, myPersonId)) {
+          writeViewSession(myPersonId);
         }
         setViewFilter('all', false);
         updateViewButtons();
@@ -9319,70 +9209,68 @@
       }
 
 
-      if (gateSearch) {
-        gateSearch.addEventListener('input', function () {
-          gateSelectedId = null;
-          if (gatePersonId) gatePersonId.value = '';
-          if (gateSelected) gateSelected.hidden = true;
-          renderGateResults(gateSearch.value);
+      if (gateLogin) {
+        gateLogin.addEventListener('focus', function () {
+          ensureGateFieldVisible(gateLogin);
         });
-        gateSearch.addEventListener('focus', function () {
-          ensureGateFieldVisible(gateSearch);
+        gateLogin.addEventListener('input', function () {
+          if (gateError) gateError.hidden = true;
         });
       }
       if (gatePassword) {
         gatePassword.addEventListener('focus', function () {
           ensureGateFieldVisible(gatePassword);
         });
+        gatePassword.addEventListener('input', function () {
+          if (gateError) gateError.hidden = true;
+        });
       }
       if (gateForm) {
         gateForm.addEventListener('submit', function (e) {
           e.preventDefault();
-          var personId = gateSelectedId || (gatePersonId && gatePersonId.value);
+          var login = String((gateLogin && gateLogin.value) || '').trim().toLowerCase();
           var password = gatePassword ? gatePassword.value : '';
-          if (!personId) {
+          function failGate(message) {
             if (gateError) {
-              gateError.textContent = 'Выберите себя из списка';
+              gateError.textContent = message;
               gateError.hidden = false;
             }
+            if (gateStatus) {
+              gateStatus.hidden = true;
+              gateStatus.classList.remove('is-busy');
+              gateStatus.textContent = '';
+            }
+          }
+          if (!login) {
+            failGate('Введите логин семьи');
+            if (gateLogin) gateLogin.focus();
             return;
           }
           if (!password) {
-            if (gateError) {
-              gateError.textContent = 'Введите пароль';
-              gateError.hidden = false;
-            }
+            failGate('Введите пароль');
+            if (gatePassword) gatePassword.focus();
             return;
           }
+          if (gateLogin) gateLogin.value = login;
+          if (gateError) gateError.hidden = true;
           if (gateSubmit) {
             gateSubmit.disabled = true;
             gateSubmit.textContent = 'Проверяем…';
           }
-          if (gateError) gateError.hidden = true;
           if (gateStatus) {
             gateStatus.hidden = false;
             gateStatus.classList.add('is-busy');
-            gateStatus.textContent = 'Проверяем пароль…';
+            gateStatus.textContent = 'Проверяем логин и пароль…';
           }
-          verifyLocalEditor(password)
-            .then(function (ok) {
-              if (ok) {
-                return {
-                  role: 'editor',
-                  locked: accessLocked,
-                  lockedReason: accessLockedReason,
-                  fromServer: false,
-                };
-              }
-              return verifyAuth(password);
-            })
-            .then(function (data) {
+          loginTreeSession(login, password)
+            .then(function (result) {
+              if (result === 'redirect') return;
               if (gateStatus) {
                 gateStatus.classList.remove('is-busy');
                 gateStatus.textContent = 'Готово, открываем древо…';
               }
-              unlockViewWithPerson(personId, password, data);
               if (gatePassword) gatePassword.value = '';
+              unlockViewAfterLogin();
               updateViewButtons();
               refreshActivityUi();
               updateSaveButton();
@@ -9390,36 +9278,33 @@
               showToast('Марша вохийла', 'success');
             })
             .catch(function (err) {
-              var msg = (err && err.message) || 'Неверный пароль';
+              var msg = (err && err.message) || 'Неверный логин или пароль';
               var status = err && err.status;
-              var rateLimited = status === 429;
+              // 429 уже несёт текст сервера со временем ожидания — показываем как есть.
               var networkish =
-                !rateLimited &&
-                (/failed to fetch|network|load failed|timeout|timed out|abort|503|502|cloudflare|fetch/i.test(
-                  String(msg)
-                ) ||
-                  status === 0 ||
-                  (typeof status === 'number' && status >= 500));
-              if (networkish && editorPasswordHash) {
-                msg = 'Неверный пароль';
-              } else if (networkish) {
+                status !== 429 &&
+                status !== 401 &&
+                (status === 0 ||
+                  (typeof status === 'number' && status >= 500) ||
+                  /failed to fetch|network|load failed|timeout|timed out|abort|cloudflare/i.test(
+                    String(msg)
+                  ));
+              if (networkish) {
                 msg =
-                  'Не удалось связаться с сервером. Проверьте интернет и попробуйте снова.';
+                  'Не удалось связаться с сервером. Проверьте интернет (или включите VPN) и попробуйте снова.';
               }
-              if (gateError) {
-                gateError.textContent = msg;
-                gateError.hidden = false;
-              }
-              if (gateStatus) {
-                gateStatus.hidden = true;
-                gateStatus.classList.remove('is-busy');
-                gateStatus.textContent = '';
+              failGate(msg);
+              if (gatePassword) {
+                gatePassword.value = '';
+                try {
+                  gatePassword.focus();
+                } catch (err2) {}
               }
             })
             .finally(function () {
               if (gateSubmit) {
                 gateSubmit.disabled = false;
-                gateSubmit.textContent = 'Войти в демо';
+                gateSubmit.textContent = 'Войти';
               }
             });
         });
