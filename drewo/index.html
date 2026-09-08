@@ -2436,6 +2436,7 @@
     </button>
     <div class="fab-panel" id="fab-panel">
       <button type="button" id="install-home">На экран Домой</button>
+      <button type="button" id="enable-push">Уведомления</button>
       <button type="button" id="reload-page">Обновить</button>
       <button type="button" id="share-tree">Поделиться</button>
       <button type="button" id="save-remote" hidden>Сохранить</button>
@@ -4559,6 +4560,7 @@
       var addNameInput = document.getElementById('add-name');
       var addCancelBtn = document.getElementById('add-cancel');
       var installHomeBtn = document.getElementById('install-home');
+      var enablePushBtn = document.getElementById('enable-push');
       var reloadPageBtn = document.getElementById('reload-page');
       var shareTreeBtn = document.getElementById('share-tree');
       var saveRemoteBtn = document.getElementById('save-remote');
@@ -4598,6 +4600,8 @@
       var baseTreeJson = '';
       var PUBLISH_URL = 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
       var TREE_DIR = 'drewo';
+      var PUSH_PROMPT_KEY = 'drewo-push-prompt:' + TREE_DIR;
+      var lastEditPassword = '';
       var TREE_LOGIN = 'hoti';
       var VIEW_SESSION_KEY = 'drewo-view-session';
       var NEK_SESSION_KEY = 'nek-session:' + TREE_DIR;
@@ -6903,6 +6907,85 @@
         });
       }
 
+      
+      function urlBase64ToUint8Array(base64String) {
+        var padding = '='.repeat((4 - (base64String.length % 4)) % 4);
+        var base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        var rawData = atob(base64);
+        var outputArray = new Uint8Array(rawData.length);
+        for (var i = 0; i < rawData.length; ++i) outputArray[i] = rawData.charCodeAt(i);
+        return outputArray;
+      }
+      function registerDrewoServiceWorker() {
+        if (!('serviceWorker' in navigator)) return Promise.resolve(null);
+        return navigator.serviceWorker.register('./sw.js').catch(function (err) {
+          console.warn('SW register failed', err);
+          return null;
+        });
+      }
+      function pushApiSupported() {
+        return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+      }
+      function fetchVapidPublicKey(password) {
+        return callPublishApi({ action: 'vapid-public', password: password, treeDir: TREE_DIR }).then(function (data) {
+          return data.publicKey;
+        });
+      }
+      function subscribeDeviceToPush(password) {
+        if (!pushApiSupported()) {
+          return Promise.reject(new Error('Уведомления на этом устройстве недоступны'));
+        }
+        return registerDrewoServiceWorker()
+          .then(function () { return navigator.serviceWorker.ready; })
+          .then(function (reg) {
+            return fetchVapidPublicKey(password).then(function (publicKey) {
+              return reg.pushManager.subscribe({
+                userVisibleOnly: true,
+                applicationServerKey: urlBase64ToUint8Array(publicKey),
+              });
+            });
+          })
+          .then(function (sub) {
+            var json = sub.toJSON();
+            return callPublishApi({
+              action: 'subscribe',
+              password: password,
+              treeDir: TREE_DIR,
+              subscription: { endpoint: json.endpoint, keys: json.keys },
+            });
+          });
+      }
+      function maybeOfferPushSubscription(password) {
+        try { if (localStorage.getItem(PUSH_PROMPT_KEY)) return; } catch (e) {}
+        if (!pushApiSupported()) return;
+        askChoice('Уведомлять, когда в это древо добавляют человека?', [
+          { id: 'yes', label: 'Да', primary: true },
+          { id: 'no', label: 'Нет' },
+        ]).then(function (choice) {
+          try { localStorage.setItem(PUSH_PROMPT_KEY, choice === 'yes' ? 'subscribed' : 'declined'); } catch (e) {}
+          if (choice !== 'yes') return;
+          subscribeDeviceToPush(password).catch(function (err) {
+            showToast(err.message || 'Не удалось включить уведомления');
+            try { localStorage.removeItem(PUSH_PROMPT_KEY); } catch (e2) {}
+          });
+        });
+      }
+      function requestEnablePush() {
+        if (lastEditPassword) {
+          try { localStorage.removeItem(PUSH_PROMPT_KEY); } catch (e) {}
+          subscribeDeviceToPush(lastEditPassword)
+            .then(function () {
+              try { localStorage.setItem(PUSH_PROMPT_KEY, 'subscribed'); } catch (e) {}
+              showToast('Уведомления включены');
+            })
+            .catch(function (err) {
+              showToast(err.message || 'Не удалось включить уведомления');
+            });
+          return;
+        }
+        openPasswordDialog({ type: 'push' });
+      }
+
       function callPublishApi(payload) {
         var body = payload;
         var nekToken = readNekToken();
@@ -7930,6 +8013,7 @@
                 }
               }
               rememberSession(pass, data);
+              lastEditPassword = pass;
               pendingPasswordAction = null;
               if (passwordDialog && passwordDialog.open) passwordDialog.close();
               var nextAction = action;
@@ -7960,8 +8044,19 @@
                   restoreBackup(pass, nextAction.backup, nextAction.label || nextAction.backup);
                 } else if (nextAction.type === 'super-admin') {
                   openAdminDialog();
+                } else if (nextAction.type === 'push') {
+                  try { localStorage.removeItem(PUSH_PROMPT_KEY); } catch (e) {}
+                  subscribeDeviceToPush(pass).then(function () {
+                    try { localStorage.setItem(PUSH_PROMPT_KEY, 'subscribed'); } catch (e) {}
+                    showToast('Уведомления включены');
+                  }).catch(function (err) {
+                    showToast(err.message || 'Не удалось включить уведомления');
+                  });
                 } else {
                   setEditMode(true);
+                }
+                if (!(nextAction && nextAction.type === 'push')) {
+                  maybeOfferPushSubscription(pass);
                 }
               }, 80);
             })
@@ -8082,6 +8177,12 @@
         shareTreeBtn.addEventListener('click', handleShareTree);
       }
 
+      if (enablePushBtn) {
+        enablePushBtn.addEventListener('click', function () {
+          setFabOpen(false);
+          requestEnablePush();
+        });
+      }
       if (installHomeBtn) {
         installHomeBtn.addEventListener('click', function () {
           if (deferredInstallPrompt) {
@@ -9252,6 +9353,7 @@
 
 
       function finishBoot() {
+        registerDrewoServiceWorker();
         var session = readViewSession();
         if (!session && !nekSessionActive) {
           clearGateBusy();
