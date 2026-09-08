@@ -1,0 +1,57 @@
+﻿name: Assemble APK chunks to Release
+
+on:
+  push:
+    paths:
+      - 'downloads/apk-chunks-*/**'
+    branches:
+      - main
+      - apk-chunks
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find chunk dir
+        id: dir
+        run: |
+          DIR=$(ls -1d downloads/apk-chunks-* 2>/dev/null | sort -V | tail -1)
+          if [ -z "$DIR" ]; then echo "No chunk dir"; exit 1; fi
+          echo "dir=$DIR" >> "$GITHUB_OUTPUT"
+          cat "$DIR/meta.json"
+
+      - name: Assemble APK
+        id: apk
+        run: |
+          DIR="${{ steps.dir.outputs.dir }}"
+          VERSION=$(jq -r .version "$DIR/meta.json")
+          ASSET=$(jq -r .assetName "$DIR/meta.json")
+          EXPECT_SHA=$(jq -r .sha256 "$DIR/meta.json")
+          EXPECT_SIZE=$(jq -r .size "$DIR/meta.json")
+          OUT="$RUNNER_TEMP/$ASSET"
+          cat "$DIR"/part-*.bin > "$OUT"
+          SIZE=$(wc -c < "$OUT" | tr -d ' ')
+          SHA=$(sha256sum "$OUT" | awk '{print $1}')
+          echo "size=$SIZE expected=$EXPECT_SIZE"
+          echo "sha=$SHA expected=$EXPECT_SHA"
+          test "$SIZE" = "$EXPECT_SIZE"
+          test "$SHA" = "$EXPECT_SHA"
+          echo "file=$OUT" >> "$GITHUB_OUTPUT"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "asset=$ASSET" >> "$GITHUB_OUTPUT"
+
+      - name: Publish GitHub Release asset
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.apk.outputs.version }}
+          name: Коран и Азкары v${{ steps.apk.outputs.version }}
+          files: ${{ steps.apk.outputs.file }}
+          fail_on_unmatched_files: true
+          make_latest: true
+          overwrite_files: true
