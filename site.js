@@ -74,7 +74,7 @@
 
   wireLinkButtons('[data-link="rustore"]', LINKS.rustore);
   wireLinkButtons('[data-link="appstore"]', LINKS.appStore);
-  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true });
+  wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true, keepBadge: true });
 
   var versionEl = document.getElementById('app-version');
   function setVersionLabel(version, code) {
@@ -117,7 +117,7 @@
       }
       wireLinkButtons('[data-link="rustore"]', rustoreUrl || LINKS.rustore);
       wireLinkButtons('[data-link="appstore"]', ios.appStoreUrl || LINKS.appStore);
-      wireLinkButtons('[data-link="apk"]', apkUrl || LINKS.apk, { download: true });
+      wireLinkButtons('[data-link="apk"]', apkUrl || LINKS.apk, { download: true, keepBadge: true });
     })
     .catch(function () { /* keep LINKS fallback */ });
 

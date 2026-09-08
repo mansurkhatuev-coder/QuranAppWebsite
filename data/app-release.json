@@ -11,9 +11,9 @@
                                     "url":  "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
                                 },
                     "apk":  {
-                                "latestVersion":  "1.0.14",
-                                "versionCode":  16,
-                                "url":  "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.14/koran-i-azkary-1.0.14.apk"
+                                "latestVersion":  "1.0.16",
+                                "versionCode":  18,
+                                "url":  "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.16/koran-i-azkary-1.0.16.apk"
                             }
                 },
     "messageRu":  "Версия 1.0.16: плавнее компас Киблы на Android, плюс улучшения 1.0.15 (Калям Шариф, чтецы, намаз по СНГ, азкары и мусхаф). Если что-то нужно поправить — напишите. Лерамца, Мансур!",
