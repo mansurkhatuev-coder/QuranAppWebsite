@@ -26,6 +26,7 @@ import {
 import {
   applyBillingAction,
   defaultExemptBilling,
+  getBillingAccess,
   parseBilling,
   publicBillingView,
   serializeBilling,
@@ -35,6 +36,9 @@ import {
   type TreeBilling,
 } from './billing.ts';
 
+import { listAddedPeople } from './added-people.ts';
+import { configureWebPushFromEnv, notifyAddedPeople } from './push-send.ts';
+import type { DrewoTreeRow, PushSubRow } from './push-notify.ts';
 import {
   NEK_SESSION_TTL_MS,
   passwordFingerprint,
@@ -236,6 +240,65 @@ async function requireHubUser(request: Request) {
     throw httpError('Войдите в Trees', 401);
   }
   return data.user;
+}
+
+function supabaseService() {
+  const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+  if (!supabaseUrl || !serviceKey) {
+    throw new Error('Supabase service role is not configured');
+  }
+  return createClient(supabaseUrl, serviceKey);
+}
+
+function pushSubscriptionsPath(treeDir: string) {
+  return `${treeDir}/push-subscriptions.json`;
+}
+
+type PushStoreFile = {
+  notifications_enabled: boolean;
+  subscriptions: Array<{
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+    created_at?: string;
+  }>;
+};
+
+function parsePushStore(raw?: string | null): PushStoreFile {
+  try {
+    const parsed = raw ? JSON.parse(raw) : null;
+    const subscriptions = Array.isArray(parsed?.subscriptions) ? parsed.subscriptions : [];
+    return {
+      notifications_enabled: parsed?.notifications_enabled !== false,
+      subscriptions: subscriptions
+        .filter(
+          (s: Record<string, unknown>) =>
+            typeof s?.endpoint === 'string' &&
+            typeof s?.p256dh === 'string' &&
+            typeof s?.auth === 'string'
+        )
+        .map((s: Record<string, unknown>) => ({
+          endpoint: String(s.endpoint),
+          p256dh: String(s.p256dh),
+          auth: String(s.auth),
+          created_at: typeof s.created_at === 'string' ? s.created_at : undefined,
+        })),
+    };
+  } catch {
+    return { notifications_enabled: true, subscriptions: [] };
+  }
+}
+
+function serializePushStore(store: PushStoreFile) {
+  return `${JSON.stringify(
+    {
+      notifications_enabled: store.notifications_enabled !== false,
+      subscriptions: store.subscriptions,
+    },
+    null,
+    2
+  )}\n`;
 }
 
 async function githubListDir(
@@ -1819,6 +1882,70 @@ Deno.serve(async (request) => {
       });
     }
 
+    if (action === 'vapid-public') {
+      const publicKey = Deno.env.get('VAPID_PUBLIC_KEY') ?? '';
+      if (!publicKey) return jsonResponse({ error: 'VAPID_PUBLIC_KEY missing' }, 500);
+      return jsonResponse({ ok: true, publicKey, treeDir });
+    }
+
+    if (action === 'subscribe') {
+      const sub = body.subscription;
+      const endpoint = sub && typeof sub.endpoint === 'string' ? sub.endpoint : '';
+      const p256dh = sub?.keys?.p256dh;
+      const auth = sub?.keys?.auth;
+      if (!endpoint || !p256dh || !auth) {
+        return jsonResponse({ error: 'Нужна subscription' }, 400);
+      }
+      const pushPath = pushSubscriptionsPath(treeDir);
+      const existing = await githubGetFile(githubToken, githubRepo, pushPath);
+      const store = parsePushStore(existing?.content);
+      const nextSubs = store.subscriptions.filter((s) => s.endpoint !== endpoint);
+      nextSubs.push({
+        endpoint,
+        p256dh: String(p256dh),
+        auth: String(auth),
+        created_at: new Date().toISOString(),
+      });
+      const nextStore: PushStoreFile = {
+        notifications_enabled: store.notifications_enabled,
+        subscriptions: nextSubs,
+      };
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Upsert push subscription for ${treeDir}`,
+        changes: [{ path: pushPath, content: serializePushStore(nextStore) }],
+      });
+      return jsonResponse({ ok: true, treeDir, count: nextSubs.length });
+    }
+
+    if (action === 'unsubscribe') {
+      const endpoint = typeof body.endpoint === 'string' ? body.endpoint : '';
+      if (!endpoint) return jsonResponse({ error: 'Нужен endpoint' }, 400);
+      const pushPath = pushSubscriptionsPath(treeDir);
+      const existing = await githubGetFile(githubToken, githubRepo, pushPath);
+      const store = parsePushStore(existing?.content);
+      const nextSubs = store.subscriptions.filter((s) => s.endpoint !== endpoint);
+      if (nextSubs.length === store.subscriptions.length) {
+        return jsonResponse({ ok: true, treeDir, count: nextSubs.length });
+      }
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Remove push subscription for ${treeDir}`,
+        changes: [
+          {
+            path: pushPath,
+            content: serializePushStore({
+              notifications_enabled: store.notifications_enabled,
+              subscriptions: nextSubs,
+            }),
+          },
+        ],
+      });
+      return jsonResponse({ ok: true, treeDir, count: nextSubs.length });
+    }
+
     if (action === 'set-lock') {
       const denied = requireSuper('set-lock');
       if (denied) return denied;
@@ -2300,6 +2427,82 @@ Deno.serve(async (request) => {
     });
 
     const fingerprint = await fingerprintText(publishNormalized);
+
+    let pushNotify: Record<string, unknown> | undefined;
+    try {
+      let serverBefore: unknown = null;
+      try {
+        serverBefore = serverTreeRaw ? JSON.parse(serverTreeRaw) : null;
+      } catch {
+        serverBefore = null;
+      }
+      const afterTree = JSON.parse(publishTreeJson);
+      const added = listAddedPeople(serverBefore as never, afterTree);
+      if (!added.length) {
+        pushNotify = { skippedReason: 'no-additions' };
+      } else {
+        const requirePremium = (Deno.env.get('DREWO_PUSH_REQUIRE_PREMIUM') || '') === '1';
+        const billingAccess = getBillingAccess(access.billing);
+        const vapidOk = configureWebPushFromEnv({
+          publicKey: Deno.env.get('VAPID_PUBLIC_KEY') ?? undefined,
+          privateKey: Deno.env.get('VAPID_PRIVATE_KEY') ?? undefined,
+          subject: Deno.env.get('VAPID_SUBJECT') ?? undefined,
+        });
+        const title = registryEntryFor(registry, treeDir)?.title || treeDir;
+        const pushPath = pushSubscriptionsPath(treeDir);
+        const pushFile = await githubGetFile(githubToken, githubRepo, pushPath);
+        const store = parsePushStore(pushFile?.content);
+        const treeRow: DrewoTreeRow = {
+          tree_id: treeDir,
+          name: title,
+          premium: billingAccess.hasPremium,
+          notifications_enabled: store.notifications_enabled,
+        };
+        if (!vapidOk) {
+          pushNotify = { skippedReason: 'vapid-missing' };
+        } else {
+          const subs: PushSubRow[] = store.subscriptions.map((s, i) => ({
+            id: i + 1,
+            tree_id: treeDir,
+            endpoint: s.endpoint,
+            p256dh: s.p256dh,
+            auth: s.auth,
+          }));
+          const result = await notifyAddedPeople({
+            tree: treeRow,
+            added,
+            subscriptions: subs,
+            baseUrl: `https://waydean.ru/${treeDir}/`,
+            requirePremium,
+            deleteEndpoint: async (endpoint) => {
+              const fresh = await githubGetFile(githubToken, githubRepo, pushPath);
+              const cur = parsePushStore(fresh?.content);
+              const next = cur.subscriptions.filter((s) => s.endpoint !== endpoint);
+              if (next.length === cur.subscriptions.length) return;
+              await githubCommitChanges({
+                token: githubToken,
+                repo: githubRepo,
+                message: `Prune dead push subscription for ${treeDir}`,
+                changes: [
+                  {
+                    path: pushPath,
+                    content: serializePushStore({
+                      notifications_enabled: cur.notifications_enabled,
+                      subscriptions: next,
+                    }),
+                  },
+                ],
+              });
+            },
+          });
+          pushNotify = { ...result };
+        }
+      }
+    } catch (pushErr) {
+      console.error('push notify failed', pushErr);
+      pushNotify = { skippedReason: 'error' };
+    }
+
     return jsonResponse({
       ok: true,
       publishedAt: new Date().toISOString(),
@@ -2321,6 +2524,7 @@ Deno.serve(async (request) => {
       mergeStats,
       treeJson: publishTreeJson,
       activityJson: publishActivityJson,
+      pushNotify,
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
