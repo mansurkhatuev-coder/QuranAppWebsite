@@ -251,6 +251,56 @@ function supabaseService() {
   return createClient(supabaseUrl, serviceKey);
 }
 
+function pushSubscriptionsPath(treeDir: string) {
+  return `${treeDir}/push-subscriptions.json`;
+}
+
+type PushStoreFile = {
+  notifications_enabled: boolean;
+  subscriptions: Array<{
+    endpoint: string;
+    p256dh: string;
+    auth: string;
+    created_at?: string;
+  }>;
+};
+
+function parsePushStore(raw?: string | null): PushStoreFile {
+  try {
+    const parsed = raw ? JSON.parse(raw) : null;
+    const subscriptions = Array.isArray(parsed?.subscriptions) ? parsed.subscriptions : [];
+    return {
+      notifications_enabled: parsed?.notifications_enabled !== false,
+      subscriptions: subscriptions
+        .filter(
+          (s: Record<string, unknown>) =>
+            typeof s?.endpoint === 'string' &&
+            typeof s?.p256dh === 'string' &&
+            typeof s?.auth === 'string'
+        )
+        .map((s: Record<string, unknown>) => ({
+          endpoint: String(s.endpoint),
+          p256dh: String(s.p256dh),
+          auth: String(s.auth),
+          created_at: typeof s.created_at === 'string' ? s.created_at : undefined,
+        })),
+    };
+  } catch {
+    return { notifications_enabled: true, subscriptions: [] };
+  }
+}
+
+function serializePushStore(store: PushStoreFile) {
+  return `${JSON.stringify(
+    {
+      notifications_enabled: store.notifications_enabled !== false,
+      subscriptions: store.subscriptions,
+    },
+    null,
+    2
+  )}\n`;
+}
+
 async function githubListDir(
   token: string,
   repo: string,
@@ -1846,41 +1896,54 @@ Deno.serve(async (request) => {
       if (!endpoint || !p256dh || !auth) {
         return jsonResponse({ error: 'Нужна subscription' }, 400);
       }
-      const sb = supabaseService();
-      const title = registryEntryFor(registry, treeDir)?.title || treeDir;
-      await sb.from('drewo_trees').upsert(
-        {
-          tree_id: treeDir,
-          name: title,
-          premium: true,
-          notifications_enabled: true,
-        },
-        { onConflict: 'tree_id' }
-      );
-      const { error } = await sb.from('drewo_push_subscriptions').upsert(
-        {
-          tree_id: treeDir,
-          endpoint,
-          p256dh: String(p256dh),
-          auth: String(auth),
-        },
-        { onConflict: 'tree_id,endpoint' }
-      );
-      if (error) return jsonResponse({ error: error.message }, 500);
-      return jsonResponse({ ok: true, treeDir });
+      const pushPath = pushSubscriptionsPath(treeDir);
+      const existing = await githubGetFile(githubToken, githubRepo, pushPath);
+      const store = parsePushStore(existing?.content);
+      const nextSubs = store.subscriptions.filter((s) => s.endpoint !== endpoint);
+      nextSubs.push({
+        endpoint,
+        p256dh: String(p256dh),
+        auth: String(auth),
+        created_at: new Date().toISOString(),
+      });
+      const nextStore: PushStoreFile = {
+        notifications_enabled: store.notifications_enabled,
+        subscriptions: nextSubs,
+      };
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Upsert push subscription for ${treeDir}`,
+        changes: [{ path: pushPath, content: serializePushStore(nextStore) }],
+      });
+      return jsonResponse({ ok: true, treeDir, count: nextSubs.length });
     }
 
     if (action === 'unsubscribe') {
       const endpoint = typeof body.endpoint === 'string' ? body.endpoint : '';
       if (!endpoint) return jsonResponse({ error: 'Нужен endpoint' }, 400);
-      const sb = supabaseService();
-      const { error } = await sb
-        .from('drewo_push_subscriptions')
-        .delete()
-        .eq('tree_id', treeDir)
-        .eq('endpoint', endpoint);
-      if (error) return jsonResponse({ error: error.message }, 500);
-      return jsonResponse({ ok: true, treeDir });
+      const pushPath = pushSubscriptionsPath(treeDir);
+      const existing = await githubGetFile(githubToken, githubRepo, pushPath);
+      const store = parsePushStore(existing?.content);
+      const nextSubs = store.subscriptions.filter((s) => s.endpoint !== endpoint);
+      if (nextSubs.length === store.subscriptions.length) {
+        return jsonResponse({ ok: true, treeDir, count: nextSubs.length });
+      }
+      await githubCommitChanges({
+        token: githubToken,
+        repo: githubRepo,
+        message: `Remove push subscription for ${treeDir}`,
+        changes: [
+          {
+            path: pushPath,
+            content: serializePushStore({
+              notifications_enabled: store.notifications_enabled,
+              subscriptions: nextSubs,
+            }),
+          },
+        ],
+      });
+      return jsonResponse({ ok: true, treeDir, count: nextSubs.length });
     }
 
     if (action === 'set-lock') {
@@ -2385,48 +2448,51 @@ Deno.serve(async (request) => {
           privateKey: Deno.env.get('VAPID_PRIVATE_KEY') ?? undefined,
           subject: Deno.env.get('VAPID_SUBJECT') ?? undefined,
         });
-        const sb = supabaseService();
         const title = registryEntryFor(registry, treeDir)?.title || treeDir;
-        await sb.from('drewo_trees').upsert(
-          {
-            tree_id: treeDir,
-            name: title,
-            premium: billingAccess.hasPremium,
-            notifications_enabled: true,
-          },
-          { onConflict: 'tree_id' }
-        );
-        const { data: treeRows } = await sb
-          .from('drewo_trees')
-          .select('*')
-          .eq('tree_id', treeDir)
-          .limit(1);
-        const dbTree = (treeRows && treeRows[0]) as DrewoTreeRow | undefined;
+        const pushPath = pushSubscriptionsPath(treeDir);
+        const pushFile = await githubGetFile(githubToken, githubRepo, pushPath);
+        const store = parsePushStore(pushFile?.content);
         const treeRow: DrewoTreeRow = {
           tree_id: treeDir,
-          name: dbTree?.name || title,
-          premium: requirePremium ? billingAccess.hasPremium : Boolean(dbTree?.premium ?? true),
-          notifications_enabled: dbTree?.notifications_enabled !== false,
+          name: title,
+          premium: billingAccess.hasPremium,
+          notifications_enabled: store.notifications_enabled,
         };
         if (!vapidOk) {
           pushNotify = { skippedReason: 'vapid-missing' };
         } else {
-          const { data: subs } = await sb
-            .from('drewo_push_subscriptions')
-            .select('*')
-            .eq('tree_id', treeDir);
+          const subs: PushSubRow[] = store.subscriptions.map((s, i) => ({
+            id: i + 1,
+            tree_id: treeDir,
+            endpoint: s.endpoint,
+            p256dh: s.p256dh,
+            auth: s.auth,
+          }));
           const result = await notifyAddedPeople({
             tree: treeRow,
             added,
-            subscriptions: (subs || []) as PushSubRow[],
+            subscriptions: subs,
             baseUrl: `https://waydean.ru/${treeDir}/`,
             requirePremium,
             deleteEndpoint: async (endpoint) => {
-              await sb
-                .from('drewo_push_subscriptions')
-                .delete()
-                .eq('tree_id', treeDir)
-                .eq('endpoint', endpoint);
+              const fresh = await githubGetFile(githubToken, githubRepo, pushPath);
+              const cur = parsePushStore(fresh?.content);
+              const next = cur.subscriptions.filter((s) => s.endpoint !== endpoint);
+              if (next.length === cur.subscriptions.length) return;
+              await githubCommitChanges({
+                token: githubToken,
+                repo: githubRepo,
+                message: `Prune dead push subscription for ${treeDir}`,
+                changes: [
+                  {
+                    path: pushPath,
+                    content: serializePushStore({
+                      notifications_enabled: cur.notifications_enabled,
+                      subscriptions: next,
+                    }),
+                  },
+                ],
+              });
             },
           });
           pushNotify = { ...result };
