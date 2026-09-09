@@ -373,6 +373,7 @@ async function buildHostBoard(db: SupabaseClient, session: Record<string, unknow
     .from('academy_participants')
     .select('id, display_name, last_seen_at, status')
     .eq('session_id', String(session.id))
+    .eq('status', 'active')
     .order('joined_at', { ascending: true });
   const { data: answers } = await db
     .from('academy_answers')
@@ -413,6 +414,36 @@ async function buildHostBoard(db: SupabaseClient, session: Record<string, unknow
       avg_ms,
       fastest_ms: times.length ? Math.min(...times) : null,
     },
+  };
+}
+
+function normalizeParticipantName(name: string) {
+  return String(name || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+    .toLowerCase()
+    .replace(/ё/g, 'е');
+}
+
+function sessionPublicPayload(
+  liveSession: Record<string, unknown>,
+  settings: ReturnType<typeof settingsDefaults>,
+) {
+  const reveal = shouldReveal(settings, String(liveSession.phase));
+  return {
+    id: liveSession.id,
+    code: liveSession.code,
+    status: liveSession.status,
+    phase: liveSession.phase,
+    current_index: liveSession.current_index,
+    version: liveSession.version,
+    phase_ends_at: liveSession.phase_ends_at,
+    phase_started_at: liveSession.phase_started_at,
+    settings,
+    question_count: Array.isArray(liveSession.question_snapshot) ? liveSession.question_snapshot.length : 0,
+    current_question: ['answering', 'reveal'].includes(String(liveSession.phase))
+      ? currentPublicQuestion(liveSession, reveal)
+      : null,
   };
 }
 
@@ -504,7 +535,9 @@ async function handleCreate(db: SupabaseClient, userId: string, body: Record<str
 
 async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
   const code = String(body.code || '').trim();
-  const displayName = String(body.display_name || '').trim();
+  const displayName = String(body.display_name || '').trim().slice(0, 40);
+  const fingerprint =
+    typeof body.client_fingerprint === 'string' ? body.client_fingerprint.trim().slice(0, 80) : '';
   if (!/^\d{4,8}$/.test(code)) return json({ error: 'code' }, 400);
   if (displayName.length < 2) return json({ error: 'name' }, 400);
 
@@ -526,43 +559,76 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
 
   const resumeToken = randomToken();
   const resumeHash = await sha256Hex(resumeToken);
-  const { data: participant, error: pErr } = await db
+  const nowIso = new Date().toISOString();
+  const normalized = normalizeParticipantName(displayName);
+
+  const { data: existingRows } = await db
     .from('academy_participants')
-    .insert({
-      session_id: liveSession.id,
-      display_name: displayName.slice(0, 40),
-      resume_token_hash: resumeHash,
-      status: 'active',
-      last_seen_at: new Date().toISOString(),
-    })
-    .select('id, display_name, session_id')
-    .maybeSingle();
-  if (pErr) return json({ error: 'join_failed' }, 500);
+    .select('id, display_name, status, joined_at, client_fingerprint')
+    .eq('session_id', liveSession.id)
+    .neq('status', 'kicked')
+    .order('joined_at', { ascending: true });
+
+  const matches = (existingRows || []).filter(
+    (p) => normalizeParticipantName(String(p.display_name)) === normalized,
+  );
+
+  let participant:
+    | { id: string; display_name: string; session_id: string }
+    | null
+    | undefined = null;
+  let rejoined = false;
+
+  if (matches.length) {
+    const preferred =
+      (fingerprint && matches.find((p) => p.client_fingerprint === fingerprint)) || matches[0];
+    const { data: updated, error: uErr } = await db
+      .from('academy_participants')
+      .update({
+        resume_token_hash: resumeHash,
+        status: 'active',
+        display_name: displayName,
+        client_fingerprint: fingerprint || preferred.client_fingerprint || null,
+        last_seen_at: nowIso,
+      })
+      .eq('id', preferred.id)
+      .select('id, display_name, session_id')
+      .maybeSingle();
+    if (uErr || !updated) return json({ error: 'join_failed' }, 500);
+    participant = updated;
+    rejoined = true;
+
+    const dupIds = matches.filter((m) => m.id !== preferred.id).map((m) => m.id);
+    if (dupIds.length) {
+      await db.from('academy_participants').update({ status: 'left' }).in('id', dupIds);
+    }
+  } else {
+    const { data: created, error: pErr } = await db
+      .from('academy_participants')
+      .insert({
+        session_id: liveSession.id,
+        display_name: displayName,
+        resume_token_hash: resumeHash,
+        client_fingerprint: fingerprint || null,
+        status: 'active',
+        last_seen_at: nowIso,
+      })
+      .select('id, display_name, session_id')
+      .maybeSingle();
+    if (pErr || !created) return json({ error: 'join_failed' }, 500);
+    participant = created;
+  }
 
   await db
     .from('academy_sessions')
-    .update({ last_activity_at: new Date().toISOString() })
+    .update({ last_activity_at: nowIso })
     .eq('id', liveSession.id);
 
-  const reveal = shouldReveal(settings, liveSession.phase);
   return json({
     resume_token: resumeToken,
     participant,
-    session: {
-      id: liveSession.id,
-      code: liveSession.code,
-      status: liveSession.status,
-      phase: liveSession.phase,
-      current_index: liveSession.current_index,
-      version: liveSession.version,
-      phase_ends_at: liveSession.phase_ends_at,
-      phase_started_at: liveSession.phase_started_at,
-      settings,
-      question_count: Array.isArray(liveSession.question_snapshot) ? liveSession.question_snapshot.length : 0,
-      current_question: ['answering', 'reveal'].includes(liveSession.phase)
-        ? currentPublicQuestion(liveSession, reveal)
-        : null,
-    },
+    rejoined,
+    session: sessionPublicPayload(liveSession, settings),
   });
 }
 
