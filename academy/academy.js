@@ -32,7 +32,7 @@
   }
 
   async function requireTeacher(client, user) {
-    // First login: register admin Auth user as academy teacher (signup is closed).
+    let ensureErr;
     try {
       const ensured = await A.callLive(
         'ensure_teacher',
@@ -40,8 +40,9 @@
         { accessToken }
       );
       if (ensured?.teacher) return ensured.teacher;
+      if (ensured?.error) ensureErr = new Error(ensured.error);
     } catch (err) {
-      console.warn('ensure_teacher', err);
+      ensureErr = err;
     }
 
     const { data, error } = await client
@@ -49,13 +50,9 @@
       .select('user_id, display_name, is_active')
       .eq('user_id', user.id)
       .maybeSingle();
-    if (error) throw new Error(error.message);
-    if (!data || !data.is_active) {
-      throw new Error(
-        'Не удалось зарегистрировать учителя. Проверьте, что Edge Function academy-live задеплоена.'
-      );
-    }
-    return data;
+    if (data?.is_active) return data;
+    const detail = error?.message || ensureErr?.message || 'unknown';
+    throw new Error('Не удалось войти как учитель: ' + detail);
   }
 
   async function loadLessons(client) {
@@ -247,7 +244,7 @@
     showError(editorError, '');
   }
 
-  async function saveLesson(client, userId) {
+  async function saveLesson(_client, _userId) {
     syncDraftsFromDom();
     const title = document.getElementById('lesson-title').value.trim();
     const subject = document.getElementById('lesson-subject').value;
@@ -290,23 +287,19 @@
       };
     });
 
-    const { data: lesson, error } = await client
-      .from('academy_lessons')
-      .insert({
-        owner_id: userId,
+    const data = await A.callLive(
+      'save_lesson',
+      {
         title,
         subject,
         level: 'beginner',
         description: '',
-      })
-      .select('id')
-      .maybeSingle();
-    if (error) throw error;
-
-    const payload = rows.map((r) => ({ ...r, lesson_id: lesson.id }));
-    const { error: qErr } = await client.from('academy_questions').insert(payload);
-    if (qErr) throw qErr;
-    return lesson.id;
+        questions: rows,
+      },
+      { accessToken }
+    );
+    if (!data?.lesson?.id) throw new Error(data?.error || 'Не удалось сохранить урок');
+    return data.lesson.id;
   }
 
   async function startSession(lessonId) {

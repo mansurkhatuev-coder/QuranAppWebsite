@@ -59,19 +59,18 @@ async function requireTeacher(db: SupabaseClient, userId: string) {
 }
 
 /** Any signed-in Auth user (admin signup is closed) can become an Academy teacher. */
-async function handleEnsureTeacher(
+async function upsertTeacher(
   db: SupabaseClient,
   user: { id: string; email?: string | null },
-  body: Record<string, unknown>,
+  displayName?: string,
 ) {
-  const fromBody = typeof body.display_name === 'string' ? body.display_name.trim() : '';
-  const displayName = fromBody || user.email || 'Учитель';
+  const name = (displayName || '').trim() || user.email || 'Учитель';
   const { data, error } = await db
     .from('academy_teachers')
     .upsert(
       {
         user_id: user.id,
-        display_name: displayName,
+        display_name: name,
         is_active: true,
         updated_at: new Date().toISOString(),
       },
@@ -79,8 +78,78 @@ async function handleEnsureTeacher(
     )
     .select('user_id, display_name, is_active')
     .maybeSingle();
-  if (error) return json({ error: error.message }, 500);
-  return json({ teacher: data });
+  if (error) throw new Error(error.message);
+  return data;
+}
+
+async function handleEnsureTeacher(
+  db: SupabaseClient,
+  user: { id: string; email?: string | null },
+  body: Record<string, unknown>,
+) {
+  try {
+    const fromBody = typeof body.display_name === 'string' ? body.display_name.trim() : '';
+    const teacher = await upsertTeacher(db, user, fromBody);
+    return json({ teacher });
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+  }
+}
+
+async function handleSaveLesson(
+  db: SupabaseClient,
+  user: { id: string; email?: string | null },
+  body: Record<string, unknown>,
+) {
+  try {
+    await upsertTeacher(db, user, user.email || 'Учитель');
+  } catch (err) {
+    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+  }
+  await requireTeacher(db, user.id);
+
+  const title = String(body.title || '').trim();
+  const subject = String(body.subject || 'other').trim() || 'other';
+  const level = String(body.level || 'beginner');
+  const description = String(body.description || '');
+  const questions = Array.isArray(body.questions) ? body.questions : [];
+  if (!title) return json({ error: 'title' }, 400);
+  if (!questions.length) return json({ error: 'no_questions' }, 400);
+
+  const { data: lesson, error: lessonErr } = await db
+    .from('academy_lessons')
+    .insert({
+      owner_id: user.id,
+      title,
+      subject,
+      level,
+      description,
+    })
+    .select('id, title')
+    .maybeSingle();
+  if (lessonErr) return json({ error: lessonErr.message }, 500);
+  if (!lesson) return json({ error: 'lesson_create_failed' }, 500);
+
+  const rows = questions.map((raw, position) => {
+    const q = (raw || {}) as Record<string, unknown>;
+    return {
+      lesson_id: lesson.id,
+      type: String(q.type || 'single_choice'),
+      prompt: String(q.prompt || ''),
+      prompt_media: q.prompt_media ?? null,
+      payload: (q.payload || {}) as Record<string, unknown>,
+      scoring: (q.scoring || { method: 'auto', points: 1 }) as Record<string, unknown>,
+      position,
+    };
+  });
+
+  const { error: qErr } = await db.from('academy_questions').insert(rows);
+  if (qErr) {
+    await db.from('academy_lessons').delete().eq('id', lesson.id);
+    return json({ error: qErr.message }, 500);
+  }
+
+  return json({ lesson });
 }
 
 async function canHost(db: SupabaseClient, sessionId: string, userId: string) {
@@ -649,7 +718,7 @@ Deno.serve(async (req) => {
   try {
     const db = serviceClient();
 
-    if (['create', 'control', 'host_state', 'ensure_teacher'].includes(action)) {
+    if (['create', 'control', 'host_state', 'ensure_teacher', 'save_lesson'].includes(action)) {
       if (!authHeader) return json({ error: 'auth' }, 401);
       const userClient = anonAuthedClient(authHeader);
       const { data: userData, error: userErr } = await userClient.auth.getUser();
@@ -657,6 +726,9 @@ Deno.serve(async (req) => {
       const userId = userData.user.id;
       if (action === 'ensure_teacher') {
         return await handleEnsureTeacher(db, userData.user, body);
+      }
+      if (action === 'save_lesson') {
+        return await handleSaveLesson(db, userData.user, body);
       }
       if (action === 'create') return await handleCreate(db, userId, body);
       if (action === 'control') return await handleControl(db, userId, body);
