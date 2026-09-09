@@ -58,6 +58,31 @@ async function requireTeacher(db: SupabaseClient, userId: string) {
   return data;
 }
 
+/** Any signed-in Auth user (admin signup is closed) can become an Academy teacher. */
+async function handleEnsureTeacher(
+  db: SupabaseClient,
+  user: { id: string; email?: string | null },
+  body: Record<string, unknown>,
+) {
+  const fromBody = typeof body.display_name === 'string' ? body.display_name.trim() : '';
+  const displayName = fromBody || user.email || 'Учитель';
+  const { data, error } = await db
+    .from('academy_teachers')
+    .upsert(
+      {
+        user_id: user.id,
+        display_name: displayName,
+        is_active: true,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'user_id' },
+    )
+    .select('user_id, display_name, is_active')
+    .maybeSingle();
+  if (error) return json({ error: error.message }, 500);
+  return json({ teacher: data });
+}
+
 async function canHost(db: SupabaseClient, sessionId: string, userId: string) {
   const { data: session } = await db
     .from('academy_sessions')
@@ -624,12 +649,15 @@ Deno.serve(async (req) => {
   try {
     const db = serviceClient();
 
-    if (['create', 'control', 'host_state'].includes(action)) {
+    if (['create', 'control', 'host_state', 'ensure_teacher'].includes(action)) {
       if (!authHeader) return json({ error: 'auth' }, 401);
       const userClient = anonAuthedClient(authHeader);
       const { data: userData, error: userErr } = await userClient.auth.getUser();
       if (userErr || !userData?.user) return json({ error: 'auth' }, 401);
       const userId = userData.user.id;
+      if (action === 'ensure_teacher') {
+        return await handleEnsureTeacher(db, userData.user, body);
+      }
       if (action === 'create') return await handleCreate(db, userId, body);
       if (action === 'control') return await handleControl(db, userId, body);
       return await handleHostState(db, userId, body);

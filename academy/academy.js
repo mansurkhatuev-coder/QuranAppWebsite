@@ -32,6 +32,18 @@
   }
 
   async function requireTeacher(client, user) {
+    // First login: register admin Auth user as academy teacher (signup is closed).
+    try {
+      const ensured = await A.callLive(
+        'ensure_teacher',
+        { display_name: user.email || user.user_metadata?.full_name || 'Учитель' },
+        { accessToken }
+      );
+      if (ensured?.teacher) return ensured.teacher;
+    } catch (err) {
+      console.warn('ensure_teacher', err);
+    }
+
     const { data, error } = await client
       .from('academy_teachers')
       .select('user_id, display_name, is_active')
@@ -39,7 +51,9 @@
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (!data || !data.is_active) {
-      throw new Error('Аккаунт не в academy_teachers. Дождитесь синхронизации или добавьте строку в Supabase.');
+      throw new Error(
+        'Не удалось зарегистрировать учителя. Проверьте, что Edge Function academy-live задеплоена.'
+      );
     }
     return data;
   }
