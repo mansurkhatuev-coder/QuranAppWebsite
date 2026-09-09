@@ -404,6 +404,15 @@
       const t = event.target;
       if (t.classList.contains('q-type')) {
         syncDraftsFromDom();
+        const idx = Number(t.getAttribute('data-q'));
+        const q = questionDrafts[idx];
+        if (q && q.type === 'single_choice' && (!q.options || q.options.length < 2)) {
+          q.options = [
+            { id: 'a', label: '' },
+            { id: 'b', label: '' },
+          ];
+          q.correct = 'a';
+        }
         renderQuestionEditor();
       }
     });
