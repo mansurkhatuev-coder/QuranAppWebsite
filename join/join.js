@@ -275,8 +275,37 @@
     render(false);
   }
 
+  function getDeviceFingerprint() {
+    try {
+      const key = 'academy_device_fp';
+      let fp = localStorage.getItem(key);
+      if (!fp) {
+        fp = 'fp_' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+        localStorage.setItem(key, fp);
+      }
+      return fp;
+    } catch (_) {
+      return '';
+    }
+  }
+
   async function join(name) {
-    const data = await A.callLive('join', { code, display_name: name });
+    const saved = code ? A.loadResume(code) : null;
+    if (saved?.resume_token) {
+      resumeToken = saved.resume_token;
+      try {
+        await syncResume();
+        return;
+      } catch (_) {
+        /* fall through — token expired or kicked */
+      }
+    }
+
+    const data = await A.callLive('join', {
+      code,
+      display_name: name,
+      client_fingerprint: getDeviceFingerprint(),
+    });
     resumeToken = data.resume_token;
     session = data.session;
     myAnswer = null;
