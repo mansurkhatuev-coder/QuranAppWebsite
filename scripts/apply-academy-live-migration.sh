@@ -19,7 +19,8 @@ if [[ ! -f "$SQL_FILE" ]]; then
 fi
 
 # Safety: refuse destructive statements (ignore SQL comments).
-if python3 - "$SQL_FILE" <<'PY'
+# Python exits 0 when clean, 1 when destructive SQL found.
+if ! python3 - "$SQL_FILE" <<'PY'
 import re, sys
 text = open(sys.argv[1], encoding="utf-8").read()
 # strip /* */ and -- comments
