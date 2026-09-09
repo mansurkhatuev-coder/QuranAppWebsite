@@ -2502,8 +2502,8 @@
   <aside id="guide-banner" class="guide-banner" role="region" aria-label="Инструкция" hidden="">
     <strong>Как пользоваться</strong>
     <ol>
-      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Долгое нажатие — карточка человека (имя, годы, био).</li>
-      <li>Вход: своё имя из списка + пароль семьи. <b>Кто я</b> ставится при входе; фото — в карточке (долгое нажатие), кружок на древе после «Сохранить».</li>
+      <li>Просмотр: жесты, поиск, свернуть/раскрыть ветки. Карточка: тап по листу или долгое нажатие по ветке (имя, годы, био).</li>
+      <li>Вход: своё имя из списка + пароль семьи. <b>Кто я</b> ставится при входе; фото — в карточке (тап по листу / долгое нажатие), кружок на древе после «Сохранить».</li>
       <li><b>+</b> (добавить человека) и <b>Редактировать</b> — сначала обычный пароль. Пол выбирается в форме. Тумблер «Женщины» по умолчанию выключен.</li>
       <li>Линии от женщин к детям — другого цвета (розовые), чтобы не смешиваться с мужской линией.</li>
       <li>В карточке человека: <b>Добавить отца</b> — в том числе у вершины древа (род растёт вверх). Если дети были у матери — отец встаёт рядом с ней, дети переходят к нему.</li>
@@ -2516,7 +2516,7 @@
       <button type="button" id="guide-never" class="guide-dismiss-forever">Не показывать больше</button>
     </div>
   </aside>
-  <p id="edit-hint" class="edit-hint">Режим редактирования: перенос на нового отца, у листьев — удалить. Имя, годы и био — долгое нажатие. Затем «Сохранить».</p>
+  <p id="edit-hint" class="edit-hint">Режим редактирования: перенос на нового отца, у листьев — удалить. Имя, годы и био — из карточки (тап по листу / долгое нажатие). Затем «Сохранить».</p>
   <p id="lock-banner" class="lock-banner" hidden>Правки временно закрыты. Сохранение и смена связей недоступны без суперпароля.</p>
 
   <main>
@@ -4231,6 +4231,12 @@
       var yearEditField = null; // 'born' | 'died'
       var longPressTimer = null;
       var longPressFired = false;
+      function clearLongPressGesture() {
+        if (longPressTimer) {
+          window.clearTimeout(longPressTimer);
+          longPressTimer = null;
+        }
+      }
       var searchInput = document.getElementById('search');
       var searchResults = document.getElementById('search-results');
       var addDialog = document.getElementById('add-dialog');
@@ -7293,7 +7299,7 @@
         } else if (editMode) {
           btn.title = baseTitle + ' — перетащите на нового отца';
         } else {
-          btn.title = baseTitle + ' — долгое нажатие: карточка';
+          btn.title = baseTitle + ' — нажмите: карточка';
         }
         btn.style.width = '100%';
         btn.style.maxWidth = 'none';
@@ -7323,7 +7329,11 @@
           e.stopPropagation();
           if (gestureMoved || longPressFired) return;
           if (editMode) return;
-          if (!meta.hasSons) return;
+          // Leaves have nothing to expand — short tap opens the person card.
+          if (!meta.hasSons) {
+            openPersonSheet(meta.id);
+            return;
+          }
           if (expanded.has(meta.id)) expanded.delete(meta.id);
           else expanded.add(meta.id);
           render();
@@ -7341,29 +7351,46 @@
           clearLongPress();
           var startX = e.clientX;
           var startY = e.clientY;
+          var pointerId = e.pointerId;
+          // Longer hold + larger move cancel: avoid sheet while panning/zooming.
+          // Listen on window (capture): viewport often steals pointer capture for pan.
           longPressTimer = window.setTimeout(function () {
             longPressTimer = null;
+            if (gestureMoved || activePointers.size >= 2) return;
             longPressFired = true;
             try {
               if (navigator.vibrate) navigator.vibrate(12);
             } catch (err) {}
             openPersonSheet(meta.id);
-          }, 520);
+          }, 750);
 
           function onMove(ev) {
-            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 10) {
+            if (ev.pointerId !== pointerId) return;
+            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) > 18) {
               clearLongPress();
             }
           }
-          function onUp() {
+          function onUp(ev) {
+            if (ev && ev.pointerId !== pointerId) return;
+            // Short tap: click is often suppressed because viewport pan calls preventDefault.
+            var shortTap = !!longPressTimer && !gestureMoved && activePointers.size < 2;
             clearLongPress();
-            btn.removeEventListener('pointermove', onMove);
-            btn.removeEventListener('pointerup', onUp);
-            btn.removeEventListener('pointercancel', onUp);
+            window.removeEventListener('pointermove', onMove, true);
+            window.removeEventListener('pointerup', onUp, true);
+            window.removeEventListener('pointercancel', onUp, true);
+            if (!shortTap || editMode) return;
+            longPressFired = true; // suppress residual click
+            if (!meta.hasSons) {
+              openPersonSheet(meta.id);
+              return;
+            }
+            if (expanded.has(meta.id)) expanded.delete(meta.id);
+            else expanded.add(meta.id);
+            render();
           }
-          btn.addEventListener('pointermove', onMove);
-          btn.addEventListener('pointerup', onUp);
-          btn.addEventListener('pointercancel', onUp);
+          window.addEventListener('pointermove', onMove, true);
+          window.addEventListener('pointerup', onUp, true);
+          window.addEventListener('pointercancel', onUp, true);
 
           if (!editMode || !editUnlocked) return;
           e.stopPropagation();
@@ -7772,6 +7799,7 @@
         viewport.setPointerCapture(e.pointerId);
         activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
         if (activePointers.size === 2) {
+          clearLongPressGesture();
           beginPinch();
         } else if (activePointers.size === 1) {
           beginPan(activePointers.get(e.pointerId));
@@ -7787,6 +7815,7 @@
         activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
 
         if (activePointers.size >= 2 && pinchOrigin && pinchOrigin.distance > 0) {
+          clearLongPressGesture();
           var pts = Array.from(activePointers.values());
           var dist = pointerDistance(pts[0], pts[1]);
           var rect = viewport.getBoundingClientRect();
@@ -7808,7 +7837,10 @@
 
         if (activePointers.size === 1 && panOrigin) {
           var p = activePointers.get(e.pointerId);
-          if (Math.hypot(p.x - panOrigin.x, p.y - panOrigin.y) > 6) gestureMoved = true;
+          if (Math.hypot(p.x - panOrigin.x, p.y - panOrigin.y) > 6) {
+            gestureMoved = true;
+            clearLongPressGesture();
+          }
           map.x = panOrigin.mapX + (p.x - panOrigin.x);
           map.y = panOrigin.mapY + (p.y - panOrigin.y);
           applyMapTransform();
