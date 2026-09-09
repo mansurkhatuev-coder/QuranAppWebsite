@@ -128,7 +128,7 @@
       .map(
         (s) => `<li>
           <div>
-            <div class="academy-pin" style="font-size:1.4rem;letter-spacing:0.12em">${A.escapeHtml(s.code)}</div>
+            <div class="academy-pin academy-pin--compact">${A.escapeHtml(s.code)}</div>
             <div class="academy-muted">${A.escapeHtml(A.labelStatus(s.status))} · ${A.escapeHtml(
           A.labelPhase(s.phase)
         )}</div>
@@ -167,7 +167,7 @@
       .map((q, idx) => {
         const optionsHtml = (q.options || [])
           .map(
-            (o, oi) => `<div style="display:grid;grid-template-columns:1fr auto;gap:0.4rem;align-items:end;margin-top:0.4rem">
+            (o, oi) => `<div class="academy-option-row">
               <label>Вариант ${oi + 1}
                 <input data-q="${idx}" data-opt="${oi}" class="opt-label" value="${A.escapeHtml(o.label)}" />
               </label>
@@ -180,10 +180,10 @@
         const singleChoiceBlock =
           q.type === 'single_choice'
             ? `${optionsHtml}
-          <div class="academy-actions" style="margin-top:0.6rem">
+          <div class="academy-actions">
             <button type="button" class="academy-btn" data-add-opt="${idx}">+ Вариант</button>
           </div>
-          <label style="margin-top:0.5rem">Правильный ответ
+          <label class="academy-field-gap">Правильный ответ
             <select data-q="${idx}" class="q-correct">
               ${(q.options || [])
                 .map(
@@ -195,24 +195,24 @@
                 .join('')}
             </select>
           </label>
-          <p class="academy-muted" style="margin-top:0.4rem;font-size:0.85rem">Можно добавить до 8 вариантов.</p>`
+          <p class="academy-muted academy-field-gap">Можно добавить до 8 вариантов.</p>`
             : '';
-        return `<div class="academy-card" style="margin-top:0.75rem;padding:1rem">
+        return `<div class="academy-card academy-editor-block">
           <strong>Вопрос ${idx + 1}</strong>
-          <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Тип
+          <label class="academy-field-gap">Тип
             <select data-q="${idx}" class="q-type">
               <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один из вариантов</option>
               <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно</option>
               <option value="short_text" ${q.type === 'short_text' ? 'selected' : ''}>Короткий ввод</option>
             </select>
           </label>
-          <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Текст вопроса
+          <label class="academy-field-gap">Текст вопроса
             <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
           </label>
           ${singleChoiceBlock}
           ${
             q.type === 'true_false'
-              ? `<label style="margin-top:0.5rem">Правильный ответ
+              ? `<label class="academy-field-gap">Правильный ответ
             <select data-q="${idx}" class="q-tf">
               <option value="true" ${q.tf ? 'selected' : ''}>Верно</option>
               <option value="false" ${!q.tf ? 'selected' : ''}>Неверно</option>
@@ -221,7 +221,7 @@
           }
           ${
             q.type === 'short_text'
-              ? `<label style="margin-top:0.5rem">Правильные ответы (через | )
+              ? `<label class="academy-field-gap">Правильные ответы (через | )
             <input data-q="${idx}" class="q-accepted" value="${A.escapeHtml(q.accepted)}" placeholder="4|четыре" />
           </label>`
               : ''
