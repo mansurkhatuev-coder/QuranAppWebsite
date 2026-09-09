@@ -12,12 +12,16 @@
   const playFeedback = document.getElementById('play-feedback');
   const playError = document.getElementById('play-error');
   const submitBtn = document.getElementById('btn-submit-answer');
+  const playTimer = document.getElementById('play-timer');
+  const playTimerValue = document.getElementById('play-timer-value');
+  const playTimerBar = document.getElementById('play-timer-bar');
 
   let code = '';
   let resumeToken = '';
   let session = null;
   let myAnswer = null;
   let pollTimer = null;
+  let tickTimer = null;
   let selectedAnswer = null;
   let draftText = '';
   let renderedQuestionKey = '';
@@ -30,6 +34,33 @@
 
   function softError(message) {
     return A.humanizeError ? A.humanizeError(message) : message;
+  }
+
+  function formatMs(ms) {
+    if (ms == null || !Number.isFinite(ms)) return '—';
+    const s = Math.max(0, ms) / 1000;
+    if (s < 10) return s.toFixed(1).replace('.', ',') + ' с';
+    return Math.round(s) + ' с';
+  }
+
+  function updatePlayTimer() {
+    if (
+      !session ||
+      session.phase !== 'answering' ||
+      session.status !== 'live' ||
+      !session.phase_ends_at ||
+      myAnswer
+    ) {
+      playTimer.hidden = true;
+      return;
+    }
+    const ends = new Date(session.phase_ends_at).getTime();
+    const total = Math.max(1, Number(session.settings?.timer_seconds || 0) * 1000);
+    const left = Math.max(0, ends - Date.now());
+    playTimer.hidden = false;
+    playTimerValue.textContent = formatMs(left);
+    playTimerBar.style.width = Math.max(0, Math.min(100, (left / total) * 100)) + '%';
+    playTimer.classList.toggle('academy-timer--urgent', left <= 5000);
   }
 
   function persist() {
@@ -56,6 +87,7 @@
       session?.phase,
       session?.current_index,
       session?.question_count,
+      session?.phase_ends_at || '',
       myAnswer ? '1' : '0',
     ].join('|');
   }
@@ -158,10 +190,11 @@
     if (session.phase === 'reveal') {
       showError(
         playFeedback,
-        myAnswer ? 'Ответ принят. Учитель показывает разбор.' : 'Приём ответов закрыт.'
+        myAnswer ? 'Ответ принят. Ждите следующий вопрос.' : 'Приём ответов закрыт.'
       );
       playFeedback.hidden = false;
       setControlsLocked(true);
+      playTimer.hidden = true;
       return;
     }
 
@@ -169,6 +202,7 @@
       showError(playFeedback, 'Ответ принят');
       playFeedback.hidden = false;
       setControlsLocked(true);
+      playTimer.hidden = true;
     } else {
       playFeedback.hidden = true;
       setControlsLocked(false);
@@ -191,6 +225,7 @@
       )}. Не закрывайте вкладку — после обновления страницы вернётесь сюда.</p>`;
       submitBtn.hidden = true;
       playFeedback.hidden = true;
+      playTimer.hidden = true;
       return;
     }
 
@@ -201,6 +236,7 @@
       playBody.innerHTML = `<p class="academy-muted">Спасибо! Учитель видит ваши ответы.</p>`;
       submitBtn.hidden = true;
       playFeedback.hidden = true;
+      playTimer.hidden = true;
       return;
     }
 
@@ -222,6 +258,7 @@
         renderQuestion(q, { locked: session.phase === 'reveal' || session.status === 'paused' });
       }
       updateAnswerChrome();
+      updatePlayTimer();
     }
   }
 
@@ -280,11 +317,10 @@
       });
       myAnswer = data.answer;
       lastSyncKey = syncKey();
-      if (data.feedback?.is_correct === true) showError(playFeedback, 'Верно');
-      else if (data.feedback?.is_correct === false) showError(playFeedback, 'Пока неверно — смотрите разбор у учителя');
-      else showError(playFeedback, 'Ответ принят');
+      showError(playFeedback, 'Ответ принят');
       playFeedback.hidden = false;
       setControlsLocked(true);
+      updatePlayTimer();
     } catch (err) {
       showError(playError, softError(err.message || err));
       submitBtn.disabled = Boolean(myAnswer);
@@ -304,6 +340,7 @@
     try {
       await join(name);
       if (!pollTimer) pollTimer = setInterval(() => syncResume().catch(() => {}), 2000);
+      if (!tickTimer) tickTimer = setInterval(updatePlayTimer, 200);
     } catch (err) {
       showError(errorEl, softError(err.message || err));
     }
@@ -313,7 +350,9 @@
   document.getElementById('btn-leave').addEventListener('click', () => {
     if (code) A.clearResume(code);
     clearInterval(pollTimer);
+    clearInterval(tickTimer);
     pollTimer = null;
+    tickTimer = null;
     resumeToken = '';
     session = null;
     selectedAnswer = null;
@@ -335,6 +374,7 @@
       try {
         await syncResume();
         if (!pollTimer) pollTimer = setInterval(() => syncResume().catch(() => {}), 2000);
+        if (!tickTimer) tickTimer = setInterval(updatePlayTimer, 200);
       } catch (_) {
         /* fall back to form */
       }

@@ -212,13 +212,22 @@ async function canHost(db: SupabaseClient, sessionId: string, userId: string) {
 }
 
 function settingsDefaults(input: Record<string, unknown> | null | undefined) {
+  const rawTimer = input?.timer_seconds;
+  const timer =
+    typeof rawTimer === 'number' && Number.isFinite(rawTimer)
+      ? Math.max(0, Math.min(300, Math.floor(rawTimer)))
+      : 30;
   return {
-    mode: typeof input?.mode === 'string' ? input.mode : 'learning',
-    timer_seconds: typeof input?.timer_seconds === 'number' ? input.timer_seconds : 0,
+    mode: typeof input?.mode === 'string' ? input.mode : 'quiz',
+    timer_seconds: timer,
+    auto_advance: input?.auto_advance !== false,
+    auto_advance_on_all: input?.auto_advance_on_all !== false,
+    show_instant_feedback: Boolean(input?.show_instant_feedback),
     leaderboard: Boolean(input?.leaderboard),
     shuffle_questions: Boolean(input?.shuffle_questions),
     shuffle_options: Boolean(input?.shuffle_options),
-    reveal_answers: typeof input?.reveal_answers === 'string' ? input.reveal_answers : 'learning_only',
+    // Student never sees correct keys until an explicit reveal policy allows it.
+    reveal_answers: typeof input?.reveal_answers === 'string' ? input.reveal_answers : 'never',
     allow_late_join: input?.allow_late_join !== false,
   };
 }
@@ -262,6 +271,149 @@ function currentPublicQuestion(session: Record<string, unknown>, reveal: boolean
   const q = snap[idx] as Record<string, unknown> | undefined;
   if (!q) return null;
   return publicQuestion(q, { reveal });
+}
+
+function currentRawQuestion(session: Record<string, unknown>) {
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  const idx = Number(session.current_index) || 0;
+  return (snap[idx] as Record<string, unknown> | undefined) || null;
+}
+
+function formatAnswerLabel(
+  q: Record<string, unknown> | null,
+  answerPayload: Record<string, unknown> | null | undefined,
+) {
+  if (!q || !answerPayload) return '—';
+  const type = String(q.type || '');
+  const payload = (q.payload || {}) as Record<string, unknown>;
+  if (type === 'single_choice' || type === 'image_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const opt = options.find((o) => String(o.id) === String(answerPayload.option_id));
+    return opt ? String(opt.label ?? '') : String(answerPayload.option_id || '—');
+  }
+  if (type === 'true_false') return answerPayload.value ? 'Верно' : 'Неверно';
+  if (type === 'short_text') return String(answerPayload.text || '—');
+  return 'ответ';
+}
+
+function publicStudentAnswer(ans: Record<string, unknown> | null, revealCorrect: boolean) {
+  if (!ans) return null;
+  const out: Record<string, unknown> = {
+    question_index: ans.question_index,
+    answer_payload: ans.answer_payload,
+  };
+  if (revealCorrect) {
+    out.is_correct = ans.is_correct;
+    out.score = ans.score;
+  }
+  return out;
+}
+
+function buildNextPatch(session: Record<string, unknown>, settings: ReturnType<typeof settingsDefaults>, now: Date) {
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  const nextIndex = session.phase === 'lobby' ? 0 : Number(session.current_index) + 1;
+  const patch: Record<string, unknown> = {
+    version: Number(session.version) + 1,
+    last_activity_at: now.toISOString(),
+  };
+  if (nextIndex >= snap.length) {
+    patch.status = 'finished';
+    patch.phase = 'results';
+    patch.finished_at = now.toISOString();
+    patch.phase_ends_at = null;
+    patch.phase_started_at = null;
+  } else {
+    patch.status = 'live';
+    patch.phase = 'answering';
+    patch.current_index = nextIndex;
+    patch.phase_started_at = now.toISOString();
+    if (settings.timer_seconds > 0) {
+      patch.phase_ends_at = new Date(now.getTime() + settings.timer_seconds * 1000).toISOString();
+    } else {
+      patch.phase_ends_at = null;
+    }
+  }
+  return patch;
+}
+
+async function maybeAutoAdvance(db: SupabaseClient, session: Record<string, unknown>) {
+  if (!session?.id) return session;
+  if (session.status !== 'live' || session.phase !== 'answering') return session;
+  const settings = settingsDefaults(session.settings as Record<string, unknown>);
+  let due = false;
+
+  if (settings.auto_advance && session.phase_ends_at) {
+    if (Date.now() >= new Date(String(session.phase_ends_at)).getTime()) due = true;
+  }
+
+  if (!due && settings.auto_advance_on_all) {
+    const participants = await participantCount(db, String(session.id));
+    const answered = await answeredCount(db, String(session.id), Number(session.current_index));
+    if (participants > 0 && answered >= participants) due = true;
+  }
+
+  if (!due) return session;
+
+  const now = new Date();
+  const patch = buildNextPatch(session, settings, now);
+  const { data: updated } = await db
+    .from('academy_sessions')
+    .update(patch)
+    .eq('id', session.id)
+    .eq('version', session.version)
+    .select('*')
+    .maybeSingle();
+  return updated || session;
+}
+
+async function buildHostBoard(db: SupabaseClient, session: Record<string, unknown>) {
+  const q = currentRawQuestion(session);
+  const idx = Number(session.current_index) || 0;
+  const { data: people } = await db
+    .from('academy_participants')
+    .select('id, display_name, last_seen_at, status')
+    .eq('session_id', String(session.id))
+    .order('joined_at', { ascending: true });
+  const { data: answers } = await db
+    .from('academy_answers')
+    .select('participant_id, is_correct, score, response_ms, created_at, answer_payload')
+    .eq('session_id', String(session.id))
+    .eq('question_index', idx);
+
+  const byParticipant = new Map((answers || []).map((a) => [a.participant_id, a]));
+  const board = (people || []).map((p) => {
+    const ans = byParticipant.get(p.id);
+    return {
+      participant_id: p.id,
+      display_name: p.display_name,
+      status: p.status,
+      answered: Boolean(ans),
+      is_correct: ans ? ans.is_correct : null,
+      response_ms: ans?.response_ms ?? null,
+      answer_label: ans ? formatAnswerLabel(q, ans.answer_payload as Record<string, unknown>) : null,
+      answered_at: ans?.created_at ?? null,
+    };
+  });
+
+  const times = board.map((b) => b.response_ms).filter((n): n is number => typeof n === 'number');
+  const answered = board.filter((b) => b.answered).length;
+  const correct = board.filter((b) => b.is_correct === true).length;
+  const wrong = board.filter((b) => b.is_correct === false).length;
+  const avg_ms = times.length ? Math.round(times.reduce((s, n) => s + n, 0) / times.length) : null;
+
+  return {
+    people: people || [],
+    board,
+    stats: {
+      participants: board.length,
+      answered,
+      correct,
+      wrong,
+      waiting: Math.max(0, board.length - answered),
+      avg_ms,
+      fastest_ms: times.length ? Math.min(...times) : null,
+    },
+  };
 }
 
 async function handleCreate(db: SupabaseClient, userId: string, body: Record<string, unknown>) {
@@ -362,11 +514,13 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
     .eq('code', code)
     .in('status', ['lobby', 'live', 'paused'])
     .maybeSingle();
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'session_not_found' }, 500);
   if (!session) return json({ error: 'session_not_found' }, 404);
 
-  const settings = settingsDefaults(session.settings);
-  if (session.status !== 'lobby' && !settings.allow_late_join) {
+  let liveSession = await maybeAutoAdvance(db, session);
+
+  const settings = settingsDefaults(liveSession.settings);
+  if (liveSession.status !== 'lobby' && !settings.allow_late_join) {
     return json({ error: 'late_join_disabled' }, 403);
   }
 
@@ -375,7 +529,7 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
   const { data: participant, error: pErr } = await db
     .from('academy_participants')
     .insert({
-      session_id: session.id,
+      session_id: liveSession.id,
       display_name: displayName.slice(0, 40),
       resume_token_hash: resumeHash,
       status: 'active',
@@ -383,28 +537,30 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
     })
     .select('id, display_name, session_id')
     .maybeSingle();
-  if (pErr) return json({ error: pErr.message }, 500);
+  if (pErr) return json({ error: 'join_failed' }, 500);
 
   await db
     .from('academy_sessions')
     .update({ last_activity_at: new Date().toISOString() })
-    .eq('id', session.id);
+    .eq('id', liveSession.id);
 
-  const reveal = shouldReveal(settings, session.phase);
+  const reveal = shouldReveal(settings, liveSession.phase);
   return json({
     resume_token: resumeToken,
     participant,
     session: {
-      id: session.id,
-      code: session.code,
-      status: session.status,
-      phase: session.phase,
-      current_index: session.current_index,
-      version: session.version,
+      id: liveSession.id,
+      code: liveSession.code,
+      status: liveSession.status,
+      phase: liveSession.phase,
+      current_index: liveSession.current_index,
+      version: liveSession.version,
+      phase_ends_at: liveSession.phase_ends_at,
+      phase_started_at: liveSession.phase_started_at,
       settings,
-      question_count: Array.isArray(session.question_snapshot) ? session.question_snapshot.length : 0,
-      current_question: ['answering', 'reveal'].includes(session.phase)
-        ? currentPublicQuestion(session, reveal)
+      question_count: Array.isArray(liveSession.question_snapshot) ? liveSession.question_snapshot.length : 0,
+      current_question: ['answering', 'reveal'].includes(liveSession.phase)
+        ? currentPublicQuestion(liveSession, reveal)
         : null,
     },
   });
@@ -424,8 +580,9 @@ async function handleResume(db: SupabaseClient, body: Record<string, unknown>) {
   if (error) return json({ error: error.message }, 500);
   if (!participant || participant.status === 'kicked') return json({ error: 'invalid_token' }, 401);
 
-  const session = await loadSession(db, participant.session_id);
-  if (!session || session.code !== code) return json({ error: 'session_mismatch' }, 404);
+  const sessionRaw = await loadSession(db, participant.session_id);
+  if (!sessionRaw || sessionRaw.code !== code) return json({ error: 'session_mismatch' }, 404);
+  const session = await maybeAutoAdvance(db, sessionRaw);
 
   await db
     .from('academy_participants')
@@ -439,11 +596,11 @@ async function handleResume(db: SupabaseClient, body: Record<string, unknown>) {
   if (['answering', 'reveal', 'results'].includes(session.phase)) {
     const { data: ans } = await db
       .from('academy_answers')
-      .select('question_index, is_correct, score, answer_payload')
+      .select('question_index, is_correct, score, answer_payload, response_ms')
       .eq('participant_id', participant.id)
       .eq('question_index', session.current_index)
       .maybeSingle();
-    myAnswer = ans;
+    myAnswer = publicStudentAnswer(ans, reveal || Boolean(settings.show_instant_feedback));
   }
 
   return json({
@@ -455,12 +612,13 @@ async function handleResume(db: SupabaseClient, body: Record<string, unknown>) {
       phase: session.phase,
       current_index: session.current_index,
       version: session.version,
+      phase_ends_at: session.phase_ends_at,
+      phase_started_at: session.phase_started_at,
       settings,
       question_count: Array.isArray(session.question_snapshot) ? session.question_snapshot.length : 0,
       current_question: ['answering', 'reveal'].includes(session.phase)
         ? currentPublicQuestion(session, reveal)
         : null,
-      finished: session.status === 'finished' || session.phase === 'results',
     },
     my_answer: myAnswer,
   });
@@ -492,8 +650,9 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
     if (session.status !== 'lobby' && session.status !== 'paused') return json({ error: 'bad_state' }, 400);
     patch.status = 'live';
     patch.phase = 'answering';
-    patch.current_index = 0;
+    patch.current_index = session.status === 'paused' ? session.current_index : 0;
     patch.started_at = session.started_at || now.toISOString();
+    patch.phase_started_at = now.toISOString();
     if (settings.timer_seconds > 0) {
       patch.phase_ends_at = new Date(now.getTime() + settings.timer_seconds * 1000).toISOString();
     } else patch.phase_ends_at = null;
@@ -505,25 +664,15 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
     if (!['answering', 'reveal', 'lobby'].includes(session.phase) && session.status !== 'paused') {
       return json({ error: 'bad_state' }, 400);
     }
-    const nextIndex = session.phase === 'lobby' ? 0 : Number(session.current_index) + 1;
-    if (nextIndex >= snap.length) {
-      patch.status = 'finished';
-      patch.phase = 'results';
-      patch.finished_at = now.toISOString();
-      patch.phase_ends_at = null;
-    } else {
-      patch.status = 'live';
-      patch.phase = 'answering';
-      patch.current_index = nextIndex;
-      if (settings.timer_seconds > 0) {
-        patch.phase_ends_at = new Date(now.getTime() + settings.timer_seconds * 1000).toISOString();
-      } else patch.phase_ends_at = null;
-    }
+    Object.assign(patch, buildNextPatch(session, settings, now));
+    // buildNextPatch already sets version; keep single increment from outer patch base
+    patch.version = session.version + 1;
   } else if (command === 'finish') {
     patch.status = 'finished';
     patch.phase = 'results';
     patch.finished_at = now.toISOString();
     patch.phase_ends_at = null;
+    patch.phase_started_at = null;
   } else if (command === 'pause') {
     if (session.status !== 'live') return json({ error: 'bad_state' }, 400);
     patch.status = 'paused';
@@ -543,11 +692,10 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
     .eq('version', session.version)
     .select('*')
     .maybeSingle();
-  if (error) return json({ error: error.message }, 500);
+  if (error) return json({ error: 'version_conflict' }, 500);
   if (!updated) return json({ error: 'version_conflict' }, 409);
 
-  const participants = await participantCount(db, sessionId);
-  const answered = await answeredCount(db, sessionId, updated.current_index);
+  const board = await buildHostBoard(db, updated);
   return json({
     session: {
       id: updated.id,
@@ -557,13 +705,18 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
       current_index: updated.current_index,
       version: updated.version,
       phase_ends_at: updated.phase_ends_at,
+      phase_started_at: updated.phase_started_at,
       settings: settingsDefaults(updated.settings),
       question_count: snap.length,
       current_question: ['answering', 'reveal'].includes(updated.phase)
-        ? currentPublicQuestion(updated, shouldReveal(settingsDefaults(updated.settings), updated.phase))
+        ? currentPublicQuestion(updated, true)
         : null,
-      participants,
-      answered,
+      participants: board.stats.participants,
+      answered: board.stats.answered,
+      people: board.people,
+      board: board.board,
+      stats: board.stats,
+      join_url: `https://waydean.ru/join/?c=${updated.code}`,
     },
   });
 }
@@ -582,8 +735,9 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     .maybeSingle();
   if (!participant || participant.status === 'kicked') return json({ error: 'invalid_token' }, 401);
 
-  const session = await loadSession(db, participant.session_id);
-  if (!session) return json({ error: 'not_found' }, 404);
+  const sessionRaw = await loadSession(db, participant.session_id);
+  if (!sessionRaw) return json({ error: 'not_found' }, 404);
+  const session = await maybeAutoAdvance(db, sessionRaw);
   if (session.status !== 'live' || session.phase !== 'answering') return json({ error: 'not_accepting' }, 409);
   if (questionIndex !== session.current_index) return json({ error: 'wrong_question' }, 409);
 
@@ -598,7 +752,13 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     .eq('question_index', questionIndex)
     .maybeSingle();
   if (existing) {
-    return json({ ok: true, already: true, answer: existing });
+    const settings = settingsDefaults(session.settings);
+    return json({
+      ok: true,
+      already: true,
+      answer: publicStudentAnswer(existing, Boolean(settings.show_instant_feedback)),
+      feedback: { accepted: true },
+    });
   }
 
   const scored = scoreAnswer(
@@ -608,6 +768,9 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     (q.scoring || {}) as Record<string, unknown>,
   );
 
+  const startedAt = session.phase_started_at ? new Date(String(session.phase_started_at)).getTime() : null;
+  const responseMs = startedAt != null && Number.isFinite(startedAt) ? Math.max(0, Date.now() - startedAt) : null;
+
   const row = {
     session_id: session.id,
     participant_id: participant.id,
@@ -616,6 +779,7 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     answer_payload: answerPayload,
     is_correct: scored.is_correct,
     score: scored.score,
+    response_ms: responseMs,
     scored_at: scored.pending ? null : new Date().toISOString(),
     scored_by: scored.pending ? null : 'auto',
   };
@@ -629,9 +793,14 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
         .eq('participant_id', participant.id)
         .eq('question_index', questionIndex)
         .maybeSingle();
-      return json({ ok: true, already: true, answer: again });
+      return json({
+        ok: true,
+        already: true,
+        answer: publicStudentAnswer(again, false),
+        feedback: { accepted: true },
+      });
     }
-    return json({ error: error.message }, 500);
+    return json({ error: 'submit_failed' }, 500);
   }
 
   await db
@@ -640,12 +809,16 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     .eq('id', participant.id);
 
   const settings = settingsDefaults(session.settings);
-  const feedback =
-    settings.mode === 'learning' && !scored.pending
-      ? { is_correct: scored.is_correct, correct: publicQuestion(q, { reveal: true }).payload }
-      : { accepted: true };
+  const feedback = settings.show_instant_feedback && !scored.pending
+    ? { is_correct: scored.is_correct, accepted: true }
+    : { accepted: true };
 
-  return json({ ok: true, answer: inserted, feedback });
+  // Auto-advance may fire on next host/resume poll when all answered.
+  return json({
+    ok: true,
+    answer: publicStudentAnswer(inserted, Boolean(settings.show_instant_feedback)),
+    feedback,
+  });
 }
 
 async function handleHeartbeat(db: SupabaseClient, body: Record<string, unknown>) {
@@ -671,15 +844,10 @@ async function handleHostState(db: SupabaseClient, userId: string, body: Record<
   const sessionId = String(body.session_id || '');
   if (!sessionId) return json({ error: 'session_id' }, 400);
   if (!(await canHost(db, sessionId, userId))) return json({ error: 'forbidden' }, 403);
-  const session = await loadSession(db, sessionId);
-  if (!session) return json({ error: 'not_found' }, 404);
-  const participants = await participantCount(db, sessionId);
-  const answered = await answeredCount(db, sessionId, session.current_index);
-  const { data: people } = await db
-    .from('academy_participants')
-    .select('id, display_name, last_seen_at, status')
-    .eq('session_id', sessionId)
-    .order('joined_at', { ascending: true });
+  const sessionRaw = await loadSession(db, sessionId);
+  if (!sessionRaw) return json({ error: 'not_found' }, 404);
+  const session = await maybeAutoAdvance(db, sessionRaw);
+  const board = await buildHostBoard(db, session);
 
   return json({
     session: {
@@ -690,12 +858,15 @@ async function handleHostState(db: SupabaseClient, userId: string, body: Record<
       current_index: session.current_index,
       version: session.version,
       phase_ends_at: session.phase_ends_at,
+      phase_started_at: session.phase_started_at,
       settings: settingsDefaults(session.settings),
       question_count: Array.isArray(session.question_snapshot) ? session.question_snapshot.length : 0,
       current_question: currentPublicQuestion(session, true),
-      participants,
-      answered,
-      people: people || [],
+      participants: board.stats.participants,
+      answered: board.stats.answered,
+      people: board.people,
+      board: board.board,
+      stats: board.stats,
       join_url: `https://waydean.ru/join/?c=${session.code}`,
     },
   });

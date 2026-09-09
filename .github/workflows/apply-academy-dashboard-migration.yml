@@ -1,0 +1,41 @@
+name: Apply Academy dashboard migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/academy-teacher-dashboard-51a2
+    paths:
+      - admin/supabase-migration-academy-dashboard.sql
+      - .github/workflows/apply-academy-dashboard-migration.yml
+      - supabase/functions/academy-live/**
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply dashboard timing columns
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-dashboard.sql
+
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy academy-live
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy academy-live \
+            --project-ref rivjkiksknnesahrvamf \
+            --no-verify-jwt \
+            --use-api

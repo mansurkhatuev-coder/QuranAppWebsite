@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="../academy/academy.css?v=3" />
+    <link rel="stylesheet" href="../academy/academy.css?v=4" />
   </head>
   <body class="academy-body">
     <div class="academy-shell">
@@ -49,6 +49,11 @@
       <div class="academy-card" id="play-card" hidden>
         <p class="academy-kicker" id="play-kicker">Лобби</p>
         <p class="academy-title" style="font-size:1.5rem" id="play-title">Ожидание учителя…</p>
+        <div id="play-timer" class="academy-timer" hidden>
+          <div class="academy-timer__label">Осталось</div>
+          <div id="play-timer-value" class="academy-timer__value">—</div>
+          <div class="academy-timer__bar"><span id="play-timer-bar"></span></div>
+        </div>
         <div id="play-body"></div>
         <p id="play-feedback" class="academy-ok" hidden></p>
         <p id="play-error" class="academy-error" hidden></p>
@@ -60,7 +65,7 @@
     </div>
 
     <script src="../admin/supabase-config.js?v=7"></script>
-    <script src="../academy/academy-shared.js?v=3"></script>
-    <script src="./join.js?v=3"></script>
+    <script src="../academy/academy-shared.js?v=4"></script>
+    <script src="./join.js?v=4"></script>
   </body>
 </html>
