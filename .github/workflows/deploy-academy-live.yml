@@ -8,10 +8,12 @@ on:
       - cursor/academy-teacher-login-fix-51a2
       - cursor/academy-seed-lessons-51a2
       - cursor/academy-ux-hard-fix-51a2
+      - cursor/academy-teacher-dashboard-51a2
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml
       - admin/supabase-migration-academy-teachers-bootstrap.sql
+      - admin/supabase-migration-academy-dashboard.sql
 
 permissions:
   contents: read
@@ -35,6 +37,15 @@ jobs:
         run: |
           chmod +x scripts/apply-academy-live-migration.sh
           scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-teachers-bootstrap.sql
+
+      - name: Apply dashboard timing columns (additive)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          if [ -f admin/supabase-migration-academy-dashboard.sql ]; then
+            scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-dashboard.sql
+          fi
 
       - name: Deploy academy-live function
         env:

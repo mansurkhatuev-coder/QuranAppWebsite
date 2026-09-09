@@ -16,9 +16,14 @@
   const questionsEditor = document.getElementById('questions-editor');
   const editorError = document.getElementById('editor-error');
   const lessonForm = document.getElementById('lesson-form');
+  const startCard = document.getElementById('start-card');
+  const startForm = document.getElementById('start-form');
+  const startError = document.getElementById('start-error');
+  const startLessonTitle = document.getElementById('start-lesson-title');
 
   let accessToken = '';
   let questionDrafts = [];
+  let pendingStartLesson = null;
 
   function showError(el, message) {
     if (!el) return;
@@ -104,7 +109,9 @@
           l.level ? ' · ' + A.escapeHtml(levelLabel(l.level)) : ''
         }</div>
           </div>
-          <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(l.id)}">Запустить</button>
+          <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(l.id)}" data-title="${A.escapeHtml(
+          l.title
+        )}">Запустить</button>
         </li>`
       )
       .join('');
@@ -323,23 +330,34 @@
     return data.lesson.id;
   }
 
-  async function startSession(lessonId) {
+  async function startSession(lessonId, settings) {
     const data = await A.callLive(
       'create',
       {
         lesson_id: lessonId,
         settings: {
-          mode: 'learning',
-          timer_seconds: 0,
+          mode: 'quiz',
+          timer_seconds: Number(settings?.timer_seconds || 0),
+          auto_advance: settings?.auto_advance !== false,
+          auto_advance_on_all: settings?.auto_advance_on_all !== false,
+          show_instant_feedback: false,
           leaderboard: false,
           allow_late_join: true,
-          reveal_answers: 'learning_only',
+          reveal_answers: 'never',
         },
       },
       { accessToken }
     );
     if (!data?.session?.id) throw new Error(friendly(data?.error, 'Не удалось запустить урок'));
     location.href = `./session/?id=${encodeURIComponent(data.session.id)}`;
+  }
+
+  function openStartSettings(lesson) {
+    pendingStartLesson = lesson;
+    startLessonTitle.textContent = lesson?.title || 'Урок';
+    startCard.hidden = false;
+    showError(startError, '');
+    startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
   async function bootApp(client, session) {
@@ -409,6 +427,11 @@
     document.getElementById('btn-cancel-editor').addEventListener('click', () => {
       editorCard.hidden = true;
       showError(editorError, '');
+    });
+    document.getElementById('btn-cancel-start').addEventListener('click', () => {
+      startCard.hidden = true;
+      pendingStartLesson = null;
+      showError(startError, '');
     });
     document.getElementById('btn-add-question').addEventListener('click', () => {
       syncDraftsFromDom();
@@ -497,20 +520,35 @@
       }
     });
 
-    lessonsList.addEventListener('click', async (event) => {
+    startForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      if (!pendingStartLesson?.id) return;
+      showError(startError, '');
+      const { data } = await client.auth.getSession();
+      if (!data?.session) return setLoggedIn(false);
+      accessToken = data.session.access_token;
+      const submitBtn = startForm.querySelector('button[type="submit"]');
+      if (submitBtn) submitBtn.disabled = true;
+      try {
+        await startSession(pendingStartLesson.id, {
+          timer_seconds: Number(document.getElementById('start-timer').value),
+          auto_advance: document.getElementById('start-auto').checked,
+          auto_advance_on_all: document.getElementById('start-auto-all').checked,
+        });
+      } catch (err) {
+        showError(startError, friendly(err, 'Не удалось запустить урок'));
+        if (submitBtn) submitBtn.disabled = false;
+      }
+    });
+
+    lessonsList.addEventListener('click', (event) => {
       const btn = event.target.closest('[data-start]');
       if (!btn) return;
-      btn.disabled = true;
       showError(appError, '');
-      try {
-        const { data } = await client.auth.getSession();
-        if (!data?.session) return setLoggedIn(false);
-        accessToken = data.session.access_token;
-        await startSession(btn.getAttribute('data-start'));
-      } catch (err) {
-        showError(appError, friendly(err, 'Не удалось запустить урок'));
-        btn.disabled = false;
-      }
+      openStartSettings({
+        id: btn.getAttribute('data-start'),
+        title: btn.getAttribute('data-title') || 'Урок',
+      });
     });
   }
 

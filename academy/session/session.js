@@ -4,7 +4,11 @@
   const metaEl = document.getElementById('session-meta');
   const questionBox = document.getElementById('question-box');
   const optionsBox = document.getElementById('options-box');
-  const peopleBox = document.getElementById('people-box');
+  const boardBox = document.getElementById('board-box');
+  const statsBox = document.getElementById('stats-box');
+  const timerBox = document.getElementById('timer-box');
+  const timerValue = document.getElementById('timer-value');
+  const timerBar = document.getElementById('timer-bar');
   const errorEl = document.getElementById('session-error');
   const joinLink = document.getElementById('join-link');
   const btnStart = document.getElementById('btn-start');
@@ -15,10 +19,18 @@
   let accessToken = '';
   let state = null;
   let pollTimer = null;
+  let tickTimer = null;
 
   function showError(message) {
     errorEl.hidden = !message;
     errorEl.textContent = message ? A.humanizeError(message) : '';
+  }
+
+  function formatMs(ms) {
+    if (ms == null || !Number.isFinite(ms)) return '—';
+    const s = Math.max(0, ms) / 1000;
+    if (s < 10) return s.toFixed(1).replace('.', ',') + ' с';
+    return Math.round(s) + ' с';
   }
 
   function formatCorrect(q) {
@@ -69,11 +81,69 @@
     optionsBox.hidden = !html;
   }
 
+  function renderBoard() {
+    const board = state?.board || [];
+    const stats = state?.stats || {};
+    if (!board.length) {
+      statsBox.hidden = true;
+      boardBox.innerHTML = '<p class="academy-muted">Пока никого — ждите вход по коду</p>';
+      return;
+    }
+
+    statsBox.hidden = false;
+    statsBox.innerHTML = `
+      <div><strong>${stats.answered || 0}</strong><span>ответили</span></div>
+      <div><strong>${stats.waiting || 0}</strong><span>ждут</span></div>
+      <div><strong>${stats.correct || 0}</strong><span>верно</span></div>
+      <div><strong>${stats.wrong || 0}</strong><span>ошибка</span></div>
+      <div><strong>${formatMs(stats.avg_ms)}</strong><span>среднее</span></div>
+      <div><strong>${formatMs(stats.fastest_ms)}</strong><span>быстрее всех</span></div>
+    `;
+
+    const showMark = state.phase === 'reveal' || state.phase === 'results' || state.phase === 'answering';
+    boardBox.innerHTML = `<ul class="academy-board-list">${board
+      .map((row) => {
+        let mark = '';
+        if (row.answered && showMark) {
+          if (row.is_correct === true) mark = '<span class="academy-pill academy-pill--ok">верно</span>';
+          else if (row.is_correct === false) mark = '<span class="academy-pill academy-pill--bad">ошибка</span>';
+          else mark = '<span class="academy-pill">принято</span>';
+        } else if (!row.answered && state.phase === 'answering') {
+          mark = '<span class="academy-pill academy-pill--wait">думает…</span>';
+        }
+        return `<li>
+          <div>
+            <strong>${A.escapeHtml(row.display_name)}</strong>
+            <div class="academy-muted">${row.answered ? A.escapeHtml(row.answer_label || '—') : 'ещё не ответил'}</div>
+          </div>
+          <div class="academy-board-meta">
+            <span class="academy-time">${row.answered ? formatMs(row.response_ms) : '—'}</span>
+            ${mark}
+          </div>
+        </li>`;
+      })
+      .join('')}</ul>`;
+  }
+
+  function updateTimer() {
+    if (!state || state.phase !== 'answering' || state.status !== 'live' || !state.phase_ends_at) {
+      timerBox.hidden = true;
+      return;
+    }
+    const ends = new Date(state.phase_ends_at).getTime();
+    const total = Math.max(1, Number(state.settings?.timer_seconds || 0) * 1000);
+    const left = Math.max(0, ends - Date.now());
+    timerBox.hidden = false;
+    timerValue.textContent = formatMs(left);
+    const pct = Math.max(0, Math.min(100, (left / total) * 100));
+    timerBar.style.width = pct + '%';
+    timerBox.classList.toggle('academy-timer--urgent', left <= 5000);
+  }
+
   function updateButtons() {
     if (!state) return;
     const inLobby = state.status === 'lobby' || state.phase === 'lobby';
     const answering = state.phase === 'answering' && state.status === 'live';
-    const revealing = state.phase === 'reveal';
     const finished = state.status === 'finished' || state.phase === 'results';
     btnStart.disabled = finished || (!inLobby && state.status !== 'paused');
     btnReveal.disabled = !answering;
@@ -90,9 +160,14 @@
     )}</a>`;
     const statusRu = A.labelStatus(state.status);
     const phaseRu = A.labelPhase(state.phase);
+    const timerNote =
+      state.settings?.timer_seconds > 0
+        ? ` · таймер ${state.settings.timer_seconds} с`
+        : ' · без таймера';
+    const autoNote = state.settings?.auto_advance === false ? '' : ' · автодалее';
     metaEl.textContent = `${statusRu} · ${phaseRu} · вопрос ${Number(state.current_index) + 1}/${
       state.question_count
-    } · ответили ${state.answered || 0} из ${state.participants || 0}`;
+    } · ответили ${state.answered || 0} из ${state.participants || 0}${timerNote}${autoNote}`;
 
     if (state.current_question && (state.phase === 'answering' || state.phase === 'reveal')) {
       questionBox.hidden = false;
@@ -111,10 +186,8 @@
       renderOptions(null, false);
     }
 
-    const people = state.people || [];
-    peopleBox.textContent = people.length
-      ? 'Участники: ' + people.map((p) => p.display_name).join(', ')
-      : 'Пока никого';
+    renderBoard();
+    updateTimer();
     updateButtons();
   }
 
@@ -146,7 +219,7 @@
       state = { ...state, ...data.session };
       render();
     } catch (err) {
-      if (err.status === 409 && err.payload?.session) {
+      if (err.status === 409) {
         await refresh();
       }
       showError(err.message || String(err));
@@ -172,7 +245,8 @@
     }
     pollTimer = setInterval(() => {
       refresh().catch(() => {});
-    }, 2500);
+    }, 2000);
+    tickTimer = setInterval(updateTimer, 200);
   }
 
   document.getElementById('btn-reload').addEventListener('click', () =>
@@ -182,7 +256,10 @@
   btnReveal.addEventListener('click', () => control('reveal'));
   btnNext.addEventListener('click', () => control('next'));
   btnFinish.addEventListener('click', () => control('finish'));
-  window.addEventListener('beforeunload', () => clearInterval(pollTimer));
+  window.addEventListener('beforeunload', () => {
+    clearInterval(pollTimer);
+    clearInterval(tickTimer);
+  });
 
   init();
 })();

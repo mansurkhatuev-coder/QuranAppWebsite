@@ -13,7 +13,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./academy.css?v=3" />
+    <link rel="stylesheet" href="./academy.css?v=4" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -90,6 +90,40 @@
           </form>
         </div>
 
+        <div class="academy-card" id="start-card" hidden>
+          <p class="academy-kicker">Запуск урока</p>
+          <p class="academy-muted" id="start-lesson-title">—</p>
+          <form id="start-form" class="academy-form academy-start-settings">
+            <label>
+              Таймер на вопрос
+              <select id="start-timer">
+                <option value="20">20 секунд</option>
+                <option value="30" selected>30 секунд</option>
+                <option value="45">45 секунд</option>
+                <option value="60">60 секунд</option>
+                <option value="90">90 секунд</option>
+                <option value="0">Без таймера</option>
+              </select>
+            </label>
+            <label style="display:flex;align-items:center;gap:0.55rem">
+              <input id="start-auto" type="checkbox" checked />
+              Автопереход к следующему вопросу
+            </label>
+            <label style="display:flex;align-items:center;gap:0.55rem">
+              <input id="start-auto-all" type="checkbox" checked />
+              Переходить сразу, когда ответили все
+            </label>
+            <p class="academy-muted" style="margin:0;font-size:0.85rem">
+              Ученикам правильность сразу не показывается — только «Ответ принят».
+            </p>
+            <div class="academy-actions">
+              <button type="submit" class="academy-btn academy-btn--primary">Запустить</button>
+              <button type="button" class="academy-btn academy-btn--ghost" id="btn-cancel-start">Отмена</button>
+            </div>
+            <p id="start-error" class="academy-error" hidden></p>
+          </form>
+        </div>
+
         <div class="academy-card">
           <div id="lessons-empty" class="academy-empty" hidden>Уроков пока нет — создайте первый.</div>
           <ul id="lessons-list" class="academy-list" hidden></ul>
@@ -106,8 +140,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../admin/supabase-config.js?v=7"></script>
-    <script src="./academy-shared.js?v=3"></script>
+    <script src="./academy-shared.js?v=4"></script>
     <script src="./question-types.js?v=1"></script>
-    <script src="./academy.js?v=6"></script>
+    <script src="./academy.js?v=7"></script>
   </body>
 </html>
