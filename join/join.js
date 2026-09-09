@@ -307,14 +307,9 @@
       client_fingerprint: getDeviceFingerprint(),
     });
     resumeToken = data.resume_token;
-    session = data.session;
-    myAnswer = null;
-    selectedAnswer = null;
-    draftText = '';
-    renderedQuestionKey = '';
-    lastSyncKey = syncKey();
     persist();
-    render(true);
+    // Always sync after join so rejoined students keep prior answers/state.
+    await syncResume();
   }
 
   async function submitAnswer() {
