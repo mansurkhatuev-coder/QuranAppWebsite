@@ -12,6 +12,14 @@
   const lessonsEmpty = document.getElementById('lessons-empty');
   const sessionsCard = document.getElementById('active-sessions-card');
   const sessionsList = document.getElementById('sessions-list');
+  const historyEmpty = document.getElementById('history-empty');
+  const historyList = document.getElementById('history-list');
+  const reportCard = document.getElementById('report-card');
+  const reportTitle = document.getElementById('report-title');
+  const reportMeta = document.getElementById('report-meta');
+  const reportStats = document.getElementById('report-stats');
+  const reportList = document.getElementById('report-list');
+  const reportError = document.getElementById('report-error');
   const editorCard = document.getElementById('editor-card');
   const questionsEditor = document.getElementById('questions-editor');
   const editorError = document.getElementById('editor-error');
@@ -24,6 +32,7 @@
   let accessToken = '';
   let questionDrafts = [];
   let pendingStartLesson = null;
+  let historyCache = [];
 
   function showError(el, message) {
     if (!el) return;
@@ -45,6 +54,25 @@
     if (level === 'intermediate') return 'средний';
     if (level === 'advanced') return 'продвинутый';
     return level || '';
+  }
+
+  function formatDate(value) {
+    if (!value) return '—';
+    try {
+      return new Date(value).toLocaleString('ru-RU', {
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+    } catch (_) {
+      return String(value);
+    }
+  }
+
+  function percentLabel(correct, total) {
+    if (!total) return '—';
+    return Math.round((correct / total) * 100) + '%';
   }
 
   async function requireTeacher(client, user) {
@@ -89,6 +117,185 @@
       .order('last_activity_at', { ascending: false });
     if (error) throw new Error(friendly(error, 'Не удалось загрузить сессии.'));
     return data || [];
+  }
+
+  async function loadFinishedSessions(client) {
+    let { data, error } = await client
+      .from('academy_sessions')
+      .select('id, code, status, started_at, finished_at, lesson_id, academy_lessons(title, subject)')
+      .in('status', ['finished', 'abandoned'])
+      .order('finished_at', { ascending: false })
+      .limit(20);
+
+    if (error) {
+      // Fallback if embed is unavailable
+      const plain = await client
+        .from('academy_sessions')
+        .select('id, code, status, started_at, finished_at, lesson_id')
+        .in('status', ['finished', 'abandoned'])
+        .order('finished_at', { ascending: false })
+        .limit(20);
+      if (plain.error) throw new Error(friendly(plain.error, 'Не удалось загрузить историю занятий.'));
+      data = plain.data || [];
+      error = null;
+      const lessonIds = [...new Set(data.map((r) => r.lesson_id).filter(Boolean))];
+      let lessonMap = {};
+      if (lessonIds.length) {
+        const { data: lessons } = await client.from('academy_lessons').select('id, title, subject').in('id', lessonIds);
+        (lessons || []).forEach((l) => {
+          lessonMap[l.id] = l;
+        });
+      }
+      data = data.map((r) => ({ ...r, academy_lessons: lessonMap[r.lesson_id] || null }));
+    }
+
+    const rows = data || [];
+    if (!rows.length) return [];
+
+    const ids = rows.map((r) => r.id);
+    const { data: people, error: pErr } = await client
+      .from('academy_participants')
+      .select('session_id, display_name, status')
+      .in('session_id', ids)
+      .order('joined_at', { ascending: true });
+    if (pErr) throw new Error(friendly(pErr, 'Не удалось загрузить учеников.'));
+
+    const { data: answers, error: aErr } = await client
+      .from('academy_answers')
+      .select('session_id, is_correct')
+      .in('session_id', ids);
+    if (aErr) throw new Error(friendly(aErr, 'Не удалось загрузить ответы.'));
+
+    const namesBySession = {};
+    (people || []).forEach((p) => {
+      if (!namesBySession[p.session_id]) namesBySession[p.session_id] = [];
+      if (p.status === 'kicked') return;
+      const name = String(p.display_name || '').trim();
+      if (!name) return;
+      if (!namesBySession[p.session_id].includes(name)) namesBySession[p.session_id].push(name);
+    });
+
+    const scoreBySession = {};
+    (answers || []).forEach((a) => {
+      if (!scoreBySession[a.session_id]) scoreBySession[a.session_id] = { correct: 0, total: 0 };
+      scoreBySession[a.session_id].total += 1;
+      if (a.is_correct === true) scoreBySession[a.session_id].correct += 1;
+    });
+
+    return rows.map((row) => ({
+      ...row,
+      lesson_title: row.academy_lessons?.title || 'Урок',
+      lesson_subject: row.academy_lessons?.subject || '',
+      students: namesBySession[row.id] || [],
+      score: scoreBySession[row.id] || { correct: 0, total: 0 },
+    }));
+  }
+
+  function renderSummary({ lessons, active, history }) {
+    document.getElementById('stat-lessons').textContent = String(lessons.length);
+    document.getElementById('stat-active').textContent = String(active.length);
+    document.getElementById('stat-finished').textContent = String(history.length);
+    let correct = 0;
+    let total = 0;
+    history.forEach((h) => {
+      correct += h.score?.correct || 0;
+      total += h.score?.total || 0;
+    });
+    document.getElementById('stat-correct').textContent = percentLabel(correct, total);
+  }
+
+  function renderHistory(history) {
+    historyCache = history || [];
+    if (!historyCache.length) {
+      historyEmpty.hidden = false;
+      historyList.hidden = true;
+      historyList.innerHTML = '';
+      return;
+    }
+    historyEmpty.hidden = true;
+    historyList.hidden = false;
+    historyList.innerHTML = historyCache
+      .map((h) => {
+        const names =
+          h.students.length > 0
+            ? h.students
+                .slice(0, 8)
+                .map((n) => `<span class="academy-chip">${A.escapeHtml(n)}</span>`)
+                .join('')
+            : '<span class="academy-muted">Никто не зашёл</span>';
+        const more =
+          h.students.length > 8
+            ? `<span class="academy-chip academy-chip--muted">+${h.students.length - 8}</span>`
+            : '';
+        return `<li>
+          <div class="academy-history-main">
+            <strong>${A.escapeHtml(h.lesson_title)}</strong>
+            <div class="academy-muted">${formatDate(h.finished_at || h.started_at)} · код ${A.escapeHtml(
+          h.code
+        )} · ${A.escapeHtml(percentLabel(h.score.correct, h.score.total))} верно · ${
+          h.students.length
+        } уч.</div>
+            <div class="academy-chip-row">${names}${more}</div>
+          </div>
+          <button type="button" class="academy-btn" data-report="${A.escapeHtml(h.id)}">Отчёт</button>
+        </li>`;
+      })
+      .join('');
+  }
+
+  async function openReport(sessionId) {
+    const item = historyCache.find((h) => h.id === sessionId);
+    showError(reportError, '');
+    reportCard.hidden = false;
+    reportTitle.textContent = item?.lesson_title || 'Отчёт';
+    reportMeta.textContent = item
+      ? `${formatDate(item.finished_at || item.started_at)} · код ${item.code}`
+      : 'Загрузка…';
+    reportStats.hidden = true;
+    reportList.innerHTML = '<li class="academy-muted">Загрузка…</li>';
+    reportCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+    try {
+      const data = await A.callLive('results', { session_id: sessionId }, { accessToken });
+      const people = data.participants || [];
+      const answers = data.answers || [];
+      const byPerson = {};
+      people.forEach((p) => {
+        byPerson[p.id] = { name: p.display_name, correct: 0, total: 0 };
+      });
+      answers.forEach((a) => {
+        if (!byPerson[a.participant_id]) {
+          byPerson[a.participant_id] = { name: 'Ученик', correct: 0, total: 0 };
+        }
+        byPerson[a.participant_id].total += 1;
+        if (a.is_correct === true) byPerson[a.participant_id].correct += 1;
+      });
+      const rows = Object.values(byPerson).sort((a, b) => b.correct - a.correct || a.name.localeCompare(b.name, 'ru'));
+      const allCorrect = rows.reduce((s, r) => s + r.correct, 0);
+      const allTotal = rows.reduce((s, r) => s + r.total, 0);
+      reportStats.hidden = false;
+      reportStats.innerHTML = `
+        <div><strong>${rows.length}</strong><span>учеников</span></div>
+        <div><strong>${allTotal}</strong><span>ответов</span></div>
+        <div><strong>${percentLabel(allCorrect, allTotal)}</strong><span>верно</span></div>
+      `;
+      reportList.innerHTML = rows.length
+        ? rows
+            .map(
+              (r) => `<li>
+            <div>
+              <strong>${A.escapeHtml(r.name)}</strong>
+              <div class="academy-muted">${r.correct} из ${r.total} верно</div>
+            </div>
+            <span class="academy-time">${A.escapeHtml(percentLabel(r.correct, r.total))}</span>
+          </li>`
+            )
+            .join('')
+        : '<li class="academy-muted">В этом занятии ещё нет учеников</li>';
+    } catch (err) {
+      reportList.innerHTML = '';
+      showError(reportError, friendly(err, 'Не удалось открыть отчёт'));
+    }
   }
 
   function renderLessons(lessons) {
@@ -366,9 +573,15 @@
     accessToken = session.access_token;
     const teacher = await requireTeacher(client, session.user);
     teacherHello.textContent = `Вы вошли как ${teacher.display_name || session.user.email || 'Учитель'}`;
-    const [lessons, sessions] = await Promise.all([loadLessons(client), loadActiveSessions(client)]);
-    renderLessons(lessons);
+    const [lessons, sessions, history] = await Promise.all([
+      loadLessons(client),
+      loadActiveSessions(client),
+      loadFinishedSessions(client),
+    ]);
+    renderSummary({ lessons, active: sessions, history });
     renderSessions(sessions);
+    renderHistory(history);
+    renderLessons(lessons);
     setLoggedIn(true);
   }
 
@@ -420,6 +633,25 @@
         showError(appStatus, 'Список обновлён');
       } catch (err) {
         showError(appError, friendly(err));
+      }
+    });
+
+    document.getElementById('btn-close-report').addEventListener('click', () => {
+      reportCard.hidden = true;
+      showError(reportError, '');
+    });
+
+    historyList.addEventListener('click', async (event) => {
+      const btn = event.target.closest('[data-report]');
+      if (!btn) return;
+      const { data } = await client.auth.getSession();
+      if (!data?.session) return setLoggedIn(false);
+      accessToken = data.session.access_token;
+      btn.disabled = true;
+      try {
+        await openReport(btn.getAttribute('data-report'));
+      } finally {
+        btn.disabled = false;
       }
     });
 
