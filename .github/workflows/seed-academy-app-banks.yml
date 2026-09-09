@@ -1,0 +1,60 @@
+name: Seed Academy app course banks
+
+# Только вручную. Не запускать без явного решения — пишет в Supabase.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  seed-app-banks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bootstrap teachers
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-teachers-bootstrap.sql
+
+      - name: Seed app course banks (additive)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-seed-app-banks.sql
+
+      - name: Count seeded app lessons
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          BODY=$(mktemp); RESP=$(mktemp)
+          python3 - <<'PY' > "$BODY"
+          import json
+          print(json.dumps({"query": """
+          select
+            count(*)::int as lessons,
+            count(*) filter (where title like 'Знания:%')::int as knowledge,
+            count(*) filter (where title like 'Таджвид%')::int as tajweed,
+            count(*) filter (where title like 'Мединский%')::int as madina,
+            count(*) filter (where title like '99 имён%')::int as names99
+          from public.academy_lessons
+          where title like 'Знания:%'
+             or title like 'Таджвид%'
+             or title like 'Мединский%'
+             or title like '99 имён%';
+          """}))
+          PY
+          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+            --data-binary @"$BODY")
+          echo "HTTP $CODE"; cat "$RESP"; echo
