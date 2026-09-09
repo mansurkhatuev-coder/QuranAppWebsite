@@ -6814,10 +6814,21 @@
           }
           function onUp(ev) {
             if (ev && ev.pointerId !== pointerId) return;
+            // Short tap: click is often suppressed because viewport pan calls preventDefault.
+            var shortTap = !!longPressTimer && !gestureMoved && activePointers.size < 2;
             clearLongPress();
             window.removeEventListener('pointermove', onMove, true);
             window.removeEventListener('pointerup', onUp, true);
             window.removeEventListener('pointercancel', onUp, true);
+            if (!shortTap || editMode) return;
+            longPressFired = true; // suppress residual click
+            if (!meta.hasSons) {
+              openPersonSheet(meta.id);
+              return;
+            }
+            if (expanded.has(meta.id)) expanded.delete(meta.id);
+            else expanded.add(meta.id);
+            render();
           }
           window.addEventListener('pointermove', onMove, true);
           window.addEventListener('pointerup', onUp, true);
