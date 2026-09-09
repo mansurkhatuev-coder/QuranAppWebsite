@@ -178,6 +178,7 @@ language sql
 stable
 security definer
 set search_path = public
+set row_security = off
 as $$
   select exists (
     select 1
@@ -196,6 +197,7 @@ language sql
 stable
 security definer
 set search_path = public
+set row_security = off
 as $$
   select exists (
     select 1
@@ -215,12 +217,32 @@ $$;
 revoke all on function public.can_manage_academy_lesson(uuid, uuid) from public;
 grant execute on function public.can_manage_academy_lesson(uuid, uuid) to authenticated;
 
+create or replace function public.is_academy_lesson_owner(p_lesson_id uuid, uid uuid default auth.uid())
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+set row_security = off
+as $$
+  select exists (
+    select 1
+    from public.academy_lessons l
+    where l.id = p_lesson_id
+      and l.owner_id = uid
+  );
+$$;
+
+revoke all on function public.is_academy_lesson_owner(uuid, uuid) from public;
+grant execute on function public.is_academy_lesson_owner(uuid, uuid) to authenticated;
+
 create or replace function public.can_host_academy_session(p_session_id uuid, uid uuid default auth.uid())
 returns boolean
 language sql
 stable
 security definer
 set search_path = public
+set row_security = off
 as $$
   select exists (
     select 1
@@ -238,6 +260,25 @@ $$;
 
 revoke all on function public.can_host_academy_session(uuid, uuid) from public;
 grant execute on function public.can_host_academy_session(uuid, uuid) to authenticated;
+
+create or replace function public.is_academy_session_primary_host(p_session_id uuid, uid uuid default auth.uid())
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+set row_security = off
+as $$
+  select exists (
+    select 1
+    from public.academy_sessions s
+    where s.id = p_session_id
+      and s.host_user_id = uid
+  );
+$$;
+
+revoke all on function public.is_academy_session_primary_host(uuid, uuid) from public;
+grant execute on function public.is_academy_session_primary_host(uuid, uuid) to authenticated;
 
 create or replace function public.touch_academy_updated_at()
 returns trigger
@@ -341,16 +382,7 @@ create policy "teachers read manage lessons"
   on public.academy_lessons
   for select
   to authenticated
-  using (
-    public.is_academy_teacher()
-    and (
-      owner_id = auth.uid()
-      or exists (
-        select 1 from public.academy_lesson_teachers lt
-        where lt.lesson_id = academy_lessons.id and lt.user_id = auth.uid()
-      )
-    )
-  );
+  using (public.can_manage_academy_lesson(id));
 
 drop policy if exists "teachers insert lessons" on public.academy_lessons;
 create policy "teachers insert lessons"
@@ -372,7 +404,7 @@ create policy "teachers delete lessons"
   on public.academy_lessons
   for delete
   to authenticated
-  using (owner_id = auth.uid());
+  using (public.is_academy_lesson_owner(id));
 
 -- Lesson teachers
 drop policy if exists "lesson teachers read" on public.academy_lesson_teachers;
@@ -380,25 +412,15 @@ create policy "lesson teachers read"
   on public.academy_lesson_teachers
   for select
   to authenticated
-  using (public.can_manage_academy_lesson(lesson_id) or user_id = auth.uid());
+  using (user_id = auth.uid() or public.can_manage_academy_lesson(lesson_id));
 
 drop policy if exists "lesson owners manage collab" on public.academy_lesson_teachers;
 create policy "lesson owners manage collab"
   on public.academy_lesson_teachers
   for all
   to authenticated
-  using (
-    exists (
-      select 1 from public.academy_lessons l
-      where l.id = lesson_id and l.owner_id = auth.uid()
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.academy_lessons l
-      where l.id = lesson_id and l.owner_id = auth.uid()
-    )
-  );
+  using (public.is_academy_lesson_owner(lesson_id))
+  with check (public.is_academy_lesson_owner(lesson_id));
 
 -- Questions
 drop policy if exists "teachers read questions" on public.academy_questions;
@@ -423,7 +445,7 @@ create policy "hosts read sessions"
   on public.academy_sessions
   for select
   to authenticated
-  using (public.can_host_academy_session(id) or host_user_id = auth.uid());
+  using (public.can_host_academy_session(id));
 
 drop policy if exists "teachers insert sessions" on public.academy_sessions;
 create policy "teachers insert sessions"
@@ -456,18 +478,8 @@ create policy "primary host manage cohosts"
   on public.academy_session_hosts
   for all
   to authenticated
-  using (
-    exists (
-      select 1 from public.academy_sessions s
-      where s.id = session_id and s.host_user_id = auth.uid()
-    )
-  )
-  with check (
-    exists (
-      select 1 from public.academy_sessions s
-      where s.id = session_id and s.host_user_id = auth.uid()
-    )
-  );
+  using (public.is_academy_session_primary_host(session_id))
+  with check (public.is_academy_session_primary_host(session_id));
 
 -- Participants / answers: no anon policies.
 -- Join/resume/submit will use Edge Functions with service role.
