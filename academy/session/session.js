@@ -20,6 +20,9 @@
   let state = null;
   let pollTimer = null;
   let tickTimer = null;
+  let finalResults = null;
+  let finalResultsKey = '';
+  let finalResultsLoading = false;
 
   function showError(message) {
     errorEl.hidden = !message;
@@ -81,7 +84,115 @@
     optionsBox.hidden = !html;
   }
 
+  function renderFinalResults() {
+    if (!finalResults) {
+      boardBox.innerHTML = '<p class="academy-muted">Загружаем итоги по всем вопросам…</p>';
+      statsBox.hidden = true;
+      return;
+    }
+    const people = finalResults.participants || [];
+    const answers = finalResults.answers || [];
+    const questions = finalResults.questions || [];
+    const byPerson = {};
+    people.forEach((p) => {
+      byPerson[p.id] = { name: p.display_name, correct: 0, total: 0, answers: [] };
+    });
+    answers.forEach((a) => {
+      if (!byPerson[a.participant_id]) {
+        byPerson[a.participant_id] = { name: 'Ученик', correct: 0, total: 0, answers: [] };
+      }
+      const person = byPerson[a.participant_id];
+      person.total += 1;
+      if (a.is_correct === true) person.correct += 1;
+      person.answers.push(a);
+    });
+    Object.values(byPerson).forEach((person) => {
+      const answeredIdx = new Set(person.answers.map((a) => Number(a.question_index)));
+      questions.forEach((q) => {
+        const idx = Number(q.index);
+        if (answeredIdx.has(idx)) return;
+        person.answers.push({
+          question_index: idx,
+          prompt: q.prompt,
+          is_correct: null,
+          answer_label: 'нет ответа',
+          correct_label: q.correct_label,
+        });
+        person.total += 1;
+      });
+    });
+    const rows = Object.values(byPerson).sort(
+      (a, b) => b.correct - a.correct || a.name.localeCompare(b.name, 'ru')
+    );
+    const allCorrect = rows.reduce((s, r) => s + r.correct, 0);
+    const allTotal = rows.reduce((s, r) => s + r.total, 0);
+    statsBox.hidden = false;
+    statsBox.innerHTML = `
+      <div><strong>${rows.length}</strong><span>учеников</span></div>
+      <div><strong>${questions.length}</strong><span>вопросов</span></div>
+      <div><strong>${allCorrect}</strong><span>верно</span></div>
+      <div><strong>${Math.max(0, allTotal - allCorrect)}</strong><span>ошибки / пропуск</span></div>
+    `;
+    boardBox.innerHTML = rows.length
+      ? `<ul class="academy-report-list">${rows
+          .map((r) => {
+            const details = r.answers
+              .slice()
+              .sort((a, b) => (Number(a.question_index) || 0) - (Number(b.question_index) || 0))
+              .map((a) => A.renderAnswerReviewItem(a, { showCorrectAlways: true }))
+              .join('');
+            return `<li class="academy-report-person">
+              <details>
+                <summary>
+                  <span class="academy-report-person__main">
+                    <strong>${A.escapeHtml(r.name)}</strong>
+                    <span class="academy-muted">${r.correct} из ${r.total} верно</span>
+                  </span>
+                  <span class="academy-time">${
+                    r.total ? Math.round((r.correct / r.total) * 100) + '%' : '—'
+                  }</span>
+                </summary>
+                <ul class="academy-answer-review-list">${details}</ul>
+              </details>
+            </li>`;
+          })
+          .join('')}</ul>`
+      : '<p class="academy-muted">В этом занятии не было учеников</p>';
+  }
+
+  async function loadFinalResults() {
+    if (!state) return;
+    const key = `${state.id}|${state.version}|final`;
+    if (key === finalResultsKey && finalResults) return;
+    if (key === finalResultsKey && finalResultsLoading) return;
+    finalResultsKey = key;
+    finalResultsLoading = true;
+    boardBox.innerHTML = '<p class="academy-muted">Загружаем итоги по всем вопросам…</p>';
+    statsBox.hidden = true;
+    try {
+      finalResults = await A.callLive('results', { session_id: state.id }, { accessToken });
+      if (finalResultsKey === key) renderFinalResults();
+    } catch (_) {
+      if (finalResultsKey === key) {
+        boardBox.innerHTML = '<p class="academy-muted">Не удалось загрузить полный разбор ответов</p>';
+      }
+    } finally {
+      if (finalResultsKey === key) finalResultsLoading = false;
+    }
+  }
+
   function renderBoard() {
+    if (state?.phase === 'results' || state?.status === 'finished') {
+      if (finalResults && finalResultsKey === `${state.id}|${state.version}|final`) {
+        // Keep existing DOM so open student details stay expanded across polls.
+        return;
+      }
+      loadFinalResults();
+      return;
+    }
+    finalResults = null;
+    finalResultsKey = '';
+    finalResultsLoading = false;
     const board = state?.board || [];
     const stats = state?.stats || {};
     if (!board.length) {
@@ -179,7 +290,7 @@
       renderOptions(null, false);
     } else if (state.phase === 'results' || state.status === 'finished') {
       questionBox.hidden = false;
-      questionBox.textContent = 'Урок завершён';
+      questionBox.textContent = 'Итог — раскройте ученика, чтобы увидеть верные и ошибочные ответы';
       renderOptions(null, false);
     } else {
       questionBox.hidden = true;

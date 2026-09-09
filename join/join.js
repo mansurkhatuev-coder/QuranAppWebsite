@@ -27,6 +27,9 @@
   let renderedQuestionKey = '';
   let lastSyncKey = '';
 
+  let lastResultsKey = '';
+  let resultsHtml = '';
+
   function showError(el, message) {
     el.hidden = !message;
     el.textContent = message || '';
@@ -234,10 +237,41 @@
       renderedQuestionKey = '';
       playKicker.textContent = 'Итог';
       playTitle.textContent = 'Урок завершён';
-      playBody.innerHTML = `<p class="academy-muted">Спасибо! Учитель видит ваши ответы.</p>`;
       submitBtn.hidden = true;
       playFeedback.hidden = true;
       playTimer.hidden = true;
+      const resultsKey = `${session.id}|${session.version || ''}|results`;
+      if (resultsKey !== lastResultsKey) {
+        lastResultsKey = resultsKey;
+        resultsHtml = '<p class="academy-muted">Загружаем разбор ответов…</p>';
+        playBody.innerHTML = resultsHtml;
+        A.callLive('results', { session_id: session.id, resume_token: resumeToken })
+          .then((data) => {
+            if (lastResultsKey !== resultsKey) return;
+            const answers = (data.answers || []).slice().sort(
+              (a, b) => (Number(a.question_index) || 0) - (Number(b.question_index) || 0)
+            );
+            const summary = data.summary || {};
+            const correct = Number(summary.correct_count) || 0;
+            const answered = Number(summary.answered) || answers.length;
+            const head = `<p class="academy-muted" style="margin-bottom:0.75rem">Верно ${correct} из ${answered}. Разбор ваших ответов:</p>`;
+            const list = answers.length
+              ? `<ul class="academy-answer-review-list academy-answer-review-list--plain">${answers
+                  .map((a) => A.renderAnswerReviewItem(a, { showCorrectAlways: true }))
+                  .join('')}</ul>`
+              : '<p class="academy-muted">Вы не отправили ни одного ответа.</p>';
+            resultsHtml = head + list;
+            playBody.innerHTML = resultsHtml;
+          })
+          .catch(() => {
+            if (lastResultsKey !== resultsKey) return;
+            resultsHtml =
+              '<p class="academy-muted">Спасибо! Учитель видит ваши ответы. Разбор сейчас недоступен.</p>';
+            playBody.innerHTML = resultsHtml;
+          });
+      } else {
+        playBody.innerHTML = resultsHtml;
+      }
       return;
     }
 
