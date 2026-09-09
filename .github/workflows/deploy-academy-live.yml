@@ -9,6 +9,7 @@ on:
       - cursor/academy-seed-lessons-51a2
       - cursor/academy-ux-hard-fix-51a2
       - cursor/academy-teacher-dashboard-51a2
+      - cursor/academy-join-dedupe-51a2
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml
