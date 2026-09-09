@@ -124,12 +124,12 @@
       const options = (q.payload?.options || [])
         .map(
           (o) =>
-            `<button type="button" class="academy-btn" style="width:100%;margin-top:0.5rem" data-opt="${A.escapeHtml(
-              o.id
-            )}" ${locked || myAnswer ? 'disabled' : ''}>${A.escapeHtml(o.label)}</button>`
+            `<button type="button" class="academy-btn" data-opt="${A.escapeHtml(o.id)}" ${
+              locked || myAnswer ? 'disabled' : ''
+            }>${A.escapeHtml(o.label)}</button>`
         )
         .join('');
-      playBody.innerHTML = options;
+      playBody.innerHTML = `<div class="academy-play-options">${options}</div>`;
       playBody.onclick = (event) => {
         const btn = event.target.closest('[data-opt]');
         if (!btn || myAnswer || locked || session?.status === 'paused') return;
@@ -140,13 +140,14 @@
       return;
     }
     if (q.type === 'true_false') {
-      playBody.innerHTML = `
-        <button type="button" class="academy-btn" style="width:100%;margin-top:0.5rem" data-tf="true" ${
+      playBody.innerHTML = `<div class="academy-play-options">
+        <button type="button" class="academy-btn" data-tf="true" ${
           locked || myAnswer ? 'disabled' : ''
         }>Верно</button>
-        <button type="button" class="academy-btn" style="width:100%;margin-top:0.5rem" data-tf="false" ${
+        <button type="button" class="academy-btn" data-tf="false" ${
           locked || myAnswer ? 'disabled' : ''
-        }>Неверно</button>`;
+        }>Неверно</button>
+      </div>`;
       playBody.onclick = (event) => {
         const btn = event.target.closest('[data-tf]');
         if (!btn || myAnswer || locked || session?.status === 'paused') return;
@@ -157,10 +158,10 @@
       return;
     }
     if (q.type === 'short_text') {
-      playBody.innerHTML = `<label style="display:grid;gap:0.35rem;margin-top:0.75rem">Ответ
-        <input id="short-answer" maxlength="120" value="${A.escapeHtml(draftText)}" ${
-          locked || myAnswer ? 'disabled' : ''
-        } />
+      playBody.innerHTML = `<label class="academy-field" style="margin-top:0.85rem">Ответ
+        <input id="short-answer" name="short-answer" autocomplete="off" enterkeyhint="done" maxlength="120" value="${A.escapeHtml(
+          draftText
+        )}" ${locked || myAnswer ? 'disabled' : ''} />
       </label>`;
       const input = document.getElementById('short-answer');
       if (input && !locked && !myAnswer) {
