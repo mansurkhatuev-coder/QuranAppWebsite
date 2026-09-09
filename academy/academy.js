@@ -133,43 +133,82 @@
     };
   }
 
+  function nextOptionId(options) {
+    const letters = 'abcdefghijklmnopqrstuvwxyz';
+    for (let i = 0; i < letters.length; i += 1) {
+      const id = letters[i];
+      if (!(options || []).some((o) => o.id === id)) return id;
+    }
+    return `o${(options || []).length + 1}`;
+  }
+
   function renderQuestionEditor() {
     questionsEditor.innerHTML = questionDrafts
       .map((q, idx) => {
         const optionsHtml = (q.options || [])
           .map(
-            (o, oi) => `<label style="margin-top:0.4rem">Вариант ${oi + 1}
-              <input data-q="${idx}" data-opt="${oi}" class="opt-label" value="${A.escapeHtml(o.label)}" />
-            </label>`
+            (o, oi) => `<div style="display:grid;grid-template-columns:1fr auto;gap:0.4rem;align-items:end;margin-top:0.4rem">
+              <label>Вариант ${oi + 1}
+                <input data-q="${idx}" data-opt="${oi}" class="opt-label" value="${A.escapeHtml(o.label)}" />
+              </label>
+              <button type="button" class="academy-btn academy-btn--ghost" data-del-opt="${idx}:${oi}" ${
+                (q.options || []).length <= 2 ? 'disabled' : ''
+              }>−</button>
+            </div>`
           )
           .join('');
+        const singleChoiceBlock =
+          q.type === 'single_choice'
+            ? `${optionsHtml}
+          <div class="academy-actions" style="margin-top:0.6rem">
+            <button type="button" class="academy-btn" data-add-opt="${idx}">+ Вариант</button>
+          </div>
+          <label style="margin-top:0.5rem">Правильный ответ
+            <select data-q="${idx}" class="q-correct">
+              ${(q.options || [])
+                .map(
+                  (o) =>
+                    `<option value="${A.escapeHtml(o.id)}" ${q.correct === o.id ? 'selected' : ''}>${A.escapeHtml(
+                      o.label || o.id
+                    )}</option>`
+                )
+                .join('')}
+            </select>
+          </label>
+          <p class="academy-muted" style="margin-top:0.4rem;font-size:0.85rem">Можно добавить до 8 вариантов.</p>`
+            : '';
         return `<div class="academy-card" style="margin-top:0.75rem;padding:1rem">
           <strong>Вопрос ${idx + 1}</strong>
           <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Тип
             <select data-q="${idx}" class="q-type">
-              <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один вариант</option>
-              <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно</option>
+              <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один из вариантов</option>
+              <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно (только 2)</option>
               <option value="short_text" ${q.type === 'short_text' ? 'selected' : ''}>Короткий ввод</option>
             </select>
           </label>
           <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Текст
             <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
           </label>
-          <div data-panel="${idx}" class="q-panel"></div>
-          ${q.type === 'single_choice' ? optionsHtml + `<label style="margin-top:0.5rem">Правильный
-            <select data-q="${idx}" class="q-correct">
-              ${(q.options || []).map((o) => `<option value="${o.id}" ${q.correct === o.id ? 'selected' : ''}>${o.id}</option>`).join('')}
-            </select></label>` : ''}
-          ${q.type === 'true_false' ? `<label style="margin-top:0.5rem">Ответ
+          ${singleChoiceBlock}
+          ${
+            q.type === 'true_false'
+              ? `<label style="margin-top:0.5rem">Ответ
             <select data-q="${idx}" class="q-tf">
               <option value="true" ${q.tf ? 'selected' : ''}>Верно</option>
               <option value="false" ${!q.tf ? 'selected' : ''}>Неверно</option>
-            </select></label>` : ''}
-          ${q.type === 'short_text' ? `<label style="margin-top:0.5rem">Правильные ответы (через | )
+            </select></label>
+            <p class="academy-muted" style="margin-top:0.4rem;font-size:0.85rem">Для 3+ вариантов выберите тип «Один из вариантов».</p>`
+              : ''
+          }
+          ${
+            q.type === 'short_text'
+              ? `<label style="margin-top:0.5rem">Правильные ответы (через | )
             <input data-q="${idx}" class="q-accepted" value="${A.escapeHtml(q.accepted)}" placeholder="4|четыре" />
-          </label>` : ''}
+          </label>`
+              : ''
+          }
           <div class="academy-actions">
-            <button type="button" class="academy-btn academy-btn--ghost" data-del="${idx}">Удалить</button>
+            <button type="button" class="academy-btn academy-btn--ghost" data-del="${idx}">Удалить вопрос</button>
           </div>
         </div>`;
       })
@@ -369,6 +408,34 @@
       }
     });
     questionsEditor.addEventListener('click', (event) => {
+      const addOpt = event.target.closest('[data-add-opt]');
+      if (addOpt) {
+        syncDraftsFromDom();
+        const idx = Number(addOpt.getAttribute('data-add-opt'));
+        const q = questionDrafts[idx];
+        if (!q) return;
+        if (!Array.isArray(q.options)) q.options = [];
+        if (q.options.length >= 8) return;
+        const id = nextOptionId(q.options);
+        q.options.push({ id, label: '' });
+        renderQuestionEditor();
+        return;
+      }
+
+      const delOpt = event.target.closest('[data-del-opt]');
+      if (delOpt) {
+        syncDraftsFromDom();
+        const [qi, oi] = String(delOpt.getAttribute('data-del-opt') || '')
+          .split(':')
+          .map(Number);
+        const q = questionDrafts[qi];
+        if (!q || !Array.isArray(q.options) || q.options.length <= 2) return;
+        const removed = q.options.splice(oi, 1)[0];
+        if (removed && q.correct === removed.id) q.correct = q.options[0]?.id || 'a';
+        renderQuestionEditor();
+        return;
+      }
+
       const btn = event.target.closest('[data-del]');
       if (!btn) return;
       syncDraftsFromDom();

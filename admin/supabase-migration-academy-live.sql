@@ -311,6 +311,7 @@ returns trigger
 language plpgsql
 security definer
 set search_path = public
+set row_security = off
 as $$
 begin
   insert into public.academy_lesson_teachers (lesson_id, user_id, role)
@@ -389,7 +390,15 @@ create policy "teachers insert lessons"
   on public.academy_lessons
   for insert
   to authenticated
-  with check (public.is_academy_teacher() and owner_id = auth.uid());
+  with check (
+    owner_id = auth.uid()
+    and exists (
+      select 1
+      from public.academy_teachers t
+      where t.user_id = auth.uid()
+        and t.is_active = true
+    )
+  );
 
 drop policy if exists "teachers update lessons" on public.academy_lessons;
 create policy "teachers update lessons"
