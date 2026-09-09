@@ -38,6 +38,15 @@ jobs:
           chmod +x scripts/apply-academy-live-migration.sh
           scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-teachers-bootstrap.sql
 
+      - name: Apply dashboard timing columns (additive)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          if [ -f admin/supabase-migration-academy-dashboard.sql ]; then
+            scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-dashboard.sql
+          fi
+
       - name: Deploy academy-live function
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
