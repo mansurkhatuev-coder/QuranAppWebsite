@@ -6,6 +6,7 @@ on:
     branches:
       - cursor/academy-live-lessons-plan-51a2
       - cursor/academy-teacher-login-fix-51a2
+      - cursor/academy-seed-lessons-51a2
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml
