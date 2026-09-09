@@ -1052,12 +1052,7 @@ async function handleResults(db: SupabaseClient, body: Record<string, unknown>, 
     .select('question_index, is_correct, score, answer_payload')
     .eq('participant_id', participant.id)
     .order('question_index');
-  const enriched = enrichResultsAnswers(session, (answers || []) as Array<Record<string, unknown>>).map(
-    (row) => {
-      const { participant_id: _pid, ...rest } = row;
-      return rest;
-    },
-  );
+  const enriched = enrichResultsAnswers(session, (answers || []) as Array<Record<string, unknown>>);
   const total = enriched.reduce((sum, a) => sum + (Number(a.score) || 0), 0);
   const correct = enriched.filter((a) => a.is_correct === true).length;
   return json({

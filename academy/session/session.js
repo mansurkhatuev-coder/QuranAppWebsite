@@ -22,6 +22,7 @@
   let tickTimer = null;
   let finalResults = null;
   let finalResultsKey = '';
+  let finalResultsLoading = false;
 
   function showError(message) {
     errorEl.hidden = !message;
@@ -162,24 +163,36 @@
   async function loadFinalResults() {
     if (!state) return;
     const key = `${state.id}|${state.version}|final`;
-    if (key === finalResultsKey && finalResults) {
-      renderFinalResults();
-      return;
-    }
+    if (key === finalResultsKey && finalResults) return;
+    if (key === finalResultsKey && finalResultsLoading) return;
     finalResultsKey = key;
+    finalResultsLoading = true;
+    boardBox.innerHTML = '<p class="academy-muted">Загружаем итоги по всем вопросам…</p>';
+    statsBox.hidden = true;
     try {
       finalResults = await A.callLive('results', { session_id: state.id }, { accessToken });
-      renderFinalResults();
+      if (finalResultsKey === key) renderFinalResults();
     } catch (_) {
-      boardBox.innerHTML = '<p class="academy-muted">Не удалось загрузить полный разбор ответов</p>';
+      if (finalResultsKey === key) {
+        boardBox.innerHTML = '<p class="academy-muted">Не удалось загрузить полный разбор ответов</p>';
+      }
+    } finally {
+      if (finalResultsKey === key) finalResultsLoading = false;
     }
   }
 
   function renderBoard() {
     if (state?.phase === 'results' || state?.status === 'finished') {
+      if (finalResults && finalResultsKey === `${state.id}|${state.version}|final`) {
+        // Keep existing DOM so open student details stay expanded across polls.
+        return;
+      }
       loadFinalResults();
       return;
     }
+    finalResults = null;
+    finalResultsKey = '';
+    finalResultsLoading = false;
     const board = state?.board || [];
     const stats = state?.stats || {};
     if (!board.length) {
