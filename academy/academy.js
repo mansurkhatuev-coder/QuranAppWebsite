@@ -1,6 +1,5 @@
 (function () {
   const A = window.AcademyLive;
-  const Types = window.AcademyQuestionTypes;
 
   const loginView = document.getElementById('login-view');
   const appView = document.getElementById('app-view');
@@ -16,6 +15,7 @@
   const editorCard = document.getElementById('editor-card');
   const questionsEditor = document.getElementById('questions-editor');
   const editorError = document.getElementById('editor-error');
+  const lessonForm = document.getElementById('lesson-form');
 
   let accessToken = '';
   let questionDrafts = [];
@@ -26,9 +26,20 @@
     el.textContent = message || '';
   }
 
+  function friendly(err, fallback) {
+    return A.humanizeError(err?.message || err, fallback || 'Не получилось. Попробуйте ещё раз.');
+  }
+
   function setLoggedIn(on) {
     loginView.hidden = on;
     appView.hidden = !on;
+  }
+
+  function levelLabel(level) {
+    if (level === 'beginner') return 'начальный';
+    if (level === 'intermediate') return 'средний';
+    if (level === 'advanced') return 'продвинутый';
+    return level || '';
   }
 
   async function requireTeacher(client, user) {
@@ -51,8 +62,9 @@
       .eq('user_id', user.id)
       .maybeSingle();
     if (data?.is_active) return data;
-    const detail = error?.message || ensureErr?.message || 'unknown';
-    throw new Error('Не удалось войти как учитель: ' + detail);
+    throw new Error(
+      friendly(ensureErr || error, 'Не удалось войти как учитель. Проверьте аккаунт или попробуйте позже.')
+    );
   }
 
   async function loadLessons(client) {
@@ -60,7 +72,7 @@
       .from('academy_lessons')
       .select('id, title, subject, level, updated_at')
       .order('updated_at', { ascending: false });
-    if (error) throw error;
+    if (error) throw new Error(friendly(error, 'Не удалось загрузить уроки.'));
     return data || [];
   }
 
@@ -70,7 +82,7 @@
       .select('id, code, status, phase, lesson_id, last_activity_at')
       .in('status', ['lobby', 'live', 'paused'])
       .order('last_activity_at', { ascending: false });
-    if (error) throw error;
+    if (error) throw new Error(friendly(error, 'Не удалось загрузить сессии.'));
     return data || [];
   }
 
@@ -88,7 +100,9 @@
         (l) => `<li>
           <div>
             <strong>${A.escapeHtml(l.title)}</strong>
-            <div class="academy-muted">${A.escapeHtml(l.subject)} · ${A.escapeHtml(l.level)}</div>
+            <div class="academy-muted">${A.escapeHtml(A.labelSubject(l.subject))}${
+          l.level ? ' · ' + A.escapeHtml(levelLabel(l.level)) : ''
+        }</div>
           </div>
           <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(l.id)}">Запустить</button>
         </li>`
@@ -108,7 +122,9 @@
         (s) => `<li>
           <div>
             <div class="academy-pin" style="font-size:1.4rem;letter-spacing:0.12em">${A.escapeHtml(s.code)}</div>
-            <div class="academy-muted">${A.escapeHtml(s.status)} / ${A.escapeHtml(s.phase)}</div>
+            <div class="academy-muted">${A.escapeHtml(A.labelStatus(s.status))} · ${A.escapeHtml(
+          A.labelPhase(s.phase)
+        )}</div>
           </div>
           <a class="academy-btn academy-btn--primary" href="./session/?id=${encodeURIComponent(s.id)}">Продолжить</a>
         </li>`
@@ -166,7 +182,7 @@
                 .map(
                   (o) =>
                     `<option value="${A.escapeHtml(o.id)}" ${q.correct === o.id ? 'selected' : ''}>${A.escapeHtml(
-                      o.label || o.id
+                      o.label || 'Вариант ' + o.id
                     )}</option>`
                 )
                 .join('')}
@@ -179,22 +195,21 @@
           <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Тип
             <select data-q="${idx}" class="q-type">
               <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один из вариантов</option>
-              <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно (только 2)</option>
+              <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно</option>
               <option value="short_text" ${q.type === 'short_text' ? 'selected' : ''}>Короткий ввод</option>
             </select>
           </label>
-          <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Текст
+          <label style="margin-top:0.5rem;display:grid;gap:0.35rem">Текст вопроса
             <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
           </label>
           ${singleChoiceBlock}
           ${
             q.type === 'true_false'
-              ? `<label style="margin-top:0.5rem">Ответ
+              ? `<label style="margin-top:0.5rem">Правильный ответ
             <select data-q="${idx}" class="q-tf">
               <option value="true" ${q.tf ? 'selected' : ''}>Верно</option>
               <option value="false" ${!q.tf ? 'selected' : ''}>Неверно</option>
-            </select></label>
-            <p class="academy-muted" style="margin-top:0.4rem;font-size:0.85rem">Для 3+ вариантов выберите тип «Один из вариантов».</p>`
+            </select></label>`
               : ''
           }
           ${
@@ -240,22 +255,28 @@
   function openEditor() {
     questionDrafts = [defaultQuestion(), defaultQuestion(), defaultQuestion()];
     editorCard.hidden = false;
+    document.getElementById('lesson-title').value = '';
     renderQuestionEditor();
     showError(editorError, '');
+    editorCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async function saveLesson(_client, _userId) {
+  async function saveLesson() {
     syncDraftsFromDom();
     const title = document.getElementById('lesson-title').value.trim();
     const subject = document.getElementById('lesson-subject').value;
-    if (!title) throw new Error('Укажите название');
-    if (questionDrafts.length < 1) throw new Error('Добавьте вопрос');
+    if (!title) throw new Error('Укажите название урока');
+    if (questionDrafts.length < 1) throw new Error('Добавьте хотя бы один вопрос');
 
     const rows = questionDrafts.map((q, position) => {
-      if (!q.prompt.trim()) throw new Error(`Пустой текст в вопросе ${position + 1}`);
+      if (!q.prompt.trim()) throw new Error(`Заполните текст вопроса ${position + 1}`);
       if (q.type === 'single_choice') {
-        const options = (q.options || []).map((o) => ({ id: o.id, label: o.label.trim() }));
-        if (options.some((o) => !o.label)) throw new Error(`Заполните варианты в вопросе ${position + 1}`);
+        const options = (q.options || []).map((o) => ({ id: o.id, label: String(o.label || '').trim() }));
+        if (options.length < 2) throw new Error(`В вопросе ${position + 1} нужно минимум 2 варианта`);
+        if (options.some((o) => !o.label)) throw new Error(`Заполните все варианты в вопросе ${position + 1}`);
+        if (!options.some((o) => o.id === q.correct)) {
+          throw new Error(`Выберите правильный ответ в вопросе ${position + 1}`);
+        }
         return {
           type: 'single_choice',
           prompt: q.prompt.trim(),
@@ -277,7 +298,7 @@
         .split('|')
         .map((s) => s.trim())
         .filter(Boolean);
-      if (!accepted.length) throw new Error(`Нужен ответ в вопросе ${position + 1}`);
+      if (!accepted.length) throw new Error(`Укажите правильный ответ в вопросе ${position + 1}`);
       return {
         type: 'short_text',
         prompt: q.prompt.trim(),
@@ -298,7 +319,7 @@
       },
       { accessToken }
     );
-    if (!data?.lesson?.id) throw new Error(data?.error || 'Не удалось сохранить урок');
+    if (!data?.lesson?.id) throw new Error(friendly(data?.error, 'Не удалось сохранить урок'));
     return data.lesson.id;
   }
 
@@ -317,6 +338,7 @@
       },
       { accessToken }
     );
+    if (!data?.session?.id) throw new Error(friendly(data?.error, 'Не удалось запустить урок'));
     location.href = `./session/?id=${encodeURIComponent(data.session.id)}`;
   }
 
@@ -329,13 +351,12 @@
     const [lessons, sessions] = await Promise.all([loadLessons(client), loadActiveSessions(client)]);
     renderLessons(lessons);
     renderSessions(sessions);
-    showError(appStatus, Types ? `Типы MVP: ${Types.listSupported().join(', ')}` : 'Ок');
     setLoggedIn(true);
   }
 
   async function init() {
     if (!A.canCreateClient()) {
-      showError(loginError, 'Supabase не настроен');
+      showError(loginError, 'Сервис входа не настроен. Обновите страницу позже.');
       return;
     }
     const client = A.getClient();
@@ -345,7 +366,7 @@
         await bootApp(client, authData.session);
       } catch (err) {
         setLoggedIn(false);
-        showError(loginError, err.message || String(err));
+        showError(loginError, friendly(err, 'Не удалось войти.'));
       }
     }
 
@@ -361,7 +382,7 @@
         if (error) throw error;
         await bootApp(client, data.session);
       } catch (err) {
-        showError(loginError, err.message || 'Не удалось войти');
+        showError(loginError, friendly(err, 'Не удалось войти'));
         setLoggedIn(false);
       } finally {
         submit.disabled = false;
@@ -378,14 +399,16 @@
       if (!data?.session) return setLoggedIn(false);
       try {
         await bootApp(client, data.session);
+        showError(appStatus, 'Список обновлён');
       } catch (err) {
-        showError(appError, err.message || String(err));
+        showError(appError, friendly(err));
       }
     });
 
     document.getElementById('btn-new-lesson').addEventListener('click', openEditor);
     document.getElementById('btn-cancel-editor').addEventListener('click', () => {
       editorCard.hidden = true;
+      showError(editorError, '');
     });
     document.getElementById('btn-add-question').addEventListener('click', () => {
       syncDraftsFromDom();
@@ -447,19 +470,30 @@
       renderQuestionEditor();
     });
 
-    document.getElementById('lesson-form').addEventListener('submit', async (event) => {
+    lessonForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       showError(editorError, '');
       const { data } = await client.auth.getSession();
       if (!data?.session) return setLoggedIn(false);
+      accessToken = data.session.access_token;
+      const submitBtn = lessonForm.querySelector('button[type="submit"]');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Сохранение…';
+      }
       try {
-        await saveLesson(client, data.session.user.id);
+        await saveLesson();
         editorCard.hidden = true;
         document.getElementById('lesson-title').value = '';
         await bootApp(client, data.session);
-        showError(appStatus, 'Урок сохранён');
+        showError(appStatus, 'Урок сохранён — можно запускать');
       } catch (err) {
-        showError(editorError, err.message || String(err));
+        showError(editorError, friendly(err, 'Не удалось сохранить урок'));
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = 'Сохранить урок';
+        }
       }
     });
 
@@ -469,9 +503,12 @@
       btn.disabled = true;
       showError(appError, '');
       try {
+        const { data } = await client.auth.getSession();
+        if (!data?.session) return setLoggedIn(false);
+        accessToken = data.session.access_token;
         await startSession(btn.getAttribute('data-start'));
       } catch (err) {
-        showError(appError, err.message || String(err));
+        showError(appError, friendly(err, 'Не удалось запустить урок'));
         btn.disabled = false;
       }
     });
