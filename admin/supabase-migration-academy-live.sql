@@ -1,6 +1,13 @@
 -- Academy live lessons (madrasah): schema for web-first MVP.
 -- Run in Supabase SQL Editor after core admin schema.
 -- See docs/academy-live-lessons-plan.md
+--
+-- SAFETY (additive / non-destructive):
+--   * create table if not exists — never DROP TABLE / TRUNCATE / DELETE
+--   * drop policy/trigger if exists only recreates policy/trigger definitions
+--   * existing academy_course_feedback / giveaway / dua_* tables are untouched
+-- Apply via: scripts/apply-academy-live-migration.sh or workflow
+--   apply-academy-live-migration.yml
 
 -- ---------------------------------------------------------------------------
 -- Orgs / teachers (multi-teacher from day one; org UI later)

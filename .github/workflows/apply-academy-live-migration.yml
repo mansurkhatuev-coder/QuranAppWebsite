@@ -1,0 +1,68 @@
+name: Apply Academy live SQL migration
+
+# Additive only: creates academy_* tables/policies if missing.
+# Does NOT drop tables or delete rows. Uses Supabase Management API.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply academy-live migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-live.sql
+
+      - name: Verify tables exist
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          python3 - <<'PY'
+          import json, os, urllib.request
+          token = os.environ["SUPABASE_ACCESS_TOKEN"]
+          ref = os.environ["SUPABASE_PROJECT_REF"]
+          q = """
+          select table_name
+          from information_schema.tables
+          where table_schema = 'public'
+            and table_name in (
+              'academy_teachers','academy_lessons','academy_questions',
+              'academy_sessions','academy_participants','academy_answers'
+            )
+          order by 1;
+          """
+          body = json.dumps({"query": q}).encode()
+          req = urllib.request.Request(
+            f"https://api.supabase.com/v1/projects/{ref}/database/query",
+            data=body,
+            method="POST",
+            headers={
+              "Authorization": f"Bearer {token}",
+              "Content-Type": "application/json",
+            },
+          )
+          with urllib.request.urlopen(req, timeout=60) as resp:
+            data = json.load(resp)
+          print(json.dumps(data, ensure_ascii=False, indent=2)[:4000])
+          names = {row.get("table_name") for row in data} if isinstance(data, list) else set()
+          need = {
+            "academy_teachers","academy_lessons","academy_questions",
+            "academy_sessions","academy_participants","academy_answers",
+          }
+          missing = sorted(need - names)
+          if missing:
+            raise SystemExit(f"Missing tables: {missing}")
+          print("OK: all required tables present")
+          PY
