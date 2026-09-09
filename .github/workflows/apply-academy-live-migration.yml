@@ -5,6 +5,13 @@ name: Apply Academy live SQL migration
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - cursor/academy-live-lessons-plan-51a2
+    paths:
+      - admin/supabase-migration-academy-live.sql
+      - scripts/apply-academy-live-migration.sh
+      - .github/workflows/apply-academy-live-migration.yml
 
 permissions:
   contents: read
