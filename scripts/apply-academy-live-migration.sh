@@ -18,10 +18,20 @@ if [[ ! -f "$SQL_FILE" ]]; then
   exit 1
 fi
 
-# Safety: refuse files that look destructive.
-if grep -Eiq -- \
-  'drop[[:space:]]+table|truncate[[:space:]]|delete[[:space:]]+from|drop[[:space:]]+schema' \
-  "$SQL_FILE"; then
+# Safety: refuse destructive statements (ignore SQL comments).
+if python3 - "$SQL_FILE" <<'PY'
+import re, sys
+text = open(sys.argv[1], encoding="utf-8").read()
+# strip /* */ and -- comments
+text = re.sub(r"/\*.*?\*/", " ", text, flags=re.S)
+text = re.sub(r"--.*?$", " ", text, flags=re.M)
+pat = re.compile(
+    r"\bdrop\s+table\b|\btruncate\s+\w|\bdelete\s+from\b|\bdrop\s+schema\b",
+    re.I,
+)
+sys.exit(1 if pat.search(text) else 0)
+PY
+then
   echo "Refusing to run SQL that contains DROP TABLE / TRUNCATE / DELETE FROM / DROP SCHEMA" >&2
   exit 2
 fi
