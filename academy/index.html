@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./academy.css?v=5" />
+    <link rel="stylesheet" href="./academy.css?v=6" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -53,13 +53,48 @@
 
       <div id="app-view" hidden>
         <p class="academy-kicker">Кабинет учителя</p>
-        <h1 class="academy-title">Мои уроки</h1>
+        <h1 class="academy-title">Дашборд</h1>
         <p class="academy-muted" id="teacher-hello">—</p>
 
         <div class="academy-actions">
           <button type="button" class="academy-btn academy-btn--primary" id="btn-new-lesson">Создать урок</button>
           <button type="button" class="academy-btn" id="btn-refresh">Обновить</button>
           <button type="button" class="academy-btn academy-btn--ghost" id="btn-logout">Выйти</button>
+        </div>
+
+        <div class="academy-card" id="summary-card">
+          <p class="academy-kicker">Общий прогресс</p>
+          <div id="summary-stats" class="academy-home-stats">
+            <div><strong id="stat-lessons">0</strong><span>уроков</span></div>
+            <div><strong id="stat-active">0</strong><span>активных</span></div>
+            <div><strong id="stat-finished">0</strong><span>завершено</span></div>
+            <div><strong id="stat-correct">—</strong><span>верно в среднем</span></div>
+          </div>
+        </div>
+
+        <div class="academy-card" id="active-sessions-card" hidden>
+          <p class="academy-kicker">Активные сессии</p>
+          <ul id="sessions-list" class="academy-list"></ul>
+        </div>
+
+        <div class="academy-card" id="history-card">
+          <p class="academy-kicker">Недавние занятия</p>
+          <p class="academy-muted" id="history-empty">Завершённых уроков пока нет — запустите первый.</p>
+          <ul id="history-list" class="academy-history-list" hidden></ul>
+        </div>
+
+        <div class="academy-card" id="report-card" hidden>
+          <div class="academy-report-head">
+            <div>
+              <p class="academy-kicker">Отчёт по занятию</p>
+              <p class="academy-question-prompt" id="report-title" style="margin-top:0.35rem">—</p>
+              <p class="academy-muted" id="report-meta">—</p>
+            </div>
+            <button type="button" class="academy-btn academy-btn--ghost" id="btn-close-report">Закрыть</button>
+          </div>
+          <div id="report-stats" class="academy-home-stats academy-home-stats--compact" hidden></div>
+          <ul id="report-list" class="academy-board-list"></ul>
+          <p id="report-error" class="academy-error" hidden></p>
         </div>
 
         <div class="academy-card" id="editor-card" hidden>
@@ -126,15 +161,23 @@
         </div>
 
         <div class="academy-card">
+          <p class="academy-kicker">Мои уроки</p>
           <div id="lessons-empty" class="academy-empty" hidden>Уроков пока нет — создайте первый.</div>
           <ul id="lessons-list" class="academy-list" hidden></ul>
           <p id="app-error" class="academy-error" hidden></p>
           <p id="app-status" class="academy-ok" hidden></p>
         </div>
 
-        <div class="academy-card" id="active-sessions-card" hidden>
-          <p class="academy-kicker">Активные сессии</p>
-          <ul id="sessions-list" class="academy-list"></ul>
+        <div class="academy-card" id="classes-card">
+          <p class="academy-kicker">Классы</p>
+          <p class="academy-muted">
+            Скоро: списки классов (например «5А фикх») и привязка занятий к ним.
+            Пока ученики входят по имени на каждый урок — в отчётах имена уже сохраняются.
+          </p>
+          <p class="academy-muted academy-field-gap">
+            Варианты позже на выбор: ручной список имён, код приглашения в класс или импорт из медресе.
+          </p>
+          <button type="button" class="academy-btn" id="btn-classes-soon" disabled>Добавить класс — скоро</button>
         </div>
       </div>
     </div>
@@ -143,6 +186,6 @@
     <script src="../admin/supabase-config.js?v=7"></script>
     <script src="./academy-shared.js?v=4"></script>
     <script src="./question-types.js?v=1"></script>
-    <script src="./academy.js?v=8"></script>
+    <script src="./academy.js?v=9"></script>
   </body>
 </html>
