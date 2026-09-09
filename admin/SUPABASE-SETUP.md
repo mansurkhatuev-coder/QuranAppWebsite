@@ -82,6 +82,27 @@
    `supabase functions deploy academy-giveaway-enter`
 3. В админке → вкладка **Розыгрыш** → включите тумблер и сохраните.
 
+### 2.4 Live-уроки Академии (медресе, сайт)
+
+Web-first кабинет учителя и вход ученика по коду (`/academy/`, `/join/`). План: `docs/academy-live-lessons-plan.md`.
+
+1. **SQL Editor** → выполните `website/admin/supabase-migration-academy-live.sql`
+2. **Authentication** → пользователь учителя (можно существующий аккаунт админки)
+3. Добавьте строку учителя (подставьте uuid из **Authentication → Users**):
+
+```sql
+insert into public.academy_teachers (user_id, display_name)
+values ('<auth-user-uuid>', 'Имя учителя')
+on conflict (user_id) do update
+  set is_active = true,
+      display_name = excluded.display_name;
+```
+
+4. Проверка: откройте `https://waydean.ru/academy/` → вход тем email/паролем → кабинет без ошибки про `academy_teachers`.
+5. Ученик: `https://waydean.ru/join/` (live join через Edge Functions — следующим шагом).
+
+**Table Editor** после миграции: `academy_teachers`, `academy_lessons`, `academy_questions`, `academy_sessions`, `academy_participants`, `academy_answers` (+ org stubs).
+
 Если нужна вкладка аналитики «Сторы · скачивания»:
 
 1. **SQL Editor** → выполните `website/admin/supabase-migration-store-downloads.sql`

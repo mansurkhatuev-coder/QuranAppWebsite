@@ -20,6 +20,12 @@
 /admin/*
   Cache-Control: no-store
 
+/academy/*
+  Cache-Control: no-store
+
+/join/*
+  Cache-Control: no-store
+
 /trees/*
   Cache-Control: no-store
 

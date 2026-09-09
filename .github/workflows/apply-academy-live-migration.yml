@@ -1,0 +1,81 @@
+name: Apply Academy live SQL migration
+
+# Additive only: creates academy_* tables/policies if missing.
+# Does NOT drop tables or delete rows. Uses Supabase Management API.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/academy-live-lessons-plan-51a2
+    paths:
+      - admin/supabase-migration-academy-live.sql
+      - scripts/apply-academy-live-migration.sh
+      - .github/workflows/apply-academy-live-migration.yml
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply academy-live migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-live.sql
+
+      - name: Verify tables exist
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          BODY=$(mktemp)
+          RESP=$(mktemp)
+          python3 - <<'PY' > "$BODY"
+          import json
+          print(json.dumps({
+            "query": """
+          select table_name
+          from information_schema.tables
+          where table_schema = 'public'
+            and table_name in (
+              'academy_teachers','academy_lessons','academy_questions',
+              'academy_sessions','academy_participants','academy_answers'
+            )
+          order by 1;
+          """
+          }))
+          PY
+          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+            --data-binary @"$BODY")
+          echo "HTTP $CODE"
+          cat "$RESP"
+          echo
+          python3 - "$RESP" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          if not isinstance(data, list):
+              raise SystemExit(f"Unexpected response: {data!r}"[:500])
+          names = {row.get("table_name") for row in data}
+          need = {
+            "academy_teachers","academy_lessons","academy_questions",
+            "academy_sessions","academy_participants","academy_answers",
+          }
+          missing = sorted(need - names)
+          if missing:
+              raise SystemExit(f"Missing tables: {missing}")
+          print("OK: all required tables present")
+          PY
+

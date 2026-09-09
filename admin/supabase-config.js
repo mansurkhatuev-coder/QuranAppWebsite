@@ -7,4 +7,5 @@ window.SUPABASE_CONFIG = {
   rustoreVersionUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/rustore-version',
   syncAppReleaseUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/sync-app-release',
   storeDownloadsUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/store-downloads',
+  academyLiveUrl: 'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/academy-live',
 };
