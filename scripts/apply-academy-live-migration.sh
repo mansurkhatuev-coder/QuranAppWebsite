@@ -39,35 +39,35 @@ fi
 
 echo "Applying $(basename "$SQL_FILE") to project $REF (additive)…"
 
-python3 - "$SQL_FILE" "$REF" <<'PY'
-import json, os, sys, urllib.request
+BODY_FILE="$(mktemp)"
+RESP_FILE="$(mktemp)"
+trap 'rm -f "$BODY_FILE" "$RESP_FILE"' EXIT
 
-sql_path, ref = sys.argv[1], sys.argv[2]
-token = os.environ["SUPABASE_ACCESS_TOKEN"]
-query = open(sql_path, encoding="utf-8").read()
-
-# Management API accepts one query string; keep full migration as a single script.
-body = json.dumps({"query": query}).encode("utf-8")
-req = urllib.request.Request(
-    f"https://api.supabase.com/v1/projects/{ref}/database/query",
-    data=body,
-    method="POST",
-    headers={
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-    },
-)
-try:
-    with urllib.request.urlopen(req, timeout=180) as resp:
-        raw = resp.read().decode("utf-8", errors="replace")
-        print("HTTP", resp.status)
-        print(raw[:4000] if raw else "(empty body)")
-except urllib.error.HTTPError as e:
-    err = e.read().decode("utf-8", errors="replace")
-    print("HTTP", e.code, file=sys.stderr)
-    print(err[:8000], file=sys.stderr)
-    sys.exit(1)
+python3 - "$SQL_FILE" "$BODY_FILE" <<'PY'
+import json, sys
+query = open(sys.argv[1], encoding="utf-8").read()
+with open(sys.argv[2], "w", encoding="utf-8") as f:
+    json.dump({"query": query}, f, ensure_ascii=False)
 PY
+
+# Use curl + browser-like UA: Python urllib is banned by Cloudflare on api.supabase.com (1010).
+HTTP_CODE="$(
+  curl -sS -o "$RESP_FILE" -w "%{http_code}" \
+    -X POST "https://api.supabase.com/v1/projects/${REF}/database/query" \
+    -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+    -H "Content-Type: application/json" \
+    -H "Accept: application/json" \
+    -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+    --data-binary @"$BODY_FILE"
+)"
+
+echo "HTTP $HTTP_CODE"
+head -c 8000 "$RESP_FILE" || true
+echo
+
+if [[ "$HTTP_CODE" != "201" && "$HTTP_CODE" != "200" ]]; then
+  echo "Migration request failed" >&2
+  exit 1
+fi
 
 echo "Done."

@@ -36,11 +36,12 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
         run: |
-          python3 - <<'PY'
-          import json, os, urllib.request
-          token = os.environ["SUPABASE_ACCESS_TOKEN"]
-          ref = os.environ["SUPABASE_PROJECT_REF"]
-          q = """
+          BODY=$(mktemp)
+          RESP=$(mktemp)
+          python3 - <<'PY' > "$BODY"
+          import json
+          print(json.dumps({
+            "query": """
           select table_name
           from information_schema.tables
           where table_schema = 'public'
@@ -50,26 +51,31 @@ jobs:
             )
           order by 1;
           """
-          body = json.dumps({"query": q}).encode()
-          req = urllib.request.Request(
-            f"https://api.supabase.com/v1/projects/{ref}/database/query",
-            data=body,
-            method="POST",
-            headers={
-              "Authorization": f"Bearer {token}",
-              "Content-Type": "application/json",
-            },
-          )
-          with urllib.request.urlopen(req, timeout=60) as resp:
-            data = json.load(resp)
-          print(json.dumps(data, ensure_ascii=False, indent=2)[:4000])
-          names = {row.get("table_name") for row in data} if isinstance(data, list) else set()
+          }))
+          PY
+          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+            --data-binary @"$BODY")
+          echo "HTTP $CODE"
+          cat "$RESP"
+          echo
+          python3 - "$RESP" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          if not isinstance(data, list):
+              raise SystemExit(f"Unexpected response: {data!r}"[:500])
+          names = {row.get("table_name") for row in data}
           need = {
             "academy_teachers","academy_lessons","academy_questions",
             "academy_sessions","academy_participants","academy_answers",
           }
           missing = sorted(need - names)
           if missing:
-            raise SystemExit(f"Missing tables: {missing}")
+              raise SystemExit(f"Missing tables: {missing}")
           print("OK: all required tables present")
           PY
+
