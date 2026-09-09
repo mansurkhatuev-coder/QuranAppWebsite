@@ -13,14 +13,14 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="../academy.css?v=2" />
+    <link rel="stylesheet" href="../academy.css?v=3" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
       <div class="academy-top">
         <a class="academy-brand" href="../">
           <img src="../../assets/icon.png" width="36" height="36" alt="" />
-          <strong>Host</strong>
+          <strong>Учитель</strong>
         </a>
         <a class="academy-btn academy-btn--ghost" href="../">К урокам</a>
       </div>
@@ -33,6 +33,7 @@
         <p id="session-pin" class="academy-pin" hidden></p>
         <p id="session-meta" class="academy-muted">Загрузка…</p>
         <p id="question-box" class="academy-title" style="font-size:1.45rem;margin-top:1rem" hidden></p>
+        <div id="options-box" class="academy-host-options-wrap" hidden></div>
         <p id="people-box" class="academy-muted" style="margin-top:0.75rem"></p>
         <p id="session-error" class="academy-error" hidden></p>
         <div class="academy-actions">
@@ -47,7 +48,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../admin/supabase-config.js?v=7"></script>
-    <script src="../academy-shared.js?v=2"></script>
-    <script src="./session.js?v=2"></script>
+    <script src="../academy-shared.js?v=3"></script>
+    <script src="./session.js?v=3"></script>
   </body>
 </html>

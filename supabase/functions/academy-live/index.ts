@@ -91,9 +91,38 @@ async function handleEnsureTeacher(
     const fromBody = typeof body.display_name === 'string' ? body.display_name.trim() : '';
     const teacher = await upsertTeacher(db, user, fromBody);
     return json({ teacher });
-  } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+  } catch (_err) {
+    return json({ error: 'not_teacher' }, 500);
   }
+}
+
+function validateQuestionPayload(
+  type: string,
+  prompt: string,
+  payload: Record<string, unknown>,
+): string | null {
+  if (!prompt.trim()) return 'question_invalid';
+  if (type === 'single_choice' || type === 'image_choice') {
+    const options = Array.isArray(payload.options) ? payload.options as Array<Record<string, unknown>> : [];
+    if (options.length < 2) return 'question_invalid';
+    if (options.some((o) => !String(o?.label || '').trim() || !String(o?.id || '').trim())) {
+      return 'question_invalid';
+    }
+    const correct = String(payload.correct_option_id || '');
+    if (!options.some((o) => String(o.id) === correct)) return 'question_invalid';
+    return null;
+  }
+  if (type === 'true_false') {
+    if (typeof payload.correct !== 'boolean') return 'question_invalid';
+    return null;
+  }
+  if (type === 'short_text') {
+    const accepted = Array.isArray(payload.accepted) ? payload.accepted : [];
+    if (!accepted.length || accepted.some((v) => !String(v || '').trim())) return 'question_invalid';
+    return null;
+  }
+  // Unknown future types: accept if prompt exists.
+  return null;
 }
 
 async function handleSaveLesson(
@@ -103,10 +132,14 @@ async function handleSaveLesson(
 ) {
   try {
     await upsertTeacher(db, user, user.email || 'Учитель');
-  } catch (err) {
-    return json({ error: err instanceof Error ? err.message : String(err) }, 500);
+  } catch (_err) {
+    return json({ error: 'not_teacher' }, 500);
   }
-  await requireTeacher(db, user.id);
+  try {
+    await requireTeacher(db, user.id);
+  } catch (_err) {
+    return json({ error: 'not_teacher' }, 403);
+  }
 
   const title = String(body.title || '').trim();
   const subject = String(body.subject || 'other').trim() || 'other';
@@ -115,6 +148,15 @@ async function handleSaveLesson(
   const questions = Array.isArray(body.questions) ? body.questions : [];
   if (!title) return json({ error: 'title' }, 400);
   if (!questions.length) return json({ error: 'no_questions' }, 400);
+
+  for (let i = 0; i < questions.length; i += 1) {
+    const raw = (questions[i] || {}) as Record<string, unknown>;
+    const type = String(raw.type || 'single_choice');
+    const prompt = String(raw.prompt || '');
+    const payload = (raw.payload || {}) as Record<string, unknown>;
+    const bad = validateQuestionPayload(type, prompt, payload);
+    if (bad) return json({ error: bad, index: i }, 400);
+  }
 
   const { data: lesson, error: lessonErr } = await db
     .from('academy_lessons')
@@ -127,7 +169,7 @@ async function handleSaveLesson(
     })
     .select('id, title')
     .maybeSingle();
-  if (lessonErr) return json({ error: lessonErr.message }, 500);
+  if (lessonErr) return json({ error: 'lesson_create_failed' }, 500);
   if (!lesson) return json({ error: 'lesson_create_failed' }, 500);
 
   const rows = questions.map((raw, position) => {
@@ -135,7 +177,7 @@ async function handleSaveLesson(
     return {
       lesson_id: lesson.id,
       type: String(q.type || 'single_choice'),
-      prompt: String(q.prompt || ''),
+      prompt: String(q.prompt || '').trim(),
       prompt_media: q.prompt_media ?? null,
       payload: (q.payload || {}) as Record<string, unknown>,
       scoring: (q.scoring || { method: 'auto', points: 1 }) as Record<string, unknown>,
@@ -146,7 +188,7 @@ async function handleSaveLesson(
   const { error: qErr } = await db.from('academy_questions').insert(rows);
   if (qErr) {
     await db.from('academy_lessons').delete().eq('id', lesson.id);
-    return json({ error: qErr.message }, 500);
+    return json({ error: 'lesson_create_failed' }, 500);
   }
 
   return json({ lesson });
@@ -232,7 +274,7 @@ async function handleCreate(db: SupabaseClient, userId: string, body: Record<str
     .select('id, owner_id, org_id, title')
     .eq('id', lessonId)
     .maybeSingle();
-  if (lessonErr) return json({ error: lessonErr.message }, 500);
+  if (lessonErr) return json({ error: 'lesson_not_found' }, 500);
   if (!lesson) return json({ error: 'lesson_not_found' }, 404);
 
   const { data: collab } = await db
@@ -752,7 +794,17 @@ Deno.serve(async (req) => {
     return json({ error: 'unknown_action' }, 400);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
-    const status = (err as { status?: number })?.status || (message === 'config' ? 500 : 500);
-    return json({ error: message }, status);
+    const status = (err as { status?: number })?.status || 500;
+    const safeCodes = new Set([
+      'config',
+      'auth',
+      'forbidden',
+      'not_teacher',
+      'not_found',
+      'bad_state',
+      'version_conflict',
+    ]);
+    const code = safeCodes.has(message) ? message : 'config';
+    return json({ error: code }, status === 403 || status === 401 ? status : 500);
   }
 });

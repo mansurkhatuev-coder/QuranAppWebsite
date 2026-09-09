@@ -4,6 +4,41 @@
 (function (global) {
   const RESUME_PREFIX = 'academy_join:';
 
+  const ERROR_MAP = {
+    academyLiveUrl: 'Сервис уроков не настроен. Обновите страницу позже.',
+    config: 'Сервис временно недоступен.',
+    auth: 'Войдите заново.',
+    forbidden: 'Нет доступа.',
+    not_teacher: 'Этот аккаунт не может вести уроки. Обратитесь к администратору.',
+    title: 'Укажите название урока.',
+    no_questions: 'Добавьте хотя бы один вопрос.',
+    lesson_create_failed: 'Не удалось сохранить урок. Попробуйте ещё раз.',
+    lesson_not_found: 'Урок не найден.',
+    lesson_id: 'Не выбран урок.',
+    session_id: 'Сессия не найдена.',
+    session_not_found: 'Урок с таким кодом не найден.',
+    late_join_disabled: 'К этому уроку уже нельзя присоединиться.',
+    code: 'Введите код из 4–8 цифр.',
+    name: 'Введите имя (хотя бы 2 буквы).',
+    resume: 'Не удалось восстановить вход. Войдите снова.',
+    invalid_token: 'Сессия устарела — войдите заново.',
+    session_mismatch: 'Код не совпадает с этой сессией. Войдите снова.',
+    params: 'Не хватает данных. Обновите страницу.',
+    version_conflict: 'Урок обновился. Нажмите «Обновить».',
+    bad_state: 'Сейчас это действие недоступно.',
+    unknown_command: 'Неизвестная команда.',
+    not_accepting: 'Сейчас нельзя ответить — учитель закрыл приём ответов.',
+    wrong_question: 'Вопрос уже сменился. Обновите экран.',
+    no_question: 'Вопрос не найден.',
+    code_collision: 'Не удалось выдать код. Попробуйте ещё раз.',
+    not_found: 'Не найдено.',
+    method: 'Неверный запрос.',
+    invalid_json: 'Неверный запрос.',
+    unknown_action: 'Неизвестное действие.',
+    question_invalid: 'Проверьте вопросы: текст, варианты и правильный ответ.',
+    abort: 'Нет связи. Проверьте интернет и попробуйте снова.',
+  };
+
   function getConfig() {
     return global.SUPABASE_CONFIG || null;
   }
@@ -36,9 +71,40 @@
     return '';
   }
 
+  function looksTechnical(message) {
+    const s = String(message || '');
+    if (!s) return true;
+    if (/row-level security|infinite recursion|PGRST|JWT|postgres|permission denied|violates/i.test(s)) {
+      return true;
+    }
+    if (/^[a-z][a-z0-9_]*$/i.test(s) && s.includes('_')) return true;
+    if (/^HTTP\s+\d+/i.test(s)) return true;
+    return false;
+  }
+
+  function humanizeError(raw, fallback) {
+    if (raw == null || raw === '') return fallback || 'Не получилось. Попробуйте ещё раз.';
+    if (typeof raw === 'object') {
+      const code = raw.code || raw.error || raw.message;
+      return humanizeError(code, fallback);
+    }
+    const text = String(raw).trim();
+    if (ERROR_MAP[text]) return ERROR_MAP[text];
+
+    const lower = text.toLowerCase();
+    if (lower.includes('invalid login credentials')) return 'Неверный email или пароль.';
+    if (lower.includes('email not confirmed')) return 'Подтвердите email и попробуйте снова.';
+    if (lower.includes('network') || lower.includes('failed to fetch')) {
+      return 'Нет связи. Проверьте интернет.';
+    }
+    if (lower.includes('abort')) return ERROR_MAP.abort;
+    if (looksTechnical(text)) return fallback || 'Не получилось. Попробуйте ещё раз.';
+    return text;
+  }
+
   async function callLive(action, body, opts) {
     const url = academyLiveUrl();
-    if (!url) throw new Error('academyLiveUrl не задан');
+    if (!url) throw new Error(ERROR_MAP.academyLiveUrl);
     const headers = {
       'Content-Type': 'application/json',
       apikey: getConfig()?.anonKey || '',
@@ -57,12 +123,24 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        const err = new Error(data.error || `HTTP ${res.status}`);
+        const code = data.error || data.code || `HTTP ${res.status}`;
+        const err = new Error(humanizeError(code));
         err.status = res.status;
+        err.code = typeof data.error === 'string' ? data.error : code;
         err.payload = data;
         throw err;
       }
       return data;
+    } catch (err) {
+      if (err?.name === 'AbortError') {
+        const e = new Error(ERROR_MAP.abort);
+        e.code = 'abort';
+        throw e;
+      }
+      if (err?.payload || err?.code) throw err;
+      const e = new Error(humanizeError(err?.message, 'Не получилось. Попробуйте ещё раз.'));
+      e.cause = err;
+      throw e;
     } finally {
       clearTimeout(timer);
     }
@@ -125,18 +203,58 @@
       .replace(/"/g, '&quot;');
   }
 
+  const SUBJECT_LABELS = {
+    fiqh: 'Фикх',
+    aqida: 'Акыда',
+    sira: 'Сира',
+    quran: 'Коран',
+    hadith: 'Хадисы',
+    arabic: 'Арабский',
+    other: 'Другое',
+  };
+
+  const STATUS_LABELS = {
+    lobby: 'Лобби',
+    live: 'Идёт урок',
+    paused: 'Пауза',
+    finished: 'Завершён',
+  };
+
+  const PHASE_LABELS = {
+    lobby: 'ожидание',
+    answering: 'ответы',
+    reveal: 'разбор',
+    results: 'итог',
+  };
+
+  function labelSubject(value) {
+    return SUBJECT_LABELS[value] || value || '—';
+  }
+
+  function labelStatus(value) {
+    return STATUS_LABELS[value] || value || '—';
+  }
+
+  function labelPhase(value) {
+    return PHASE_LABELS[value] || value || '—';
+  }
+
   global.AcademyLive = {
     getConfig,
     canCreateClient,
     getClient,
     academyLiveUrl,
     callLive,
+    humanizeError,
     saveResume,
     loadResume,
     clearResume,
     resolveJoinCode,
     resolveSessionId,
     escapeHtml,
+    labelSubject,
+    labelStatus,
+    labelPhase,
     RESUME_PREFIX,
   };
 })(window);
