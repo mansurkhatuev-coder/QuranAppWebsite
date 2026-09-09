@@ -120,13 +120,35 @@
   }
 
   async function loadFinishedSessions(client) {
-    const { data, error } = await client
+    let { data, error } = await client
       .from('academy_sessions')
       .select('id, code, status, started_at, finished_at, lesson_id, academy_lessons(title, subject)')
       .in('status', ['finished', 'abandoned'])
       .order('finished_at', { ascending: false })
       .limit(20);
-    if (error) throw new Error(friendly(error, 'Не удалось загрузить историю занятий.'));
+
+    if (error) {
+      // Fallback if embed is unavailable
+      const plain = await client
+        .from('academy_sessions')
+        .select('id, code, status, started_at, finished_at, lesson_id')
+        .in('status', ['finished', 'abandoned'])
+        .order('finished_at', { ascending: false })
+        .limit(20);
+      if (plain.error) throw new Error(friendly(plain.error, 'Не удалось загрузить историю занятий.'));
+      data = plain.data || [];
+      error = null;
+      const lessonIds = [...new Set(data.map((r) => r.lesson_id).filter(Boolean))];
+      let lessonMap = {};
+      if (lessonIds.length) {
+        const { data: lessons } = await client.from('academy_lessons').select('id, title, subject').in('id', lessonIds);
+        (lessons || []).forEach((l) => {
+          lessonMap[l.id] = l;
+        });
+      }
+      data = data.map((r) => ({ ...r, academy_lessons: lessonMap[r.lesson_id] || null }));
+    }
+
     const rows = data || [];
     if (!rows.length) return [];
 
