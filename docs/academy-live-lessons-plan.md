@@ -399,11 +399,12 @@ lobby → live/answering ⇄ reveal → answering → … → results
 
 ## 10. Фазы поставки
 
-### Фаза 0 — каркас
+### Фаза 0 — каркас ✅ в репозитории
 
-- `/academy/`, `/join/`.
-- SQL: orgs/teachers/lessons/questions/sessions/participants/answers + snapshot + resume_token.
-- RLS + registry stub (3 типа).
+- `/academy/`, `/academy/session/`, `/join/`.
+- SQL: `admin/supabase-migration-academy-live.sql` (orgs/teachers/lessons/questions/sessions/participants/answers + snapshot + resume_token_hash).
+- RLS + client registry stub (3 типа).
+- Осталось с вашей стороны: выполнить SQL в Supabase и добавить строку в `academy_teachers`.
 
 ### Фаза 1 — редактор
 
