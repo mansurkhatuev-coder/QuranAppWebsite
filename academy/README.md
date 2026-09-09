@@ -1,39 +1,20 @@
 # Академия: live-уроки (сайт)
 
-Публичные страницы:
-
 | URL | Кто |
 |---|---|
-| https://waydean.ru/academy/ | учитель (вход Supabase) |
-| https://waydean.ru/academy/session/?id=… | host / продолжение после F5 |
-| https://waydean.ru/join/ | ученик (код + имя) |
-| https://waydean.ru/join/?c=482719 | ученик по ссылке |
+| https://waydean.ru/academy/ | учитель |
+| https://waydean.ru/academy/session/?id=… | host |
+| https://waydean.ru/join/?c=482719 | ученик |
 
-Приложение пока не трогаем.
+## Уже сделано
 
-## Один раз в Supabase
+1. SQL `academy_*` (additive) — применена
+2. Bootstrap учителей из `auth.users` — через workflow deploy
+3. Edge Function `academy-live` (create/join/resume/control/submit/host_state/results/heartbeat)
+4. Редактор 3 типов вопросов + запуск сессии + join ученика с resume после F5
 
-1. SQL Editor → выполнить `admin/supabase-migration-academy-live.sql`
-2. Authentication → пользователь учителя (можно тот же, что для админки)
-3. Добавить учителя:
+## Деплой функции
 
-```sql
-insert into public.academy_teachers (user_id, display_name)
-values ('<uuid-из-auth.users>', 'Имя учителя')
-on conflict (user_id) do update
-  set is_active = true,
-      display_name = excluded.display_name;
-```
+Workflow: **Deploy Academy live Edge Function** (push на ветку или workflow_dispatch).
 
 План: [`docs/academy-live-lessons-plan.md`](../docs/academy-live-lessons-plan.md).
-
-## Сейчас (фаза 0)
-
-- схема + RLS
-- вход учителя и проверка `academy_teachers`
-- список уроков / активных сессий (пока пусто)
-- join-экран с локальным resume заделом
-
-## Дальше
-
-Edge Functions: create / join / resume / control / submit → редактор 3 типов → live host.

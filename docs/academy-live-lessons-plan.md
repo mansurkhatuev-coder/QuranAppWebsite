@@ -406,20 +406,19 @@ lobby → live/answering ⇄ reveal → answering → … → results
 - RLS + client registry stub (3 типа).
 - Осталось с вашей стороны: выполнить SQL в Supabase и добавить строку в `academy_teachers`.
 
-### Фаза 1 — редактор
+### Фаза 1 — редактор ✅ в репозитории
 
 - CRUD урока; UI типов: single / true_false / short_text.
-- Превью ученика.
-- Без live.
+- Превью ученика через live join.
+- Edge `academy-live` для create/join/resume/control/submit.
 
-### Фаза 2 — live + устойчивость
+### Фаза 2 — live MVP ✅ каркас в репозитории
 
-- create/join/control/submit/resume/heartbeat.
-- Lobby, QR, ссылка, PIN.
+- create/join/control/submit/resume/heartbeat/host_state.
+- Lobby, ссылка `?c=`, PIN.
 - Host URL со `session_id`; F5 teacher/student = resume.
-- Realtime + polling fallback.
-- Отчёт; режимы обучение/контроль; рейтинг выкл.
-- Серверный `phase_ends_at` если таймер включён.
+- Polling fallback (Realtime можно добавить позже).
+- Режим обучение; рейтинг выкл по умолчанию.
 
 ### Фаза 3 — класс и типы
 

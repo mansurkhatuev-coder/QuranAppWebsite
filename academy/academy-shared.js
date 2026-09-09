@@ -1,6 +1,5 @@
 /**
  * Shared helpers for Academy live (web).
- * Resume keys and Supabase client bootstrap.
  */
 (function (global) {
   const RESUME_PREFIX = 'academy_join:';
@@ -30,6 +29,45 @@
     return getClient.instance;
   }
 
+  function academyLiveUrl() {
+    const config = getConfig();
+    if (config?.academyLiveUrl) return config.academyLiveUrl;
+    if (config?.url) return `${String(config.url).replace(/\/$/, '')}/functions/v1/academy-live`;
+    return '';
+  }
+
+  async function callLive(action, body, opts) {
+    const url = academyLiveUrl();
+    if (!url) throw new Error('academyLiveUrl не задан');
+    const headers = {
+      'Content-Type': 'application/json',
+      apikey: getConfig()?.anonKey || '',
+    };
+    if (opts?.accessToken) headers.Authorization = `Bearer ${opts.accessToken}`;
+    else if (getConfig()?.anonKey) headers.Authorization = `Bearer ${getConfig().anonKey}`;
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), opts?.timeoutMs || 15000);
+    try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ action, ...(body || {}) }),
+        signal: controller.signal,
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data.error || `HTTP ${res.status}`);
+        err.status = res.status;
+        err.payload = data;
+        throw err;
+      }
+      return data;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   function saveResume(code, payload) {
     try {
       localStorage.setItem(
@@ -37,7 +75,7 @@
         JSON.stringify({ ...payload, saved_at: Date.now() })
       );
     } catch (_) {
-      /* ignore quota / private mode */
+      /* ignore */
     }
   }
 
@@ -59,12 +97,10 @@
     }
   }
 
-  /** Resolve join code from ?c= / ?code= or trailing /join/123456 path. */
   function resolveJoinCode() {
     const params = new URLSearchParams(location.search);
     const fromQuery = params.get('c') || params.get('code');
     if (fromQuery && /^\d{4,8}$/.test(fromQuery.trim())) return fromQuery.trim();
-
     const parts = location.pathname.split('/').filter(Boolean);
     const last = parts[parts.length - 1];
     if (last && last !== 'join' && /^\d{4,8}$/.test(last)) return last;
@@ -81,15 +117,26 @@
     return '';
   }
 
+  function escapeHtml(value) {
+    return String(value ?? '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
   global.AcademyLive = {
     getConfig,
     canCreateClient,
     getClient,
+    academyLiveUrl,
+    callLive,
     saveResume,
     loadResume,
     clearResume,
     resolveJoinCode,
     resolveSessionId,
+    escapeHtml,
     RESUME_PREFIX,
   };
 })(window);

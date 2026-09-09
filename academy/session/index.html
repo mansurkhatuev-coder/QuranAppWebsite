@@ -13,10 +13,10 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="../academy.css?v=1" />
+    <link rel="stylesheet" href="../academy.css?v=2" />
   </head>
   <body class="academy-body">
-    <div class="academy-shell">
+    <div class="academy-shell academy-shell--wide">
       <div class="academy-top">
         <a class="academy-brand" href="../">
           <img src="../../assets/icon.png" width="36" height="36" alt="" />
@@ -27,25 +27,27 @@
 
       <p class="academy-kicker">Экран учителя</p>
       <h1 class="academy-title">Сессия</h1>
-      <p class="academy-muted">
-        Фаза 0: восстановление по <code>session_id</code> после обновления страницы. Управление live
-        (Далее / QR) — в следующей фазе.
-      </p>
+      <p class="academy-muted" id="join-link">—</p>
 
       <div class="academy-card">
-        <p id="session-status" class="academy-muted">Загрузка…</p>
         <p id="session-pin" class="academy-pin" hidden></p>
-        <p id="session-meta" class="academy-muted" hidden></p>
+        <p id="session-meta" class="academy-muted">Загрузка…</p>
+        <p id="question-box" class="academy-title" style="font-size:1.45rem;margin-top:1rem" hidden></p>
+        <p id="people-box" class="academy-muted" style="margin-top:0.75rem"></p>
         <p id="session-error" class="academy-error" hidden></p>
         <div class="academy-actions">
-          <button type="button" class="academy-btn" id="btn-reload">Обновить состояние</button>
+          <button type="button" class="academy-btn academy-btn--primary" id="btn-start">Начать</button>
+          <button type="button" class="academy-btn" id="btn-reveal">Показать ответ</button>
+          <button type="button" class="academy-btn" id="btn-next">Далее</button>
+          <button type="button" class="academy-btn" id="btn-finish">Завершить</button>
+          <button type="button" class="academy-btn academy-btn--ghost" id="btn-reload">Обновить</button>
         </div>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <script src="../../admin/supabase-config.js?v=6"></script>
-    <script src="../academy-shared.js?v=1"></script>
-    <script src="./session.js?v=1"></script>
+    <script src="../../admin/supabase-config.js?v=7"></script>
+    <script src="../academy-shared.js?v=2"></script>
+    <script src="./session.js?v=2"></script>
   </body>
 </html>

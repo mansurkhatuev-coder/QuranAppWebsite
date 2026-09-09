@@ -17,4 +17,7 @@ window.SUPABASE_CONFIG = {
 
   /** Edge Functions → store-downloads → RuStore CSV + App Store Connect */
   storeDownloadsUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/store-downloads',
+
+  /** Edge Functions → academy-live → create/join/resume/control/submit */
+  academyLiveUrl: 'https://YOUR_PROJECT_REF.supabase.co/functions/v1/academy-live',
 };
