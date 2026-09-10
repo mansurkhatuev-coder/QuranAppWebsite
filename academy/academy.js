@@ -258,6 +258,31 @@
     showError(reportError, '');
   }
 
+  function renderPersonReport(row) {
+    const details = (row.answers || [])
+      .slice()
+      .sort((a, b) => (Number(a.question_index) || 0) - (Number(b.question_index) || 0))
+      .map((a) => A.renderAnswerReviewItem(a, { showCorrectAlways: true }))
+      .join('');
+    return `<li class="academy-report-person">
+      <details>
+        <summary>
+          <span class="academy-report-person__main">
+            <strong>${A.escapeHtml(row.name)}</strong>
+            <span class="academy-muted">${row.correct} из ${row.total} верно</span>
+          </span>
+          <span class="academy-time">${A.escapeHtml(percentLabel(row.correct, row.total))}</span>
+        </summary>
+        <ul class="academy-answer-review-list">
+          ${
+            details ||
+            '<li class="academy-muted">Этот ученик не успел ответить ни на один вопрос</li>'
+          }
+        </ul>
+      </details>
+    </li>`;
+  }
+
   async function openReport(sessionId) {
     const item = historyCache.find((h) => h.id === sessionId);
     showError(reportError, '');
@@ -274,16 +299,41 @@
       const data = await A.callLive('results', { session_id: sessionId }, { accessToken });
       const people = data.participants || [];
       const answers = data.answers || [];
+      const questions = data.questions || [];
       const byPerson = {};
       people.forEach((p) => {
-        byPerson[p.id] = { name: p.display_name, correct: 0, total: 0 };
+        byPerson[p.id] = { id: p.id, name: p.display_name, correct: 0, total: 0, answers: [] };
       });
       answers.forEach((a) => {
         if (!byPerson[a.participant_id]) {
-          byPerson[a.participant_id] = { name: 'Ученик', correct: 0, total: 0 };
+          byPerson[a.participant_id] = {
+            id: a.participant_id,
+            name: 'Ученик',
+            correct: 0,
+            total: 0,
+            answers: [],
+          };
         }
-        byPerson[a.participant_id].total += 1;
-        if (a.is_correct === true) byPerson[a.participant_id].correct += 1;
+        const person = byPerson[a.participant_id];
+        person.total += 1;
+        if (a.is_correct === true) person.correct += 1;
+        person.answers.push(a);
+      });
+      // Include unanswered questions so the teacher sees gaps.
+      Object.values(byPerson).forEach((person) => {
+        const answeredIdx = new Set(person.answers.map((a) => Number(a.question_index)));
+        questions.forEach((q) => {
+          const idx = Number(q.index);
+          if (answeredIdx.has(idx)) return;
+          person.answers.push({
+            question_index: idx,
+            prompt: q.prompt,
+            is_correct: null,
+            answer_label: 'нет ответа',
+            correct_label: q.correct_label,
+          });
+          person.total += 1;
+        });
       });
       const rows = Object.values(byPerson).sort((a, b) => b.correct - a.correct || a.name.localeCompare(b.name, 'ru'));
       const allCorrect = rows.reduce((s, r) => s + r.correct, 0);
@@ -291,21 +341,12 @@
       reportStats.hidden = false;
       reportStats.innerHTML = `
         <div><strong>${rows.length}</strong><span>учеников</span></div>
-        <div><strong>${allTotal}</strong><span>ответов</span></div>
+        <div><strong>${questions.length || '—'}</strong><span>вопросов</span></div>
         <div><strong>${percentLabel(allCorrect, allTotal)}</strong><span>верно</span></div>
       `;
+      reportList.className = 'academy-report-list';
       reportList.innerHTML = rows.length
-        ? rows
-            .map(
-              (r) => `<li>
-            <div>
-              <strong>${A.escapeHtml(r.name)}</strong>
-              <div class="academy-muted">${r.correct} из ${r.total} верно</div>
-            </div>
-            <span class="academy-time">${A.escapeHtml(percentLabel(r.correct, r.total))}</span>
-          </li>`
-            )
-            .join('')
+        ? rows.map((r) => renderPersonReport(r)).join('')
         : '<li class="academy-muted">В этом занятии ещё нет учеников</li>';
     } catch (err) {
       reportList.innerHTML = '';

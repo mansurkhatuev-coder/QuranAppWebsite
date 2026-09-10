@@ -241,6 +241,34 @@
     return PHASE_LABELS[value] || value || '—';
   }
 
+  function correctnessPill(isCorrect) {
+    if (isCorrect === true) return '<span class="academy-pill academy-pill--ok">верно</span>';
+    if (isCorrect === false) return '<span class="academy-pill academy-pill--bad">ошибка</span>';
+    return '<span class="academy-pill">без оценки</span>';
+  }
+
+  function renderAnswerReviewItem(answer, opts) {
+    const options = opts || {};
+    const idx = Number(answer?.question_index) || 0;
+    const prompt = String(answer?.prompt || `Вопрос ${idx + 1}`);
+    const given = String(answer?.answer_label || '—');
+    const correct = String(answer?.correct_label || '—');
+    const wrong = answer?.is_correct === false;
+    const showCorrect = options.showCorrectAlways || wrong || answer?.is_correct == null;
+    return `<li class="academy-answer-review">
+      <div class="academy-answer-review__head">
+        ${correctnessPill(answer?.is_correct)}
+        <strong>${escapeHtml(`${idx + 1}. ${prompt}`)}</strong>
+      </div>
+      <div class="academy-muted">Ответ ученика: ${escapeHtml(given)}</div>
+      ${
+        showCorrect
+          ? `<div class="academy-muted">Правильно: ${escapeHtml(correct)}</div>`
+          : ''
+      }
+    </li>`;
+  }
+
   global.AcademyLive = {
     getConfig,
     canCreateClient,
@@ -257,6 +285,8 @@
     labelSubject,
     labelStatus,
     labelPhase,
+    correctnessPill,
+    renderAnswerReviewItem,
     RESUME_PREFIX,
   };
 })(window);

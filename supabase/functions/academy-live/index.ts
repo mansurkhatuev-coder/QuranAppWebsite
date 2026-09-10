@@ -293,7 +293,78 @@ function formatAnswerLabel(
   }
   if (type === 'true_false') return answerPayload.value ? 'Верно' : 'Неверно';
   if (type === 'short_text') return String(answerPayload.text || '—');
+  if (type === 'multi_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const ids = Array.isArray(answerPayload.option_ids) ? (answerPayload.option_ids as unknown[]).map(String) : [];
+    const labels = ids
+      .map((id) => options.find((o) => String(o.id) === id))
+      .filter(Boolean)
+      .map((o) => String((o as Record<string, unknown>).label ?? ''));
+    return labels.length ? labels.join(', ') : ids.join(', ') || '—';
+  }
+  if (type === 'free_text') return String(answerPayload.text || '—');
   return 'ответ';
+}
+
+function formatCorrectLabel(q: Record<string, unknown> | null) {
+  if (!q) return '—';
+  const type = String(q.type || '');
+  const payload = (q.payload || {}) as Record<string, unknown>;
+  if (type === 'single_choice' || type === 'image_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const opt = options.find((o) => String(o.id) === String(payload.correct_option_id));
+    return opt ? String(opt.label ?? '') : '—';
+  }
+  if (type === 'true_false') return payload.correct ? 'Верно' : 'Неверно';
+  if (type === 'short_text') {
+    const accepted = Array.isArray(payload.accepted) ? (payload.accepted as unknown[]).map(String) : [];
+    return accepted.length ? accepted.join(', ') : '—';
+  }
+  if (type === 'multi_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const ids = Array.isArray(payload.correct_option_ids)
+      ? (payload.correct_option_ids as unknown[]).map(String)
+      : [];
+    const labels = ids
+      .map((id) => options.find((o) => String(o.id) === id))
+      .filter(Boolean)
+      .map((o) => String((o as Record<string, unknown>).label ?? ''));
+    return labels.length ? labels.join(', ') : '—';
+  }
+  return '—';
+}
+
+function buildResultsQuestions(session: Record<string, unknown>) {
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  return snap.map((raw, index) => {
+    const q = (raw || {}) as Record<string, unknown>;
+    return {
+      index,
+      prompt: String(q.prompt || ''),
+      type: String(q.type || ''),
+      correct_label: formatCorrectLabel(q),
+    };
+  });
+}
+
+function enrichResultsAnswers(
+  session: Record<string, unknown>,
+  answers: Array<Record<string, unknown>>,
+) {
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  return answers.map((ans) => {
+    const idx = Number(ans.question_index) || 0;
+    const q = (snap[idx] as Record<string, unknown> | undefined) || null;
+    return {
+      participant_id: ans.participant_id,
+      question_index: idx,
+      is_correct: ans.is_correct ?? null,
+      score: ans.score ?? null,
+      answer_label: formatAnswerLabel(q, ans.answer_payload as Record<string, unknown>),
+      correct_label: formatCorrectLabel(q),
+      prompt: q ? String(q.prompt || '') : `Вопрос ${idx + 1}`,
+    };
+  });
 }
 
 function publicStudentAnswer(ans: Record<string, unknown> | null, revealCorrect: boolean) {
@@ -945,16 +1016,27 @@ async function handleResults(db: SupabaseClient, body: Record<string, unknown>, 
   const session = await loadSession(db, sessionId);
   if (!session) return json({ error: 'not_found' }, 404);
 
+  const questions = buildResultsQuestions(session);
+  const finished = String(session.status) === 'finished' || String(session.phase) === 'results';
+
   if (userId && (await canHost(db, sessionId, userId))) {
     const { data: answers } = await db
       .from('academy_answers')
       .select('participant_id, question_index, is_correct, score, answer_payload')
-      .eq('session_id', sessionId);
+      .eq('session_id', sessionId)
+      .order('question_index');
     const { data: people } = await db
       .from('academy_participants')
       .select('id, display_name')
       .eq('session_id', sessionId);
-    return json({ role: 'host', session_id: sessionId, participants: people || [], answers: answers || [] });
+    return json({
+      role: 'host',
+      session_id: sessionId,
+      finished,
+      questions,
+      participants: people || [],
+      answers: enrichResultsAnswers(session, (answers || []) as Array<Record<string, unknown>>),
+    });
   }
 
   if (!resumeToken) return json({ error: 'forbidden' }, 403);
@@ -967,16 +1049,19 @@ async function handleResults(db: SupabaseClient, body: Record<string, unknown>, 
   if (!participant || participant.session_id !== sessionId) return json({ error: 'forbidden' }, 403);
   const { data: answers } = await db
     .from('academy_answers')
-    .select('question_index, is_correct, score')
+    .select('question_index, is_correct, score, answer_payload')
     .eq('participant_id', participant.id)
     .order('question_index');
-  const total = (answers || []).reduce((sum, a) => sum + (Number(a.score) || 0), 0);
-  const correct = (answers || []).filter((a) => a.is_correct === true).length;
+  const enriched = enrichResultsAnswers(session, (answers || []) as Array<Record<string, unknown>>);
+  const total = enriched.reduce((sum, a) => sum + (Number(a.score) || 0), 0);
+  const correct = enriched.filter((a) => a.is_correct === true).length;
   return json({
     role: 'student',
+    finished,
     participant,
-    answers: answers || [],
-    summary: { total_score: total, correct_count: correct, answered: (answers || []).length },
+    questions,
+    answers: enriched,
+    summary: { total_score: total, correct_count: correct, answered: enriched.length },
   });
 }
 
