@@ -347,7 +347,7 @@
       guestBanner.hidden = true;
       return;
     }
-    hubStatus.textContent = 'Проходите в своём темпе. Регистрация необязательна.';
+    hubStatus.textContent = 'Проходите уроки в своём темпе.';
     showView('catalog');
     if (displayName.length >= 2) {
       nameCard.hidden = true;
