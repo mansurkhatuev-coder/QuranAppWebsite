@@ -10,16 +10,18 @@
   const teacherHello = document.getElementById('teacher-hello');
   const lessonsList = document.getElementById('lessons-list');
   const lessonsEmpty = document.getElementById('lessons-empty');
-  const sessionsCard = document.getElementById('active-sessions-card');
   const sessionsList = document.getElementById('sessions-list');
   const historyEmpty = document.getElementById('history-empty');
   const historyList = document.getElementById('history-list');
-  const reportCard = document.getElementById('report-card');
+  const reportCard = document.getElementById('report-modal');
   const reportTitle = document.getElementById('report-title');
   const reportMeta = document.getElementById('report-meta');
   const reportStats = document.getElementById('report-stats');
   const reportList = document.getElementById('report-list');
   const reportError = document.getElementById('report-error');
+  const liveEmpty = document.getElementById('live-empty');
+  const tabCountLive = document.getElementById('tab-count-live');
+  const cabinetTabs = document.getElementById('cabinet-tabs');
   const editorCard = document.getElementById('editor-card');
   const questionsEditor = document.getElementById('questions-editor');
   const editorError = document.getElementById('editor-error');
@@ -33,6 +35,7 @@
   let questionDrafts = [];
   let pendingStartLesson = null;
   let historyCache = [];
+  let currentTab = 'lessons';
 
   function showError(el, message) {
     if (!el) return;
@@ -47,6 +50,20 @@
   function setLoggedIn(on) {
     loginView.hidden = on;
     appView.hidden = !on;
+  }
+
+  function setTab(tab) {
+    currentTab = tab || 'lessons';
+    document.querySelectorAll('[data-panel]').forEach((panel) => {
+      panel.hidden = panel.getAttribute('data-panel') !== currentTab;
+    });
+    document.querySelectorAll('.academy-tab').forEach((btn) => {
+      btn.classList.toggle('is-active', btn.getAttribute('data-tab') === currentTab);
+    });
+    if (currentTab !== 'lessons') {
+      editorCard.hidden = true;
+      startCard.hidden = true;
+    }
   }
 
   function levelLabel(level) {
@@ -216,31 +233,29 @@
     historyList.hidden = false;
     historyList.innerHTML = historyCache
       .map((h) => {
-        const names =
-          h.students.length > 0
-            ? h.students
-                .slice(0, 8)
-                .map((n) => `<span class="academy-chip">${A.escapeHtml(n)}</span>`)
-                .join('')
-            : '<span class="academy-muted">Никто не зашёл</span>';
-        const more =
-          h.students.length > 8
-            ? `<span class="academy-chip academy-chip--muted">+${h.students.length - 8}</span>`
-            : '';
+        const preview = h.students.slice(0, 3).join(', ');
+        const more = h.students.length > 3 ? ` и ещё ${h.students.length - 3}` : '';
+        const studentsLine = h.students.length
+          ? `${A.escapeHtml(preview)}${A.escapeHtml(more)}`
+          : 'Никто не зашёл';
         return `<li>
           <div class="academy-history-main">
             <strong>${A.escapeHtml(h.lesson_title)}</strong>
-            <div class="academy-muted">${formatDate(h.finished_at || h.started_at)} · код ${A.escapeHtml(
-          h.code
-        )} · ${A.escapeHtml(percentLabel(h.score.correct, h.score.total))} верно · ${
+            <div class="academy-muted">${formatDate(h.finished_at || h.started_at)} · ${
           h.students.length
-        } уч.</div>
-            <div class="academy-chip-row">${names}${more}</div>
+        } уч. · ${A.escapeHtml(percentLabel(h.score.correct, h.score.total))}</div>
+            <div class="academy-muted academy-history-names">${studentsLine}</div>
           </div>
           <button type="button" class="academy-btn" data-report="${A.escapeHtml(h.id)}">Отчёт</button>
         </li>`;
       })
       .join('');
+  }
+
+  function closeReport() {
+    reportCard.hidden = true;
+    document.body.classList.remove('academy-modal-open');
+    showError(reportError, '');
   }
 
   function renderPersonReport(row) {
@@ -272,13 +287,13 @@
     const item = historyCache.find((h) => h.id === sessionId);
     showError(reportError, '');
     reportCard.hidden = false;
+    document.body.classList.add('academy-modal-open');
     reportTitle.textContent = item?.lesson_title || 'Отчёт';
     reportMeta.textContent = item
       ? `${formatDate(item.finished_at || item.started_at)} · код ${item.code}`
       : 'Загрузка…';
     reportStats.hidden = true;
     reportList.innerHTML = '<li class="academy-muted">Загрузка…</li>';
-    reportCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
 
     try {
       const data = await A.callLive('results', { session_id: sessionId }, { accessToken });
@@ -366,13 +381,20 @@
   }
 
   function renderSessions(sessions) {
-    if (!sessions.length) {
-      sessionsCard.hidden = true;
+    const list = sessions || [];
+    if (tabCountLive) {
+      tabCountLive.hidden = !list.length;
+      tabCountLive.textContent = String(list.length);
+    }
+    if (!list.length) {
+      if (liveEmpty) liveEmpty.hidden = false;
+      sessionsList.hidden = true;
       sessionsList.innerHTML = '';
       return;
     }
-    sessionsCard.hidden = false;
-    sessionsList.innerHTML = sessions
+    if (liveEmpty) liveEmpty.hidden = true;
+    sessionsList.hidden = false;
+    sessionsList.innerHTML = list
       .map(
         (s) => `<li>
           <div>
@@ -508,6 +530,8 @@
   }
 
   function openEditor() {
+    setTab('lessons');
+    startCard.hidden = true;
     questionDrafts = [defaultQuestion(), defaultQuestion(), defaultQuestion()];
     editorCard.hidden = false;
     document.getElementById('lesson-title').value = '';
@@ -601,6 +625,8 @@
   }
 
   function openStartSettings(lesson) {
+    setTab('lessons');
+    editorCard.hidden = true;
     pendingStartLesson = lesson;
     startLessonTitle.textContent = lesson?.title || 'Урок';
     startCard.hidden = false;
@@ -623,6 +649,7 @@
     renderSessions(sessions);
     renderHistory(history);
     renderLessons(lessons);
+    setTab(currentTab || 'lessons');
     setLoggedIn(true);
   }
 
@@ -677,9 +704,22 @@
       }
     });
 
-    document.getElementById('btn-close-report').addEventListener('click', () => {
-      reportCard.hidden = true;
-      showError(reportError, '');
+    if (cabinetTabs) {
+      cabinetTabs.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-tab]');
+        if (!btn) return;
+        showError(appError, '');
+        showError(appStatus, '');
+        setTab(btn.getAttribute('data-tab'));
+      });
+    }
+
+    document.getElementById('btn-close-report').addEventListener('click', closeReport);
+    reportCard.addEventListener('click', (event) => {
+      if (event.target.closest('[data-close-report]')) closeReport();
+    });
+    document.addEventListener('keydown', (event) => {
+      if (event.key === 'Escape' && reportCard && !reportCard.hidden) closeReport();
     });
 
     historyList.addEventListener('click', async (event) => {

@@ -52,133 +52,136 @@
       </div>
 
       <div id="app-view" hidden>
-        <p class="academy-kicker">Кабинет учителя</p>
-        <h1 class="academy-title">Дашборд</h1>
-        <p class="academy-muted" id="teacher-hello">—</p>
+        <header class="academy-cabinet-head">
+          <div>
+            <p class="academy-kicker">Кабинет</p>
+            <h1 class="academy-title academy-title--sm">Мои live-уроки</h1>
+            <p class="academy-muted" id="teacher-hello">—</p>
+          </div>
+          <div class="academy-cabinet-actions">
+            <button type="button" class="academy-btn academy-btn--primary" id="btn-new-lesson">+ Урок</button>
+            <button type="button" class="academy-btn academy-btn--ghost" id="btn-refresh" title="Обновить">↻</button>
+            <button type="button" class="academy-btn academy-btn--ghost" id="btn-logout">Выйти</button>
+          </div>
+        </header>
 
-        <div class="academy-actions">
-          <button type="button" class="academy-btn academy-btn--primary" id="btn-new-lesson">Создать урок</button>
-          <button type="button" class="academy-btn" id="btn-refresh">Обновить</button>
-          <button type="button" class="academy-btn academy-btn--ghost" id="btn-logout">Выйти</button>
-        </div>
+        <nav class="academy-tabs" id="cabinet-tabs" aria-label="Разделы кабинета">
+          <button type="button" class="academy-tab is-active" data-tab="lessons">Уроки</button>
+          <button type="button" class="academy-tab" data-tab="live">
+            Живые <span class="academy-tab-count" id="tab-count-live" hidden>0</span>
+          </button>
+          <button type="button" class="academy-tab" data-tab="reports">Отчёты</button>
+        </nav>
 
-        <div class="academy-card" id="summary-card">
-          <p class="academy-kicker">Общий прогресс</p>
-          <div id="summary-stats" class="academy-home-stats">
+        <p id="app-error" class="academy-error" hidden></p>
+        <p id="app-status" class="academy-ok" hidden></p>
+
+        <section class="academy-tab-panel" id="tab-lessons" data-panel="lessons">
+          <div class="academy-card" id="editor-card" hidden>
+            <p class="academy-kicker">Новый урок</p>
+            <form id="lesson-form" class="academy-form">
+              <label>
+                Название
+                <input id="lesson-title" required maxlength="120" placeholder="Условия намаза" />
+              </label>
+              <label>
+                Предмет
+                <select id="lesson-subject">
+                  <option value="fiqh">Фикх</option>
+                  <option value="aqida">Акыда</option>
+                  <option value="sira">Сира</option>
+                  <option value="quran">Коран</option>
+                  <option value="hadith">Хадисы</option>
+                  <option value="arabic">Арабский</option>
+                  <option value="other">Другое</option>
+                </select>
+              </label>
+              <div id="questions-editor"></div>
+              <div class="academy-actions">
+                <button type="button" class="academy-btn" id="btn-add-question">+ Вопрос</button>
+                <button type="submit" class="academy-btn academy-btn--primary">Сохранить урок</button>
+                <button type="button" class="academy-btn academy-btn--ghost" id="btn-cancel-editor">Отмена</button>
+              </div>
+              <p id="editor-error" class="academy-error" hidden></p>
+            </form>
+          </div>
+
+          <div class="academy-card" id="start-card" hidden>
+            <p class="academy-kicker">Запуск урока</p>
+            <p class="academy-muted" id="start-lesson-title">—</p>
+            <form id="start-form" class="academy-form academy-start-settings">
+              <label>
+                Таймер на вопрос
+                <select id="start-timer">
+                  <option value="20">20 секунд</option>
+                  <option value="30" selected>30 секунд</option>
+                  <option value="45">45 секунд</option>
+                  <option value="60">60 секунд</option>
+                  <option value="90">90 секунд</option>
+                  <option value="0">Без таймера</option>
+                </select>
+              </label>
+              <label class="academy-check">
+                <input id="start-auto" type="checkbox" checked />
+                <span>Автопереход к следующему вопросу</span>
+              </label>
+              <label class="academy-check">
+                <input id="start-auto-all" type="checkbox" checked />
+                <span>Переходить сразу, когда ответили все</span>
+              </label>
+              <div class="academy-actions">
+                <button type="submit" class="academy-btn academy-btn--primary">Запустить</button>
+                <button type="button" class="academy-btn academy-btn--ghost" id="btn-cancel-start">Отмена</button>
+              </div>
+              <p id="start-error" class="academy-error" hidden></p>
+            </form>
+          </div>
+
+          <div class="academy-card">
+            <div id="lessons-empty" class="academy-empty" hidden>Уроков пока нет — нажмите «+ Урок».</div>
+            <ul id="lessons-list" class="academy-list" hidden></ul>
+          </div>
+        </section>
+
+        <section class="academy-tab-panel" id="tab-live" data-panel="live" hidden>
+          <div class="academy-card" id="active-sessions-card">
+            <p class="academy-muted" id="live-empty">Сейчас нет живых сессий. Запустите урок во вкладке «Уроки».</p>
+            <ul id="sessions-list" class="academy-list" hidden></ul>
+          </div>
+        </section>
+
+        <section class="academy-tab-panel" id="tab-reports" data-panel="reports" hidden>
+          <div class="academy-summary-strip" id="summary-card">
             <div><strong id="stat-lessons">0</strong><span>уроков</span></div>
-            <div><strong id="stat-active">0</strong><span>активных</span></div>
-            <div><strong id="stat-finished">0</strong><span>завершено</span></div>
-            <div><strong id="stat-correct">—</strong><span>верно в среднем</span></div>
+            <div><strong id="stat-active">0</strong><span>живых</span></div>
+            <div><strong id="stat-finished">0</strong><span>занятий</span></div>
+            <div><strong id="stat-correct">—</strong><span>верно</span></div>
           </div>
-        </div>
 
-        <div class="academy-card" id="active-sessions-card" hidden>
-          <p class="academy-kicker">Активные сессии</p>
-          <ul id="sessions-list" class="academy-list"></ul>
-        </div>
-
-        <div class="academy-card" id="history-card">
-          <p class="academy-kicker">Недавние занятия</p>
-          <p class="academy-muted" id="history-empty">Завершённых уроков пока нет — запустите первый.</p>
-          <ul id="history-list" class="academy-history-list" hidden></ul>
-        </div>
-
-        <div class="academy-card" id="report-card" hidden>
-          <div class="academy-report-head">
-            <div>
-              <p class="academy-kicker">Отчёт по занятию</p>
-              <p class="academy-question-prompt" id="report-title" style="margin-top:0.35rem">—</p>
-              <p class="academy-muted" id="report-meta">—</p>
-            </div>
-            <button type="button" class="academy-btn academy-btn--ghost" id="btn-close-report">Закрыть</button>
+          <div class="academy-card" id="history-card">
+            <p class="academy-muted" id="history-empty">Завершённых занятий пока нет.</p>
+            <ul id="history-list" class="academy-history-list" hidden></ul>
           </div>
-          <div id="report-stats" class="academy-home-stats academy-home-stats--compact" hidden></div>
-          <ul id="report-list" class="academy-report-list"></ul>
-          <p id="report-error" class="academy-error" hidden></p>
-        </div>
 
-        <div class="academy-card" id="editor-card" hidden>
-          <p class="academy-kicker">Новый урок</p>
-          <form id="lesson-form" class="academy-form">
-            <label>
-              Название
-              <input id="lesson-title" required maxlength="120" placeholder="Условия намаза" />
-            </label>
-            <label>
-              Предмет
-              <select id="lesson-subject">
-                <option value="fiqh">Фикх</option>
-                <option value="aqida">Акыда</option>
-                <option value="sira">Сира</option>
-                <option value="quran">Коран</option>
-                <option value="hadith">Хадисы</option>
-                <option value="arabic">Арабский</option>
-                <option value="other">Другое</option>
-              </select>
-            </label>
-            <div id="questions-editor"></div>
-            <div class="academy-actions">
-              <button type="button" class="academy-btn" id="btn-add-question">+ Вопрос</button>
-              <button type="submit" class="academy-btn academy-btn--primary">Сохранить урок</button>
-              <button type="button" class="academy-btn academy-btn--ghost" id="btn-cancel-editor">Отмена</button>
-            </div>
-            <p id="editor-error" class="academy-error" hidden></p>
-          </form>
-        </div>
+          <p class="academy-muted academy-hint">Классы появятся позже — пока имена учеников сохраняются в отчётах занятий.</p>
+        </section>
+      </div>
+    </div>
 
-        <div class="academy-card" id="start-card" hidden>
-          <p class="academy-kicker">Запуск урока</p>
-          <p class="academy-muted" id="start-lesson-title">—</p>
-          <form id="start-form" class="academy-form academy-start-settings">
-            <label>
-              Таймер на вопрос
-              <select id="start-timer">
-                <option value="20">20 секунд</option>
-                <option value="30" selected>30 секунд</option>
-                <option value="45">45 секунд</option>
-                <option value="60">60 секунд</option>
-                <option value="90">90 секунд</option>
-                <option value="0">Без таймера</option>
-              </select>
-            </label>
-            <label class="academy-check">
-              <input id="start-auto" type="checkbox" checked />
-              <span>Автопереход к следующему вопросу</span>
-            </label>
-            <label class="academy-check">
-              <input id="start-auto-all" type="checkbox" checked />
-              <span>Переходить сразу, когда ответили все</span>
-            </label>
-            <p class="academy-muted" style="margin:0;font-size:0.85rem">
-              Ученикам правильность сразу не показывается — только «Ответ принят».
-            </p>
-            <div class="academy-actions">
-              <button type="submit" class="academy-btn academy-btn--primary">Запустить</button>
-              <button type="button" class="academy-btn academy-btn--ghost" id="btn-cancel-start">Отмена</button>
-            </div>
-            <p id="start-error" class="academy-error" hidden></p>
-          </form>
+    <div id="report-modal" class="academy-modal" hidden>
+      <div class="academy-modal__backdrop" data-close-report></div>
+      <div class="academy-modal__sheet" role="dialog" aria-modal="true" aria-labelledby="report-title">
+        <div class="academy-report-head">
+          <div>
+            <p class="academy-kicker">Отчёт</p>
+            <p class="academy-question-prompt" id="report-title">—</p>
+            <p class="academy-muted" id="report-meta">—</p>
+          </div>
+          <button type="button" class="academy-btn academy-btn--ghost" id="btn-close-report">Закрыть</button>
         </div>
-
-        <div class="academy-card">
-          <p class="academy-kicker">Мои уроки</p>
-          <div id="lessons-empty" class="academy-empty" hidden>Уроков пока нет — создайте первый.</div>
-          <ul id="lessons-list" class="academy-list" hidden></ul>
-          <p id="app-error" class="academy-error" hidden></p>
-          <p id="app-status" class="academy-ok" hidden></p>
-        </div>
-
-        <div class="academy-card" id="classes-card">
-          <p class="academy-kicker">Классы</p>
-          <p class="academy-muted">
-            Скоро: списки классов (например «5А фикх») и привязка занятий к ним.
-            Пока ученики входят по имени на каждый урок — в отчётах имена уже сохраняются.
-          </p>
-          <p class="academy-muted academy-field-gap">
-            Варианты позже на выбор: ручной список имён, код приглашения в класс или импорт из медресе.
-          </p>
-          <button type="button" class="academy-btn" id="btn-classes-soon" disabled>Добавить класс — скоро</button>
-        </div>
+        <div id="report-stats" class="academy-home-stats academy-home-stats--compact" hidden></div>
+        <ul id="report-list" class="academy-board-list"></ul>
+        <p id="report-error" class="academy-error" hidden></p>
       </div>
     </div>
 
