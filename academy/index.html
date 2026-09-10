@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./academy.css?v=10" />
+    <link rel="stylesheet" href="./academy.css?v=11" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -67,6 +67,7 @@
 
         <nav class="academy-tabs" id="cabinet-tabs" aria-label="Разделы кабинета">
           <button type="button" class="academy-tab is-active" data-tab="lessons">Уроки</button>
+          <button type="button" class="academy-tab" data-tab="homework">Домашние</button>
           <button type="button" class="academy-tab" data-tab="live">
             Живые <span class="academy-tab-count" id="tab-count-live" hidden>0</span>
           </button>
@@ -163,6 +164,43 @@
           </div>
         </section>
 
+        <section class="academy-tab-panel" id="tab-homework" data-panel="homework" hidden>
+          <div class="academy-card">
+            <p class="academy-kicker">Домашние задания</p>
+            <p class="academy-muted">
+              Одна ссылка для учеников. Можно закрыть набор в любой момент — новые не смогут начать.
+            </p>
+            <form id="hub-form" class="academy-form">
+              <label>
+                Название набора
+                <input id="hub-title" maxlength="120" placeholder="Домашние задания · неделя 1" />
+              </label>
+              <label class="academy-check">
+                <input id="hub-open" type="checkbox" checked />
+                <span>Набор открыт (новые могут начинать)</span>
+              </label>
+              <p class="academy-muted" id="hub-link-row" hidden>
+                Ссылка:
+                <a id="hub-link" href="#" target="_blank" rel="noopener">—</a>
+                <button type="button" class="academy-btn academy-btn--ghost" id="btn-copy-hub">Копировать</button>
+              </p>
+              <p class="academy-kicker" style="margin-top:1rem">Уроки в наборе</p>
+              <div id="hub-lesson-picker" class="academy-hub-picker"></div>
+              <div class="academy-actions">
+                <button type="submit" class="academy-btn academy-btn--primary" id="btn-save-hub">Сохранить набор</button>
+                <button type="button" class="academy-btn" id="btn-refresh-hub-reports">Отчёты набора</button>
+              </div>
+              <p id="hub-error" class="academy-error" hidden></p>
+              <p id="hub-ok" class="academy-ok" hidden></p>
+            </form>
+          </div>
+          <div class="academy-card" id="hub-reports-card" hidden>
+            <p class="academy-kicker">Прохождения по ссылке</p>
+            <p class="academy-muted" id="hub-reports-empty" hidden>Пока никто не проходил.</p>
+            <ul id="hub-reports-list" class="academy-history-list"></ul>
+          </div>
+        </section>
+
         <section class="academy-tab-panel" id="tab-live" data-panel="live" hidden>
           <div class="academy-card" id="active-sessions-card">
             <p class="academy-muted" id="live-empty">Сейчас нет живых сессий. Запустите урок во вкладке «Уроки».</p>
@@ -207,8 +245,8 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../admin/supabase-config.js?v=7"></script>
-    <script src="./academy-shared.js?v=5"></script>
+    <script src="./academy-shared.js?v=6"></script>
     <script src="./question-types.js?v=1"></script>
-    <script src="./academy.js?v=12"></script>
+    <script src="./academy.js?v=13"></script>
   </body>
 </html>

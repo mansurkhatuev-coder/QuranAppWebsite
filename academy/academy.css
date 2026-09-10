@@ -260,6 +260,30 @@ a:hover {
   margin-top: 1rem;
 }
 
+.academy-hub-picker {
+  display: grid;
+  gap: 0.45rem;
+  max-height: 18rem;
+  overflow: auto;
+  padding: 0.35rem 0.15rem 0.35rem 0;
+  margin-bottom: 0.75rem;
+}
+
+.academy-hub-pick {
+  align-items: flex-start;
+}
+
+#hub-link-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+}
+
+#hub-link-row a {
+  word-break: break-all;
+}
+
 .academy-btn {
   appearance: none;
   -webkit-appearance: none;

@@ -1,5 +1,18 @@
 import { createClient, type SupabaseClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 import { publicQuestion, scoreAnswer } from './scoring.ts';
+import {
+  handleAsyncStart,
+  handleAsyncState,
+  handleAsyncSubmit,
+  handleEnsureStudent,
+  handleHubGet,
+  handleHubReports,
+  handleHubToggle,
+  handleHubUpsert,
+  handlePublicCatalog,
+  handleStudentHistory,
+  type PublicAsyncDeps,
+} from './public-async.ts';
 
 const CORS = {
   'Content-Type': 'application/json',
@@ -409,6 +422,8 @@ function buildNextPatch(session: Record<string, unknown>, settings: ReturnType<t
 
 async function maybeAutoAdvance(db: SupabaseClient, session: Record<string, unknown>) {
   if (!session?.id) return session;
+  // Self-paced async runs advance only on student submit — never auto-advance.
+  if (String(session.pacing) === 'async') return session;
   if (session.status !== 'live' || session.phase !== 'answering') return session;
   const settings = settingsDefaults(session.settings as Record<string, unknown>);
   let due = false;
@@ -858,6 +873,22 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
   });
 }
 
+function publicAsyncDeps(): PublicAsyncDeps {
+  return {
+    json,
+    sha256Hex,
+    randomToken,
+    randomCode,
+    requireTeacher,
+    loadSession,
+    settingsDefaults,
+    publicStudentAnswer,
+    enrichResultsAnswers,
+    buildResultsQuestions,
+    canHost,
+  };
+}
+
 async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
   const resumeToken = String(body.resume_token || '');
   const questionIndex = Number(body.question_index);
@@ -874,6 +905,10 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
 
   const sessionRaw = await loadSession(db, participant.session_id);
   if (!sessionRaw) return json({ error: 'not_found' }, 404);
+  // Async homework uses async_submit (self-paced). Keep live submit teacher-paced only.
+  if (String(sessionRaw.pacing) === 'async') {
+    return handleAsyncSubmit(db, body, publicAsyncDeps());
+  }
   const session = await maybeAutoAdvance(db, sessionRaw);
   if (session.status !== 'live' || session.phase !== 'answering') return json({ error: 'not_accepting' }, 409);
   if (questionIndex !== session.current_index) return json({ error: 'wrong_question' }, 409);
@@ -1082,7 +1117,21 @@ Deno.serve(async (req) => {
   try {
     const db = serviceClient();
 
-    if (['create', 'control', 'host_state', 'ensure_teacher', 'save_lesson'].includes(action)) {
+    const deps = publicAsyncDeps();
+
+    if (
+      [
+        'create',
+        'control',
+        'host_state',
+        'ensure_teacher',
+        'save_lesson',
+        'hub_get',
+        'hub_upsert',
+        'hub_toggle',
+        'hub_reports',
+      ].includes(action)
+    ) {
       if (!authHeader) return json({ error: 'auth' }, 401);
       const userClient = anonAuthedClient(authHeader);
       const { data: userData, error: userErr } = await userClient.auth.getUser();
@@ -1094,10 +1143,38 @@ Deno.serve(async (req) => {
       if (action === 'save_lesson') {
         return await handleSaveLesson(db, userData.user, body);
       }
+      if (action === 'hub_get') return await handleHubGet(db, userId, body, deps);
+      if (action === 'hub_upsert') return await handleHubUpsert(db, userId, body, deps);
+      if (action === 'hub_toggle') return await handleHubToggle(db, userId, body, deps);
+      if (action === 'hub_reports') return await handleHubReports(db, userId, body, deps);
       if (action === 'create') return await handleCreate(db, userId, body);
       if (action === 'control') return await handleControl(db, userId, body);
       return await handleHostState(db, userId, body);
     }
+
+    if (['ensure_student', 'student_history'].includes(action)) {
+      if (!authHeader) return json({ error: 'auth' }, 401);
+      const userClient = anonAuthedClient(authHeader);
+      const { data: userData, error: userErr } = await userClient.auth.getUser();
+      if (userErr || !userData?.user) return json({ error: 'auth' }, 401);
+      if (action === 'ensure_student') {
+        return await handleEnsureStudent(db, userData.user, body, deps);
+      }
+      return await handleStudentHistory(db, userData.user.id, body, deps);
+    }
+
+    if (action === 'public_catalog') return await handlePublicCatalog(db, body, deps);
+    if (action === 'async_start') {
+      let userId: string | null = null;
+      if (authHeader) {
+        const userClient = anonAuthedClient(authHeader);
+        const { data: userData } = await userClient.auth.getUser();
+        userId = userData?.user?.id ?? null;
+      }
+      return await handleAsyncStart(db, body, userId, deps);
+    }
+    if (action === 'async_state') return await handleAsyncState(db, body, deps);
+    if (action === 'async_submit') return await handleAsyncSubmit(db, body, deps);
 
     if (action === 'join') return await handleJoin(db, body);
     if (action === 'resume') return await handleResume(db, body);

@@ -39,6 +39,17 @@
     unknown_action: 'Неизвестное действие.',
     question_invalid: 'Проверьте вопросы: текст, варианты и правильный ответ.',
     abort: 'Нет связи. Проверьте интернет и попробуйте снова.',
+    token: 'Ссылка неполная или устарела.',
+    hub_not_found: 'Набор уроков не найден.',
+    hub_closed: 'Набор закрыт учителем. Новые прохождения недоступны.',
+    hub_id: 'Набор не выбран.',
+    hub_load_failed: 'Не удалось загрузить набор.',
+    hub_save_failed: 'Не удалось сохранить набор.',
+    lesson_not_in_hub: 'Этого урока нет в наборе.',
+    not_async: 'Это не домашнее задание.',
+    not_student: 'Войдите как ученик.',
+    student_create_failed: 'Не удалось создать профиль ученика.',
+    history_failed: 'Не удалось загрузить историю.',
   };
 
   function getConfig() {
@@ -64,6 +75,61 @@
       });
     }
     return getClient.instance;
+  }
+
+  /** Separate Auth storage so teacher and student cabinets never share a session. */
+  function getStudentClient() {
+    if (!canCreateClient()) return null;
+    if (!getStudentClient.instance) {
+      const config = getConfig();
+      getStudentClient.instance = global.supabase.createClient(config.url, config.anonKey, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: 'academy-student-auth',
+        },
+      });
+    }
+    return getStudentClient.instance;
+  }
+
+  function resolveHubToken() {
+    const params = new URLSearchParams(location.search);
+    const fromQuery = params.get('t') || params.get('token');
+    if (fromQuery && String(fromQuery).trim().length >= 8) return String(fromQuery).trim();
+    return '';
+  }
+
+  const ASYNC_RESUME_PREFIX = 'academy_async:';
+
+  function saveAsyncResume(token, lessonId, payload) {
+    try {
+      localStorage.setItem(
+        ASYNC_RESUME_PREFIX + String(token) + ':' + String(lessonId),
+        JSON.stringify({ ...payload, saved_at: Date.now() })
+      );
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function loadAsyncResume(token, lessonId) {
+    try {
+      const raw = localStorage.getItem(ASYNC_RESUME_PREFIX + String(token) + ':' + String(lessonId));
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (_) {
+      return null;
+    }
+  }
+
+  function clearAsyncResume(token, lessonId) {
+    try {
+      localStorage.removeItem(ASYNC_RESUME_PREFIX + String(token) + ':' + String(lessonId));
+    } catch (_) {
+      /* ignore */
+    }
   }
 
   function academyLiveUrl() {
@@ -96,6 +162,8 @@
     const lower = text.toLowerCase();
     if (lower.includes('invalid login credentials')) return 'Неверный email или пароль.';
     if (lower.includes('email not confirmed')) return 'Подтвердите email и попробуйте снова.';
+    if (lower.includes('user already registered')) return 'Этот email уже зарегистрирован. Войдите.';
+    if (lower.includes('password should be')) return 'Пароль слишком короткий.';
     if (lower.includes('network') || lower.includes('failed to fetch')) {
       return 'Нет связи. Проверьте интернет.';
     }
@@ -273,6 +341,7 @@
     getConfig,
     canCreateClient,
     getClient,
+    getStudentClient,
     academyLiveUrl,
     callLive,
     humanizeError,
@@ -281,6 +350,10 @@
     clearResume,
     resolveJoinCode,
     resolveSessionId,
+    resolveHubToken,
+    saveAsyncResume,
+    loadAsyncResume,
+    clearAsyncResume,
     escapeHtml,
     labelSubject,
     labelStatus,
@@ -288,5 +361,6 @@
     correctnessPill,
     renderAnswerReviewItem,
     RESUME_PREFIX,
+    ASYNC_RESUME_PREFIX,
   };
 })(window);

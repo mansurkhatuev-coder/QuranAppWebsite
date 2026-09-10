@@ -23,6 +23,9 @@
 /academy/*
   Cache-Control: no-store
 
+/q/*
+  Cache-Control: no-store
+
 /join/*
   Cache-Control: no-store
 
