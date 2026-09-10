@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0B0F13" />
+    <meta name="color-scheme" content="dark" />
+    <title>Кабинет ученика — Академия</title>
+    <link rel="icon" href="../../assets/icon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
+    />
+    <link rel="stylesheet" href="../../academy/academy.css?v=11" />
+    <link rel="stylesheet" href="../q.css?v=1" />
+  </head>
+  <body class="academy-body">
+    <div class="academy-shell academy-shell--wide">
+      <div class="academy-top">
+        <a class="academy-brand" href="/">
+          <img src="../../assets/icon.png" width="36" height="36" alt="" />
+          <strong>Академия</strong>
+        </a>
+        <button type="button" class="academy-btn academy-btn--ghost" id="btn-logout">Выйти</button>
+      </div>
+
+      <header class="academy-cabinet-head">
+        <div class="academy-cabinet-copy">
+          <p class="academy-kicker">Ученик</p>
+          <h1 class="academy-title academy-title--sm">Мой кабинет</h1>
+          <p class="academy-muted" id="student-hello">—</p>
+        </div>
+      </header>
+
+      <p id="app-error" class="academy-error" hidden></p>
+
+      <section class="academy-card">
+        <p class="academy-kicker">История</p>
+        <p class="academy-muted" id="history-empty" hidden>Пока нет прохождений. Откройте ссылку учителя.</p>
+        <ul id="history-list" class="academy-history-list"></ul>
+      </section>
+
+      <section class="academy-card" id="leaderboard-card" hidden>
+        <p class="academy-kicker">Рейтинг набора</p>
+        <p class="academy-muted">Только сводные показатели — чужие ответы скрыты.</p>
+        <div id="leaderboard-body"></div>
+      </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../admin/supabase-config.js?v=7"></script>
+    <script src="../../academy/academy-shared.js?v=6"></script>
+    <script src="./cabinet.js?v=1"></script>
+  </body>
+</html>

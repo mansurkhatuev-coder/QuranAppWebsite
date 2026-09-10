@@ -36,6 +36,17 @@
   const startForm = document.getElementById('start-form');
   const startError = document.getElementById('start-error');
   const startLessonTitle = document.getElementById('start-lesson-title');
+  const hubForm = document.getElementById('hub-form');
+  const hubTitleInput = document.getElementById('hub-title');
+  const hubOpenInput = document.getElementById('hub-open');
+  const hubLinkRow = document.getElementById('hub-link-row');
+  const hubLink = document.getElementById('hub-link');
+  const hubLessonPicker = document.getElementById('hub-lesson-picker');
+  const hubError = document.getElementById('hub-error');
+  const hubOk = document.getElementById('hub-ok');
+  const hubReportsCard = document.getElementById('hub-reports-card');
+  const hubReportsEmpty = document.getElementById('hub-reports-empty');
+  const hubReportsList = document.getElementById('hub-reports-list');
 
   let accessToken = '';
   let questionDrafts = [];
@@ -45,6 +56,8 @@
   let selectedCourse = null;
   let lessonsQuery = '';
   let currentTab = 'lessons';
+  let hubCache = null;
+  let hubSelectedIds = new Set();
 
   const COURSE_ORDER = [
     'knowledge',
@@ -156,10 +169,20 @@
   async function loadActiveSessions(client) {
     const { data, error } = await client
       .from('academy_sessions')
-      .select('id, code, status, phase, lesson_id, last_activity_at')
+      .select('id, code, status, phase, lesson_id, last_activity_at, pacing')
       .in('status', ['lobby', 'live', 'paused'])
+      .eq('pacing', 'live')
       .order('last_activity_at', { ascending: false });
-    if (error) throw new Error(friendly(error, 'Не удалось загрузить сессии.'));
+    if (error) {
+      // Older DBs without filtering by pacing — fall back and filter client-side.
+      const plain = await client
+        .from('academy_sessions')
+        .select('id, code, status, phase, lesson_id, last_activity_at, pacing')
+        .in('status', ['lobby', 'live', 'paused'])
+        .order('last_activity_at', { ascending: false });
+      if (plain.error) throw new Error(friendly(plain.error, 'Не удалось загрузить сессии.'));
+      return (plain.data || []).filter((s) => String(s.pacing || 'live') !== 'async');
+    }
     return data || [];
   }
 
@@ -811,6 +834,93 @@
     location.href = `./session/?id=${encodeURIComponent(data.session.id)}`;
   }
 
+  function renderHubPicker(lessons) {
+    if (!hubLessonPicker) return;
+    const rows = lessons || [];
+    if (!rows.length) {
+      hubLessonPicker.innerHTML = '<p class="academy-muted">Сначала создайте уроки во вкладке «Уроки».</p>';
+      return;
+    }
+    hubLessonPicker.innerHTML = rows
+      .map((lesson) => {
+        const id = lesson.id;
+        const checked = hubSelectedIds.has(id) ? 'checked' : '';
+        return `<label class="academy-check academy-hub-pick">
+          <input type="checkbox" data-hub-lesson="${A.escapeHtml(id)}" ${checked} />
+          <span>${A.escapeHtml(lesson.title)} <span class="academy-muted">· ${A.escapeHtml(
+            A.labelSubject(lesson.subject)
+          )}</span></span>
+        </label>`;
+      })
+      .join('');
+  }
+
+  function syncHubSelectionFromDom() {
+    hubSelectedIds = new Set();
+    hubLessonPicker?.querySelectorAll('[data-hub-lesson]').forEach((input) => {
+      if (input.checked) hubSelectedIds.add(input.getAttribute('data-hub-lesson'));
+    });
+  }
+
+  function renderHub(data) {
+    hubCache = data?.hub || null;
+    const lessons = data?.lessons || [];
+    hubSelectedIds = new Set(lessons.map((l) => l.lesson_id || l.id).filter(Boolean));
+    if (hubTitleInput) hubTitleInput.value = hubCache?.title || 'Домашние задания';
+    if (hubOpenInput) hubOpenInput.checked = hubCache ? Boolean(hubCache.is_open) : true;
+    if (hubCache && data?.public_url) {
+      hubLinkRow.hidden = false;
+      hubLink.href = data.public_url;
+      hubLink.textContent = data.public_url.replace(/^https?:\/\//, '');
+    } else {
+      hubLinkRow.hidden = true;
+    }
+    renderHubPicker(lessonsCache);
+  }
+
+  async function loadHub() {
+    const data = await A.callLive('hub_get', {}, { accessToken });
+    renderHub(data);
+    return data;
+  }
+
+  function renderHubReports(runs) {
+    hubReportsCard.hidden = false;
+    if (!runs?.length) {
+      hubReportsEmpty.hidden = false;
+      hubReportsList.innerHTML = '';
+      return;
+    }
+    hubReportsEmpty.hidden = true;
+    hubReportsList.innerHTML = runs
+      .map((row) => {
+        const pct = percentLabel(row.score?.correct || 0, row.score?.total || 0);
+        const names = (row.students || []).slice(0, 4).join(', ') || '—';
+        return `<li class="academy-history-item">
+          <div>
+            <strong>${A.escapeHtml(row.lesson_title)}</strong>
+            <div class="academy-muted">${A.escapeHtml(formatDate(row.finished_at || row.started_at))} · ${A.escapeHtml(
+              names
+            )}</div>
+          </div>
+          <div>
+            <span class="academy-muted">${A.escapeHtml(pct)}</span>
+            <button type="button" class="academy-btn academy-btn--ghost" data-report="${A.escapeHtml(row.id)}">Отчёт</button>
+          </div>
+        </li>`;
+      })
+      .join('');
+  }
+
+  async function loadHubReports() {
+    if (!hubCache?.id) {
+      showError(hubError, 'Сначала сохраните набор.');
+      return;
+    }
+    const data = await A.callLive('hub_reports', { hub_id: hubCache.id }, { accessToken });
+    renderHubReports(data.runs || []);
+  }
+
   function openStartSettings(lesson) {
     setTab('lessons');
     editorCard.hidden = true;
@@ -832,10 +942,16 @@
       loadActiveSessions(client),
       loadFinishedSessions(client),
     ]);
+    lessonsCache = lessons;
     renderSummary({ lessons, active: sessions, history });
     renderSessions(sessions);
     renderHistory(history);
     renderLessons(lessons);
+    try {
+      await loadHub();
+    } catch (_) {
+      renderHubPicker(lessons);
+    }
     setTab(currentTab || 'lessons');
     setLoggedIn(true);
   }
@@ -897,9 +1013,77 @@
         if (!btn) return;
         showError(appError, '');
         showError(appStatus, '');
-        setTab(btn.getAttribute('data-tab'));
+        const tab = btn.getAttribute('data-tab');
+        setTab(tab);
+        if (tab === 'homework') {
+          loadHub().catch((err) => showError(hubError, friendly(err)));
+        }
       });
     }
+
+    hubForm?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      showError(hubError, '');
+      showError(hubOk, '');
+      syncHubSelectionFromDom();
+      const { data } = await client.auth.getSession();
+      if (!data?.session) return setLoggedIn(false);
+      accessToken = data.session.access_token;
+      const btn = document.getElementById('btn-save-hub');
+      btn.disabled = true;
+      try {
+        const payload = {
+          hub_id: hubCache?.id || undefined,
+          title: hubTitleInput.value.trim() || 'Домашние задания',
+          is_open: Boolean(hubOpenInput.checked),
+          lesson_ids: [...hubSelectedIds],
+        };
+        const saved = await A.callLive('hub_upsert', payload, { accessToken });
+        renderHub(saved);
+        showError(hubOk, hubOpenInput.checked ? 'Набор сохранён и открыт.' : 'Набор сохранён и закрыт.');
+      } catch (err) {
+        showError(hubError, friendly(err, 'Не удалось сохранить набор.'));
+      } finally {
+        btn.disabled = false;
+      }
+    });
+
+    document.getElementById('btn-copy-hub')?.addEventListener('click', async () => {
+      const url = hubLink?.href;
+      if (!url || url === '#') return;
+      try {
+        await navigator.clipboard.writeText(url);
+        showError(hubOk, 'Ссылка скопирована.');
+      } catch (_) {
+        showError(hubOk, url);
+      }
+    });
+
+    document.getElementById('btn-refresh-hub-reports')?.addEventListener('click', async () => {
+      showError(hubError, '');
+      const { data } = await client.auth.getSession();
+      if (!data?.session) return setLoggedIn(false);
+      accessToken = data.session.access_token;
+      try {
+        await loadHubReports();
+      } catch (err) {
+        showError(hubError, friendly(err, 'Не удалось загрузить отчёты.'));
+      }
+    });
+
+    hubReportsList?.addEventListener('click', async (event) => {
+      const btn = event.target.closest('[data-report]');
+      if (!btn) return;
+      const { data } = await client.auth.getSession();
+      if (!data?.session) return setLoggedIn(false);
+      accessToken = data.session.access_token;
+      btn.disabled = true;
+      try {
+        await openReport(btn.getAttribute('data-report'));
+      } finally {
+        btn.disabled = false;
+      }
+    });
 
     document.getElementById('btn-close-report').addEventListener('click', closeReport);
     reportCard.addEventListener('click', (event) => {

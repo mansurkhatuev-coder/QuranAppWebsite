@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="ru">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0B0F13" />
+    <meta name="color-scheme" content="dark" />
+    <meta name="description" content="Домашние задания Академии — проходите уроки в своём темпе." />
+    <title>Домашние задания — Академия</title>
+    <link rel="icon" href="../assets/icon.png" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
+    />
+    <link rel="stylesheet" href="../academy/academy.css?v=11" />
+    <link rel="stylesheet" href="./q.css?v=1" />
+  </head>
+  <body class="academy-body">
+    <div class="academy-shell academy-shell--wide">
+      <div class="academy-top">
+        <a class="academy-brand" href="/">
+          <img src="../assets/icon.png" width="36" height="36" alt="" />
+          <strong>Академия</strong>
+        </a>
+        <a class="academy-btn academy-btn--ghost" id="top-auth-link" href="/q/auth/">Войти</a>
+      </div>
+
+      <div id="guest-banner" class="q-banner" hidden>
+        <p>
+          Вы проходите как гость. Зарегистрируйтесь — история и статистика сохранятся в кабинете.
+        </p>
+        <a class="academy-btn academy-btn--primary" href="/q/auth/">Создать аккаунт</a>
+      </div>
+
+      <div id="gate-view">
+        <p class="academy-kicker">Домашние задания</p>
+        <h1 class="academy-title">Откройте ссылку учителя</h1>
+        <p class="academy-muted">Нужна ссылка вида waydean.ru/q/?t=…</p>
+        <p id="gate-error" class="academy-error" hidden></p>
+      </div>
+
+      <div id="catalog-view" hidden>
+        <p class="academy-kicker">Набор</p>
+        <h1 class="academy-title academy-title--sm" id="hub-title">—</h1>
+        <p class="academy-muted" id="hub-status">—</p>
+
+        <div class="academy-card" id="name-card">
+          <form id="name-form" class="academy-form">
+            <label>
+              Ваше имя
+              <input id="guest-name" name="name" maxlength="40" autocomplete="nickname" required placeholder="Амина" />
+            </label>
+            <div class="academy-actions">
+              <button type="submit" class="academy-btn academy-btn--primary">Продолжить</button>
+            </div>
+            <p id="name-error" class="academy-error" hidden></p>
+          </form>
+        </div>
+
+        <div class="academy-card" id="lessons-card" hidden>
+          <p class="academy-muted" id="lessons-empty" hidden>В наборе пока нет уроков.</p>
+          <ul id="lessons-list" class="academy-list"></ul>
+        </div>
+        <p id="catalog-error" class="academy-error" hidden></p>
+      </div>
+
+      <div id="play-view" hidden>
+        <button type="button" class="academy-btn academy-btn--ghost" id="btn-back-catalog">← К списку</button>
+        <p class="academy-kicker" id="play-kicker">Вопрос</p>
+        <p class="academy-question-prompt" id="play-title">—</p>
+        <div id="play-body"></div>
+        <p id="play-feedback" class="academy-ok" hidden></p>
+        <p id="play-error" class="academy-error" hidden></p>
+        <div class="academy-actions">
+          <button type="button" class="academy-btn academy-btn--primary" id="btn-submit-answer">Ответить</button>
+          <button type="button" class="academy-btn" id="btn-next-question" hidden>Дальше</button>
+        </div>
+      </div>
+
+      <div id="result-view" hidden>
+        <p class="academy-kicker">Итог</p>
+        <h1 class="academy-title academy-title--sm" id="result-title">Урок завершён</h1>
+        <p class="academy-muted" id="result-summary">—</p>
+        <div id="result-body"></div>
+        <div id="result-cta" class="q-banner q-banner--after" hidden>
+          <p>Сохраните прогресс — зарегистрируйтесь за минуту.</p>
+          <a class="academy-btn academy-btn--primary" href="/q/auth/">Зарегистрироваться</a>
+        </div>
+        <div class="academy-actions">
+          <button type="button" class="academy-btn academy-btn--primary" id="btn-next-lesson">К списку уроков</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../admin/supabase-config.js?v=7"></script>
+    <script src="../academy/academy-shared.js?v=6"></script>
+    <script src="./q.js?v=1"></script>
+  </body>
+</html>

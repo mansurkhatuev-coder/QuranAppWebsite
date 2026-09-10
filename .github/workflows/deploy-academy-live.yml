@@ -11,11 +11,13 @@ on:
       - cursor/academy-teacher-dashboard-51a2
       - cursor/academy-join-dedupe-51a2
       - cursor/academy-results-detail-51a2
+      - cursor/academy-public-async-51a2
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml
       - admin/supabase-migration-academy-teachers-bootstrap.sql
       - admin/supabase-migration-academy-dashboard.sql
+      - admin/supabase-migration-academy-public-async.sql
 
 permissions:
   contents: read
@@ -47,6 +49,15 @@ jobs:
         run: |
           if [ -f admin/supabase-migration-academy-dashboard.sql ]; then
             scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-dashboard.sql
+          fi
+
+      - name: Apply public async hubs (additive)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          if [ -f admin/supabase-migration-academy-public-async.sql ]; then
+            scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-public-async.sql
           fi
 
       - name: Deploy academy-live function
