@@ -10,6 +10,9 @@
   const teacherHello = document.getElementById('teacher-hello');
   const lessonsList = document.getElementById('lessons-list');
   const lessonsEmpty = document.getElementById('lessons-empty');
+  const lessonsSearch = document.getElementById('lessons-search');
+  const lessonsFilters = document.getElementById('lessons-filters');
+  const lessonsMeta = document.getElementById('lessons-meta');
   const sessionsList = document.getElementById('sessions-list');
   const historyEmpty = document.getElementById('history-empty');
   const historyList = document.getElementById('history-list');
@@ -35,7 +38,29 @@
   let questionDrafts = [];
   let pendingStartLesson = null;
   let historyCache = [];
+  let lessonsCache = [];
+  let lessonsCourseFilter = 'all';
+  let lessonsQuery = '';
   let currentTab = 'lessons';
+
+  const COURSE_ORDER = [
+    'knowledge',
+    'tuhfa',
+    'muallim',
+    'madina',
+    'names99',
+    'other',
+  ];
+
+  const COURSE_LABELS = {
+    all: 'Все',
+    knowledge: 'Знания',
+    tuhfa: 'Тухфа',
+    muallim: 'Муаллим',
+    madina: 'Мединский',
+    names99: '99 имён',
+    other: 'Другое',
+  };
 
   function showError(el, message) {
     if (!el) return;
@@ -354,29 +379,131 @@
     }
   }
 
+  function courseKeyFromTitle(title) {
+    const t = String(title || '').toLowerCase();
+    if (t.includes('знани')) return 'knowledge';
+    if (t.includes('тухф') || t.includes('туҳф')) return 'tuhfa';
+    if (t.includes('муаллим') || t.includes('муалим')) return 'muallim';
+    if (t.includes('медин') || t.includes('мадин')) return 'madina';
+    if (t.includes('99') && (t.includes('им') || t.includes('имя') || t.includes('име'))) return 'names99';
+    if (t.startsWith('99 им')) return 'names99';
+    return 'other';
+  }
+
+  function compareLessonTitles(a, b) {
+    return String(a || '').localeCompare(String(b || ''), 'ru', { numeric: true, sensitivity: 'base' });
+  }
+
+  function sortLessons(lessons) {
+    return (lessons || []).slice().sort((a, b) => {
+      const ca = courseKeyFromTitle(a.title);
+      const cb = courseKeyFromTitle(b.title);
+      const ia = COURSE_ORDER.indexOf(ca);
+      const ib = COURSE_ORDER.indexOf(cb);
+      if (ia !== ib) return ia - ib;
+      return compareLessonTitles(a.title, b.title);
+    });
+  }
+
+  function filteredLessons() {
+    const q = lessonsQuery.trim().toLowerCase();
+    return sortLessons(lessonsCache).filter((lesson) => {
+      const course = courseKeyFromTitle(lesson.title);
+      if (lessonsCourseFilter !== 'all' && course !== lessonsCourseFilter) return false;
+      if (!q) return true;
+      const hay = `${lesson.title || ''} ${A.labelSubject(lesson.subject) || ''} ${levelLabel(lesson.level) || ''}`.toLowerCase();
+      return hay.includes(q);
+    });
+  }
+
+  function renderLessonFilters(lessons) {
+    if (!lessonsFilters) return;
+    const present = new Set((lessons || []).map((l) => courseKeyFromTitle(l.title)));
+    const keys = ['all', ...COURSE_ORDER.filter((k) => present.has(k))];
+    if (lessonsCourseFilter !== 'all' && !keys.includes(lessonsCourseFilter)) {
+      lessonsCourseFilter = 'all';
+    }
+    lessonsFilters.innerHTML = keys
+      .map((key) => {
+        const count =
+          key === 'all'
+            ? (lessons || []).length
+            : (lessons || []).filter((l) => courseKeyFromTitle(l.title) === key).length;
+        const active = key === lessonsCourseFilter ? ' is-active' : '';
+        return `<button type="button" class="academy-chip${active}" data-course="${A.escapeHtml(key)}">${A.escapeHtml(
+          COURSE_LABELS[key] || key
+        )} · ${count}</button>`;
+      })
+      .join('');
+  }
+
+  function renderLessonItem(lesson) {
+    return `<li>
+      <div>
+        <strong>${A.escapeHtml(lesson.title)}</strong>
+        <div class="academy-muted">${A.escapeHtml(A.labelSubject(lesson.subject))}${
+      lesson.level ? ' · ' + A.escapeHtml(levelLabel(lesson.level)) : ''
+    }</div>
+      </div>
+      <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(lesson.id)}" data-title="${A.escapeHtml(
+      lesson.title
+    )}">Запустить</button>
+    </li>`;
+  }
+
   function renderLessons(lessons) {
-    if (!lessons.length) {
+    if (Array.isArray(lessons)) lessonsCache = lessons;
+    renderLessonFilters(lessonsCache);
+
+    const rows = filteredLessons();
+    if (lessonsMeta) {
+      const total = lessonsCache.length;
+      lessonsMeta.hidden = !total;
+      lessonsMeta.textContent = rows.length === total
+        ? `${total} уроков · по курсам`
+        : `Показано ${rows.length} из ${total}`;
+    }
+
+    if (!lessonsCache.length) {
       lessonsEmpty.hidden = false;
+      lessonsEmpty.textContent = 'Уроков пока нет — нажмите «+ Урок».';
       lessonsList.hidden = true;
       lessonsList.innerHTML = '';
       return;
     }
+
+    if (!rows.length) {
+      lessonsEmpty.hidden = false;
+      lessonsEmpty.textContent = 'Ничего не найдено — измените поиск или фильтр.';
+      lessonsList.hidden = true;
+      lessonsList.innerHTML = '';
+      return;
+    }
+
     lessonsEmpty.hidden = true;
     lessonsList.hidden = false;
-    lessonsList.innerHTML = lessons
-      .map(
-        (l) => `<li>
-          <div>
-            <strong>${A.escapeHtml(l.title)}</strong>
-            <div class="academy-muted">${A.escapeHtml(A.labelSubject(l.subject))}${
-          l.level ? ' · ' + A.escapeHtml(levelLabel(l.level)) : ''
-        }</div>
-          </div>
-          <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(l.id)}" data-title="${A.escapeHtml(
-          l.title
-        )}">Запустить</button>
-        </li>`
-      )
+
+    const groups = [];
+    const byCourse = new Map();
+    rows.forEach((lesson) => {
+      const key = courseKeyFromTitle(lesson.title);
+      if (!byCourse.has(key)) {
+        byCourse.set(key, []);
+        groups.push(key);
+      }
+      byCourse.get(key).push(lesson);
+    });
+
+    const searching = Boolean(lessonsQuery.trim()) || lessonsCourseFilter !== 'all';
+    lessonsList.innerHTML = groups
+      .map((key) => {
+        const items = byCourse.get(key) || [];
+        const open = searching || groups.length <= 3 || key !== 'other' ? ' open' : '';
+        return `<details class="academy-lesson-group"${open}>
+          <summary>${A.escapeHtml(COURSE_LABELS[key] || key)}<span class="academy-lesson-group__count">${items.length}</span></summary>
+          <ul class="academy-list">${items.map(renderLessonItem).join('')}</ul>
+        </details>`;
+      })
       .join('');
   }
 
@@ -863,6 +990,22 @@
         title: btn.getAttribute('data-title') || 'Урок',
       });
     });
+
+    if (lessonsSearch) {
+      lessonsSearch.addEventListener('input', () => {
+        lessonsQuery = lessonsSearch.value || '';
+        renderLessons();
+      });
+    }
+
+    if (lessonsFilters) {
+      lessonsFilters.addEventListener('click', (event) => {
+        const chip = event.target.closest('[data-course]');
+        if (!chip) return;
+        lessonsCourseFilter = chip.getAttribute('data-course') || 'all';
+        renderLessons();
+      });
+    }
   }
 
   init();
