@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./academy.css?v=9" />
+    <link rel="stylesheet" href="./academy.css?v=10" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -139,19 +139,23 @@
 
           <div class="academy-card academy-card--lessons">
             <div class="academy-lessons-toolbar">
+              <div class="academy-course-nav" id="course-nav" hidden>
+                <button type="button" class="academy-btn academy-btn--ghost" id="btn-courses-back">← К курсам</button>
+                <div class="academy-course-nav__copy">
+                  <p class="academy-kicker" id="course-nav-kicker">Курс</p>
+                  <p class="academy-question-prompt" id="course-nav-title">—</p>
+                </div>
+              </div>
               <label class="academy-search">
-                <span class="academy-sr-only">Поиск уроков</span>
+                <span class="academy-sr-only">Поиск курсов и уроков</span>
                 <input
                   id="lessons-search"
                   type="search"
                   enterkeyhint="search"
-                  placeholder="Поиск: Мединский, Тухфа, имена…"
+                  placeholder="Поиск: 99 имён, алфавит, Мединский…"
                   autocomplete="off"
                 />
               </label>
-              <div class="academy-filter-chips" id="lessons-filters" role="toolbar" aria-label="Фильтр курсов">
-                <button type="button" class="academy-chip is-active" data-course="all">Все</button>
-              </div>
               <p class="academy-muted academy-lessons-meta" id="lessons-meta" hidden></p>
             </div>
             <div id="lessons-empty" class="academy-empty" hidden>Уроков пока нет — нажмите «+ Урок».</div>
@@ -205,6 +209,6 @@
     <script src="../admin/supabase-config.js?v=7"></script>
     <script src="./academy-shared.js?v=5"></script>
     <script src="./question-types.js?v=1"></script>
-    <script src="./academy.js?v=11"></script>
+    <script src="./academy.js?v=12"></script>
   </body>
 </html>

@@ -11,8 +11,11 @@
   const lessonsList = document.getElementById('lessons-list');
   const lessonsEmpty = document.getElementById('lessons-empty');
   const lessonsSearch = document.getElementById('lessons-search');
-  const lessonsFilters = document.getElementById('lessons-filters');
   const lessonsMeta = document.getElementById('lessons-meta');
+  const courseNav = document.getElementById('course-nav');
+  const courseNavTitle = document.getElementById('course-nav-title');
+  const courseNavKicker = document.getElementById('course-nav-kicker');
+  const btnCoursesBack = document.getElementById('btn-courses-back');
   const sessionsList = document.getElementById('sessions-list');
   const historyEmpty = document.getElementById('history-empty');
   const historyList = document.getElementById('history-list');
@@ -39,7 +42,7 @@
   let pendingStartLesson = null;
   let historyCache = [];
   let lessonsCache = [];
-  let lessonsCourseFilter = 'all';
+  let selectedCourse = null;
   let lessonsQuery = '';
   let currentTab = 'lessons';
 
@@ -52,14 +55,13 @@
     'other',
   ];
 
-  const COURSE_LABELS = {
-    all: 'Все',
-    knowledge: 'Знания',
-    tuhfa: 'Тухфа',
-    muallim: 'Муаллим',
-    madina: 'Мединский',
-    names99: '99 имён',
-    other: 'Другое',
+  const COURSE_META = {
+    knowledge: { label: 'Знания', hint: 'Исламская викторина' },
+    tuhfa: { label: 'Тухфа · алфавит', hint: 'Буквы и основы таджвида' },
+    muallim: { label: 'Муаллим', hint: 'Таджвид для начинающих' },
+    madina: { label: 'Мединский арабский', hint: 'Уроки арабского языка' },
+    names99: { label: '99 имён Аллаха', hint: 'Имена Всевышнего по урокам' },
+    other: { label: 'Другие уроки', hint: 'Свои и прочие материалы' },
   };
 
   function showError(el, message) {
@@ -382,12 +384,22 @@
   function courseKeyFromTitle(title) {
     const t = String(title || '').toLowerCase();
     if (t.includes('знани')) return 'knowledge';
-    if (t.includes('тухф') || t.includes('туҳф')) return 'tuhfa';
+    if (t.includes('тухф') || t.includes('туҳф') || t.includes('алфавит')) return 'tuhfa';
     if (t.includes('муаллим') || t.includes('муалим')) return 'muallim';
     if (t.includes('медин') || t.includes('мадин')) return 'madina';
-    if (t.includes('99') && (t.includes('им') || t.includes('имя') || t.includes('име'))) return 'names99';
+    if (t.includes('99') && (t.includes('им') || t.includes('имя') || t.includes('име') || t.includes('аллах'))) {
+      return 'names99';
+    }
     if (t.startsWith('99 им')) return 'names99';
     return 'other';
+  }
+
+  function courseLabel(key) {
+    return COURSE_META[key]?.label || key;
+  }
+
+  function courseHint(key) {
+    return COURSE_META[key]?.hint || '';
   }
 
   function compareLessonTitles(a, b) {
@@ -405,42 +417,83 @@
     });
   }
 
-  function filteredLessons() {
-    const q = lessonsQuery.trim().toLowerCase();
+  function lessonMatchesQuery(lesson, q) {
+    if (!q) return true;
+    const key = courseKeyFromTitle(lesson.title);
+    const hay = `${lesson.title || ''} ${courseLabel(key)} ${courseHint(key)} ${A.labelSubject(lesson.subject) || ''} ${
+      levelLabel(lesson.level) || ''
+    }`.toLowerCase();
+    return hay.includes(q);
+  }
+
+  function lessonsForCourse(courseKey, q) {
     return sortLessons(lessonsCache).filter((lesson) => {
-      const course = courseKeyFromTitle(lesson.title);
-      if (lessonsCourseFilter !== 'all' && course !== lessonsCourseFilter) return false;
-      if (!q) return true;
-      const hay = `${lesson.title || ''} ${A.labelSubject(lesson.subject) || ''} ${levelLabel(lesson.level) || ''}`.toLowerCase();
-      return hay.includes(q);
+      if (courseKeyFromTitle(lesson.title) !== courseKey) return false;
+      return lessonMatchesQuery(lesson, q);
     });
   }
 
-  function renderLessonFilters(lessons) {
-    if (!lessonsFilters) return;
-    const present = new Set((lessons || []).map((l) => courseKeyFromTitle(l.title)));
-    const keys = ['all', ...COURSE_ORDER.filter((k) => present.has(k))];
-    if (lessonsCourseFilter !== 'all' && !keys.includes(lessonsCourseFilter)) {
-      lessonsCourseFilter = 'all';
-    }
-    lessonsFilters.innerHTML = keys
-      .map((key) => {
-        const count =
-          key === 'all'
-            ? (lessons || []).length
-            : (lessons || []).filter((l) => courseKeyFromTitle(l.title) === key).length;
-        const active = key === lessonsCourseFilter ? ' is-active' : '';
-        return `<button type="button" class="academy-chip${active}" data-course="${A.escapeHtml(key)}">${A.escapeHtml(
-          COURSE_LABELS[key] || key
-        )} · ${count}</button>`;
-      })
-      .join('');
+  function presentCourses(q) {
+    const counts = new Map();
+    sortLessons(lessonsCache).forEach((lesson) => {
+      if (!lessonMatchesQuery(lesson, q)) return;
+      const key = courseKeyFromTitle(lesson.title);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return COURSE_ORDER.filter((key) => counts.has(key)).map((key) => ({
+      key,
+      count: counts.get(key) || 0,
+    }));
   }
 
-  function renderLessonItem(lesson) {
+  function lessonDisplayTitle(lesson, courseKey) {
+    const title = String(lesson.title || '');
+    const parts = title.split('·').map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const rest = parts.slice(1).join(' · ');
+      if (rest) return rest;
+    }
+    if (courseKey === 'names99') {
+      const m = title.match(/урок\s+\d+.*$/i);
+      if (m) return m[0];
+    }
+    return title;
+  }
+
+  function pluralLessons(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return `${n} урок`;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} урока`;
+    return `${n} уроков`;
+  }
+
+  function updateCourseNav() {
+    if (!courseNav) return;
+    const open = Boolean(selectedCourse);
+    courseNav.hidden = !open;
+    if (!open) return;
+    if (courseNavKicker) courseNavKicker.textContent = 'Курс';
+    if (courseNavTitle) courseNavTitle.textContent = courseLabel(selectedCourse);
+  }
+
+  function renderCourseCard(course) {
+    return `<button type="button" class="academy-course-card" data-open-course="${A.escapeHtml(course.key)}">
+      <span class="academy-course-card__body">
+        <strong>${A.escapeHtml(courseLabel(course.key))}</strong>
+        <span class="academy-muted">${A.escapeHtml(courseHint(course.key))}</span>
+      </span>
+      <span class="academy-course-card__meta">
+        <span class="academy-course-card__count">${A.escapeHtml(pluralLessons(course.count))}</span>
+        <span class="academy-course-card__chevron" aria-hidden="true">›</span>
+      </span>
+    </button>`;
+  }
+
+  function renderLessonItem(lesson, courseKey) {
     return `<li>
       <div>
-        <strong>${A.escapeHtml(lesson.title)}</strong>
+        <strong>${A.escapeHtml(lessonDisplayTitle(lesson, courseKey))}</strong>
         <div class="academy-muted">${A.escapeHtml(A.labelSubject(lesson.subject))}${
       lesson.level ? ' · ' + A.escapeHtml(levelLabel(lesson.level)) : ''
     }</div>
@@ -453,18 +506,16 @@
 
   function renderLessons(lessons) {
     if (Array.isArray(lessons)) lessonsCache = lessons;
-    renderLessonFilters(lessonsCache);
+    const q = lessonsQuery.trim().toLowerCase();
 
-    const rows = filteredLessons();
-    if (lessonsMeta) {
-      const total = lessonsCache.length;
-      lessonsMeta.hidden = !total;
-      lessonsMeta.textContent = rows.length === total
-        ? `${total} уроков · по курсам`
-        : `Показано ${rows.length} из ${total}`;
+    if (selectedCourse && !lessonsCache.some((l) => courseKeyFromTitle(l.title) === selectedCourse)) {
+      selectedCourse = null;
     }
 
+    updateCourseNav();
+
     if (!lessonsCache.length) {
+      if (lessonsMeta) lessonsMeta.hidden = true;
       lessonsEmpty.hidden = false;
       lessonsEmpty.textContent = 'Уроков пока нет — нажмите «+ Урок».';
       lessonsList.hidden = true;
@@ -472,9 +523,40 @@
       return;
     }
 
-    if (!rows.length) {
+    if (selectedCourse) {
+      const rows = lessonsForCourse(selectedCourse, q);
+      if (lessonsMeta) {
+        lessonsMeta.hidden = false;
+        lessonsMeta.textContent = q ? `Показано ${rows.length} из курса` : pluralLessons(rows.length);
+      }
+      if (!rows.length) {
+        lessonsEmpty.hidden = false;
+        lessonsEmpty.textContent = q
+          ? 'В этом курсе ничего не найдено — измените поиск.'
+          : 'В этом курсе пока нет уроков.';
+        lessonsList.hidden = true;
+        lessonsList.innerHTML = '';
+        return;
+      }
+      lessonsEmpty.hidden = true;
+      lessonsList.hidden = false;
+      lessonsList.innerHTML = `<ul class="academy-list academy-list--course">${rows
+        .map((lesson) => renderLessonItem(lesson, selectedCourse))
+        .join('')}</ul>`;
+      return;
+    }
+
+    const courses = presentCourses(q);
+    if (lessonsMeta) {
+      lessonsMeta.hidden = false;
+      lessonsMeta.textContent = q
+        ? `Найдено курсов: ${courses.length}`
+        : `${courses.length} ${courses.length === 1 ? 'курс' : courses.length < 5 ? 'курса' : 'курсов'} · откройте нужный`;
+    }
+
+    if (!courses.length) {
       lessonsEmpty.hidden = false;
-      lessonsEmpty.textContent = 'Ничего не найдено — измените поиск или фильтр.';
+      lessonsEmpty.textContent = 'Ничего не найдено — измените поиск.';
       lessonsList.hidden = true;
       lessonsList.innerHTML = '';
       return;
@@ -482,29 +564,7 @@
 
     lessonsEmpty.hidden = true;
     lessonsList.hidden = false;
-
-    const groups = [];
-    const byCourse = new Map();
-    rows.forEach((lesson) => {
-      const key = courseKeyFromTitle(lesson.title);
-      if (!byCourse.has(key)) {
-        byCourse.set(key, []);
-        groups.push(key);
-      }
-      byCourse.get(key).push(lesson);
-    });
-
-    const searching = Boolean(lessonsQuery.trim()) || lessonsCourseFilter !== 'all';
-    lessonsList.innerHTML = groups
-      .map((key) => {
-        const items = byCourse.get(key) || [];
-        const open = searching || groups.length <= 3 || key !== 'other' ? ' open' : '';
-        return `<details class="academy-lesson-group"${open}>
-          <summary>${A.escapeHtml(COURSE_LABELS[key] || key)}<span class="academy-lesson-group__count">${items.length}</span></summary>
-          <ul class="academy-list">${items.map(renderLessonItem).join('')}</ul>
-        </details>`;
-      })
-      .join('');
+    lessonsList.innerHTML = `<div class="academy-course-catalog">${courses.map(renderCourseCard).join('')}</div>`;
   }
 
   function renderSessions(sessions) {
@@ -982,6 +1042,12 @@
     });
 
     lessonsList.addEventListener('click', (event) => {
+      const openCourse = event.target.closest('[data-open-course]');
+      if (openCourse) {
+        selectedCourse = openCourse.getAttribute('data-open-course') || null;
+        renderLessons();
+        return;
+      }
       const btn = event.target.closest('[data-start]');
       if (!btn) return;
       showError(appError, '');
@@ -991,18 +1057,16 @@
       });
     });
 
-    if (lessonsSearch) {
-      lessonsSearch.addEventListener('input', () => {
-        lessonsQuery = lessonsSearch.value || '';
+    if (btnCoursesBack) {
+      btnCoursesBack.addEventListener('click', () => {
+        selectedCourse = null;
         renderLessons();
       });
     }
 
-    if (lessonsFilters) {
-      lessonsFilters.addEventListener('click', (event) => {
-        const chip = event.target.closest('[data-course]');
-        if (!chip) return;
-        lessonsCourseFilter = chip.getAttribute('data-course') || 'all';
+    if (lessonsSearch) {
+      lessonsSearch.addEventListener('input', () => {
+        lessonsQuery = lessonsSearch.value || '';
         renderLessons();
       });
     }
