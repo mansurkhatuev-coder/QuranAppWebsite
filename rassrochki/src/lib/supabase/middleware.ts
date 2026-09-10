@@ -28,7 +28,8 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isAuthPage = path === "/login" || path === "/register";
+  const isAuthPage =
+    path === "/login" || path === "/register" || path === "/forgot-password";
   const isProtected =
     path.startsWith("/dashboard") ||
     path.startsWith("/clients") ||
@@ -43,6 +44,7 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // Recovery session stays on /update-password; other auth pages redirect in.
   if (user && isAuthPage) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";

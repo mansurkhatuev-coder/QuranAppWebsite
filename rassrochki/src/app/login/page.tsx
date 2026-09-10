@@ -2,10 +2,15 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import { AuthAlert } from "@/components/auth/AuthAlert";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { PasswordField } from "@/components/auth/PasswordField";
 import { createClient } from "@/lib/supabase/client";
-import { Spinner } from "@/components/Spinner";
 import { friendlyError } from "@/lib/friendly";
+
+const EMAIL_KEY = "rassrochki:last-login-email";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -14,68 +19,92 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(EMAIL_KEY);
+      if (saved) setEmail(saved);
+    } catch {
+      // ignore
+    }
+  }, []);
+
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError(null);
     const supabase = createClient();
     const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
-    setLoading(false);
     if (authError) {
+      setLoading(false);
       setError(friendlyError("Не удалось войти. Проверьте email и пароль", authError));
       return;
+    }
+    try {
+      localStorage.setItem(EMAIL_KEY, email.trim());
+    } catch {
+      // ignore
     }
     router.push("/dashboard");
     router.refresh();
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <form onSubmit={onSubmit} className="card w-full max-w-md space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold">Вход</h1>
-          <p className="text-sm text-[var(--muted)]">Учёт рассрочек для вашей организации</p>
-        </div>
-        {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <div>
+    <AuthShell
+      title="Вход"
+      subtitle="Учёт рассрочек для вашей организации"
+      footer={
+        <p className="text-center text-sm text-[var(--muted)]">
+          Нет аккаунта?{" "}
+          <Link className="auth-link" href="/register">
+            Регистрация
+          </Link>
+        </p>
+      }
+    >
+      <form onSubmit={onSubmit} className="auth-form" noValidate>
+        <AuthAlert>{error}</AuthAlert>
+        <div className={`auth-field ${email ? "auth-field--filled" : ""}`}>
           <label className="label" htmlFor="email">
             Email
           </label>
           <input
             id="email"
-            className="input"
+            className="input auth-input"
             type="email"
+            name="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+            inputMode="email"
             required
+            disabled={loading}
+            autoFocus={!email}
+            placeholder="you@example.com"
           />
         </div>
-        <div>
-          <label className="label" htmlFor="password">
-            Пароль
-          </label>
-          <input
-            id="password"
-            className="input"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-          />
-        </div>
-        <button className="btn-primary w-full" type="submit" disabled={loading}>
-          {loading ? <Spinner label="Входим…" /> : "Войти"}
-        </button>
-        <p className="text-center text-sm text-[var(--muted)]">
-          Нет аккаунта?{" "}
-          <Link className="text-teal-700 underline" href="/register">
-            Регистрация
-          </Link>
-        </p>
+        <PasswordField
+          id="password"
+          label="Пароль"
+          value={password}
+          onChange={setPassword}
+          autoComplete="current-password"
+          required
+          disabled={loading}
+          autoFocus={Boolean(email)}
+          hint={
+            <Link className="auth-link text-xs" href="/forgot-password">
+              Забыли пароль?
+            </Link>
+          }
+        />
+        <AuthSubmitButton loading={loading} loadingLabel="Входим…">
+          Войти
+        </AuthSubmitButton>
       </form>
-    </div>
+    </AuthShell>
   );
 }

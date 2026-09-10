@@ -3,9 +3,13 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
-import { Spinner } from "@/components/Spinner";
+import { AuthAlert } from "@/components/auth/AuthAlert";
+import { AuthShell } from "@/components/auth/AuthShell";
+import { AuthSubmitButton } from "@/components/auth/AuthSubmitButton";
+import { PasswordField } from "@/components/auth/PasswordField";
+import { PasswordStrength } from "@/components/auth/PasswordStrength";
 import { PersonNameInput } from "@/components/PersonNameInput";
+import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/friendly";
 
 export default function RegisterPage() {
@@ -13,6 +17,7 @@ export default function RegisterPage() {
   const [form, setForm] = useState({
     email: "",
     password: "",
+    confirmPassword: "",
     orgName: "",
     fullName: "",
   });
@@ -21,12 +26,23 @@ export default function RegisterPage() {
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
-    setLoading(true);
+    if (loading) return;
     setError(null);
+
+    if (form.password.length < 6) {
+      setError("Пароль должен быть не короче 6 символов");
+      return;
+    }
+    if (form.password !== form.confirmPassword) {
+      setError("Пароли не совпадают");
+      return;
+    }
+
+    setLoading(true);
     const supabase = createClient();
 
     const { data, error: signUpError } = await supabase.auth.signUp({
-      email: form.email,
+      email: form.email.trim(),
       password: form.password,
     });
 
@@ -43,12 +59,12 @@ export default function RegisterPage() {
     }
 
     const { error: orgError } = await supabase.rpc("create_organization_for_user", {
-      org_name: form.orgName,
-      user_full_name: form.fullName || null,
+      org_name: form.orgName.trim(),
+      user_full_name: form.fullName.trim() || null,
     });
 
-    setLoading(false);
     if (orgError) {
+      setLoading(false);
       setError(friendlyError("Не удалось создать организацию", orgError));
       return;
     }
@@ -58,62 +74,95 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4 py-8">
-      <form onSubmit={onSubmit} className="card w-full max-w-md space-y-4">
-        <div>
-          <h1 className="text-2xl font-bold">Регистрация</h1>
-          <p className="text-sm text-[var(--muted)]">
-            30 дней бесплатно — создайте организацию и начните учёт
-          </p>
-        </div>
-        {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}
-        <div>
-          <label className="label">Название организации</label>
-          <input
-            className="input"
-            value={form.orgName}
-            onChange={(e) => setForm({ ...form, orgName: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <label className="label">Ваше имя</label>
-          <PersonNameInput
-            value={form.fullName}
-            onChange={(fullName) => setForm({ ...form, fullName })}
-          />
-        </div>
-        <div>
-          <label className="label">Email</label>
-          <input
-            className="input"
-            type="email"
-            value={form.email}
-            onChange={(e) => setForm({ ...form, email: e.target.value })}
-            required
-          />
-        </div>
-        <div>
-          <label className="label">Пароль</label>
-          <input
-            className="input"
-            type="password"
-            minLength={6}
-            value={form.password}
-            onChange={(e) => setForm({ ...form, password: e.target.value })}
-            required
-          />
-        </div>
-        <button className="btn-primary w-full" type="submit" disabled={loading}>
-          {loading ? <Spinner label="Создаём…" /> : "Создать аккаунт"}
-        </button>
+    <AuthShell
+      title="Регистрация"
+      subtitle="30 дней бесплатно — создайте организацию и начните учёт"
+      footer={
         <p className="text-center text-sm text-[var(--muted)]">
           Уже есть аккаунт?{" "}
-          <Link className="text-teal-700 underline" href="/login">
+          <Link className="auth-link" href="/login">
             Войти
           </Link>
         </p>
+      }
+    >
+      <form onSubmit={onSubmit} className="auth-form" noValidate>
+        <AuthAlert>{error}</AuthAlert>
+        <div className="auth-field">
+          <label className="label" htmlFor="orgName">
+            Название организации
+          </label>
+          <input
+            id="orgName"
+            className="input auth-input"
+            name="organization"
+            value={form.orgName}
+            onChange={(e) => setForm({ ...form, orgName: e.target.value })}
+            autoComplete="organization"
+            required
+            disabled={loading}
+            autoFocus
+          />
+        </div>
+        <div className="auth-field">
+          <label className="label" htmlFor="fullName">
+            Ваше имя
+          </label>
+          <PersonNameInput
+            id="fullName"
+            className="input auth-input"
+            value={form.fullName}
+            onChange={(fullName) => setForm({ ...form, fullName })}
+            disabled={loading}
+          />
+        </div>
+        <div className="auth-field">
+          <label className="label" htmlFor="email">
+            Email
+          </label>
+          <input
+            id="email"
+            className="input auth-input"
+            type="email"
+            name="email"
+            value={form.email}
+            onChange={(e) => setForm({ ...form, email: e.target.value })}
+            autoComplete="email"
+            inputMode="email"
+            required
+            disabled={loading}
+            placeholder="you@example.com"
+          />
+        </div>
+        <div className="space-y-2">
+          <PasswordField
+            id="password"
+            label="Пароль"
+            value={form.password}
+            onChange={(password) => setForm({ ...form, password })}
+            autoComplete="new-password"
+            name="new-password"
+            minLength={6}
+            required
+            disabled={loading}
+          />
+          <PasswordStrength password={form.password} />
+        </div>
+        <PasswordField
+          id="confirmPassword"
+          label="Повторите пароль"
+          value={form.confirmPassword}
+          onChange={(confirmPassword) => setForm({ ...form, confirmPassword })}
+          autoComplete="new-password"
+          name="confirm-password"
+          minLength={6}
+          required
+          disabled={loading}
+        />
+        <AuthSubmitButton loading={loading} loadingLabel="Создаём…">
+          Создать аккаунт
+        </AuthSubmitButton>
       </form>
-    </div>
+    </AuthShell>
   );
 }
