@@ -1,0 +1,133 @@
+# Daily free Supabase DB backup (no Pro / PITR).
+# Uses existing SUPABASE_ACCESS_TOKEN + Management API.
+# Repo is public → archive is AES-encrypted before artifact upload.
+#
+# Required secret:
+#   SUPABASE_ACCESS_TOKEN          (already used by other workflows)
+#   SUPABASE_BACKUP_ENCRYPTION_KEY (passphrase for openssl aes-256-cbc)
+#
+# Optional longer retention (private repo):
+#   SUPABASE_BACKUP_REPO           e.g. mansurkhatuev-coder/waydean-supabase-backups
+#   SUPABASE_BACKUP_TOKEN          PAT with contents:write on that private repo
+#
+# Does NOT include Storage objects (photos/files). Schema lives in admin/*.sql.
+
+name: Supabase DB backup
+
+on:
+  schedule:
+    # Daily 02:15 UTC (~05:15 MSK)
+    - cron: "15 2 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: write
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secrets
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          ENC_KEY: ${{ secrets.SUPABASE_BACKUP_ENCRYPTION_KEY }}
+          BACKUP_REPO: ${{ secrets.SUPABASE_BACKUP_REPO }}
+          BACKUP_TOKEN: ${{ secrets.SUPABASE_BACKUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${TOKEN:-}" ]; then
+            echo "Missing SUPABASE_ACCESS_TOKEN"
+            exit 1
+          fi
+          if [ -z "${ENC_KEY:-}" ] && { [ -z "${BACKUP_REPO:-}" ] || [ -z "${BACKUP_TOKEN:-}" ]; }; then
+            echo "Set SUPABASE_BACKUP_ENCRYPTION_KEY (for encrypted artifact)"
+            echo "and/or SUPABASE_BACKUP_REPO + SUPABASE_BACKUP_TOKEN (private repo)."
+            exit 1
+          fi
+
+      - name: Export tables
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+          BACKUP_DIR: backup-out
+          BACKUP_PAGE_SIZE: "1000"
+        run: |
+          set -euo pipefail
+          chmod +x scripts/supabase-backup-export.sh
+          scripts/supabase-backup-export.sh
+
+      - name: Pack archive
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y-%m-%dT%H-%MZ)
+          ARCHIVE="supabase-backup-${STAMP}.tar.gz"
+          tar -czf "$ARCHIVE" -C backup-out .
+          ls -lh "$ARCHIVE"
+          echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Encrypt archive (required for public artifact)
+        env:
+          ENC_KEY: ${{ secrets.SUPABASE_BACKUP_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ENC_KEY:-}" ]; then
+            echo "No SUPABASE_BACKUP_ENCRYPTION_KEY — skip artifact (private repo only)"
+            echo "ENC_ARCHIVE=" >> "$GITHUB_ENV"
+            exit 0
+          fi
+          ENC="${ARCHIVE}.enc"
+          # PBKDF2 + AES-256-CBC; decrypt: openssl enc -d -aes-256-cbc -pbkdf2 -in FILE.enc -out FILE.tar.gz
+          openssl enc -aes-256-cbc -pbkdf2 -salt -in "$ARCHIVE" -out "$ENC" -pass env:ENC_KEY
+          echo "ENC_ARCHIVE=${ENC}" >> "$GITHUB_ENV"
+          ls -lh "$ENC"
+
+      - name: Upload encrypted artifact (~90 days)
+        if: ${{ env.ENC_ARCHIVE != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: supabase-backup-${{ env.STAMP }}
+          path: ${{ env.ENC_ARCHIVE }}
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Push to private backup repo (optional)
+        env:
+          BACKUP_REPO: ${{ secrets.SUPABASE_BACKUP_REPO }}
+          BACKUP_TOKEN: ${{ secrets.SUPABASE_BACKUP_TOKEN }}
+          ENC_KEY: ${{ secrets.SUPABASE_BACKUP_ENCRYPTION_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${BACKUP_REPO:-}" ] || [ -z "${BACKUP_TOKEN:-}" ]; then
+            echo "Skip private repo push (SUPABASE_BACKUP_REPO / SUPABASE_BACKUP_TOKEN not set)"
+            exit 0
+          fi
+
+          # Prefer encrypted blob on the private repo too if key is set.
+          if [ -n "${ENC_ARCHIVE:-}" ] && [ -f "${ENC_ARCHIVE}" ]; then
+            PUSH_FILE="$ENC_ARCHIVE"
+          else
+            PUSH_FILE="$ARCHIVE"
+          fi
+
+          git clone --depth 1 "https://x-access-token:${BACKUP_TOKEN}@github.com/${BACKUP_REPO}.git" backup-repo
+          mkdir -p backup-repo/backups
+          cp "$PUSH_FILE" backup-repo/backups/
+          cd backup-repo
+          git config user.name "supabase-backup-bot"
+          git config user.email "backup-bot@users.noreply.github.com"
+          git add "backups/$(basename "$PUSH_FILE")"
+          git commit -m "backup: ${STAMP}" || echo "No changes"
+          git push
+
+          # Keep last 60 backup files in the private repo.
+          mapfile -t OLD < <(ls -1t backups/supabase-backup-* 2>/dev/null | tail -n +61 || true)
+          if [ "${#OLD[@]}" -gt 0 ]; then
+            git rm -f "${OLD[@]}"
+            git commit -m "prune: keep last 60 backups" || true
+            git push || true
+          fi
