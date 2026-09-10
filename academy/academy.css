@@ -260,13 +260,14 @@ a:hover {
   margin-top: 1rem;
 }
 
-.academy-hub-picker {
+.academy-hub-group {
   display: grid;
-  gap: 0.45rem;
-  max-height: 18rem;
-  overflow: auto;
-  padding: 0.35rem 0.15rem 0.35rem 0;
-  margin-bottom: 0.75rem;
+  gap: 0.4rem;
+  margin-bottom: 0.85rem;
+}
+
+.academy-hub-group .academy-kicker {
+  margin: 0.15rem 0 0.1rem;
 }
 
 .academy-hub-pick {

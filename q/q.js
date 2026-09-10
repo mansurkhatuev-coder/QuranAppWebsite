@@ -1,5 +1,6 @@
 (function () {
   const A = window.AcademyLive;
+  const Courses = window.AcademyCourses;
 
   const gateView = document.getElementById('gate-view');
   const catalogView = document.getElementById('catalog-view');
@@ -37,6 +38,7 @@
   let studentSession = null;
   let accessToken = '';
   let isGuest = true;
+  let progressByLesson = {};
 
   let activeLessonId = '';
   let resumeToken = '';
@@ -61,6 +63,76 @@
     catalogView.hidden = name !== 'catalog';
     playView.hidden = name !== 'play';
     resultView.hidden = name !== 'result';
+  }
+
+  function progressStorageKey() {
+    return 'academy_hub_progress:' + token;
+  }
+
+  function loadLocalProgress() {
+    try {
+      const raw = localStorage.getItem(progressStorageKey());
+      if (!raw) return {};
+      const parsed = JSON.parse(raw);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch (_) {
+      return {};
+    }
+  }
+
+  function saveLocalProgress(map) {
+    try {
+      localStorage.setItem(progressStorageKey(), JSON.stringify(map || {}));
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function rememberProgress(lessonId, summary) {
+    if (!lessonId) return;
+    const answered = Number(summary?.answered) || 0;
+    const correct = Number(summary?.correct_count ?? summary?.correct) || 0;
+    if (!answered) return;
+    const percent = Math.round((correct / answered) * 100);
+    const prev = progressByLesson[lessonId];
+    if (prev && Number(prev.percent) > percent) return;
+    progressByLesson = {
+      ...progressByLesson,
+      [lessonId]: {
+        correct,
+        answered,
+        percent,
+        at: new Date().toISOString(),
+      },
+    };
+    saveLocalProgress(progressByLesson);
+  }
+
+  async function refreshServerProgress() {
+    if (!accessToken) return;
+    try {
+      const hist = await A.callLive('student_history', {}, { accessToken });
+      (hist.history || []).forEach((row) => {
+        if (String(row.status) !== 'finished' && String(row.status) !== 'abandoned') return;
+        const lessonId = row.lesson_id;
+        if (!lessonId || !lessons.some((l) => l.lesson_id === lessonId)) return;
+        const answered = Number(row.answered) || 0;
+        const correct = Number(row.correct) || 0;
+        if (!answered) return;
+        const percent = Math.round((correct / answered) * 100);
+        const prev = progressByLesson[lessonId];
+        if (prev && Number(prev.percent) >= percent) return;
+        progressByLesson[lessonId] = {
+          correct,
+          answered,
+          percent,
+          at: row.finished_at || row.started_at || new Date().toISOString(),
+        };
+      });
+      saveLocalProgress(progressByLesson);
+    } catch (_) {
+      /* local progress still works */
+    }
   }
 
   function getDeviceFingerprint() {
@@ -123,7 +195,6 @@
           guestName.value = displayName;
         }
       } catch (_) {
-        /* guest path still works */
         isGuest = true;
         accessToken = '';
       }
@@ -141,19 +212,38 @@
       return;
     }
     lessonsEmpty.hidden = true;
-    lessonsList.innerHTML = lessons
-      .map((lesson) => {
-        const count = Number(lesson.question_count) || 0;
-        return `<li>
-          <div class="q-lesson-row">
-            <div class="q-lesson-row__copy">
-              <strong>${A.escapeHtml(lesson.title)}</strong>
-              <span class="academy-muted">${A.escapeHtml(A.labelSubject(lesson.subject))} · ${count} вопр.</span>
-            </div>
-            <button type="button" class="academy-btn academy-btn--primary" data-start-lesson="${A.escapeHtml(
-              lesson.lesson_id
-            )}">Начать</button>
+    const groups = Courses.groupLessonsByCourse(lessons);
+    lessonsList.innerHTML = groups
+      .map((group) => {
+        const items = group.lessons
+          .map((lesson) => {
+            const count = Number(lesson.question_count) || 0;
+            const prog = progressByLesson[lesson.lesson_id];
+            const done = Boolean(prog && prog.answered);
+            const meta = done
+              ? `Пройдено · ${prog.percent}% (${prog.correct}/${prog.answered})`
+              : `${count} вопр.`;
+            const btnLabel = done ? 'Ещё раз' : 'Начать';
+            const btnClass = done ? 'academy-btn' : 'academy-btn academy-btn--primary';
+            return `<li class="${done ? 'q-lesson-done' : ''}">
+              <div class="q-lesson-row">
+                <div class="q-lesson-row__copy">
+                  <strong>${A.escapeHtml(Courses.lessonDisplayTitle(lesson, group.key))}</strong>
+                  <span class="academy-muted">${A.escapeHtml(meta)}</span>
+                </div>
+                <button type="button" class="${btnClass}" data-start-lesson="${A.escapeHtml(
+                  lesson.lesson_id
+                )}">${btnLabel}</button>
+              </div>
+            </li>`;
+          })
+          .join('');
+        return `<li class="q-course-block">
+          <div class="q-course-block__head">
+            <strong>${A.escapeHtml(group.label)}</strong>
+            <span class="academy-muted">${A.escapeHtml(group.hint)}</span>
           </div>
+          <ul class="academy-list q-course-lessons">${items}</ul>
         </li>`;
       })
       .join('');
@@ -253,7 +343,10 @@
   async function showResults() {
     showView('result');
     resultCta.hidden = !isGuest;
-    resultTitle.textContent = session?.lesson_title || 'Урок завершён';
+    const lesson = lessons.find((l) => l.lesson_id === activeLessonId);
+    resultTitle.textContent = lesson
+      ? Courses.lessonDisplayTitle(lesson)
+      : session?.lesson_title || 'Урок завершён';
     resultBody.innerHTML = '<p class="academy-muted">Загружаем разбор…</p>';
     try {
       const data = await A.callLive('results', {
@@ -264,9 +357,10 @@
       const correct = Number(summary.correct_count) || 0;
       const answered = Number(summary.answered) || 0;
       resultSummary.textContent = `Верно ${correct} из ${answered}`;
-      const answers = (data.answers || []).slice().sort(
-        (a, b) => (Number(a.question_index) || 0) - (Number(b.question_index) || 0)
-      );
+      rememberProgress(activeLessonId, summary);
+      const answers = (data.answers || [])
+        .slice()
+        .sort((a, b) => (Number(a.question_index) || 0) - (Number(b.question_index) || 0));
       resultBody.innerHTML = answers.length
         ? `<ul class="academy-answer-review-list academy-answer-review-list--plain">${answers
             .map((a) => A.renderAnswerReviewItem(a, { showCorrectAlways: true }))
@@ -336,7 +430,9 @@
   async function loadCatalog() {
     const data = await A.callLive('public_catalog', { token });
     hub = data.hub;
-    lessons = data.lessons || [];
+    lessons = Courses.sortLessons(data.lessons || []);
+    progressByLesson = loadLocalProgress();
+    await refreshServerProgress();
     hubTitle.textContent = hub?.title || 'Набор';
     if (data.closed || hub?.is_open === false) {
       hubStatus.textContent = 'Набор закрыт — новые прохождения недоступны.';
@@ -347,7 +443,7 @@
       guestBanner.hidden = true;
       return;
     }
-    hubStatus.textContent = 'Проходите уроки в своём темпе.';
+    hubStatus.textContent = 'Проходите уроки по порядку — в своём темпе.';
     showView('catalog');
     if (displayName.length >= 2) {
       nameCard.hidden = true;

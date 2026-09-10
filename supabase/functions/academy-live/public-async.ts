@@ -59,7 +59,7 @@ async function loadHubLessons(db: SupabaseClient, hubId: string) {
     .in('id', ids);
   if (lErr) throw new Error(lErr.message);
   const map = new Map((lessons || []).map((l) => [l.id, l]));
-  return (links || [])
+  const rows = (links || [])
     .map((link, i) => {
       const lesson = map.get(link.lesson_id);
       if (!lesson) return null;
@@ -74,6 +74,54 @@ async function loadHubLessons(db: SupabaseClient, hubId: string) {
       };
     })
     .filter(Boolean) as Array<Record<string, unknown>>;
+
+  // Stable curriculum order (names 1:10…, madina 1…, tuhfa then muallim).
+  return rows.sort((a, b) => compareLessonTitlesServer(String(a.title), String(b.title)));
+}
+
+function compareLessonTitlesServer(aTitle: string, bTitle: string) {
+  const rank = (title: string): number[] => {
+    const t = title.toLowerCase();
+    let course = 9;
+    if (t.includes('знани')) course = 0;
+    else if (t.includes('тухф') || t.includes('туаллим') || t.includes('муаллим') || t.includes('муалим') || t.includes('таджвид')) {
+      course = 1;
+    } else if (t.includes('медин') || t.includes('мадин')) course = 2;
+    else if (t.includes('99') || t.includes('имён') || t.includes('имена')) course = 3;
+
+    let track = 0;
+    if (course === 1) {
+      if (t.includes('тухф')) track = 0;
+      else if (t.includes('муаллим') || t.includes('муалим')) track = 1;
+      else track = 2;
+    }
+
+    let num = 999;
+    if (course === 3) {
+      const range = title.match(/(\d+)\s*[–—:\-]\s*(\d+)/);
+      if (range) num = Number(range[1]);
+      else {
+        const lesson = title.match(/урок\s+(\d+)/i);
+        if (lesson) {
+          const n = Number(lesson[1]);
+          num = n >= 10 ? 91 : (n - 1) * 10 + 1;
+        }
+      }
+    } else if (course === 2) {
+      const lesson = title.match(/урок\s+(\d+)/i);
+      if (lesson) num = Number(lesson[1]);
+    } else if (course === 1) {
+      const mod = title.match(/модул[ьяю]\s*(\d+)/i);
+      if (mod) num = Number(mod[1]);
+    }
+    return [course, track, num];
+  };
+  const a = rank(aTitle);
+  const b = rank(bTitle);
+  for (let i = 0; i < a.length; i += 1) {
+    if (a[i] !== b[i]) return a[i] - b[i];
+  }
+  return aTitle.localeCompare(bTitle, 'ru', { numeric: true });
 }
 
 async function attachQuestionCounts(db: SupabaseClient, lessons: Array<Record<string, unknown>>) {
@@ -777,6 +825,7 @@ export async function handleStudentHistory(
       const stats = byPart[p.id] || { correct: 0, total: 0, score: 0 };
       return {
         session_id: s.id,
+        lesson_id: s.lesson_id,
         lesson_title: lessonMap[s.lesson_id] || 'Урок',
         status: s.status,
         finished_at: s.finished_at,

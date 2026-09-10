@@ -34,6 +34,34 @@
   gap: 0.65rem 1rem;
 }
 
+.q-course-block {
+  list-style: none;
+  margin: 0 0 1.25rem;
+  padding: 0;
+}
+
+.q-course-block__head {
+  display: grid;
+  gap: 0.15rem;
+  margin-bottom: 0.55rem;
+}
+
+.q-course-block__head strong {
+  font-size: 1.05rem;
+}
+
+.q-course-lessons {
+  margin: 0;
+}
+
+.q-lesson-done strong {
+  opacity: 0.92;
+}
+
+.q-lesson-done .academy-muted {
+  color: rgba(180, 220, 170, 0.9);
+}
+
 .q-lesson-row__copy {
   flex: 1 1 12rem;
   min-width: 0;
