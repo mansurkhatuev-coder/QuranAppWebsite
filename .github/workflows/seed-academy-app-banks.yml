@@ -1,8 +1,16 @@
 name: Seed Academy app course banks
 
-# Только вручную. Не запускать без явного решения — пишет в Supabase.
+# Вручную или push на seed-run ветку (для агента / однократного засева).
+# Additive SQL: повторный запуск безопасен (skip по title).
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - cursor/academy-seed-app-banks-run-51a2
+    paths:
+      - admin/supabase-migration-academy-seed-app-banks.sql
+      - .github/workflows/seed-academy-app-banks.yml
+      - scripts/apply-academy-live-migration.sh
 
 permissions:
   contents: read
