@@ -10,6 +10,12 @@
   const teacherHello = document.getElementById('teacher-hello');
   const lessonsList = document.getElementById('lessons-list');
   const lessonsEmpty = document.getElementById('lessons-empty');
+  const lessonsSearch = document.getElementById('lessons-search');
+  const lessonsMeta = document.getElementById('lessons-meta');
+  const courseNav = document.getElementById('course-nav');
+  const courseNavTitle = document.getElementById('course-nav-title');
+  const courseNavKicker = document.getElementById('course-nav-kicker');
+  const btnCoursesBack = document.getElementById('btn-courses-back');
   const sessionsList = document.getElementById('sessions-list');
   const historyEmpty = document.getElementById('history-empty');
   const historyList = document.getElementById('history-list');
@@ -35,7 +41,28 @@
   let questionDrafts = [];
   let pendingStartLesson = null;
   let historyCache = [];
+  let lessonsCache = [];
+  let selectedCourse = null;
+  let lessonsQuery = '';
   let currentTab = 'lessons';
+
+  const COURSE_ORDER = [
+    'knowledge',
+    'tuhfa',
+    'muallim',
+    'madina',
+    'names99',
+    'other',
+  ];
+
+  const COURSE_META = {
+    knowledge: { label: 'Знания', hint: 'Исламская викторина' },
+    tuhfa: { label: 'Тухфа · алфавит', hint: 'Буквы и основы таджвида' },
+    muallim: { label: 'Муаллим', hint: 'Таджвид для начинающих' },
+    madina: { label: 'Мединский арабский', hint: 'Уроки арабского языка' },
+    names99: { label: '99 имён Аллаха', hint: 'Имена Всевышнего по урокам' },
+    other: { label: 'Другие уроки', hint: 'Свои и прочие материалы' },
+  };
 
   function showError(el, message) {
     if (!el) return;
@@ -354,30 +381,190 @@
     }
   }
 
+  function courseKeyFromTitle(title) {
+    const t = String(title || '').toLowerCase();
+    if (t.includes('знани')) return 'knowledge';
+    if (t.includes('тухф') || t.includes('туҳф') || t.includes('алфавит')) return 'tuhfa';
+    if (t.includes('муаллим') || t.includes('муалим')) return 'muallim';
+    if (t.includes('медин') || t.includes('мадин')) return 'madina';
+    if (t.includes('99') && (t.includes('им') || t.includes('имя') || t.includes('име') || t.includes('аллах'))) {
+      return 'names99';
+    }
+    if (t.startsWith('99 им')) return 'names99';
+    return 'other';
+  }
+
+  function courseLabel(key) {
+    return COURSE_META[key]?.label || key;
+  }
+
+  function courseHint(key) {
+    return COURSE_META[key]?.hint || '';
+  }
+
+  function compareLessonTitles(a, b) {
+    return String(a || '').localeCompare(String(b || ''), 'ru', { numeric: true, sensitivity: 'base' });
+  }
+
+  function sortLessons(lessons) {
+    return (lessons || []).slice().sort((a, b) => {
+      const ca = courseKeyFromTitle(a.title);
+      const cb = courseKeyFromTitle(b.title);
+      const ia = COURSE_ORDER.indexOf(ca);
+      const ib = COURSE_ORDER.indexOf(cb);
+      if (ia !== ib) return ia - ib;
+      return compareLessonTitles(a.title, b.title);
+    });
+  }
+
+  function lessonMatchesQuery(lesson, q) {
+    if (!q) return true;
+    const key = courseKeyFromTitle(lesson.title);
+    const hay = `${lesson.title || ''} ${courseLabel(key)} ${courseHint(key)} ${A.labelSubject(lesson.subject) || ''} ${
+      levelLabel(lesson.level) || ''
+    }`.toLowerCase();
+    return hay.includes(q);
+  }
+
+  function lessonsForCourse(courseKey, q) {
+    return sortLessons(lessonsCache).filter((lesson) => {
+      if (courseKeyFromTitle(lesson.title) !== courseKey) return false;
+      return lessonMatchesQuery(lesson, q);
+    });
+  }
+
+  function presentCourses(q) {
+    const counts = new Map();
+    sortLessons(lessonsCache).forEach((lesson) => {
+      if (!lessonMatchesQuery(lesson, q)) return;
+      const key = courseKeyFromTitle(lesson.title);
+      counts.set(key, (counts.get(key) || 0) + 1);
+    });
+    return COURSE_ORDER.filter((key) => counts.has(key)).map((key) => ({
+      key,
+      count: counts.get(key) || 0,
+    }));
+  }
+
+  function lessonDisplayTitle(lesson, courseKey) {
+    const title = String(lesson.title || '');
+    const parts = title.split('·').map((p) => p.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const rest = parts.slice(1).join(' · ');
+      if (rest) return rest;
+    }
+    if (courseKey === 'names99') {
+      const m = title.match(/урок\s+\d+.*$/i);
+      if (m) return m[0];
+    }
+    return title;
+  }
+
+  function pluralLessons(n) {
+    const mod10 = n % 10;
+    const mod100 = n % 100;
+    if (mod10 === 1 && mod100 !== 11) return `${n} урок`;
+    if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) return `${n} урока`;
+    return `${n} уроков`;
+  }
+
+  function updateCourseNav() {
+    if (!courseNav) return;
+    const open = Boolean(selectedCourse);
+    courseNav.hidden = !open;
+    if (!open) return;
+    if (courseNavKicker) courseNavKicker.textContent = 'Курс';
+    if (courseNavTitle) courseNavTitle.textContent = courseLabel(selectedCourse);
+  }
+
+  function renderCourseCard(course) {
+    return `<button type="button" class="academy-course-card" data-open-course="${A.escapeHtml(course.key)}">
+      <span class="academy-course-card__body">
+        <strong>${A.escapeHtml(courseLabel(course.key))}</strong>
+        <span class="academy-muted">${A.escapeHtml(courseHint(course.key))}</span>
+      </span>
+      <span class="academy-course-card__meta">
+        <span class="academy-course-card__count">${A.escapeHtml(pluralLessons(course.count))}</span>
+        <span class="academy-course-card__chevron" aria-hidden="true">›</span>
+      </span>
+    </button>`;
+  }
+
+  function renderLessonItem(lesson, courseKey) {
+    return `<li>
+      <div>
+        <strong>${A.escapeHtml(lessonDisplayTitle(lesson, courseKey))}</strong>
+        <div class="academy-muted">${A.escapeHtml(A.labelSubject(lesson.subject))}${
+      lesson.level ? ' · ' + A.escapeHtml(levelLabel(lesson.level)) : ''
+    }</div>
+      </div>
+      <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(lesson.id)}" data-title="${A.escapeHtml(
+      lesson.title
+    )}">Запустить</button>
+    </li>`;
+  }
+
   function renderLessons(lessons) {
-    if (!lessons.length) {
+    if (Array.isArray(lessons)) lessonsCache = lessons;
+    const q = lessonsQuery.trim().toLowerCase();
+
+    if (selectedCourse && !lessonsCache.some((l) => courseKeyFromTitle(l.title) === selectedCourse)) {
+      selectedCourse = null;
+    }
+
+    updateCourseNav();
+
+    if (!lessonsCache.length) {
+      if (lessonsMeta) lessonsMeta.hidden = true;
       lessonsEmpty.hidden = false;
+      lessonsEmpty.textContent = 'Уроков пока нет — нажмите «+ Урок».';
       lessonsList.hidden = true;
       lessonsList.innerHTML = '';
       return;
     }
+
+    if (selectedCourse) {
+      const rows = lessonsForCourse(selectedCourse, q);
+      if (lessonsMeta) {
+        lessonsMeta.hidden = false;
+        lessonsMeta.textContent = q ? `Показано ${rows.length} из курса` : pluralLessons(rows.length);
+      }
+      if (!rows.length) {
+        lessonsEmpty.hidden = false;
+        lessonsEmpty.textContent = q
+          ? 'В этом курсе ничего не найдено — измените поиск.'
+          : 'В этом курсе пока нет уроков.';
+        lessonsList.hidden = true;
+        lessonsList.innerHTML = '';
+        return;
+      }
+      lessonsEmpty.hidden = true;
+      lessonsList.hidden = false;
+      lessonsList.innerHTML = `<ul class="academy-list academy-list--course">${rows
+        .map((lesson) => renderLessonItem(lesson, selectedCourse))
+        .join('')}</ul>`;
+      return;
+    }
+
+    const courses = presentCourses(q);
+    if (lessonsMeta) {
+      lessonsMeta.hidden = false;
+      lessonsMeta.textContent = q
+        ? `Найдено курсов: ${courses.length}`
+        : `${courses.length} ${courses.length === 1 ? 'курс' : courses.length < 5 ? 'курса' : 'курсов'} · откройте нужный`;
+    }
+
+    if (!courses.length) {
+      lessonsEmpty.hidden = false;
+      lessonsEmpty.textContent = 'Ничего не найдено — измените поиск.';
+      lessonsList.hidden = true;
+      lessonsList.innerHTML = '';
+      return;
+    }
+
     lessonsEmpty.hidden = true;
     lessonsList.hidden = false;
-    lessonsList.innerHTML = lessons
-      .map(
-        (l) => `<li>
-          <div>
-            <strong>${A.escapeHtml(l.title)}</strong>
-            <div class="academy-muted">${A.escapeHtml(A.labelSubject(l.subject))}${
-          l.level ? ' · ' + A.escapeHtml(levelLabel(l.level)) : ''
-        }</div>
-          </div>
-          <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(l.id)}" data-title="${A.escapeHtml(
-          l.title
-        )}">Запустить</button>
-        </li>`
-      )
-      .join('');
+    lessonsList.innerHTML = `<div class="academy-course-catalog">${courses.map(renderCourseCard).join('')}</div>`;
   }
 
   function renderSessions(sessions) {
@@ -855,6 +1042,12 @@
     });
 
     lessonsList.addEventListener('click', (event) => {
+      const openCourse = event.target.closest('[data-open-course]');
+      if (openCourse) {
+        selectedCourse = openCourse.getAttribute('data-open-course') || null;
+        renderLessons();
+        return;
+      }
       const btn = event.target.closest('[data-start]');
       if (!btn) return;
       showError(appError, '');
@@ -863,6 +1056,20 @@
         title: btn.getAttribute('data-title') || 'Урок',
       });
     });
+
+    if (btnCoursesBack) {
+      btnCoursesBack.addEventListener('click', () => {
+        selectedCourse = null;
+        renderLessons();
+      });
+    }
+
+    if (lessonsSearch) {
+      lessonsSearch.addEventListener('input', () => {
+        lessonsQuery = lessonsSearch.value || '';
+        renderLessons();
+      });
+    }
   }
 
   init();

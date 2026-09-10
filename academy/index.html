@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./academy.css?v=7" />
+    <link rel="stylesheet" href="./academy.css?v=10" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -53,14 +53,14 @@
 
       <div id="app-view" hidden>
         <header class="academy-cabinet-head">
-          <div>
+          <div class="academy-cabinet-copy">
             <p class="academy-kicker">Кабинет</p>
             <h1 class="academy-title academy-title--sm">Мои live-уроки</h1>
             <p class="academy-muted" id="teacher-hello">—</p>
           </div>
           <div class="academy-cabinet-actions">
             <button type="button" class="academy-btn academy-btn--primary" id="btn-new-lesson">+ Урок</button>
-            <button type="button" class="academy-btn academy-btn--ghost" id="btn-refresh" title="Обновить">↻</button>
+            <button type="button" class="academy-btn academy-btn--icon" id="btn-refresh" title="Обновить" aria-label="Обновить">↻</button>
             <button type="button" class="academy-btn academy-btn--ghost" id="btn-logout">Выйти</button>
           </div>
         </header>
@@ -137,9 +137,29 @@
             </form>
           </div>
 
-          <div class="academy-card">
+          <div class="academy-card academy-card--lessons">
+            <div class="academy-lessons-toolbar">
+              <div class="academy-course-nav" id="course-nav" hidden>
+                <button type="button" class="academy-btn academy-btn--ghost" id="btn-courses-back">← К курсам</button>
+                <div class="academy-course-nav__copy">
+                  <p class="academy-kicker" id="course-nav-kicker">Курс</p>
+                  <p class="academy-question-prompt" id="course-nav-title">—</p>
+                </div>
+              </div>
+              <label class="academy-search">
+                <span class="academy-sr-only">Поиск курсов и уроков</span>
+                <input
+                  id="lessons-search"
+                  type="search"
+                  enterkeyhint="search"
+                  placeholder="Поиск: 99 имён, алфавит, Мединский…"
+                  autocomplete="off"
+                />
+              </label>
+              <p class="academy-muted academy-lessons-meta" id="lessons-meta" hidden></p>
+            </div>
             <div id="lessons-empty" class="academy-empty" hidden>Уроков пока нет — нажмите «+ Урок».</div>
-            <ul id="lessons-list" class="academy-list" hidden></ul>
+            <div id="lessons-list" class="academy-lessons-board" hidden></div>
           </div>
         </section>
 
@@ -189,6 +209,6 @@
     <script src="../admin/supabase-config.js?v=7"></script>
     <script src="./academy-shared.js?v=5"></script>
     <script src="./question-types.js?v=1"></script>
-    <script src="./academy.js?v=10"></script>
+    <script src="./academy.js?v=12"></script>
   </body>
 </html>
