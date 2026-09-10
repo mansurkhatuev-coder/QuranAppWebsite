@@ -59,23 +59,27 @@
   let hubCache = null;
   let hubSelectedIds = new Set();
 
-  const COURSE_ORDER = [
-    'knowledge',
-    'tuhfa',
-    'muallim',
-    'madina',
-    'names99',
-    'other',
-  ];
+  const Courses = window.AcademyCourses;
 
-  const COURSE_META = {
-    knowledge: { label: 'Знания', hint: 'Исламская викторина' },
-    tuhfa: { label: 'Тухфа · алфавит', hint: 'Буквы и основы таджвида' },
-    muallim: { label: 'Муаллим', hint: 'Таджвид для начинающих' },
-    madina: { label: 'Мединский арабский', hint: 'Уроки арабского языка' },
-    names99: { label: '99 имён Аллаха', hint: 'Имена Всевышнего по урокам' },
-    other: { label: 'Другие уроки', hint: 'Свои и прочие материалы' },
-  };
+  function courseKeyFromTitle(title) {
+    return Courses.courseKeyFromTitle(title);
+  }
+
+  function courseLabel(key) {
+    return Courses.courseLabel(key);
+  }
+
+  function courseHint(key) {
+    return Courses.courseHint(key);
+  }
+
+  function sortLessons(lessons) {
+    return Courses.sortLessons(lessons);
+  }
+
+  function lessonDisplayTitle(lesson, courseKey) {
+    return Courses.lessonDisplayTitle(lesson, courseKey);
+  }
 
   function showError(el, message) {
     if (!el) return;
@@ -404,48 +408,12 @@
     }
   }
 
-  function courseKeyFromTitle(title) {
-    const t = String(title || '').toLowerCase();
-    if (t.includes('знани')) return 'knowledge';
-    if (t.includes('тухф') || t.includes('туҳф') || t.includes('алфавит')) return 'tuhfa';
-    if (t.includes('муаллим') || t.includes('муалим')) return 'muallim';
-    if (t.includes('медин') || t.includes('мадин')) return 'madina';
-    if (t.includes('99') && (t.includes('им') || t.includes('имя') || t.includes('име') || t.includes('аллах'))) {
-      return 'names99';
-    }
-    if (t.startsWith('99 им')) return 'names99';
-    return 'other';
-  }
-
-  function courseLabel(key) {
-    return COURSE_META[key]?.label || key;
-  }
-
-  function courseHint(key) {
-    return COURSE_META[key]?.hint || '';
-  }
-
-  function compareLessonTitles(a, b) {
-    return String(a || '').localeCompare(String(b || ''), 'ru', { numeric: true, sensitivity: 'base' });
-  }
-
-  function sortLessons(lessons) {
-    return (lessons || []).slice().sort((a, b) => {
-      const ca = courseKeyFromTitle(a.title);
-      const cb = courseKeyFromTitle(b.title);
-      const ia = COURSE_ORDER.indexOf(ca);
-      const ib = COURSE_ORDER.indexOf(cb);
-      if (ia !== ib) return ia - ib;
-      return compareLessonTitles(a.title, b.title);
-    });
-  }
-
   function lessonMatchesQuery(lesson, q) {
     if (!q) return true;
     const key = courseKeyFromTitle(lesson.title);
     const hay = `${lesson.title || ''} ${courseLabel(key)} ${courseHint(key)} ${A.labelSubject(lesson.subject) || ''} ${
       levelLabel(lesson.level) || ''
-    }`.toLowerCase();
+    } ${lessonDisplayTitle(lesson, key)}`.toLowerCase();
     return hay.includes(q);
   }
 
@@ -463,24 +431,10 @@
       const key = courseKeyFromTitle(lesson.title);
       counts.set(key, (counts.get(key) || 0) + 1);
     });
-    return COURSE_ORDER.filter((key) => counts.has(key)).map((key) => ({
+    return Courses.COURSE_ORDER.filter((key) => counts.has(key)).map((key) => ({
       key,
       count: counts.get(key) || 0,
     }));
-  }
-
-  function lessonDisplayTitle(lesson, courseKey) {
-    const title = String(lesson.title || '');
-    const parts = title.split('·').map((p) => p.trim()).filter(Boolean);
-    if (parts.length >= 2) {
-      const rest = parts.slice(1).join(' · ');
-      if (rest) return rest;
-    }
-    if (courseKey === 'names99') {
-      const m = title.match(/урок\s+\d+.*$/i);
-      if (m) return m[0];
-    }
-    return title;
   }
 
   function pluralLessons(n) {
@@ -836,21 +790,28 @@
 
   function renderHubPicker(lessons) {
     if (!hubLessonPicker) return;
-    const rows = lessons || [];
+    const rows = sortLessons(lessons || []);
     if (!rows.length) {
       hubLessonPicker.innerHTML = '<p class="academy-muted">Сначала создайте уроки во вкладке «Уроки».</p>';
       return;
     }
-    hubLessonPicker.innerHTML = rows
-      .map((lesson) => {
-        const id = lesson.id;
-        const checked = hubSelectedIds.has(id) ? 'checked' : '';
-        return `<label class="academy-check academy-hub-pick">
-          <input type="checkbox" data-hub-lesson="${A.escapeHtml(id)}" ${checked} />
-          <span>${A.escapeHtml(lesson.title)} <span class="academy-muted">· ${A.escapeHtml(
-            A.labelSubject(lesson.subject)
-          )}</span></span>
-        </label>`;
+    const groups = Courses.groupLessonsByCourse(rows);
+    hubLessonPicker.innerHTML = groups
+      .map((group) => {
+        const items = group.lessons
+          .map((lesson) => {
+            const id = lesson.id;
+            const checked = hubSelectedIds.has(id) ? 'checked' : '';
+            return `<label class="academy-check academy-hub-pick">
+              <input type="checkbox" data-hub-lesson="${A.escapeHtml(id)}" ${checked} />
+              <span>${A.escapeHtml(lessonDisplayTitle(lesson, group.key))}</span>
+            </label>`;
+          })
+          .join('');
+        return `<div class="academy-hub-group">
+          <p class="academy-kicker">${A.escapeHtml(group.label)}</p>
+          ${items}
+        </div>`;
       })
       .join('');
   }
@@ -860,6 +821,13 @@
     hubLessonPicker?.querySelectorAll('[data-hub-lesson]').forEach((input) => {
       if (input.checked) hubSelectedIds.add(input.getAttribute('data-hub-lesson'));
     });
+  }
+
+  function orderedSelectedLessonIds() {
+    syncHubSelectionFromDom();
+    return sortLessons(lessonsCache)
+      .map((l) => l.id)
+      .filter((id) => hubSelectedIds.has(id));
   }
 
   function renderHub(data) {
@@ -1036,7 +1004,7 @@
           hub_id: hubCache?.id || undefined,
           title: hubTitleInput.value.trim() || 'Домашние задания',
           is_open: Boolean(hubOpenInput.checked),
-          lesson_ids: [...hubSelectedIds],
+          lesson_ids: orderedSelectedLessonIds(),
         };
         const saved = await A.callLive('hub_upsert', payload, { accessToken });
         renderHub(saved);
