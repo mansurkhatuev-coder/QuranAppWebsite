@@ -1,0 +1,78 @@
+# Daily free Supabase DB backup (no Pro / PITR / new secrets).
+# Uses existing SUPABASE_ACCESS_TOKEN only:
+#   1) export tables via Management API
+#   2) fetch service_role via api-keys?reveal=true
+#   3) upload archive to private Storage bucket `db-backups`
+#
+# Triggered daily + on push (so the first backup runs after merge/push).
+
+name: Supabase DB backup
+
+on:
+  schedule:
+    # Daily 02:15 UTC (~05:15 MSK)
+    - cron: "15 2 * * *"
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - cursor/supabase-free-backups-d84f
+    paths:
+      - .github/workflows/supabase-backup.yml
+      - scripts/supabase-backup-export.sh
+      - scripts/supabase-backup-upload.sh
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-db-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check secret
+        env:
+          TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "${TOKEN:-}" ]; then
+            echo "Missing SUPABASE_ACCESS_TOKEN"
+            exit 1
+          fi
+
+      - name: Export tables
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+          BACKUP_DIR: backup-out
+          BACKUP_PAGE_SIZE: "1000"
+        run: |
+          set -euo pipefail
+          chmod +x scripts/supabase-backup-export.sh scripts/supabase-backup-upload.sh
+          scripts/supabase-backup-export.sh
+
+      - name: Pack archive
+        run: |
+          set -euo pipefail
+          STAMP=$(date -u +%Y-%m-%dT%H-%MZ)
+          ARCHIVE="supabase-backup-${STAMP}.tar.gz"
+          tar -czf "$ARCHIVE" -C backup-out .
+          ls -lh "$ARCHIVE"
+          echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
+          echo "ARCHIVE=${ARCHIVE}" >> "$GITHUB_ENV"
+
+      - name: Upload to private Supabase Storage
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+          SUPABASE_URL: https://rivjkiksknnesahrvamf.supabase.co
+          BACKUP_BUCKET: db-backups
+          KEEP_BACKUPS: "60"
+        run: |
+          set -euo pipefail
+          scripts/supabase-backup-upload.sh "$ARCHIVE"
