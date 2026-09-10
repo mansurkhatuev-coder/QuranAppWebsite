@@ -84,7 +84,7 @@ function compareLessonTitlesServer(aTitle: string, bTitle: string) {
     const t = title.toLowerCase();
     let course = 9;
     if (t.includes('знани')) course = 0;
-    else if (t.includes('тухф') || t.includes('туаллим') || t.includes('муаллим') || t.includes('муалим') || t.includes('таджвид')) {
+    else if (t.includes('тухф') || t.includes('муаллим') || t.includes('муалим') || t.includes('таджвид')) {
       course = 1;
     } else if (t.includes('медин') || t.includes('мадин')) course = 2;
     else if (t.includes('99') || t.includes('имён') || t.includes('имена')) course = 3;
