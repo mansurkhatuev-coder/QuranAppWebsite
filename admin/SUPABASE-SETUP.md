@@ -355,37 +355,18 @@ RLS (Row Level Security): без входа в Supabase чужой челове�
 
 ## Бесплатные автобэкапы (без Pro / PITR)
 
-На Free-плане у Supabase нет ежедневных бэкапов. Вместо этого workflow
-**Supabase DB backup** (`.github/workflows/supabase-backup.yml`) раз в сутки
-выгружает все `public.*` таблицы (+ метаданные `auth.users`) через Management API.
+На Free-плане у Supabase нет ежедневных бэкапов. Workflow **Supabase DB backup**
+раз в сутки выгружает все `public.*` таблицы (+ метаданные `auth.users`) и кладёт
+архив в **приватный** Storage bucket `db-backups` (в том же проекте Supabase).
 
-**Что уже есть:** секрет `SUPABASE_ACCESS_TOKEN` (тот же, что для деплоя функций).
+**Секреты:** только уже существующий `SUPABASE_ACCESS_TOKEN`. Новых паролей не нужно.
 
-**Что добавить в GitHub → Settings → Secrets:**
+**Где лежит бэкап:** Supabase Dashboard → Storage → `db-backups` →
+`supabase-backup-YYYY-mm-dd….tar.gz` (хранятся последние ~60 копий).
 
-| Secret | Зачем |
-|--------|--------|
-| `SUPABASE_BACKUP_ENCRYPTION_KEY` | Пароль шифрования архива (репозиторий публичный — без этого артефакт нельзя класть) |
-| `SUPABASE_BACKUP_REPO` (опционально) | Приватный репо вроде `mansurkhatuev-coder/waydean-supabase-backups` — хранение дольше 90 дней |
-| `SUPABASE_BACKUP_TOKEN` (опционально) | PAT с `contents:write` на этот приватный репо |
+**Запуск:** по cron каждый день, либо Actions → **Supabase DB backup** → Run workflow.
 
-Нужен **хотя бы** ключ шифрования **или** пара private-repo секретов.
-
-**Запуск:** Actions → **Supabase DB backup** → Run workflow (или по cron каждый день).
-
-**Скачать и расшифровать:**
-
-```bash
-# артефакт из Actions → supabase-backup-YYYY-….tar.gz.enc
-openssl enc -d -aes-256-cbc -pbkdf2 \
-  -in supabase-backup-….tar.gz.enc \
-  -out supabase-backup.tar.gz
-tar -tzf supabase-backup.tar.gz
-```
-
-**Не входит в бэкап:** файлы Storage (фото древа и т.п.) — они отдельно; схема таблиц уже в `admin/*.sql`.
-
-**Восстановление данных:** JSON по таблицам → Table Editor / SQL `insert` / скрипт импорта. Это страховка от потери данных, не one-click restore как у Pro.
+**Не входит:** фото/файлы из других Storage bucket’ов; схема таблиц уже в `admin/*.sql`.
 
 ---
 
@@ -399,7 +380,8 @@ tar -tzf supabase-backup.tar.gz
 | `website/supabase/functions/publish-content/` | Edge Function публикации |
 | `scripts/import-dua-to-supabase.js` | Первичный импорт дуа |
 | `scripts/supabase-backup-export.sh` | Экспорт таблиц для бесплатного бэкапа |
-| `.github/workflows/supabase-backup.yml` | Ежедневный encrypted backup |
+| `scripts/supabase-backup-upload.sh` | Загрузка архива в private Storage `db-backups` |
+| `.github/workflows/supabase-backup.yml` | Ежедневный backup в Supabase Storage |
 
 ---
 
