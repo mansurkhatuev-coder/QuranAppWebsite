@@ -5,37 +5,29 @@
   const SCHEMA_VERSION = 1;
 
   const RULES = [
-    { id: "madd2", label: "Мадд 2", hint: "2 счёта", color: "#b27a4a", key: "1" },
-    { id: "madd2_4_6", label: "Мадд 2–4–6", hint: "переменный", color: "#e27b24", key: "2" },
-    { id: "madd4_5", label: "Мадд 4–5", hint: "4–5 счётов", color: "#c63b43", key: "3" },
-    { id: "madd6", label: "Мадд 6", hint: "6 счётов", color: "#8b1e2d", key: "4" },
-    { id: "ghunna", label: "Гунна", hint: "носовой", color: "#3f9a55", key: "5" },
-    { id: "qalqala", label: "Калькаля", hint: "отскок", color: "#4fb6d3", key: "6" },
-    { id: "tafkheem", label: "Тафхим", hint: "твёрдые + ر", color: "#173f73", key: "7" },
-    { id: "silent", label: "Слияние", hint: "серый / не чит.", color: "#8f959b", key: "8" },
+    { id: "madd2", label: "Мадд 2", color: "#b27a4a", key: "1" },
+    { id: "madd246", label: "Мадд 2–4–6", color: "#e27b24", key: "2" },
+    { id: "madd45", label: "Мадд 4–5", color: "#c63b43", key: "3" },
+    { id: "madd6", label: "Мадд 6", color: "#8b1e2d", key: "4" },
+    { id: "ghunna", label: "Гунна", color: "#3f9a55", key: "5" },
+    { id: "qalqala", label: "Калькаля", color: "#4fb6d3", key: "6" },
+    { id: "tafkheem", label: "Тафхим", color: "#173f73", key: "7" },
+    { id: "silent", label: "Слияние", color: "#8f959b", key: "8" },
   ];
-
   const RULE_MAP = Object.fromEntries(RULES.map((r) => [r.id, r]));
   const COLOR_PRIORITY = [
-    "madd6",
-    "madd4_5",
-    "madd2_4_6",
-    "madd2",
-    "ghunna",
-    "qalqala",
-    "tafkheem",
-    "silent",
+    "madd6", "madd45", "madd246", "madd2", "ghunna", "qalqala", "tafkheem", "silent",
   ];
 
   const SAMPLE = {
     version: SCHEMA_VERSION,
     id: "azkar-ikhlaas-test",
     title: "Аль‑Ихляс (тест для азкара)",
-    arabic: "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\nقُلْ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌ",
+    arabic:
+      "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\nقُلْ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌ",
     transliteration:
       "Бисмилльах1иррохьманиррохьим.\nКъуль х1уваЛлох1у ахьад\nАллох1уссомад\nлам йалид валам йулад\nвалам йакуллах1у куфуван ахьад.",
     marks: [
-      // Starter marks only — not final verified tajweed. Edit freely.
       { start: 30, end: 32, rules: ["qalqala"], accent: false, hidden: false, note: "Къ — калькаля" },
       { start: 41, end: 43, rules: ["tafkheem"], accent: false, hidden: false, note: "Лл — тафхим" },
       { start: 52, end: 53, rules: ["qalqala"], accent: false, hidden: false, note: "д — калькаля" },
@@ -46,35 +38,33 @@
     ],
   };
 
+  const $ = (id) => document.getElementById(id);
   const els = {
-    title: document.getElementById("docTitle"),
-    id: document.getElementById("docId"),
-    arabic: document.getElementById("docArabic"),
-    canvas: document.getElementById("markupCanvas"),
-    ruleGrid: document.getElementById("ruleGrid"),
-    legendList: document.getElementById("legendList"),
-    selMeta: document.getElementById("selMeta"),
-    marksList: document.getElementById("marksList"),
-    markCount: document.getElementById("markCount"),
-    jsonPreview: document.getElementById("jsonPreview"),
-    saveStatus: document.getElementById("saveStatus"),
-    plainDialog: document.getElementById("plainDialog"),
-    plainText: document.getElementById("plainText"),
-    helpDialog: document.getElementById("helpDialog"),
-    fileInput: document.getElementById("fileInput"),
-    btnAccent: document.getElementById("btnAccent"),
-    btnHidden: document.getElementById("btnHidden"),
+    title: $("docTitle"),
+    id: $("docId"),
+    arabic: $("docArabic"),
+    canvas: $("markupCanvas"),
+    ruleGrid: $("ruleGrid"),
+    selMeta: $("selMeta"),
+    marksList: $("marksList"),
+    markCount: $("markCount"),
+    jsonPreview: $("jsonPreview"),
+    saveStatus: $("saveStatus"),
+    plainDialog: $("plainDialog"),
+    plainText: $("plainText"),
+    helpDialog: $("helpDialog"),
+    fileInput: $("fileInput"),
+    btnAccent: $("btnAccent"),
+    btnHidden: $("btnHidden"),
   };
 
-  /** @type {{version:number,id:string,title:string,arabic:string,transliteration:string,marks:Array}} */
   let doc = emptyDoc();
-  let selection = null; // {start,end} half-open
+  let selection = null;
   let activeMarkIndex = -1;
   let drag = null;
   const history = [];
   const future = [];
   let saveTimer = null;
-  let suppressHistory = false;
 
   function emptyDoc() {
     return {
@@ -87,47 +77,46 @@
     };
   }
 
-  function clone(value) {
-    return JSON.parse(JSON.stringify(value));
+  function clone(v) {
+    return JSON.parse(JSON.stringify(v));
+  }
+
+  function clampMark(mark, len) {
+    const start = Math.max(0, Math.min(Number(mark.start) || 0, len));
+    const end = Math.max(0, Math.min(Number(mark.end) || 0, len));
+    if (end <= start) return null;
+    return {
+      start,
+      end,
+      rules: Array.isArray(mark.rules) ? mark.rules.filter((id) => RULE_MAP[id]) : [],
+      accent: Boolean(mark.accent),
+      hidden: Boolean(mark.hidden),
+      note: String(mark.note || ""),
+    };
   }
 
   function normalizeDoc(raw) {
     const base = emptyDoc();
     const src = raw && typeof raw === "object" ? raw : {};
-    base.version = SCHEMA_VERSION;
     base.id = String(src.id || "");
     base.title = String(src.title || "");
     base.arabic = String(src.arabic || "");
     base.transliteration = String(src.transliteration || src.text || "");
     const marks = Array.isArray(src.marks) ? src.marks : [];
     base.marks = marks
-      .map((m) => ({
-        start: Math.max(0, Number(m.start) || 0),
-        end: Math.max(0, Number(m.end) || 0),
-        rules: Array.isArray(m.rules)
-          ? m.rules.filter((id) => RULE_MAP[id])
-          : m.rule && RULE_MAP[m.rule]
+      .map((m) => {
+        const rules = Array.isArray(m.rules)
+          ? m.rules
+          : m.rule
             ? [m.rule]
-            : [],
-        accent: Boolean(m.accent),
-        hidden: Boolean(m.hidden),
-        note: String(m.note || ""),
-      }))
-      .filter((m) => m.end > m.start)
-      .map((m) => clampMark(m, base.transliteration.length))
+            : [];
+        return clampMark({ ...m, rules }, base.transliteration.length);
+      })
       .filter(Boolean);
     return base;
   }
 
-  function clampMark(mark, len) {
-    const start = Math.max(0, Math.min(mark.start, len));
-    const end = Math.max(0, Math.min(mark.end, len));
-    if (end <= start) return null;
-    return { ...mark, start, end };
-  }
-
   function pushHistory() {
-    if (suppressHistory) return;
     history.push(clone(doc));
     if (history.length > 100) history.shift();
     future.length = 0;
@@ -158,13 +147,13 @@
 
   function scheduleSave() {
     els.saveStatus.textContent = "Сохранение…";
-    els.saveStatus.classList.remove("saved");
+    els.saveStatus.classList.remove("ok");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
         els.saveStatus.textContent = "Черновик сохранён в браузере";
-        els.saveStatus.classList.add("saved");
+        els.saveStatus.classList.add("ok");
       } catch {
         els.saveStatus.textContent = "Не удалось сохранить локально";
       }
@@ -174,8 +163,7 @@
   function loadStored() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (!raw) return null;
-      return normalizeDoc(JSON.parse(raw));
+      return raw ? normalizeDoc(JSON.parse(raw)) : null;
     } catch {
       return null;
     }
@@ -208,38 +196,22 @@
     };
   }
 
-  function marksCovering(index) {
-    return doc.marks.filter((m) => index >= m.start && index < m.end);
-  }
-
   function primaryRule(ruleIds) {
-    for (const id of COLOR_PRIORITY) {
-      if (ruleIds.includes(id)) return id;
-    }
+    for (const id of COLOR_PRIORITY) if (ruleIds.includes(id)) return id;
     return null;
   }
 
   function secondaryRule(ruleIds, primary) {
-    const rest = ruleIds.filter((id) => id !== primary);
-    return rest[0] || null;
+    return ruleIds.find((id) => id !== primary) || null;
   }
 
-  function ensureSelection() {
-    if (!selection || selection.end <= selection.start) {
-      flashStatus("Сначала выдели фрагмент");
-      return false;
-    }
-    return true;
-  }
-
-  function flashStatus(text) {
-    els.selMeta.textContent = text;
+  function marksCovering(index) {
+    return doc.marks.filter((m) => index >= m.start && index < m.end);
   }
 
   function setSelection(start, end) {
-    if (start == null || end == null || end <= start) {
-      selection = null;
-    } else {
+    if (start == null || end == null || end <= start) selection = null;
+    else {
       const a = Math.max(0, Math.min(start, end));
       const b = Math.min(doc.transliteration.length, Math.max(start, end));
       selection = b > a ? { start: a, end: b } : null;
@@ -262,55 +234,46 @@
 
   function selectionMarks() {
     if (!selection) return [];
-    return doc.marks.filter(
-      (m) => m.start < selection.end && m.end > selection.start
-    );
+    return doc.marks.filter((m) => m.start < selection.end && m.end > selection.start);
   }
 
   function updateLayerButtons() {
-    if (!selection) {
-      els.btnAccent.classList.remove("active");
-      els.btnHidden.classList.remove("active");
-      return;
-    }
     const overlapping = selectionMarks();
-    const accentOn = overlapping.some((m) => m.accent);
-    const hiddenOn = overlapping.some((m) => m.hidden);
-    els.btnAccent.classList.toggle("active", accentOn);
-    els.btnHidden.classList.toggle("active", hiddenOn);
-
+    els.btnAccent.classList.toggle("active", overlapping.some((m) => m.accent));
+    els.btnHidden.classList.toggle("active", overlapping.some((m) => m.hidden));
     for (const btn of els.ruleGrid.querySelectorAll(".rule-btn")) {
       const id = btn.dataset.rule;
-      const on = overlapping.some((m) => m.rules.includes(id));
-      btn.classList.toggle("active", on);
+      btn.classList.toggle("active", overlapping.some((m) => m.rules.includes(id)));
     }
+  }
+
+  function ensureSelection() {
+    if (!selection || selection.end <= selection.start) {
+      els.selMeta.textContent = "Сначала выдели фрагмент";
+      return false;
+    }
+    return true;
   }
 
   function upsertMarkForSelection(mutate) {
     if (!ensureSelection()) return;
     pushHistory();
     const { start, end } = selection;
-    // Prefer exact-range mark; else create one for the selection.
     let mark = doc.marks.find((m) => m.start === start && m.end === end);
     if (!mark) {
       mark = { start, end, rules: [], accent: false, hidden: false, note: "" };
       doc.marks.push(mark);
     }
     mutate(mark);
-    // Drop empty marks
-    doc.marks = doc.marks.filter(
-      (m) => m.rules.length > 0 || m.accent || m.hidden || m.note
-    );
+    doc.marks = doc.marks.filter((m) => m.rules.length || m.accent || m.hidden || m.note);
     renderAll();
   }
 
   function toggleRule(ruleId) {
     upsertMarkForSelection((mark) => {
-      if (mark.rules.includes(ruleId)) {
-        mark.rules = mark.rules.filter((id) => id !== ruleId);
-      } else {
-        mark.rules = [...mark.rules, ruleId];
-      }
+      mark.rules = mark.rules.includes(ruleId)
+        ? mark.rules.filter((id) => id !== ruleId)
+        : [...mark.rules, ruleId];
     });
   }
 
@@ -334,6 +297,14 @@
     renderAll();
   }
 
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
   function renderRulesUi() {
     els.ruleGrid.innerHTML = "";
     for (const rule of RULES) {
@@ -342,41 +313,26 @@
       btn.className = "rule-btn";
       btn.dataset.rule = rule.id;
       btn.title = `Клавиша ${rule.key}`;
-      btn.innerHTML = `<span class="swatch" style="background:${rule.color}"></span><span><strong>${rule.label}</strong><small>${rule.hint} · ${rule.key}</small></span>`;
+      btn.innerHTML = `<span class="swatch" style="background:${rule.color}"></span><strong>${rule.label}</strong><small>${rule.key}</small>`;
       btn.addEventListener("click", () => toggleRule(rule.id));
       els.ruleGrid.appendChild(btn);
     }
-
-    els.legendList.innerHTML = RULES.map(
-      (r) =>
-        `<li><span class="swatch" style="background:${r.color}"></span><span>${r.label} — ${r.hint}</span></li>`
-    ).join("");
-    els.legendList.innerHTML +=
-      `<li><span class="swatch" style="background:transparent;box-shadow:inset 0 2px 0 #1d241f"></span><span>Черта сверху — ударение</span></li>` +
-      `<li><span class="swatch" style="background:transparent;outline:1px dashed #666"></span><span>Пунктир — скрытый элемент</span></li>`;
   }
 
   function renderCanvas() {
     const text = doc.transliteration;
-    const frag = document.createDocumentFragment();
-
     if (!text) {
-      const empty = document.createElement("div");
-      empty.className = "empty";
-      empty.textContent = "Нет текста. Нажми «Эталон Ихляс» или «Правка текста».";
-      els.canvas.replaceChildren(empty);
+      els.canvas.innerHTML = `<div class="empty">Нет текста. Нажми «Эталон Ихляс» или «Правка текста».</div>`;
       return;
     }
-
+    const frag = document.createDocumentFragment();
     for (let i = 0; i < text.length; i += 1) {
       const ch = text[i];
       const span = document.createElement("span");
       span.className = "ch";
       span.dataset.i = String(i);
-
       if (ch === "\n") {
         span.classList.add("nl");
-        span.textContent = "";
       } else if (ch === " ") {
         span.classList.add("space");
         span.textContent = " ";
@@ -393,7 +349,6 @@
       }
       if (covering.some((m) => m.accent)) span.classList.add("has-accent");
       if (covering.some((m) => m.hidden)) span.classList.add("has-hidden");
-
       const secondary = secondaryRule(ruleIds, primary);
       if (secondary) {
         const dot = document.createElement("span");
@@ -401,14 +356,9 @@
         dot.style.background = RULE_MAP[secondary].color;
         span.appendChild(dot);
       }
-
-      if (selection && i >= selection.start && i < selection.end) {
-        span.classList.add("selected");
-      }
-
+      if (selection && i >= selection.start && i < selection.end) span.classList.add("selected");
       frag.appendChild(span);
     }
-
     els.canvas.replaceChildren(frag);
   }
 
@@ -416,14 +366,12 @@
     const sorted = doc.marks
       .map((m, index) => ({ m, index }))
       .sort((a, b) => a.m.start - b.m.start || a.m.end - b.m.end);
-
     els.markCount.textContent = String(doc.marks.length);
-
     if (!sorted.length) {
-      els.marksList.innerHTML = `<div class="empty">Меток пока нет — выдели текст и назначь правило.</div>`;
+      els.marksList.innerHTML =
+        `<div class="empty" style="min-height:auto;color:var(--muted);font-size:.85rem">Меток пока нет — выдели текст и назначь правило.</div>`;
       return;
     }
-
     els.marksList.innerHTML = "";
     for (const { m, index } of sorted) {
       const item = document.createElement("div");
@@ -439,21 +387,18 @@
       ]
         .filter(Boolean)
         .join("");
-
       item.innerHTML = `
         <div class="snippet">${escapeHtml(snippet || "∅")}</div>
         <button type="button" class="del" data-del="${index}" title="Удалить">✕</button>
         <div class="chips">${chips || `<span class="chip">пусто</span>`}</div>
         <div class="meta">[${m.start}, ${m.end})${m.note ? " · " + escapeHtml(m.note) : ""}</div>
       `;
-
       item.addEventListener("click", (e) => {
         if (e.target.closest("[data-del]")) return;
         activeMarkIndex = index;
         setSelection(m.start, m.end);
         renderMarksList();
       });
-
       item.querySelector("[data-del]").addEventListener("click", (e) => {
         e.stopPropagation();
         pushHistory();
@@ -461,7 +406,6 @@
         if (activeMarkIndex === index) activeMarkIndex = -1;
         renderAll();
       });
-
       els.marksList.appendChild(item);
     }
   }
@@ -476,14 +420,6 @@
     renderJson();
     updateSelectionMeta();
     updateLayerButtons();
-  }
-
-  function escapeHtml(s) {
-    return String(s)
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
   }
 
   function indexFromEventTarget(target) {
@@ -502,27 +438,21 @@
         return;
       }
       els.canvas.setPointerCapture(e.pointerId);
-      drag = { anchor: i, live: i };
+      drag = { anchor: i };
       setSelection(i, i + 1);
       e.preventDefault();
     });
-
     els.canvas.addEventListener("pointermove", (e) => {
       if (!drag) return;
       const i = indexFromEventTarget(e.target);
       if (i == null) return;
-      drag.live = i;
-      const start = Math.min(drag.anchor, drag.live);
-      const end = Math.max(drag.anchor, drag.live) + 1;
-      setSelection(start, end);
+      setSelection(Math.min(drag.anchor, i), Math.max(drag.anchor, i) + 1);
     });
-
     const endDrag = () => {
       drag = null;
     };
     els.canvas.addEventListener("pointerup", endDrag);
     els.canvas.addEventListener("pointercancel", endDrag);
-
     els.canvas.addEventListener("dblclick", (e) => {
       const i = indexFromEventTarget(e.target);
       if (i == null) return;
@@ -541,9 +471,8 @@
       type: "application/json",
     });
     const a = document.createElement("a");
-    const name = (doc.id || "azkar-tajweed").replace(/[^\w.-]+/g, "-");
     a.href = URL.createObjectURL(blob);
-    a.download = `${name}.json`;
+    a.download = `${(doc.id || "azkar-tajweed").replace(/[^\w.-]+/g, "-")}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
   }
@@ -551,20 +480,19 @@
   async function copyJson() {
     try {
       await navigator.clipboard.writeText(JSON.stringify(exportObject(), null, 2));
-      flashStatus("JSON скопирован");
+      els.saveStatus.textContent = "JSON скопирован";
+      els.saveStatus.classList.add("ok");
     } catch {
-      flashStatus("Не удалось скопировать — используй экспорт");
+      els.saveStatus.textContent = "Не удалось скопировать";
     }
   }
 
-  function loadDoc(next, { resetHistory = true } = {}) {
+  function loadDoc(next) {
     doc = normalizeDoc(next);
     selection = null;
     activeMarkIndex = -1;
-    if (resetHistory) {
-      history.length = 0;
-      future.length = 0;
-    }
+    history.length = 0;
+    future.length = 0;
     syncForm();
     renderAll();
     scheduleSave();
@@ -582,41 +510,33 @@
     bindMeta(els.id, "id");
     bindMeta(els.arabic, "arabic");
 
-    document.getElementById("btnAccent").addEventListener("click", toggleAccent);
-    document.getElementById("btnHidden").addEventListener("click", toggleHidden);
-    document.getElementById("btnClearSel").addEventListener("click", clearSelectionMarks);
-    document.getElementById("btnUndo").addEventListener("click", undo);
-    document.getElementById("btnRedo").addEventListener("click", redo);
-    document.getElementById("btnHelp").addEventListener("click", () => els.helpDialog.showModal());
-    document.getElementById("btnCloseHelp").addEventListener("click", () => els.helpDialog.close());
-    document.getElementById("btnLoadSample").addEventListener("click", () => {
-      if (doc.marks.length && !confirm("Загрузить эталон? Текущий черновик в редакторе будет заменён (локальный автосейв перезапишется).")) {
-        return;
-      }
+    $("btnAccent").addEventListener("click", toggleAccent);
+    $("btnHidden").addEventListener("click", toggleHidden);
+    $("btnClearSel").addEventListener("click", clearSelectionMarks);
+    $("btnUndo").addEventListener("click", undo);
+    $("btnRedo").addEventListener("click", redo);
+    $("btnHelp").addEventListener("click", () => els.helpDialog.showModal());
+    $("btnCloseHelp").addEventListener("click", () => els.helpDialog.close());
+    $("btnLoadSample").addEventListener("click", () => {
+      if (doc.marks.length && !confirm("Загрузить эталон? Текущий черновик будет заменён.")) return;
       loadDoc(SAMPLE);
     });
-    document.getElementById("btnNew").addEventListener("click", () => {
+    $("btnNew").addEventListener("click", () => {
       if (doc.transliteration && !confirm("Создать пустой документ?")) return;
       loadDoc(emptyDoc());
     });
-    document.getElementById("btnExport").addEventListener("click", downloadJson);
-    document.getElementById("btnCopyJson").addEventListener("click", copyJson);
-    document.getElementById("btnImport").addEventListener("click", () => els.fileInput.click());
-    document.getElementById("btnSelectAll").addEventListener("click", () => {
-      if (!doc.transliteration) return;
-      setSelection(0, doc.transliteration.length);
-    });
-    document.getElementById("btnSortMarks").addEventListener("click", () => {
+    $("btnExport").addEventListener("click", downloadJson);
+    $("btnCopyJson").addEventListener("click", copyJson);
+    $("btnImport").addEventListener("click", () => els.fileInput.click());
+    $("btnSortMarks").addEventListener("click", () => {
       pushHistory();
       doc.marks.sort((a, b) => a.start - b.start || a.end - b.end);
       renderAll();
     });
-
-    document.getElementById("btnEditPlain").addEventListener("click", () => {
+    $("btnEditPlain").addEventListener("click", () => {
       els.plainText.value = doc.transliteration;
       els.plainDialog.showModal();
     });
-
     els.plainDialog.addEventListener("close", () => {
       if (els.plainDialog.returnValue !== "ok") return;
       pushHistory();
@@ -627,14 +547,12 @@
       selection = null;
       renderAll();
     });
-
     els.fileInput.addEventListener("change", async () => {
       const file = els.fileInput.files && els.fileInput.files[0];
       els.fileInput.value = "";
       if (!file) return;
       try {
-        const text = await file.text();
-        loadDoc(JSON.parse(text));
+        loadDoc(JSON.parse(await file.text()));
       } catch {
         alert("Не удалось прочитать JSON");
       }
@@ -659,11 +577,9 @@
         setSelection(null, null);
         return;
       }
-      if (e.key === "Delete" || e.key === "Backspace") {
-        if (selection) {
-          e.preventDefault();
-          clearSelectionMarks();
-        }
+      if ((e.key === "Delete" || e.key === "Backspace") && selection) {
+        e.preventDefault();
+        clearSelectionMarks();
         return;
       }
       if (e.key.toLowerCase() === "a" && !e.ctrlKey && !e.metaKey) {
@@ -685,16 +601,36 @@
   }
 
   function boot() {
+    // Bridge HTML class names that differ slightly from CSS aliases.
+    const map = [
+      [".paper-panel", "paper-panel"],
+      [".markup-canvas", "markup-canvas"],
+      [".paper-hint", "paper-hint"],
+      [".side-panels", "side-panels"],
+      [".side-card", "side-card"],
+      [".side-head", "side-head"],
+      [".marks-list", "marks-list"],
+      [".json-preview", "json-preview"],
+      [".sel-pill", "sel-pill"],
+      [".toolbar-label", "toolbar-label"],
+      [".rule-strip", "rule-strip"],
+      [".toolbar-sep", "toolbar-sep"],
+    ];
+    // no-op map kept for clarity; classes already match.
+
+    for (const id of Object.values(els)) {
+      if (!id) {
+        console.error("Tajweed editor: missing DOM node", els);
+        return;
+      }
+    }
+
     renderRulesUi();
     bindCanvasPointer();
     bindChrome();
-
     const stored = loadStored();
-    if (stored && (stored.transliteration || stored.marks.length)) {
-      loadDoc(stored);
-    } else {
-      loadDoc(SAMPLE);
-    }
+    if (stored && (stored.transliteration || stored.marks.length)) loadDoc(stored);
+    else loadDoc(SAMPLE);
   }
 
   boot();
