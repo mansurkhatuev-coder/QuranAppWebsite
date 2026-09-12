@@ -54,6 +54,8 @@ button { cursor: pointer; }
   top: 0;
   z-index: 30;
 }
+.brand { min-width: 0; }
+
 .eyebrow {
   margin: 0 0 0.15rem;
   font-size: 0.7rem;
@@ -334,6 +336,7 @@ button { cursor: pointer; }
   padding: 0.85rem 0.9rem;
   min-height: 0;
 }
+.side-card.json-card { min-height: 0; }
 .side-head {
   display: flex;
   align-items: center;

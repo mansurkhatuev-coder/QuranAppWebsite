@@ -5,61 +5,12 @@
   "arabic": "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\nقُلْ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌ",
   "transliteration": "Бисмилльах1иррохьманиррохьим.\nКъуль х1уваЛлох1у ахьад\nАллох1уссомад\nлам йалид валам йулад\nвалам йакуллах1у куфуван ахьад.",
   "marks": [
-    {
-      "start": 30,
-      "end": 32,
-      "rules": ["qalqala"],
-      "accent": false,
-      "hidden": false,
-      "note": "Къ — калькаля"
-    },
-    {
-      "start": 41,
-      "end": 43,
-      "rules": ["tafkheem"],
-      "accent": false,
-      "hidden": false,
-      "note": "Лл — тафхим"
-    },
-    {
-      "start": 52,
-      "end": 53,
-      "rules": ["qalqala"],
-      "accent": false,
-      "hidden": false,
-      "note": "д — калькаля"
-    },
-    {
-      "start": 54,
-      "end": 60,
-      "rules": ["tafkheem"],
-      "accent": false,
-      "hidden": true,
-      "note": "Аллох1 — тафхим + скрытый сад"
-    },
-    {
-      "start": 66,
-      "end": 67,
-      "rules": ["qalqala"],
-      "accent": false,
-      "hidden": false,
-      "note": "д — калькаля"
-    },
-    {
-      "start": 76,
-      "end": 77,
-      "rules": ["qalqala"],
-      "accent": false,
-      "hidden": false,
-      "note": "д — калькаля"
-    },
-    {
-      "start": 88,
-      "end": 89,
-      "rules": ["qalqala"],
-      "accent": false,
-      "hidden": false,
-      "note": "д — калькаля"
-    }
+    { "start": 30, "end": 32, "rules": ["qalqala"], "accent": false, "hidden": false, "note": "Къ — калькаля" },
+    { "start": 41, "end": 43, "rules": ["tafkheem"], "accent": false, "hidden": false, "note": "Лл — тафхим" },
+    { "start": 52, "end": 53, "rules": ["qalqala"], "accent": false, "hidden": false, "note": "д — калькаля" },
+    { "start": 54, "end": 60, "rules": ["tafkheem"], "accent": false, "hidden": true, "note": "Аллох1 — тафхим + скрытый сад" },
+    { "start": 66, "end": 67, "rules": ["qalqala"], "accent": false, "hidden": false, "note": "д — калькаля" },
+    { "start": 76, "end": 77, "rules": ["qalqala"], "accent": false, "hidden": false, "note": "д — калькаля" },
+    { "start": 88, "end": 89, "rules": ["qalqala"], "accent": false, "hidden": false, "note": "д — калькаля" }
   ]
 }
