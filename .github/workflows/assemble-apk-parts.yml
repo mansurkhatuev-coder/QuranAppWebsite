@@ -1,0 +1,45 @@
+name: Assemble APK from parts
+
+on:
+  workflow_dispatch:
+    inputs:
+      parts_tag:
+        description: Release tag with apk-part-*.bin assets
+        required: true
+        default: parts-1.0.16
+      version:
+        description: App version for final asset name
+        required: true
+        default: '1.0.16'
+      expected_sha256:
+        description: Expected SHA256 of assembled APK (lowercase hex)
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  assemble:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download parts and assemble
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PARTS_TAG: ${{ github.event.inputs.parts_tag }}
+          VERSION: ${{ github.event.inputs.version }}
+          EXPECTED: ${{ github.event.inputs.expected_sha256 }}
+        run: |
+          set -euo pipefail
+          mkdir -p parts
+          gh release download "$PARTS_TAG" -R "$GITHUB_REPOSITORY" -D parts -p 'apk-part-*.bin'
+          ls -1 parts/apk-part-*.bin | sort | wc -l
+          cat $(ls -1 parts/apk-part-*.bin | sort) > "koran-i-azkary-${VERSION}.apk"
+          ACTUAL=$(sha256sum "koran-i-azkary-${VERSION}.apk" | awk '{print $1}')
+          echo "actual=$ACTUAL"
+          echo "expected=$EXPECTED"
+          test "$ACTUAL" = "$EXPECTED"
+          gh release view "v${VERSION}" -R "$GITHUB_REPOSITORY" --json assets -q '.assets[] | select(.name|endswith(".apk") or endswith(".bin")) | .id' | while read -r id; do
+            [ -n "$id" ] && gh api -X DELETE "repos/$GITHUB_REPOSITORY/releases/assets/$id" || true
+          done
+          gh release upload "v${VERSION}" "koran-i-azkary-${VERSION}.apk" -R "$GITHUB_REPOSITORY" --clobber
+          echo "Uploaded koran-i-azkary-${VERSION}.apk"
