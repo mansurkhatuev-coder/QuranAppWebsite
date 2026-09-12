@@ -1,4 +1,4 @@
-﻿{
+{
   "ios": {
     "latestVersion": "1.0.15",
     "buildNumber": 19,
@@ -19,3 +19,4 @@
   "messageRu": "Версия 1.0.16: плавнее компас Киблы на Android, надёжнее фоновое прослушивание и шторка плеера, удобнее выбор города по GPS и часы намаза, единый список переводов (в т.ч. Халифа Алтай и языки СНГ), правки азкаров и мусхафа. Если что-то нужно поправить — напишите. Лерамца, Мансур!",
   "messageEn": "Version 1.0.16: smoother Qibla compass on Android, more reliable background listening and media controls, better GPS city choice and prayer clock, unified translation list (incl. Khalifa Altai and CIS languages), azkar and mushaf fixes. If something needs fixing, write to us. With respect, Mansur!"
 }
+
