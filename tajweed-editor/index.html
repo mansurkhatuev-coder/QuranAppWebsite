@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css" />
+  <link rel="stylesheet" href="./editor.css?v=interdental2" />
 </head>
 <body>
   <div class="atmosphere" aria-hidden="true"></div>
@@ -85,6 +85,11 @@
     <div class="rule-strip" id="ruleGrid" role="toolbar"></div>
     <div class="toolbar-sep" aria-hidden="true"></div>
     <div class="layer-group" role="group" aria-label="Слои">
+      <button type="button" class="chip-btn interdental-chip" id="btnInterdental" title="Клавиша 9 · ث ذ ظ — язык между зубами">
+        <span class="chip-swatch" aria-hidden="true"></span>
+        <span class="label-full">Межзубные ثذظ</span>
+        <span class="label-short">ثذظ</span>
+      </button>
       <button type="button" class="chip-btn" id="btnAccent" title="A"><span class="label-full">´ Ударение</span><span class="label-short">´</span></button>
       <button type="button" class="chip-btn" id="btnHidden" title="H"><span class="label-full">⊘ Скрытый</span><span class="label-short">⊘</span></button>
       <button type="button" class="chip-btn danger" id="btnClearSel"><span class="label-full">Очистить</span><span class="label-short">✕</span></button>
@@ -101,7 +106,7 @@
         aria-label="Транслитерация для разметки"
         tabindex="0"
       ></div>
-      <p class="paper-hint">Тяни мышью по буквам · двойной клик — слово · Esc — снять выделение · клавиши 1–8 правила</p>
+      <p class="paper-hint">Тяни мышью по буквам · двойной клик — слово · Esc — снять выделение · клавиши 1–9 правила · Межзубные — кнопка ثذظ или 9</p>
     </section>
 
     <aside class="side-panels">
@@ -156,7 +161,7 @@
     </div>
   </dialog>
 
-  <script src="./catalog.js"></script>
-  <script src="./editor.js"></script>
+  <script src="./catalog.js?v=interdental2"></script>
+  <script src="./editor.js?v=interdental2"></script>
 </body>
 </html>
