@@ -17,16 +17,20 @@
 
   <header class="topbar">
     <div class="brand">
-      <p class="eyebrow">Тест · не прод · только браузерный черновик</p>
-      <h1>Таджвид‑разметка азкаров</h1>
+      <p class="eyebrow"><span class="eyebrow-full">Тест · не прод · только браузерный черновик</span><span class="eyebrow-short">Тест · не прод</span></p>
+      <h1><span class="title-full">Таджвид‑разметка азкаров</span><span class="title-short">Таджвид · азкары</span></h1>
+      <span id="saveStatus" class="save-pill" aria-live="polite">Черновик</span>
     </div>
     <div class="top-actions">
-      <span id="saveStatus" class="save-pill">Черновик в браузере</span>
-      <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z">↩</button>
-      <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z">↪</button>
-      <button type="button" class="btn ghost" id="btnHelp">Справка</button>
-      <button type="button" class="btn ghost" id="btnImport">Импорт</button>
-      <button type="button" class="btn primary" id="btnExport">Экспорт JSON</button>
+      <div class="action-group" role="group" aria-label="История">
+        <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z" aria-label="Отменить">↩</button>
+        <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z" aria-label="Повторить">↪</button>
+      </div>
+      <div class="action-group" role="group" aria-label="Файл">
+        <button type="button" class="btn ghost compact" id="btnHelp"><span class="label-full">Справка</span><span class="label-short">?</span></button>
+        <button type="button" class="btn ghost compact" id="btnImport"><span class="label-full">Импорт</span><span class="label-short">↓</span></button>
+        <button type="button" class="btn primary compact" id="btnExport"><span class="label-full">Экспорт JSON</span><span class="label-short">JSON</span></button>
+      </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden />
     </div>
   </header>
@@ -41,9 +45,9 @@
       <input id="docId" type="text" autocomplete="off" placeholder="azkar-ikhlaas" />
     </label>
     <div class="meta-actions">
-      <button type="button" class="btn ghost" id="btnLoadSample">Эталон Ихляс</button>
-      <button type="button" class="btn ghost" id="btnNew">Новый</button>
-      <button type="button" class="btn ghost" id="btnEditPlain">Правка текста</button>
+      <button type="button" class="btn ghost compact" id="btnLoadSample"><span class="label-full">Эталон Ихляс</span><span class="label-short">Эталон</span></button>
+      <button type="button" class="btn ghost compact" id="btnNew">Новый</button>
+      <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Правка текста</span><span class="label-short">Текст</span></button>
     </div>
   </div>
 
@@ -58,9 +62,11 @@
     <div class="toolbar-label">Правило</div>
     <div class="rule-strip" id="ruleGrid" role="toolbar"></div>
     <div class="toolbar-sep" aria-hidden="true"></div>
-    <button type="button" class="chip-btn" id="btnAccent" title="A">´ Ударение</button>
-    <button type="button" class="chip-btn" id="btnHidden" title="H">⊘ Скрытый</button>
-    <button type="button" class="chip-btn danger" id="btnClearSel">Очистить</button>
+    <div class="layer-group" role="group" aria-label="Слои">
+      <button type="button" class="chip-btn" id="btnAccent" title="A"><span class="label-full">´ Ударение</span><span class="label-short">´</span></button>
+      <button type="button" class="chip-btn" id="btnHidden" title="H"><span class="label-full">⊘ Скрытый</span><span class="label-short">⊘</span></button>
+      <button type="button" class="chip-btn danger" id="btnClearSel"><span class="label-full">Очистить</span><span class="label-short">✕</span></button>
+    </div>
     <div class="sel-pill" id="selMeta">Выделение: нет</div>
   </section>
 

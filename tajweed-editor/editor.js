@@ -152,10 +152,10 @@
     saveTimer = setTimeout(() => {
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
-        els.saveStatus.textContent = "Черновик сохранён в браузере";
+        els.saveStatus.textContent = "Сохранено";
         els.saveStatus.classList.add("ok");
       } catch {
-        els.saveStatus.textContent = "Не удалось сохранить локально";
+        els.saveStatus.textContent = "Ошибка сохранения";
       }
     }, 250);
   }
@@ -480,10 +480,10 @@
   async function copyJson() {
     try {
       await navigator.clipboard.writeText(JSON.stringify(exportObject(), null, 2));
-      els.saveStatus.textContent = "JSON скопирован";
+      els.saveStatus.textContent = "Скопировано";
       els.saveStatus.classList.add("ok");
     } catch {
-      els.saveStatus.textContent = "Не удалось скопировать";
+      els.saveStatus.textContent = "Не скопировалось";
     }
   }
 
