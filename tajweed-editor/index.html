@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css" />
+  <link rel="stylesheet" href="./editor.css?v=add-docs1" />
 </head>
 <body>
   <div class="atmosphere" aria-hidden="true"></div>
@@ -42,7 +42,8 @@
     </label>
     <div class="meta-actions library-actions">
       <button type="button" class="btn ghost compact" id="btnSeedMissing" title="Добавить недостающие эталоны">+ Эталоны</button>
-      <button type="button" class="btn ghost compact" id="btnNew">Новый</button>
+      <button type="button" class="btn ghost compact" id="btnNew" title="Добавить документ в список">+ Добавить</button>
+      <button type="button" class="btn ghost compact" id="btnDuplicate" title="Копия текущего в список">Копия</button>
       <button type="button" class="btn ghost compact" id="btnDeleteDoc" title="Удалить текущий">Удалить</button>
       <button type="button" class="btn primary compact" id="btnExportAll" title="Скачать всю библиотеку"><span class="label-full">Экспорт всего</span><span class="label-short">Все JSON</span></button>
     </div>
@@ -122,13 +123,43 @@
     </aside>
   </main>
 
+
+  <dialog id="addDocDialog" class="modal">
+    <form method="dialog" class="modal-card add-doc-card" id="addDocForm">
+      <h2>Добавить в список</h2>
+      <p class="hint">Схема разметки та же — можно завести любой азкар / суру. Уже заполненные документы не затираются.</p>
+
+      <fieldset class="add-mode">
+        <legend>Что добавить</legend>
+        <label class="radio-row"><input type="radio" name="addMode" value="empty" checked /> Пустой документ</label>
+        <label class="radio-row"><input type="radio" name="addMode" value="duplicate" /> Копия текущего</label>
+        <label class="radio-row"><input type="radio" name="addMode" value="template" /> Из шаблона (арабский готов)</label>
+      </fieldset>
+
+      <label class="meta-field grow">
+        <span>Название</span>
+        <input id="addDocTitle" type="text" autocomplete="off" placeholder="Например: утренний азкар / Аль‑Фатиха" required />
+      </label>
+
+      <label class="meta-field grow" id="addTemplateField" hidden>
+        <span>Шаблон</span>
+        <select id="addDocTemplate" aria-label="Шаблон документа"></select>
+      </label>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
+        <button type="submit" class="btn primary" value="ok" id="btnConfirmAdd">Добавить</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="plainDialog" class="modal">
     <form method="dialog" class="modal-card">
       <h2>Правка транслитерации</h2>
       <p class="hint">Метки за новыми границами обрежутся. Удобнее править текст до плотной разметки.</p>
       <textarea id="plainText" rows="10"></textarea>
       <div class="modal-actions">
-        <button type="submit" class="btn ghost" value="cancel">Отмена</button>
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
         <button type="submit" class="btn primary" value="ok">Применить</button>
       </div>
     </form>
@@ -145,6 +176,7 @@
         <li><strong>Мадды</strong> — отдельно: 2, 2–4–6, 4–5, 6.</li>
         <li><strong>Межзубные</strong> — правило <kbd>9</kbd> для ث ذ ظ: пунктир снизу остаётся даже если сверху цвет тафхима/мадда (удобно для ظ).</li>
         <li><strong>Библиотека</strong> — несколько азкаров в одном браузере; переключай сверху.</li>
+        <li><strong>Добавить</strong> — пустой документ, копия текущего или шаблон (Фатиха, Каусар и др.). Свои черновики не затираются.</li>
         <li><strong>Транслитерация</strong> — поле под арабским: вставь чеченский текст, затем размечай на «бумаге».</li>
         <li><strong>Экспорт всего</strong> — скачивает все документы одним JSON, когда будешь готов.</li>
         <li><strong>Автосейв</strong> — черновики только в этом браузере. Прод‑JSON азкаров не меняется.</li>
@@ -156,7 +188,7 @@
     </div>
   </dialog>
 
-  <script src="./catalog.js"></script>
-  <script src="./editor.js"></script>
+  <script src="./catalog.js?v=add-docs1"></script>
+  <script src="./editor.js?v=add-docs1"></script>
 </body>
 </html>

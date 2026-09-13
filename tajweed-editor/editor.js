@@ -29,6 +29,7 @@
 
   const LIBRARY_VERSION = 2;
   const SEEDS = Array.isArray(window.TAJWEED_SEED_DOCS) ? window.TAJWEED_SEED_DOCS : [];
+  const EXTRAS = Array.isArray(window.TAJWEED_EXTRA_DOCS) ? window.TAJWEED_EXTRA_DOCS : [];
 
   const $ = (id) => document.getElementById(id);
   const els = {
@@ -50,6 +51,11 @@
     btnAccent: $("btnAccent"),
     btnHidden: $("btnHidden"),
     docSelect: $("docSelect"),
+    addDialog: $("addDocDialog"),
+    addForm: $("addDocForm"),
+    addTitle: $("addDocTitle"),
+    addTemplate: $("addDocTemplate"),
+    addTemplateField: $("addTemplateField"),
   };
 
   let library = { version: LIBRARY_VERSION, activeId: "", docs: [] };
@@ -669,6 +675,106 @@
     loadDoc(parsed);
   }
 
+
+  function uniqueDocId(base) {
+    const root = String(base || "doc")
+      .toLowerCase()
+      .replace(/[^a-z0-9а-яё_-]+/gi, "-")
+      .replace(/^-+|-+$/g, "")
+      .slice(0, 40) || "doc";
+    let id = root;
+    let n = 2;
+    while (library.docs.some((d) => d.id === id)) {
+      id = `${root}-${n}`;
+      n += 1;
+    }
+    return id;
+  }
+
+  function allTemplates() {
+    const byId = new Map();
+    for (const item of [...SEEDS, ...EXTRAS]) {
+      if (!item || !item.id) continue;
+      byId.set(item.id, item);
+    }
+    return [...byId.values()];
+  }
+
+  function fillAddTemplateSelect() {
+    if (!els.addTemplate) return;
+    const present = new Set(library.docs.map((d) => d.id));
+    const templates = allTemplates().filter((t) => t.id !== "azkar-blank-custom");
+    els.addTemplate.innerHTML = templates
+      .map((t) => {
+        const inLib = present.has(t.id) ? " · уже в списке" : "";
+        return `<option value="${escapeHtml(t.id)}">${escapeHtml(t.title || t.id)}${inLib}</option>`;
+      })
+      .join("");
+  }
+
+  function openAddDialog({ mode = "empty" } = {}) {
+    if (!els.addDialog) return;
+    fillAddTemplateSelect();
+    const modeInput = els.addForm.querySelector(`input[name="addMode"][value="${mode}"]`);
+    if (modeInput) modeInput.checked = true;
+    syncAddDialogMode();
+    if (mode === "duplicate") {
+      els.addTitle.value = `${doc.title || doc.id || "Азкар"} (копия)`;
+    } else if (mode === "template") {
+      const opt = els.addTemplate.selectedOptions[0];
+      els.addTitle.value = opt ? opt.textContent.replace(/ · уже в списке$/, "") : "";
+    } else {
+      els.addTitle.value = "";
+      els.addTitle.placeholder = "Название нового азкара";
+    }
+    els.addDialog.showModal();
+    queueMicrotask(() => els.addTitle.focus());
+  }
+
+  function syncAddDialogMode() {
+    if (!els.addForm) return;
+    const mode = (els.addForm.querySelector('input[name="addMode"]:checked') || {}).value || "empty";
+    if (els.addTemplateField) els.addTemplateField.hidden = mode !== "template";
+    if (mode === "duplicate") {
+      els.addTitle.value = `${doc.title || doc.id || "Азкар"} (копия)`;
+    } else if (mode === "template") {
+      const t = allTemplates().find((x) => x.id === els.addTemplate.value);
+      if (t) els.addTitle.value = t.title || t.id;
+    }
+  }
+
+  function createDocFromAddDialog() {
+    const mode = (els.addForm.querySelector('input[name="addMode"]:checked') || {}).value || "empty";
+    const title = String(els.addTitle.value || "").trim() || "Новый азкар";
+    commitCurrentToLibrary();
+
+    let next;
+    if (mode === "duplicate") {
+      next = normalizeDoc(doc);
+      next.marks = clone(doc.marks);
+      next.title = title;
+      next.id = uniqueDocId(`${doc.id || "doc"}-copy`);
+    } else if (mode === "template") {
+      const tpl = allTemplates().find((x) => x.id === els.addTemplate.value) || emptyDoc();
+      next = seedDoc(tpl);
+      next.title = title;
+      // If template id already used, keep content but new id so we never overwrite.
+      if (library.docs.some((d) => d.id === next.id)) {
+        next.id = uniqueDocId(next.id);
+      }
+      // Keep sample marks from template when present; never touches existing docs.
+      if (!next.transliteration) next.transliteration = "";
+    } else {
+      next = emptyDoc();
+      next.title = title;
+      next.id = uniqueDocId(title);
+    }
+    next.updatedAt = nowIso();
+    loadDoc(next);
+    els.saveStatus.textContent = `Добавлено: ${next.title}`;
+    els.saveStatus.classList.add("ok");
+  }
+
   function bindChrome() {
     const bindMeta = (el, key) => {
       if (!el) return;
@@ -716,13 +822,24 @@
       els.saveStatus.textContent = "Эталоны на месте";
       els.saveStatus.classList.add("ok");
     });
-    $("btnNew").addEventListener("click", () => {
-      commitCurrentToLibrary();
-      const blank = emptyDoc();
-      blank.id = `doc-${Date.now().toString(36)}`;
-      blank.title = "Новый азкар";
-      loadDoc(blank);
-    });
+    $("btnNew").addEventListener("click", () => openAddDialog({ mode: "empty" }));
+    if ($("btnDuplicate")) {
+      $("btnDuplicate").addEventListener("click", () => openAddDialog({ mode: "duplicate" }));
+    }
+    if (els.addForm) {
+      els.addForm.addEventListener("change", (e) => {
+        if (e.target && e.target.name === "addMode") syncAddDialogMode();
+        if (e.target && e.target.id === "addDocTemplate") syncAddDialogMode();
+      });
+      els.addForm.addEventListener("submit", (e) => {
+        const submitter = e.submitter;
+        if (submitter && submitter.value === "ok") {
+          e.preventDefault();
+          createDocFromAddDialog();
+          els.addDialog.close();
+        }
+      });
+    }
     $("btnDeleteDoc").addEventListener("click", () => {
       if (library.docs.length <= 1) {
         alert("Нельзя удалить последний документ");
