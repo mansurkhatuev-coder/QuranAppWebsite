@@ -1,8 +1,8 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "tajweed-azkar-editor:v1";
-  const SCHEMA_VERSION = 1;
+  const STORAGE_KEY = "tajweed-azkar-editor:v2";
+  const SCHEMA_VERSION = 2;
 
   const RULES = [
     { id: "madd2", label: "Мадд 2", color: "#b27a4a", key: "1" },
@@ -19,30 +19,15 @@
     "madd6", "madd45", "madd246", "madd2", "ghunna", "qalqala", "tafkheem", "silent",
   ];
 
-  const SAMPLE = {
-    version: SCHEMA_VERSION,
-    id: "azkar-ikhlaas-test",
-    title: "Аль‑Ихляс (тест для азкара)",
-    arabic:
-      "بِسْمِ ٱللَّهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ\nقُلْ هُوَ ٱللَّهُ أَحَدٌ ۝ ٱللَّهُ ٱلصَّمَدُ ۝ لَمْ يَلِدْ وَلَمْ يُولَدْ ۝ وَلَمْ يَكُن لَّهُۥ كُفُوًا أَحَدٌ",
-    transliteration:
-      "Бисмилльах1иррохьманиррохьим.\nКъуль х1уваЛлох1у ахьад\nАллох1уссомад\nлам йалид валам йулад\nвалам йакуллах1у куфуван ахьад.",
-    marks: [
-      { start: 30, end: 32, rules: ["qalqala"], accent: false, hidden: false, note: "Къ — калькаля" },
-      { start: 41, end: 43, rules: ["tafkheem"], accent: false, hidden: false, note: "Лл — тафхим" },
-      { start: 52, end: 53, rules: ["qalqala"], accent: false, hidden: false, note: "д — калькаля" },
-      { start: 54, end: 60, rules: ["tafkheem"], accent: false, hidden: true, note: "Аллох1 — тафхим + скрытый сад" },
-      { start: 66, end: 67, rules: ["qalqala"], accent: false, hidden: false, note: "д — калькаля" },
-      { start: 76, end: 77, rules: ["qalqala"], accent: false, hidden: false, note: "д — калькаля" },
-      { start: 88, end: 89, rules: ["qalqala"], accent: false, hidden: false, note: "д — калькаля" },
-    ],
-  };
+  const LIBRARY_VERSION = 2;
+  const SEEDS = Array.isArray(window.TAJWEED_SEED_DOCS) ? window.TAJWEED_SEED_DOCS : [];
 
   const $ = (id) => document.getElementById(id);
   const els = {
     title: $("docTitle"),
     id: $("docId"),
     arabic: $("docArabic"),
+    translit: $("docTranslit"),
     canvas: $("markupCanvas"),
     ruleGrid: $("ruleGrid"),
     selMeta: $("selMeta"),
@@ -56,8 +41,10 @@
     fileInput: $("fileInput"),
     btnAccent: $("btnAccent"),
     btnHidden: $("btnHidden"),
+    docSelect: $("docSelect"),
   };
 
+  let library = { version: LIBRARY_VERSION, activeId: "", docs: [] };
   let doc = emptyDoc();
   let selection = null;
   let activeMarkIndex = -1;
@@ -145,13 +132,88 @@
     scheduleSave();
   }
 
+
+  function nowIso() {
+    return new Date().toISOString();
+  }
+
+  function seedDoc(raw) {
+    const d = normalizeDoc(raw);
+    d.updatedAt = raw && raw.updatedAt ? String(raw.updatedAt) : nowIso();
+    return d;
+  }
+
+  function emptyLibrary() {
+    return {
+      version: LIBRARY_VERSION,
+      activeId: "",
+      docs: SEEDS.map((s) => seedDoc(s)),
+    };
+  }
+
+  function ensureSeeds(lib, { overwriteEmptyTranslit = false } = {}) {
+    for (const seed of SEEDS) {
+      const idx = lib.docs.findIndex((d) => d.id === seed.id);
+      if (idx < 0) {
+        lib.docs.push(seedDoc(seed));
+        continue;
+      }
+      if (overwriteEmptyTranslit && !lib.docs[idx].transliteration && seed.transliteration) {
+        lib.docs[idx] = seedDoc({
+          ...lib.docs[idx],
+          arabic: lib.docs[idx].arabic || seed.arabic,
+          transliteration: seed.transliteration,
+          marks: lib.docs[idx].marks.length ? lib.docs[idx].marks : seed.marks,
+        });
+      }
+      if (!lib.docs[idx].arabic && seed.arabic) lib.docs[idx].arabic = seed.arabic;
+      if (!lib.docs[idx].title && seed.title) lib.docs[idx].title = seed.title;
+    }
+    if (!lib.activeId || !lib.docs.some((d) => d.id === lib.activeId)) {
+      lib.activeId = lib.docs[0] ? lib.docs[0].id : "";
+    }
+    return lib;
+  }
+
+  function commitCurrentToLibrary() {
+    if (!doc) return;
+    doc.updatedAt = nowIso();
+    const snapshot = normalizeDoc(doc);
+    snapshot.updatedAt = doc.updatedAt;
+    if (!snapshot.id) {
+      snapshot.id = `doc-${Date.now().toString(36)}`;
+      doc.id = snapshot.id;
+    }
+    // Prefer the previously active slot so renaming ID replaces instead of duplicating.
+    let idx = library.docs.findIndex((d) => d.id === library.activeId);
+    if (idx < 0) idx = library.docs.findIndex((d) => d.id === snapshot.id);
+    if (idx >= 0) library.docs[idx] = snapshot;
+    else library.docs.push(snapshot);
+    library.activeId = snapshot.id;
+  }
+
+  function renderDocSelect() {
+    if (!els.docSelect) return;
+    const active = library.activeId;
+    els.docSelect.innerHTML = library.docs
+      .map((d) => {
+        const missing = d.transliteration.trim() ? "" : " · нет транслита";
+        const marks = d.marks.length ? ` · меток ${d.marks.length}` : "";
+        const label = `${d.title || d.id || "Без названия"}${missing}${marks}`;
+        return `<option value="${escapeHtml(d.id)}"${d.id === active ? " selected" : ""}>${escapeHtml(label)}</option>`;
+      })
+      .join("");
+  }
+
   function scheduleSave() {
     els.saveStatus.textContent = "Сохранение…";
     els.saveStatus.classList.remove("ok");
     clearTimeout(saveTimer);
     saveTimer = setTimeout(() => {
       try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(doc));
+        commitCurrentToLibrary();
+        renderDocSelect();
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
         els.saveStatus.textContent = "Сохранено";
         els.saveStatus.classList.add("ok");
       } catch {
@@ -163,7 +225,23 @@
   function loadStored() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      return raw ? normalizeDoc(JSON.parse(raw)) : null;
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && Array.isArray(parsed.docs)) {
+        return ensureSeeds({
+          version: LIBRARY_VERSION,
+          activeId: String(parsed.activeId || ""),
+          docs: parsed.docs.map((d) => seedDoc(d)),
+        });
+      }
+      // migrate v1 single doc
+      const one = normalizeDoc(parsed);
+      const lib = emptyLibrary();
+      const idx = lib.docs.findIndex((d) => d.id === one.id);
+      if (idx >= 0) lib.docs[idx] = seedDoc(one);
+      else if (one.id || one.transliteration || one.arabic) lib.docs.unshift(seedDoc(one));
+      lib.activeId = one.id || lib.docs[0].id;
+      return ensureSeeds(lib);
     } catch {
       return null;
     }
@@ -173,6 +251,7 @@
     els.title.value = doc.title;
     els.id.value = doc.id;
     els.arabic.value = doc.arabic;
+    if (els.translit) els.translit.value = doc.transliteration;
   }
 
   function exportObject() {
@@ -322,7 +401,7 @@
   function renderCanvas() {
     const text = doc.transliteration;
     if (!text) {
-      els.canvas.innerHTML = `<div class="empty">Нет текста. Нажми «Эталон Ихляс» или «Правка текста».</div>`;
+      els.canvas.innerHTML = `<div class="empty">Нет транслитерации. Вставь текст в поле выше — затем размечай здесь.</div>`;
       return;
     }
     const frag = document.createDocumentFragment();
@@ -466,17 +545,6 @@
     });
   }
 
-  function downloadJson() {
-    const blob = new Blob([JSON.stringify(exportObject(), null, 2)], {
-      type: "application/json",
-    });
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `${(doc.id || "azkar-tajweed").replace(/[^\w.-]+/g, "-")}.json`;
-    a.click();
-    URL.revokeObjectURL(a.href);
-  }
-
   async function copyJson() {
     try {
       await navigator.clipboard.writeText(JSON.stringify(exportObject(), null, 2));
@@ -487,21 +555,117 @@
     }
   }
 
-  function loadDoc(next) {
-    doc = normalizeDoc(next);
+
+  function applyTransliteration(nextText, { history: withHistory = true } = {}) {
+    if (withHistory) pushHistory();
+    doc.transliteration = String(nextText || "");
+    doc.marks = doc.marks
+      .map((m) => clampMark(m, doc.transliteration.length))
+      .filter(Boolean);
+    selection = null;
+    if (els.translit && els.translit.value !== doc.transliteration) {
+      els.translit.value = doc.transliteration;
+    }
+    renderAll();
+  }
+
+  function switchToDoc(id) {
+    commitCurrentToLibrary();
+    const found = library.docs.find((d) => d.id === id);
+    if (!found) return;
+    library.activeId = id;
+    doc = normalizeDoc(found);
+    doc.updatedAt = found.updatedAt || nowIso();
     selection = null;
     activeMarkIndex = -1;
     history.length = 0;
     future.length = 0;
     syncForm();
+    renderDocSelect();
     renderAll();
     scheduleSave();
   }
 
+  function loadDoc(next, { addToLibrary = true } = {}) {
+    doc = normalizeDoc(next);
+    if (!doc.id) doc.id = `doc-${Date.now().toString(36)}`;
+    doc.updatedAt = nowIso();
+    selection = null;
+    activeMarkIndex = -1;
+    history.length = 0;
+    future.length = 0;
+    if (addToLibrary) {
+      const idx = library.docs.findIndex((d) => d.id === doc.id);
+      const snap = normalizeDoc(doc);
+      snap.updatedAt = doc.updatedAt;
+      if (idx >= 0) library.docs[idx] = snap;
+      else library.docs.push(snap);
+      library.activeId = doc.id;
+    }
+    syncForm();
+    renderDocSelect();
+    renderAll();
+    scheduleSave();
+  }
+
+  function downloadJson() {
+    commitCurrentToLibrary();
+    const blob = new Blob([JSON.stringify(exportObject(), null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `${(doc.id || "azkar-tajweed").replace(/[^\w.-]+/g, "-")}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }
+
+  function downloadLibrary() {
+    commitCurrentToLibrary();
+    const payload = {
+      version: LIBRARY_VERSION,
+      exportedAt: nowIso(),
+      docs: library.docs.map((d) => normalizeDoc(d)),
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json",
+    });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `azkar-tajweed-library-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    els.saveStatus.textContent = `Экспорт: ${payload.docs.length} док.`;
+    els.saveStatus.classList.add("ok");
+  }
+
+  function importPayload(parsed) {
+    if (parsed && Array.isArray(parsed.docs)) {
+      for (const item of parsed.docs) {
+        const d = seedDoc(item);
+        if (!d.id) d.id = `doc-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 6)}`;
+        const idx = library.docs.findIndex((x) => x.id === d.id);
+        if (idx >= 0) library.docs[idx] = d;
+        else library.docs.push(d);
+      }
+      if (parsed.activeId && library.docs.some((d) => d.id === parsed.activeId)) {
+        library.activeId = parsed.activeId;
+      }
+      ensureSeeds(library);
+      switchToDoc(library.activeId || library.docs[0].id);
+      return;
+    }
+    loadDoc(parsed);
+  }
+
   function bindChrome() {
     const bindMeta = (el, key) => {
+      if (!el) return;
       el.addEventListener("input", () => {
         doc[key] = el.value;
+        if (key === "id") {
+          // keep select in sync later via save
+        }
         renderJson();
         scheduleSave();
       });
@@ -510,6 +674,19 @@
     bindMeta(els.id, "id");
     bindMeta(els.arabic, "arabic");
 
+    if (els.translit) {
+      els.translit.addEventListener("input", () => {
+        applyTransliteration(els.translit.value, { history: false });
+        scheduleSave();
+      });
+    }
+
+    if (els.docSelect) {
+      els.docSelect.addEventListener("change", () => {
+        switchToDoc(els.docSelect.value);
+      });
+    }
+
     $("btnAccent").addEventListener("click", toggleAccent);
     $("btnHidden").addEventListener("click", toggleHidden);
     $("btnClearSel").addEventListener("click", clearSelectionMarks);
@@ -517,15 +694,36 @@
     $("btnRedo").addEventListener("click", redo);
     $("btnHelp").addEventListener("click", () => els.helpDialog.showModal());
     $("btnCloseHelp").addEventListener("click", () => els.helpDialog.close());
-    $("btnLoadSample").addEventListener("click", () => {
-      if (doc.marks.length && !confirm("Загрузить эталон? Текущий черновик будет заменён.")) return;
-      loadDoc(SAMPLE);
+    $("btnSeedMissing").addEventListener("click", () => {
+      ensureSeeds(library);
+      // re-add any deleted seeds
+      for (const seed of SEEDS) {
+        if (!library.docs.some((d) => d.id === seed.id)) library.docs.push(seedDoc(seed));
+      }
+      renderDocSelect();
+      scheduleSave();
+      els.saveStatus.textContent = "Эталоны на месте";
+      els.saveStatus.classList.add("ok");
     });
     $("btnNew").addEventListener("click", () => {
-      if (doc.transliteration && !confirm("Создать пустой документ?")) return;
-      loadDoc(emptyDoc());
+      commitCurrentToLibrary();
+      const blank = emptyDoc();
+      blank.id = `doc-${Date.now().toString(36)}`;
+      blank.title = "Новый азкар";
+      loadDoc(blank);
+    });
+    $("btnDeleteDoc").addEventListener("click", () => {
+      if (library.docs.length <= 1) {
+        alert("Нельзя удалить последний документ");
+        return;
+      }
+      if (!confirm(`Удалить «${doc.title || doc.id}»?`)) return;
+      library.docs = library.docs.filter((d) => d.id !== doc.id);
+      library.activeId = library.docs[0].id;
+      switchToDoc(library.activeId);
     });
     $("btnExport").addEventListener("click", downloadJson);
+    $("btnExportAll").addEventListener("click", downloadLibrary);
     $("btnCopyJson").addEventListener("click", copyJson);
     $("btnImport").addEventListener("click", () => els.fileInput.click());
     $("btnSortMarks").addEventListener("click", () => {
@@ -539,20 +737,14 @@
     });
     els.plainDialog.addEventListener("close", () => {
       if (els.plainDialog.returnValue !== "ok") return;
-      pushHistory();
-      doc.transliteration = els.plainText.value;
-      doc.marks = doc.marks
-        .map((m) => clampMark(m, doc.transliteration.length))
-        .filter(Boolean);
-      selection = null;
-      renderAll();
+      applyTransliteration(els.plainText.value, { history: true });
     });
     els.fileInput.addEventListener("change", async () => {
       const file = els.fileInput.files && els.fileInput.files[0];
       els.fileInput.value = "";
       if (!file) return;
       try {
-        loadDoc(JSON.parse(await file.text()));
+        importPayload(JSON.parse(await file.text()));
       } catch {
         alert("Не удалось прочитать JSON");
       }
@@ -601,26 +793,9 @@
   }
 
   function boot() {
-    // Bridge HTML class names that differ slightly from CSS aliases.
-    const map = [
-      [".paper-panel", "paper-panel"],
-      [".markup-canvas", "markup-canvas"],
-      [".paper-hint", "paper-hint"],
-      [".side-panels", "side-panels"],
-      [".side-card", "side-card"],
-      [".side-head", "side-head"],
-      [".marks-list", "marks-list"],
-      [".json-preview", "json-preview"],
-      [".sel-pill", "sel-pill"],
-      [".toolbar-label", "toolbar-label"],
-      [".rule-strip", "rule-strip"],
-      [".toolbar-sep", "toolbar-sep"],
-    ];
-    // no-op map kept for clarity; classes already match.
-
-    for (const id of Object.values(els)) {
-      if (!id) {
-        console.error("Tajweed editor: missing DOM node", els);
+    for (const [key, node] of Object.entries(els)) {
+      if (!node) {
+        console.error("Tajweed editor: missing DOM node", key, els);
         return;
       }
     }
@@ -628,9 +803,17 @@
     renderRulesUi();
     bindCanvasPointer();
     bindChrome();
+
     const stored = loadStored();
-    if (stored && (stored.transliteration || stored.marks.length)) loadDoc(stored);
-    else loadDoc(SAMPLE);
+    library = stored || emptyLibrary();
+    ensureSeeds(library);
+    const active = library.docs.find((d) => d.id === library.activeId) || library.docs[0];
+    doc = normalizeDoc(active || emptyDoc());
+    if (!doc.id && active) doc.id = active.id;
+    syncForm();
+    renderDocSelect();
+    renderAll();
+    scheduleSave();
   }
 
   boot();

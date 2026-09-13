@@ -29,11 +29,24 @@
       <div class="action-group" role="group" aria-label="Файл">
         <button type="button" class="btn ghost compact" id="btnHelp"><span class="label-full">Справка</span><span class="label-short">?</span></button>
         <button type="button" class="btn ghost compact" id="btnImport"><span class="label-full">Импорт</span><span class="label-short">↓</span></button>
-        <button type="button" class="btn primary compact" id="btnExport"><span class="label-full">Экспорт JSON</span><span class="label-short">JSON</span></button>
+        <button type="button" class="btn ghost compact" id="btnExport"><span class="label-full">Этот JSON</span><span class="label-short">1 JSON</span></button>
       </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden />
     </div>
   </header>
+
+  <div class="library-bar">
+    <label class="meta-field library-select-field">
+      <span>Документ</span>
+      <select id="docSelect" aria-label="Выбор документа"></select>
+    </label>
+    <div class="meta-actions library-actions">
+      <button type="button" class="btn ghost compact" id="btnSeedMissing" title="Добавить недостающие эталоны">+ Эталоны</button>
+      <button type="button" class="btn ghost compact" id="btnNew">Новый</button>
+      <button type="button" class="btn ghost compact" id="btnDeleteDoc" title="Удалить текущий">Удалить</button>
+      <button type="button" class="btn primary compact" id="btnExportAll" title="Скачать всю библиотеку"><span class="label-full">Экспорт всего</span><span class="label-short">Все JSON</span></button>
+    </div>
+  </div>
 
   <div class="meta-bar">
     <label class="meta-field grow">
@@ -45,9 +58,7 @@
       <input id="docId" type="text" autocomplete="off" placeholder="azkar-ikhlaas" />
     </label>
     <div class="meta-actions">
-      <button type="button" class="btn ghost compact" id="btnLoadSample"><span class="label-full">Эталон Ихляс</span><span class="label-short">Эталон</span></button>
-      <button type="button" class="btn ghost compact" id="btnNew">Новый</button>
-      <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Правка текста</span><span class="label-short">Текст</span></button>
+      <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Большое окно</span><span class="label-short">Окно</span></button>
     </div>
   </div>
 
@@ -55,6 +66,17 @@
     <label class="meta-field grow">
       <span>Арабский оригинал</span>
       <textarea id="docArabic" rows="2" dir="rtl" lang="ar" placeholder="قُلْ هُوَ ٱللَّهُ أَحَدٌ"></textarea>
+    </label>
+  </div>
+
+  <div class="translit-bar">
+    <label class="meta-field grow">
+      <span>Чеченская транслитерация <em class="field-note">сюда вставляй / правь текст, потом размечай на бумаге ниже</em></span>
+      <textarea
+        id="docTranslit"
+        rows="4"
+        placeholder="Вставь сюда транслитерацию…&#10;Пример: Бисмилльах1иррохьманиррохьим."
+      ></textarea>
     </label>
   </div>
 
@@ -121,7 +143,10 @@
         <li><strong>Ударение</strong> — черта сверху, отдельный слой.</li>
         <li><strong>Скрытый</strong> — для элементов вроде сада в «Аллах», которых нет отдельно в транслите.</li>
         <li><strong>Мадды</strong> — отдельно: 2, 2–4–6, 4–5, 6.</li>
-        <li><strong>Автосейв</strong> — только в этом браузере. Прод‑JSON азкаров не меняется.</li>
+        <li><strong>Библиотека</strong> — несколько азкаров в одном браузере; переключай сверху.</li>
+        <li><strong>Транслитерация</strong> — поле под арабским: вставь чеченский текст, затем размечай на «бумаге».</li>
+        <li><strong>Экспорт всего</strong> — скачивает все документы одним JSON, когда будешь готов.</li>
+        <li><strong>Автосейв</strong> — черновики только в этом браузере. Прод‑JSON азкаров не меняется.</li>
         <li>Горячие клавиши: <kbd>1–8</kbd>, <kbd>A</kbd>, <kbd>H</kbd>, <kbd>Del</kbd>, <kbd>Ctrl+Z</kbd>.</li>
       </ul>
       <div class="modal-actions">
@@ -130,6 +155,7 @@
     </div>
   </dialog>
 
+  <script src="./catalog.js"></script>
   <script src="./editor.js"></script>
 </body>
 </html>
