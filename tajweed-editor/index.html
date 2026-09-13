@@ -17,19 +17,36 @@
 
   <header class="topbar">
     <div class="brand">
-      <p class="eyebrow">Тест · не прод · только браузерный черновик</p>
-      <h1>Таджвид‑разметка азкаров</h1>
+      <p class="eyebrow"><span class="eyebrow-full">Тест · не прод · только браузерный черновик</span><span class="eyebrow-short">Тест · не прод</span></p>
+      <h1><span class="title-full">Таджвид‑разметка азкаров</span><span class="title-short">Таджвид · азкары</span></h1>
+      <span id="saveStatus" class="save-pill" aria-live="polite">Черновик</span>
     </div>
     <div class="top-actions">
-      <span id="saveStatus" class="save-pill">Черновик в браузере</span>
-      <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z">↩</button>
-      <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z">↪</button>
-      <button type="button" class="btn ghost" id="btnHelp">Справка</button>
-      <button type="button" class="btn ghost" id="btnImport">Импорт</button>
-      <button type="button" class="btn primary" id="btnExport">Экспорт JSON</button>
+      <div class="action-group" role="group" aria-label="История">
+        <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z" aria-label="Отменить">↩</button>
+        <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z" aria-label="Повторить">↪</button>
+      </div>
+      <div class="action-group" role="group" aria-label="Файл">
+        <button type="button" class="btn ghost compact" id="btnHelp"><span class="label-full">Справка</span><span class="label-short">?</span></button>
+        <button type="button" class="btn ghost compact" id="btnImport"><span class="label-full">Импорт</span><span class="label-short">↓</span></button>
+        <button type="button" class="btn ghost compact" id="btnExport"><span class="label-full">Этот JSON</span><span class="label-short">1 JSON</span></button>
+      </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden />
     </div>
   </header>
+
+  <div class="library-bar">
+    <label class="meta-field library-select-field">
+      <span>Документ</span>
+      <select id="docSelect" aria-label="Выбор документа"></select>
+    </label>
+    <div class="meta-actions library-actions">
+      <button type="button" class="btn ghost compact" id="btnSeedMissing" title="Добавить недостающие эталоны">+ Эталоны</button>
+      <button type="button" class="btn ghost compact" id="btnNew">Новый</button>
+      <button type="button" class="btn ghost compact" id="btnDeleteDoc" title="Удалить текущий">Удалить</button>
+      <button type="button" class="btn primary compact" id="btnExportAll" title="Скачать всю библиотеку"><span class="label-full">Экспорт всего</span><span class="label-short">Все JSON</span></button>
+    </div>
+  </div>
 
   <div class="meta-bar">
     <label class="meta-field grow">
@@ -41,9 +58,7 @@
       <input id="docId" type="text" autocomplete="off" placeholder="azkar-ikhlaas" />
     </label>
     <div class="meta-actions">
-      <button type="button" class="btn ghost" id="btnLoadSample">Эталон Ихляс</button>
-      <button type="button" class="btn ghost" id="btnNew">Новый</button>
-      <button type="button" class="btn ghost" id="btnEditPlain">Правка текста</button>
+      <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Большое окно</span><span class="label-short">Окно</span></button>
     </div>
   </div>
 
@@ -54,13 +69,26 @@
     </label>
   </div>
 
+  <div class="translit-bar">
+    <label class="meta-field grow">
+      <span>Чеченская транслитерация <em class="field-note">сюда вставляй / правь текст, потом размечай на бумаге ниже</em></span>
+      <textarea
+        id="docTranslit"
+        rows="4"
+        placeholder="Вставь сюда транслитерацию…&#10;Пример: Бисмилльах1иррохьманиррохьим."
+      ></textarea>
+    </label>
+  </div>
+
   <section class="toolbar" aria-label="Правила таджвида">
     <div class="toolbar-label">Правило</div>
     <div class="rule-strip" id="ruleGrid" role="toolbar"></div>
     <div class="toolbar-sep" aria-hidden="true"></div>
-    <button type="button" class="chip-btn" id="btnAccent" title="A">´ Ударение</button>
-    <button type="button" class="chip-btn" id="btnHidden" title="H">⊘ Скрытый</button>
-    <button type="button" class="chip-btn danger" id="btnClearSel">Очистить</button>
+    <div class="layer-group" role="group" aria-label="Слои">
+      <button type="button" class="chip-btn" id="btnAccent" title="A"><span class="label-full">´ Ударение</span><span class="label-short">´</span></button>
+      <button type="button" class="chip-btn" id="btnHidden" title="H"><span class="label-full">⊘ Скрытый</span><span class="label-short">⊘</span></button>
+      <button type="button" class="chip-btn danger" id="btnClearSel"><span class="label-full">Очистить</span><span class="label-short">✕</span></button>
+    </div>
     <div class="sel-pill" id="selMeta">Выделение: нет</div>
   </section>
 
@@ -115,7 +143,10 @@
         <li><strong>Ударение</strong> — черта сверху, отдельный слой.</li>
         <li><strong>Скрытый</strong> — для элементов вроде сада в «Аллах», которых нет отдельно в транслите.</li>
         <li><strong>Мадды</strong> — отдельно: 2, 2–4–6, 4–5, 6.</li>
-        <li><strong>Автосейв</strong> — только в этом браузере. Прод‑JSON азкаров не меняется.</li>
+        <li><strong>Библиотека</strong> — несколько азкаров в одном браузере; переключай сверху.</li>
+        <li><strong>Транслитерация</strong> — поле под арабским: вставь чеченский текст, затем размечай на «бумаге».</li>
+        <li><strong>Экспорт всего</strong> — скачивает все документы одним JSON, когда будешь готов.</li>
+        <li><strong>Автосейв</strong> — черновики только в этом браузере. Прод‑JSON азкаров не меняется.</li>
         <li>Горячие клавиши: <kbd>1–8</kbd>, <kbd>A</kbd>, <kbd>H</kbd>, <kbd>Del</kbd>, <kbd>Ctrl+Z</kbd>.</li>
       </ul>
       <div class="modal-actions">
@@ -124,6 +155,7 @@
     </div>
   </dialog>
 
+  <script src="./catalog.js"></script>
   <script src="./editor.js"></script>
 </body>
 </html>
