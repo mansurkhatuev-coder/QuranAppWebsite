@@ -417,6 +417,20 @@ button { cursor: pointer; }
   outline: 1.5px dashed rgba(29, 36, 31, 0.35);
   outline-offset: 1px;
 }
+/* Межзубные ث ذ ظ: always-visible tongue cue under the letter (works with tafkheem stack). */
+.ch.has-interdental::after {
+  content: "";
+  position: absolute;
+  left: 10%;
+  right: 10%;
+  bottom: 0.04em;
+  height: 0;
+  border-bottom: 2.5px dotted #8a6a28;
+  pointer-events: none;
+}
+.ch.has-interdental.has-accent::after {
+  bottom: 0.02em;
+}
 .ch .sec {
   position: absolute;
   left: 50%;
@@ -426,6 +440,9 @@ button { cursor: pointer; }
   height: 0.3em;
   border-radius: 50%;
   box-shadow: 0 0 0 1px rgba(255,255,255,0.35);
+}
+.ch.has-interdental .sec {
+  bottom: 0.28em;
 }
 .empty {
   color: rgba(29,36,31,0.45);

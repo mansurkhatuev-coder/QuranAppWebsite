@@ -13,10 +13,18 @@
     { id: "qalqala", label: "Калькаля", color: "#4fb6d3", key: "6" },
     { id: "tafkheem", label: "Тафхим", color: "#173f73", key: "7" },
     { id: "silent", label: "Слияние", color: "#8f959b", key: "8" },
+    {
+      id: "interdental",
+      label: "Межзубн.",
+      color: "#8a6a28",
+      key: "9",
+      hint: "ث ذ ظ — язык между зубами",
+    },
   ];
   const RULE_MAP = Object.fromEntries(RULES.map((r) => [r.id, r]));
+  // Interdental is low for letter color so tafkheem/madds win; it keeps its own underline cue.
   const COLOR_PRIORITY = [
-    "madd6", "madd45", "madd246", "madd2", "ghunna", "qalqala", "tafkheem", "silent",
+    "madd6", "madd45", "madd246", "madd2", "ghunna", "qalqala", "tafkheem", "silent", "interdental",
   ];
 
   const LIBRARY_VERSION = 2;
@@ -391,7 +399,7 @@
       btn.type = "button";
       btn.className = "rule-btn";
       btn.dataset.rule = rule.id;
-      btn.title = `Клавиша ${rule.key}`;
+      btn.title = rule.hint ? `${rule.hint} · клавиша ${rule.key}` : `Клавиша ${rule.key}`;
       btn.innerHTML = `<span class="swatch" style="background:${rule.color}"></span><strong>${rule.label}</strong><small>${rule.key}</small>`;
       btn.addEventListener("click", () => toggleRule(rule.id));
       els.ruleGrid.appendChild(btn);
@@ -424,12 +432,15 @@
       const primary = primaryRule(ruleIds);
       if (primary) {
         span.style.color = RULE_MAP[primary].color;
-        span.style.fontWeight = primary === "silent" ? "500" : "700";
+        span.style.fontWeight = primary === "silent" || primary === "interdental" ? "500" : "700";
       }
       if (covering.some((m) => m.accent)) span.classList.add("has-accent");
       if (covering.some((m) => m.hidden)) span.classList.add("has-hidden");
+      // Always show a tongue/teeth cue so interdental stays visible under tafkheem etc.
+      if (ruleIds.includes("interdental")) span.classList.add("has-interdental");
       const secondary = secondaryRule(ruleIds, primary);
-      if (secondary) {
+      // Skip redundant secondary dot when the underline already marks interdental.
+      if (secondary && secondary !== "interdental") {
         const dot = document.createElement("span");
         dot.className = "sec";
         dot.style.background = RULE_MAP[secondary].color;
