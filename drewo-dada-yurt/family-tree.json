@@ -709,7 +709,13 @@
                             {
                               "id": "bibolat",
                               "name": "Биболат",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1789490289835-12pkop",
+                                  "name": "Мухамад-Эмин",
+                                  "sons": []
+                                }
+                              ]
                             },
                             {
                               "id": "timur-bolat",
