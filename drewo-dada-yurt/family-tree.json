@@ -698,7 +698,13 @@
                             {
                               "id": "rizavdi",
                               "name": "Ризауди",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1789490140623-1phxsx",
+                                  "name": "Расул",
+                                  "sons": []
+                                }
+                              ]
                             },
                             {
                               "id": "bibolat",
