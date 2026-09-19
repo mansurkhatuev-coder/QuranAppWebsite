@@ -240,7 +240,7 @@
     const namesBySession = {};
     (people || []).forEach((p) => {
       if (!namesBySession[p.session_id]) namesBySession[p.session_id] = [];
-      if (p.status === 'kicked') return;
+      if (p.status === 'kicked' || p.status === 'left') return;
       const name = String(p.display_name || '').trim();
       if (!name) return;
       if (!namesBySession[p.session_id].includes(name)) namesBySession[p.session_id].push(name);

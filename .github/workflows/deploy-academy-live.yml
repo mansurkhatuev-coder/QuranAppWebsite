@@ -12,6 +12,7 @@ on:
       - cursor/academy-join-dedupe-51a2
       - cursor/academy-results-detail-51a2
       - cursor/academy-public-async-51a2
+      - cursor/academy-dedupe-auto-next-37e8
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml

@@ -432,7 +432,11 @@ async function maybeAutoAdvance(db: SupabaseClient, session: Record<string, unkn
     if (Date.now() >= new Date(String(session.phase_ends_at)).getTime()) due = true;
   }
 
-  if (!due && settings.auto_advance_on_all) {
+  // When all answered: honour explicit flag, or auto_advance with no timer
+  // (otherwise «автопереход» alone would do nothing without a countdown).
+  const advanceOnAll =
+    settings.auto_advance_on_all || (settings.auto_advance && !(settings.timer_seconds > 0));
+  if (!due && advanceOnAll) {
     const participants = await participantCount(db, String(session.id));
     const answered = await answeredCount(db, String(session.id), Number(session.current_index));
     if (participants > 0 && answered >= participants) due = true;
@@ -455,9 +459,9 @@ async function maybeAutoAdvance(db: SupabaseClient, session: Record<string, unkn
 async function buildHostBoard(db: SupabaseClient, session: Record<string, unknown>) {
   const q = currentRawQuestion(session);
   const idx = Number(session.current_index) || 0;
-  const { data: people } = await db
+  const { data: peopleRaw } = await db
     .from('academy_participants')
-    .select('id, display_name, last_seen_at, status')
+    .select('id, display_name, last_seen_at, status, joined_at, client_fingerprint')
     .eq('session_id', String(session.id))
     .eq('status', 'active')
     .order('joined_at', { ascending: true });
@@ -468,7 +472,27 @@ async function buildHostBoard(db: SupabaseClient, session: Record<string, unknow
     .eq('question_index', idx);
 
   const byParticipant = new Map((answers || []).map((a) => [a.participant_id, a]));
-  const board = (people || []).map((p) => {
+
+  // Hide name-duplicates that slipped past join races (prefer seat with an answer).
+  const bestByName = new Map<string, ParticipantRow>();
+  for (const p of (peopleRaw || []) as ParticipantRow[]) {
+    const key = normalizeParticipantName(String(p.display_name));
+    if (!key) {
+      bestByName.set(p.id, p);
+      continue;
+    }
+    const prev = bestByName.get(key);
+    if (!prev) {
+      bestByName.set(key, p);
+      continue;
+    }
+    const prevAns = byParticipant.has(prev.id);
+    const thisAns = byParticipant.has(p.id);
+    if (!prevAns && thisAns) bestByName.set(key, p);
+  }
+  const people = [...bestByName.values()];
+
+  const board = people.map((p) => {
     const ans = byParticipant.get(p.id);
     return {
       participant_id: p.id,
@@ -489,7 +513,7 @@ async function buildHostBoard(db: SupabaseClient, session: Record<string, unknow
   const avg_ms = times.length ? Math.round(times.reduce((s, n) => s + n, 0) / times.length) : null;
 
   return {
-    people: people || [],
+    people,
     board,
     stats: {
       participants: board.length,
@@ -509,6 +533,52 @@ function normalizeParticipantName(name: string) {
     .replace(/\s+/g, ' ')
     .toLowerCase()
     .replace(/ё/g, 'е');
+}
+
+type ParticipantRow = {
+  id: string;
+  display_name: string;
+  status?: string;
+  joined_at?: string;
+  client_fingerprint?: string | null;
+  last_seen_at?: string | null;
+};
+
+/** Keep one active seat per normalized name; mark the rest as left (race-safe reclaim). */
+async function collapseNameDuplicates(
+  db: SupabaseClient,
+  sessionId: string,
+  normalized: string,
+  keepId: string,
+) {
+  const { data: rows } = await db
+    .from('academy_participants')
+    .select('id, display_name, status')
+    .eq('session_id', sessionId)
+    .neq('status', 'kicked');
+  const dupIds = ((rows || []) as ParticipantRow[])
+    .filter(
+      (p) =>
+        p.id !== keepId &&
+        p.status !== 'left' &&
+        normalizeParticipantName(String(p.display_name)) === normalized,
+    )
+    .map((p) => p.id);
+  if (dupIds.length) {
+    await db.from('academy_participants').update({ status: 'left' }).in('id', dupIds);
+  }
+}
+
+function pickPreferredParticipant(
+  matches: ParticipantRow[],
+  fingerprint: string,
+): ParticipantRow {
+  if (fingerprint) {
+    const byFp = matches.find((p) => p.client_fingerprint === fingerprint);
+    if (byFp) return byFp;
+  }
+  const active = matches.find((p) => p.status === 'active');
+  return active || matches[0];
 }
 
 function sessionPublicPayload(
@@ -655,7 +725,7 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
     .neq('status', 'kicked')
     .order('joined_at', { ascending: true });
 
-  const matches = (existingRows || []).filter(
+  const matches = ((existingRows || []) as ParticipantRow[]).filter(
     (p) => normalizeParticipantName(String(p.display_name)) === normalized,
   );
 
@@ -666,8 +736,7 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
   let rejoined = false;
 
   if (matches.length) {
-    const preferred =
-      (fingerprint && matches.find((p) => p.client_fingerprint === fingerprint)) || matches[0];
+    const preferred = pickPreferredParticipant(matches, fingerprint);
     const { data: updated, error: uErr } = await db
       .from('academy_participants')
       .update({
@@ -683,11 +752,6 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
     if (uErr || !updated) return json({ error: 'join_failed' }, 500);
     participant = updated;
     rejoined = true;
-
-    const dupIds = matches.filter((m) => m.id !== preferred.id).map((m) => m.id);
-    if (dupIds.length) {
-      await db.from('academy_participants').update({ status: 'left' }).in('id', dupIds);
-    }
   } else {
     const { data: created, error: pErr } = await db
       .from('academy_participants')
@@ -703,6 +767,41 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
       .maybeSingle();
     if (pErr || !created) return json({ error: 'join_failed' }, 500);
     participant = created;
+  }
+
+  // Collapse races: two parallel joins with the same name must converge to one seat.
+  const { data: afterRows } = await db
+    .from('academy_participants')
+    .select('id, display_name, status, joined_at, client_fingerprint')
+    .eq('session_id', liveSession.id)
+    .neq('status', 'kicked')
+    .order('joined_at', { ascending: true });
+  const afterMatches = ((afterRows || []) as ParticipantRow[]).filter(
+    (p) => normalizeParticipantName(String(p.display_name)) === normalized,
+  );
+  if (afterMatches.length > 1) {
+    const keep = pickPreferredParticipant(afterMatches, fingerprint);
+    if (keep.id !== participant.id) {
+      const { data: switched, error: sErr } = await db
+        .from('academy_participants')
+        .update({
+          resume_token_hash: resumeHash,
+          status: 'active',
+          display_name: displayName,
+          client_fingerprint: fingerprint || keep.client_fingerprint || null,
+          last_seen_at: nowIso,
+        })
+        .eq('id', keep.id)
+        .select('id, display_name, session_id')
+        .maybeSingle();
+      if (!sErr && switched) {
+        participant = switched;
+        rejoined = true;
+      }
+    }
+    await collapseNameDuplicates(db, String(liveSession.id), normalized, participant.id);
+  } else if (matches.length > 1) {
+    await collapseNameDuplicates(db, String(liveSession.id), normalized, participant.id);
   }
 
   await db
@@ -833,6 +932,15 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
     patch.status = 'abandoned';
     patch.finished_at = now.toISOString();
     patch.phase_ends_at = null;
+  } else if (command === 'set_auto') {
+    const enabled = body.auto_advance !== false;
+    const onAll = body.auto_advance_on_all !== false;
+    const nextSettings = {
+      ...settings,
+      auto_advance: Boolean(enabled),
+      auto_advance_on_all: Boolean(onAll),
+    };
+    patch.settings = nextSettings;
   } else {
     return json({ error: 'unknown_command' }, 400);
   }
@@ -848,6 +956,7 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
   if (!updated) return json({ error: 'version_conflict' }, 409);
 
   const board = await buildHostBoard(db, updated);
+  const outSettings = settingsDefaults(updated.settings);
   return json({
     session: {
       id: updated.id,
@@ -858,9 +967,9 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
       version: updated.version,
       phase_ends_at: updated.phase_ends_at,
       phase_started_at: updated.phase_started_at,
-      settings: settingsDefaults(updated.settings),
+      settings: outSettings,
       question_count: snap.length,
-      current_question: ['answering', 'reveal'].includes(updated.phase)
+      current_question: ['answering', 'reveal'].includes(String(updated.phase))
         ? currentPublicQuestion(updated, true)
         : null,
       participants: board.stats.participants,

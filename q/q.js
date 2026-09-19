@@ -26,6 +26,7 @@
   const playError = document.getElementById('play-error');
   const submitBtn = document.getElementById('btn-submit-answer');
   const nextBtn = document.getElementById('btn-next-question');
+  const autoNextToggle = document.getElementById('toggle-auto-next');
   const resultTitle = document.getElementById('result-title');
   const resultSummary = document.getElementById('result-summary');
   const resultBody = document.getElementById('result-body');
@@ -47,6 +48,7 @@
   let selectedAnswer = null;
   let draftText = '';
   let pendingNext = null;
+  let autoNextTimer = null;
 
   function showError(el, message) {
     if (!el) return;
@@ -163,6 +165,58 @@
     } catch (_) {
       return '';
     }
+  }
+
+  function autoNextStorageKey() {
+    return 'academy_auto_next:' + (token || 'default');
+  }
+
+  function loadAutoNextPref() {
+    try {
+      return localStorage.getItem(autoNextStorageKey()) === '1';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  function saveAutoNextPref(on) {
+    try {
+      localStorage.setItem(autoNextStorageKey(), on ? '1' : '0');
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function clearAutoNextTimer() {
+    if (autoNextTimer) {
+      clearTimeout(autoNextTimer);
+      autoNextTimer = null;
+    }
+  }
+
+  function goToPendingNext() {
+    if (!pendingNext) return;
+    clearAutoNextTimer();
+    session = {
+      ...session,
+      current_index: pendingNext.next_index,
+      current_question: pendingNext.next_question,
+    };
+    myAnswer = null;
+    pendingNext = null;
+    selectedAnswer = null;
+    draftText = '';
+    showError(playFeedback, '');
+    showError(playError, '');
+    renderPlay();
+  }
+
+  function scheduleAutoNextIfNeeded() {
+    clearAutoNextTimer();
+    if (!pendingNext || !autoNextToggle?.checked) return;
+    autoNextTimer = setTimeout(() => {
+      goToPendingNext();
+    }, 900);
   }
 
   function updateGuestChrome() {
@@ -328,7 +382,7 @@
     renderQuestion(q, locked);
     submitBtn.hidden = locked;
     submitBtn.disabled = locked;
-    nextBtn.hidden = !pendingNext;
+    nextBtn.hidden = !pendingNext || Boolean(autoNextToggle?.checked);
     if (myAnswer && myAnswer.is_correct === true) {
       showError(playFeedback, 'Верно');
     } else if (myAnswer && myAnswer.is_correct === false) {
@@ -338,6 +392,7 @@
     } else {
       playFeedback.hidden = true;
     }
+    scheduleAutoNextIfNeeded();
   }
 
   async function showResults() {
@@ -484,6 +539,7 @@
   });
 
   document.getElementById('btn-back-catalog')?.addEventListener('click', () => {
+    clearAutoNextTimer();
     pendingNext = null;
     myAnswer = null;
     showView('catalog');
@@ -495,6 +551,17 @@
     showView('catalog');
     lessonsCard.hidden = false;
     renderLessons();
+  });
+
+  autoNextToggle?.addEventListener('change', () => {
+    saveAutoNextPref(autoNextToggle.checked);
+    if (autoNextToggle.checked) {
+      scheduleAutoNextIfNeeded();
+      if (pendingNext) nextBtn.hidden = true;
+    } else {
+      clearAutoNextTimer();
+      nextBtn.hidden = !pendingNext;
+    }
   });
 
   submitBtn?.addEventListener('click', async () => {
@@ -517,6 +584,7 @@
       });
       myAnswer = data.answer;
       if (data.finished) {
+        clearAutoNextTimer();
         session = { ...session, status: 'finished', phase: 'results' };
         A.clearAsyncResume(token, activeLessonId);
         await showResults();
@@ -534,19 +602,7 @@
   });
 
   nextBtn?.addEventListener('click', () => {
-    if (!pendingNext) return;
-    session = {
-      ...session,
-      current_index: pendingNext.next_index,
-      current_question: pendingNext.next_question,
-    };
-    myAnswer = null;
-    pendingNext = null;
-    selectedAnswer = null;
-    draftText = '';
-    showError(playFeedback, '');
-    showError(playError, '');
-    renderPlay();
+    goToPendingNext();
   });
 
   async function boot() {
@@ -557,6 +613,7 @@
     }
     displayName = loadSavedName();
     if (displayName) guestName.value = displayName;
+    if (autoNextToggle) autoNextToggle.checked = loadAutoNextPref();
     try {
       await refreshStudentAuth();
       await loadCatalog();

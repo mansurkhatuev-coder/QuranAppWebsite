@@ -15,6 +15,7 @@
   const btnReveal = document.getElementById('btn-reveal');
   const btnNext = document.getElementById('btn-next');
   const btnFinish = document.getElementById('btn-finish');
+  const toggleAuto = document.getElementById('toggle-auto');
 
   let accessToken = '';
   let state = null;
@@ -23,6 +24,7 @@
   let finalResults = null;
   let finalResultsKey = '';
   let finalResultsLoading = false;
+  let syncingAutoToggle = false;
 
   function showError(message) {
     errorEl.hidden = !message;
@@ -256,10 +258,15 @@
     const inLobby = state.status === 'lobby' || state.phase === 'lobby';
     const answering = state.phase === 'answering' && state.status === 'live';
     const finished = state.status === 'finished' || state.phase === 'results';
+    const autoOn = state.settings?.auto_advance !== false;
     btnStart.disabled = finished || (!inLobby && state.status !== 'paused');
     btnReveal.disabled = !answering;
-    btnNext.disabled = finished || inLobby;
+    btnNext.disabled = finished || inLobby || (autoOn && answering);
     btnFinish.disabled = finished;
+    if (toggleAuto && !syncingAutoToggle) {
+      toggleAuto.checked = autoOn;
+      toggleAuto.disabled = finished;
+    }
   }
 
   function render() {
@@ -314,7 +321,7 @@
     render();
   }
 
-  async function control(command) {
+  async function control(command, extra) {
     if (!state) return;
     showError('');
     try {
@@ -324,6 +331,7 @@
           session_id: state.id,
           command,
           expected_version: state.version,
+          ...(extra || {}),
         },
         { accessToken }
       );
@@ -367,6 +375,20 @@
   btnReveal.addEventListener('click', () => control('reveal'));
   btnNext.addEventListener('click', () => control('next'));
   btnFinish.addEventListener('click', () => control('finish'));
+  toggleAuto?.addEventListener('change', async () => {
+    if (!state || syncingAutoToggle) return;
+    const enabled = toggleAuto.checked;
+    syncingAutoToggle = true;
+    try {
+      await control('set_auto', {
+        auto_advance: enabled,
+        auto_advance_on_all: enabled,
+      });
+    } finally {
+      syncingAutoToggle = false;
+      updateButtons();
+    }
+  });
   window.addEventListener('beforeunload', () => {
     clearInterval(pollTimer);
     clearInterval(tickTimer);
