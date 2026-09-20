@@ -231,6 +231,41 @@ async function handleSaveLesson(
   return json({ lesson });
 }
 
+async function handleDeleteLesson(
+  db: SupabaseClient,
+  userId: string,
+  body: Record<string, unknown>,
+) {
+  await requireTeacher(db, userId);
+  const lessonId = String(body.lesson_id || '').trim();
+  if (!lessonId) return json({ error: 'lesson_id' }, 400);
+
+  const { data: lesson } = await db
+    .from('academy_lessons')
+    .select('id, owner_id, title')
+    .eq('id', lessonId)
+    .maybeSingle();
+  if (!lesson) return json({ error: 'lesson_not_found' }, 404);
+  if (lesson.owner_id !== userId) return json({ error: 'forbidden' }, 403);
+
+  await db.from('academy_public_hub_lessons').delete().eq('lesson_id', lessonId);
+
+  const { data: sessions } = await db.from('academy_sessions').select('id').eq('lesson_id', lessonId);
+  const sessionIds = (sessions || []).map((s) => String(s.id));
+  if (sessionIds.length) {
+    await db.from('academy_session_hosts').delete().in('session_id', sessionIds);
+    await db.from('academy_answers').delete().in('session_id', sessionIds);
+    await db.from('academy_participants').delete().in('session_id', sessionIds);
+    const { error: sessErr } = await db.from('academy_sessions').delete().eq('lesson_id', lessonId);
+    if (sessErr) return json({ error: 'lesson_delete_failed', detail: sessErr.message }, 500);
+  }
+
+  await db.from('academy_questions').delete().eq('lesson_id', lessonId);
+  const { error } = await db.from('academy_lessons').delete().eq('id', lessonId);
+  if (error) return json({ error: 'lesson_delete_failed', detail: error.message }, 500);
+  return json({ ok: true, deleted: lessonId, title: lesson.title });
+}
+
 async function canHost(db: SupabaseClient, sessionId: string, userId: string) {
   const { data: session } = await db
     .from('academy_sessions')
@@ -1303,6 +1338,7 @@ Deno.serve(async (req) => {
         'host_state',
         'ensure_teacher',
         'save_lesson',
+        'delete_lesson',
         'hub_get',
         'hub_upsert',
         'hub_toggle',
@@ -1319,6 +1355,9 @@ Deno.serve(async (req) => {
       }
       if (action === 'save_lesson') {
         return await handleSaveLesson(db, userData.user, body);
+      }
+      if (action === 'delete_lesson') {
+        return await handleDeleteLesson(db, userId, body);
       }
       if (action === 'hub_get') return await handleHubGet(db, userId, body, deps);
       if (action === 'hub_upsert') return await handleHubUpsert(db, userId, body, deps);

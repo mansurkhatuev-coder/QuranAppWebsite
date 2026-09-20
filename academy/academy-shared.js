@@ -48,6 +48,7 @@
     hub_load_failed: 'Не удалось загрузить набор.',
     hub_save_failed: 'Не удалось сохранить набор.',
     lesson_not_in_hub: 'Этого урока нет в наборе.',
+    lesson_delete_failed: 'Не удалось удалить урок.',
     not_async: 'Это не домашнее задание.',
     not_student: 'Войдите как ученик.',
     student_create_failed: 'Не удалось создать профиль ученика.',
