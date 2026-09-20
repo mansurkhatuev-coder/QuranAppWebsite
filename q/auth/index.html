@@ -14,8 +14,8 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="../../academy/academy.css?v=11" />
-    <link rel="stylesheet" href="../q.css?v=1" />
+    <link rel="stylesheet" href="../../academy/academy.css?v=13" />
+    <link rel="stylesheet" href="../q.css?v=3" />
   </head>
   <body class="academy-body">
     <div class="academy-shell">
@@ -62,12 +62,29 @@
           <p id="auth-error" class="academy-error" hidden></p>
           <p id="auth-ok" class="academy-ok" hidden></p>
         </form>
+
+        <form id="recovery-form" class="academy-form" autocomplete="on" hidden>
+          <p class="academy-muted">Задайте новый пароль для аккаунта.</p>
+          <label>
+            Новый пароль
+            <input id="recovery-password" name="new_password" type="password" autocomplete="new-password" required minlength="6" />
+          </label>
+          <label>
+            Ещё раз
+            <input id="recovery-password2" name="new_password2" type="password" autocomplete="new-password" required minlength="6" />
+          </label>
+          <div class="academy-actions">
+            <button type="submit" class="academy-btn academy-btn--primary" id="recovery-submit">Сохранить пароль</button>
+          </div>
+          <p id="recovery-error" class="academy-error" hidden></p>
+          <p id="recovery-ok" class="academy-ok" hidden></p>
+        </form>
       </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../admin/supabase-config.js?v=7"></script>
-    <script src="../../academy/academy-shared.js?v=6"></script>
-    <script src="./auth.js?v=1"></script>
+    <script src="../../academy/academy-shared.js?v=7"></script>
+    <script src="./auth.js?v=2"></script>
   </body>
 </html>

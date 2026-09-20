@@ -29,6 +29,7 @@
 
   let lastResultsKey = '';
   let resultsHtml = '';
+  let syncFailStreak = 0;
 
   function showError(el, message) {
     el.hidden = !message;
@@ -178,6 +179,22 @@
     submitBtn.hidden = true;
   }
 
+  function formatCorrectHint(q) {
+    if (!q?.payload) return '';
+    const p = q.payload;
+    if (q.type === 'single_choice' || q.type === 'image_choice') {
+      const opt = (p.options || []).find((o) => String(o.id) === String(p.correct_option_id));
+      return opt ? `Правильный ответ: ${opt.label}` : '';
+    }
+    if (q.type === 'true_false' && typeof p.correct === 'boolean') {
+      return `Правильный ответ: ${p.correct ? 'Верно' : 'Неверно'}`;
+    }
+    if (q.type === 'short_text' && Array.isArray(p.accepted) && p.accepted.length) {
+      return `Правильные ответы: ${p.accepted.join(', ')}`;
+    }
+    return '';
+  }
+
   function updateAnswerChrome() {
     const locked =
       session.phase !== 'answering' || session.status === 'paused' || session.status === 'finished';
@@ -192,13 +209,27 @@
     }
 
     if (session.phase === 'reveal') {
-      showError(
-        playFeedback,
-        myAnswer ? 'Ответ принят. Ждите следующий вопрос.' : 'Приём ответов закрыт.'
-      );
+      const hint = formatCorrectHint(session.current_question);
+      const head = myAnswer ? 'Ответ принят.' : 'Приём ответов закрыт.';
+      showError(playFeedback, hint ? `${head} ${hint}` : head);
       playFeedback.hidden = false;
       setControlsLocked(true);
       playTimer.hidden = true;
+      // Mark correct option visually when keys are revealed
+      const q = session.current_question;
+      if (q?.type === 'single_choice' && q.payload?.correct_option_id) {
+        [...playBody.querySelectorAll('[data-opt]')].forEach((b) => {
+          if (b.getAttribute('data-opt') === String(q.payload.correct_option_id)) {
+            b.classList.add('academy-btn--primary');
+          }
+        });
+      }
+      if (q?.type === 'true_false' && typeof q.payload?.correct === 'boolean') {
+        [...playBody.querySelectorAll('[data-tf]')].forEach((b) => {
+          const val = b.getAttribute('data-tf') === 'true';
+          if (val === q.payload.correct) b.classList.add('academy-btn--primary');
+        });
+      }
       return;
     }
 
@@ -298,16 +329,41 @@
   }
 
   async function syncResume() {
-    const data = await A.callLive('resume', { code, resume_token: resumeToken });
-    session = data.session;
-    myAnswer = data.my_answer;
-    persist();
-    const key = syncKey();
-    if (key === lastSyncKey && !playCard.hidden) {
-      return;
+    try {
+      const data = await A.callLive('resume', { code, resume_token: resumeToken });
+      session = data.session;
+      myAnswer = data.my_answer;
+      persist();
+      syncFailStreak = 0;
+      const key = syncKey();
+      if (key === lastSyncKey && !playCard.hidden) {
+        return;
+      }
+      lastSyncKey = key;
+      render(false);
+    } catch (err) {
+      syncFailStreak += 1;
+      const raw = String(err.message || err || '');
+      const fatal = /invalid_token|session_mismatch|forbidden|kicked|не найден/i.test(raw);
+      if (fatal || syncFailStreak >= 5) {
+        clearInterval(pollTimer);
+        clearInterval(tickTimer);
+        pollTimer = null;
+        tickTimer = null;
+        if (fatal && code) A.clearResume(code);
+        if (fatal) resumeToken = '';
+        session = null;
+        codeCard.hidden = false;
+        playCard.hidden = true;
+        const submit = document.getElementById('join-submit');
+        if (submit) submit.disabled = false;
+        showError(
+          errorEl,
+          softError(raw) || (fatal ? 'Сессия прервана — войдите снова.' : 'Нет связи с уроком. Проверьте интернет и войдите снова.')
+        );
+      }
+      throw err;
     }
-    lastSyncKey = key;
-    render(false);
   }
 
   function getDeviceFingerprint() {
