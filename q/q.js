@@ -443,19 +443,29 @@
     }
     if (q.type === 'rule_choice' && window.AcademyZahetTask2?.renderRuleChoice) {
       const Z = window.AcademyZahetTask2;
+      const selected = Array.isArray(selectedAnswer?.rule_ids)
+        ? selectedAnswer.rule_ids.slice()
+        : selectedAnswer?.rule_id
+          ? [selectedAnswer.rule_id]
+          : [];
       Z.renderRuleChoice(playBody, q, {
         locked,
-        selected: selectedAnswer?.rule_id || '',
+        selected,
       });
       playBody.onclick = (event) => {
         if (locked || myAnswer) return;
         const btn = event.target.closest('[data-rule]');
         if (!btn) return;
-        selectedAnswer = { rule_id: btn.getAttribute('data-rule') };
-        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_id });
-        submitBtn.disabled = false;
+        const id = btn.getAttribute('data-rule');
+        const current = Array.isArray(selectedAnswer?.rule_ids) ? selectedAnswer.rule_ids : [];
+        const set = new Set(current);
+        if (set.has(id)) set.delete(id);
+        else set.add(id);
+        selectedAnswer = { rule_ids: [...set] };
+        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_ids });
+        submitBtn.disabled = !selectedAnswer.rule_ids.length;
       };
-      submitBtn.disabled = locked || !selectedAnswer?.rule_id;
+      submitBtn.disabled = locked || !selected.length;
       return;
     }
     playBody.innerHTML = `<p class="academy-muted">Этот тип вопроса пока недоступен.</p>`;
@@ -693,11 +703,16 @@
       }
       answer = { letters: answer.letters.slice() };
     } else if (session?.current_question?.type === 'rule_choice') {
-      if (!answer?.rule_id) {
-        showError(playError, 'Выберите правило.');
+      const ids = Array.isArray(answer?.rule_ids)
+        ? answer.rule_ids
+        : answer?.rule_id
+          ? [answer.rule_id]
+          : [];
+      if (!ids.length) {
+        showError(playError, 'Отметьте хотя бы одно правило.');
         return;
       }
-      answer = { rule_id: String(answer.rule_id) };
+      answer = { rule_ids: ids.map(String) };
     } else if (
       !answer ||
       (answer.option_id == null && answer.value == null && !String(answer.text || '').trim())

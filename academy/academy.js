@@ -744,9 +744,12 @@
             <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
           </label>
           <p class="academy-muted">Верно: ${A.escapeHtml(
-            (q.rulePayload?.options || []).find((o) => o.id === q.rulePayload?.correct_rule_id)?.label ||
-              q.rulePayload?.correct_rule_id ||
-              '—'
+            (q.rulePayload?.correct_rule_ids || [])
+              .map(
+                (id) =>
+                  (q.rulePayload?.options || []).find((o) => o.id === id)?.label || id
+              )
+              .join(' · ') || '—'
           )} · ${Number(q.points) || 1.5} балла</p>`
               : `<label class="academy-field-gap">Тип
             <select data-q="${idx}" class="q-type">
@@ -878,9 +881,13 @@
       if (q.type === 'rule_choice') {
         const payload = q.rulePayload || {};
         const options = Array.isArray(payload.options) ? payload.options : [];
-        const correct = String(payload.correct_rule_id || '');
-        if (!String(payload.word || '').trim() || !correct) {
-          throw new Error(`Проверьте слово и правило в вопросе ${position + 1}`);
+        const correct = Array.isArray(payload.correct_rule_ids)
+          ? payload.correct_rule_ids.map(String)
+          : payload.correct_rule_id
+            ? [String(payload.correct_rule_id)]
+            : [];
+        if (!String(payload.word || '').trim() || !correct.length) {
+          throw new Error(`Проверьте слово и правила в вопросе ${position + 1}`);
         }
         return {
           type: 'rule_choice',
@@ -889,7 +896,7 @@
             word: payload.word,
             word_id: payload.word_id,
             options,
-            correct_rule_id: correct,
+            correct_rule_ids: correct,
           },
           scoring: { method: 'auto', points: Number(q.points) || 1.5 },
           position,
@@ -1336,7 +1343,7 @@
       showError(editorError, '');
       showError(
         appStatus,
-        'Вставлено задание 2: 12 слов → правило (18 баллов). Можно нажать ещё раз для другого набора.',
+        'Вставлено задание 2: 12 слов → правила стр. 68 (18 баллов). Можно нажать ещё раз для другого набора.',
       );
     });
 

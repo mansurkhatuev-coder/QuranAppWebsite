@@ -337,9 +337,18 @@ body.academy-is-booting {
   gap: 0.55rem;
 }
 
+.academy-rule-choices--many {
+  grid-template-columns: 1fr;
+  max-height: min(55vh, 28rem);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
 .academy-rule-choice {
-  min-height: 3rem;
+  min-height: 2.75rem;
   font-weight: 600;
+  justify-content: flex-start;
+  text-align: start;
 }
 
 @media (max-width: 520px) {
@@ -347,7 +356,7 @@ body.academy-is-booting {
     grid-template-columns: repeat(5, minmax(0, 1fr));
   }
 
-  .academy-rule-choices {
+  .academy-rule-choices:not(.academy-rule-choices--many) {
     grid-template-columns: 1fr;
   }
 }

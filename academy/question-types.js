@@ -72,17 +72,28 @@
       },
     },
     rule_choice: {
-      label: 'Выбор правила',
-      answerShape: 'rule_id',
+      label: 'Правила (стр. 68)',
+      answerShape: 'rule_ids',
       validatePayload(payload) {
         if (!String(payload?.word || '').trim()) return 'Нужно слово';
         const options = payload?.options;
         if (!Array.isArray(options) || options.length < 2) return 'Нужны варианты правил';
-        if (!payload?.correct_rule_id) return 'Не указано верное правило';
+        const correct = Array.isArray(payload?.correct_rule_ids)
+          ? payload.correct_rule_ids
+          : payload?.correct_rule_id
+            ? [payload.correct_rule_id]
+            : [];
+        if (!correct.length) return 'Не указаны верные правила';
         return null;
       },
       previewScore(payload, answer) {
-        return String(answer?.rule_id || '') === String(payload?.correct_rule_id || '');
+        const got = [...new Set((answer?.rule_ids || (answer?.rule_id ? [answer.rule_id] : [])).map(String))].sort();
+        const correct = [
+          ...new Set(
+            (payload?.correct_rule_ids || (payload?.correct_rule_id ? [payload.correct_rule_id] : [])).map(String),
+          ),
+        ].sort();
+        return got.length === correct.length && got.every((v, i) => v === correct[i]);
       },
     },
   };

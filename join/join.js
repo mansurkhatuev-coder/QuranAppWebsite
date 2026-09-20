@@ -244,21 +244,31 @@
     }
     if (q.type === 'rule_choice' && window.AcademyZahetTask2?.renderRuleChoice) {
       const Z = window.AcademyZahetTask2;
+      const selected = Array.isArray(selectedAnswer?.rule_ids)
+        ? selectedAnswer.rule_ids.slice()
+        : selectedAnswer?.rule_id
+          ? [selectedAnswer.rule_id]
+          : [];
       Z.renderRuleChoice(playBody, q, {
         locked: locked || Boolean(myAnswer),
-        selected: selectedAnswer?.rule_id || '',
+        selected,
       });
       playBody.onclick = (event) => {
         if (myAnswer || locked || session?.status === 'paused') return;
         const btn = event.target.closest('[data-rule]');
         if (!btn) return;
-        selectedAnswer = { rule_id: btn.getAttribute('data-rule') };
-        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_id });
-        submitBtn.disabled = false;
+        const id = btn.getAttribute('data-rule');
+        const current = Array.isArray(selectedAnswer?.rule_ids) ? selectedAnswer.rule_ids : [];
+        const set = new Set(current);
+        if (set.has(id)) set.delete(id);
+        else set.add(id);
+        selectedAnswer = { rule_ids: [...set] };
+        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_ids });
+        submitBtn.disabled = !selectedAnswer.rule_ids.length;
         submitBtn.hidden = false;
       };
       submitBtn.hidden = locked;
-      submitBtn.disabled = locked || Boolean(myAnswer) || !selectedAnswer?.rule_id;
+      submitBtn.disabled = locked || Boolean(myAnswer) || !selected.length;
       return;
     }
     playBody.innerHTML = `<p class="academy-muted">Этот тип вопроса пока недоступен. Подождите следующий.</p>`;
@@ -281,9 +291,18 @@
     if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
       return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
     }
-    if (q.type === 'rule_choice' && p.correct_rule_id) {
-      const opt = (p.options || []).find((o) => String(o.id) === String(p.correct_rule_id));
-      return `Правильный ответ: ${opt?.label || p.correct_rule_id}`;
+    if (q.type === 'rule_choice') {
+      const ids = Array.isArray(p.correct_rule_ids)
+        ? p.correct_rule_ids
+        : p.correct_rule_id
+          ? [p.correct_rule_id]
+          : [];
+      if (!ids.length) return '';
+      const labels = ids.map((id) => {
+        const opt = (p.options || []).find((o) => String(o.id) === String(id));
+        return opt?.label || id;
+      });
+      return `Правильные правила: ${labels.join(' · ')}`;
     }
     return '';
   }
@@ -331,9 +350,17 @@
           }
         });
       }
-      if (q?.type === 'rule_choice' && q.payload?.correct_rule_id) {
+      if (q?.type === 'rule_choice') {
+        const ids = new Set(
+          (Array.isArray(q.payload?.correct_rule_ids)
+            ? q.payload.correct_rule_ids
+            : q.payload?.correct_rule_id
+              ? [q.payload.correct_rule_id]
+              : []
+          ).map(String),
+        );
         [...playBody.querySelectorAll('[data-rule]')].forEach((b) => {
-          if (b.getAttribute('data-rule') === String(q.payload.correct_rule_id)) {
+          if (ids.has(b.getAttribute('data-rule'))) {
             b.classList.add('academy-btn--primary', 'is-selected');
           }
         });
@@ -540,11 +567,16 @@
       answer = { letters: answer.letters.slice() };
     }
     if (session?.current_question?.type === 'rule_choice') {
-      if (!answer?.rule_id) {
-        showError(playError, 'Выберите правило.');
+      const ids = Array.isArray(answer?.rule_ids)
+        ? answer.rule_ids
+        : answer?.rule_id
+          ? [answer.rule_id]
+          : [];
+      if (!ids.length) {
+        showError(playError, 'Отметьте хотя бы одно правило.');
         return;
       }
-      answer = { rule_id: String(answer.rule_id) };
+      answer = { rule_ids: ids.map(String) };
     }
     submitBtn.disabled = true;
     try {

@@ -55,9 +55,18 @@
     if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
       return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
     }
-    if (q.type === 'rule_choice' && p.correct_rule_id) {
-      const opt = (p.options || []).find((o) => String(o.id) === String(p.correct_rule_id));
-      return `Правильный ответ: ${opt?.label || p.correct_rule_id}`;
+    if (q.type === 'rule_choice') {
+      const ids = Array.isArray(p.correct_rule_ids)
+        ? p.correct_rule_ids
+        : p.correct_rule_id
+          ? [p.correct_rule_id]
+          : [];
+      if (!ids.length) return '';
+      const labels = ids.map((id) => {
+        const opt = (p.options || []).find((o) => String(o.id) === String(id));
+        return opt?.label || id;
+      });
+      return `Правильные правила: ${labels.join(' · ')}`;
     }
     return '';
   }

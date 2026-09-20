@@ -8,7 +8,9 @@
     "pron_latin": "waman ʿāda",
     "status": "checked",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "izhar_nun"
+    ]
   },
   {
     "id": "2",
@@ -18,7 +20,10 @@
     "pron_ru": "тубтум",
     "pron_latin": "tubtum",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "qalqala"
+    ]
   },
   {
     "id": "3",
@@ -28,7 +33,10 @@
     "pron_ru": "вашаавирхум",
     "pron_latin": "washāwirhum",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
   },
   {
     "id": "4",
@@ -39,7 +47,10 @@
     "pron_latin": "maʾāʾࣰ thajjājࣰā",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "hamza",
+      "ikhfa_nun"
+    ]
   },
   {
     "id": "5",
@@ -49,7 +60,10 @@
     "pron_ru": "тукъаатилу",
     "pron_latin": "tuqātilu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
   },
   {
     "id": "6",
@@ -60,7 +74,11 @@
     "pron_latin": "min rrizqࣲ",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun",
+      "istila",
+      "ra"
+    ]
   },
   {
     "id": "7",
@@ -70,7 +88,10 @@
     "pron_ru": "лахум сииаабࣱ",
     "pron_latin": "lahum thīābࣱ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
   },
   {
     "id": "8",
@@ -80,7 +101,13 @@
     "pron_ru": "къули лллахумма",
     "pron_latin": "quli lllahumma",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "ghunnah_shadda",
+      "istila",
+      "lam_allah"
+    ]
   },
   {
     "id": "9",
@@ -90,7 +117,11 @@
     "pron_ru": "лмуззаммилу",
     "pron_latin": "lmuzzammilu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "ghunnah_shadda"
+    ]
   },
   {
     "id": "10",
@@ -101,7 +132,10 @@
     "pron_latin": "ʿadhbࣱ furātࣱ",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "ikhfa_nun",
+      "ra"
+    ]
   },
   {
     "id": "11",
@@ -111,7 +145,12 @@
     "pron_ru": "лмайманати٨",
     "pron_latin": "lmaymanati٨",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "madd_article",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "12",
@@ -121,7 +160,11 @@
     "pron_ru": "баъсухум байнахум",
     "pron_latin": "baʾsuhum baynahum",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "mim_sakin"
+    ]
   },
   {
     "id": "13",
@@ -132,7 +175,9 @@
     "pron_latin": "man dassāhā",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "ikhfa_nun"
+    ]
   },
   {
     "id": "14",
@@ -142,7 +187,11 @@
     "pron_ru": "ъизаа йасри٤",
     "pron_latin": "ʾidhā yasri٤",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
   },
   {
     "id": "15",
@@ -152,7 +201,10 @@
     "pron_ru": "мухаммадун",
     "pron_latin": "muḥammadun",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda"
+    ]
   },
   {
     "id": "16",
@@ -162,7 +214,12 @@
     "pron_ru": "йавму лкъиимати٦",
     "pron_latin": "yawmu lqīmati٦",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "istila",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "17",
@@ -173,7 +230,9 @@
     "pron_latin": "laʾin llam",
     "status": "checked",
     "notes": "уточнено: шадда в «لَّمْ»",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun"
+    ]
   },
   {
     "id": "18",
@@ -183,7 +242,11 @@
     "pron_ru": "катаба лллаху",
     "pron_latin": "kataba lllahu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "lam_allah"
+    ]
   },
   {
     "id": "19",
@@ -194,7 +257,10 @@
     "pron_latin": "min nnafsࣲ",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "ghunnah_shadda",
+      "idgham_nun"
+    ]
   },
   {
     "id": "20",
@@ -204,7 +270,11 @@
     "pron_ru": "ваъатаънаа",
     "pron_latin": "waʾaṭaʿnā",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "istila"
+    ]
   },
   {
     "id": "21",
@@ -214,7 +284,11 @@
     "pron_ru": "вамислахум ммаъахум",
     "pron_latin": "wamithlahum mmaʿahum",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
   },
   {
     "id": "22",
@@ -225,7 +299,11 @@
     "pron_latin": "kalimata bāqīhࣰ",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun",
+      "istila",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "23",
@@ -235,7 +313,11 @@
     "pron_ru": "фаъасарна",
     "pron_latin": "faʾatharna",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
   },
   {
     "id": "24",
@@ -245,7 +327,10 @@
     "pron_ru": "лаъаллакум тахтадууна",
     "pron_latin": "laʿallakum tahtadūna",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
   },
   {
     "id": "25",
@@ -255,7 +340,11 @@
     "pron_ru": "йатмаъууна",
     "pron_latin": "yaṭmaʿūna",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila",
+      "qalqala"
+    ]
   },
   {
     "id": "26",
@@ -265,7 +354,10 @@
     "pron_ru": "вааджифатун٨",
     "pron_latin": "wājifatun٨",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ta_marbuta"
+    ]
   },
   {
     "id": "27",
@@ -276,7 +368,10 @@
     "pron_latin": "malakࣱ karīmࣱ",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "ikhfa_nun",
+      "ra"
+    ]
   },
   {
     "id": "28",
@@ -286,7 +381,15 @@
     "pron_ru": "вакъаала ъамрахаа",
     "pron_latin": "waqāla ʾamrahā",
     "status": "checked",
-    "notes": "уточнено: «أَمْرَهَا», не «أَمَرَهَا»"
+    "notes": "уточнено: «أَمْرَهَا», не «أَمَرَهَا»",
+    "rules": [
+      "article",
+      "hamza",
+      "istila",
+      "madd_article",
+      "mim_sakin",
+      "ra"
+    ]
   },
   {
     "id": "29",
@@ -297,7 +400,10 @@
     "pron_latin": "fāqiʿࣱ llawnuhā",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun",
+      "istila"
+    ]
   },
   {
     "id": "30",
@@ -307,7 +413,10 @@
     "pron_ru": "нумиддухум бихи",
     "pron_latin": "numidduhum bihi",
     "status": "edited",
-    "notes": "сверено вручную по изображению"
+    "notes": "сверено вручную по изображению",
+    "rules": [
+      "mim_sakin"
+    ]
   },
   {
     "id": "31",
@@ -317,7 +426,12 @@
     "pron_ru": "бизикри лллахи",
     "pron_latin": "bidhikri lllahi",
     "status": "edited",
-    "notes": "уточнено: окончание «اللَّهِ», не «اللَّهَ»"
+    "notes": "уточнено: окончание «اللَّهِ», не «اللَّهَ»",
+    "rules": [
+      "article",
+      "lam_allah",
+      "ra"
+    ]
   },
   {
     "id": "32",
@@ -328,7 +442,11 @@
     "pron_latin": "waʾin khiftum",
     "status": "checked",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "hamza",
+      "istila",
+      "izhar_nun"
+    ]
   },
   {
     "id": "33",
@@ -338,7 +456,10 @@
     "pron_ru": "лам тамут",
     "pron_latin": "lam tamut",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
   },
   {
     "id": "34",
@@ -348,7 +469,11 @@
     "pron_ru": "ъиннакум",
     "pron_latin": "ʾinnakum",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "hamza"
+    ]
   },
   {
     "id": "35",
@@ -359,7 +484,10 @@
     "pron_latin": "min khilāfin",
     "status": "edited",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "istila",
+      "izhar_nun"
+    ]
   },
   {
     "id": "36",
@@ -370,7 +498,9 @@
     "pron_latin": "min bayninā",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun"
+    ]
   },
   {
     "id": "37",
@@ -380,7 +510,10 @@
     "pron_ru": "муртаабун",
     "pron_latin": "murtābun",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
   },
   {
     "id": "38",
@@ -391,7 +524,11 @@
     "pron_latin": "man dhā lladhī",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "article",
+      "ikhfa_nun",
+      "madd_article"
+    ]
   },
   {
     "id": "39",
@@ -402,7 +539,11 @@
     "pron_latin": "ʿalīmu bilmuttaqīna",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "article",
+      "iqlab_nun",
+      "istila"
+    ]
   },
   {
     "id": "40",
@@ -412,7 +553,10 @@
     "pron_ru": "ваъаммаатукум",
     "pron_latin": "waʿammātukum",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda"
+    ]
   },
   {
     "id": "41",
@@ -422,7 +566,11 @@
     "pron_ru": "ваъада лллаху",
     "pron_latin": "waʿada lllahu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "lam_allah"
+    ]
   },
   {
     "id": "42",
@@ -432,7 +580,10 @@
     "pron_ru": "кам лабиста",
     "pron_latin": "kam labithta",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
   },
   {
     "id": "43",
@@ -443,7 +594,11 @@
     "pron_latin": "faminhum mmuhtadࣲ",
     "status": "edited",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "ghunnah_shadda",
+      "izhar_nun",
+      "mim_sakin"
+    ]
   },
   {
     "id": "44",
@@ -454,7 +609,10 @@
     "pron_latin": "yawmaـidhࣲ yatadhakkaru",
     "status": "edited",
     "notes": "уточнено: «يَتَذَكَّرُ», не «يَذَّكَّرُ»",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun",
+      "ra"
+    ]
   },
   {
     "id": "45",
@@ -465,7 +623,10 @@
     "pron_latin": "wāqiʿu bihim",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun",
+      "istila"
+    ]
   },
   {
     "id": "46",
@@ -476,7 +637,10 @@
     "pron_latin": "lajamīʿun ḥādhirūna",
     "status": "edited",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "izhar_nun",
+      "ra"
+    ]
   },
   {
     "id": "47",
@@ -486,7 +650,10 @@
     "pron_ru": "гъалабат",
     "pron_latin": "ghalabat",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
   },
   {
     "id": "48",
@@ -496,7 +663,10 @@
     "pron_ru": "йурииду",
     "pron_latin": "yurīdu",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
   },
   {
     "id": "53",
@@ -507,7 +677,9 @@
     "pron_latin": "fatanfaʿahu",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "ikhfa_nun"
+    ]
   },
   {
     "id": "54",
@@ -517,7 +689,11 @@
     "pron_ru": "ъумирту",
     "pron_latin": "ʾumirtu",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
   },
   {
     "id": "55",
@@ -528,7 +704,10 @@
     "pron_latin": "ʿadhābࣱ yukhzīhi",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun",
+      "istila"
+    ]
   },
   {
     "id": "56",
@@ -538,7 +717,11 @@
     "pron_ru": "наджджайнаахум бисахрࣲ",
     "pron_latin": "najjaynāhum bisaḥrࣲ",
     "status": "edited",
-    "notes": "сверено вручную по изображению"
+    "notes": "сверено вручную по изображению",
+    "rules": [
+      "mim_sakin",
+      "ra"
+    ]
   },
   {
     "id": "57",
@@ -548,7 +731,10 @@
     "pron_ru": "лакум фатхࣱ",
     "pron_latin": "lakum fatḥࣱ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
   },
   {
     "id": "58",
@@ -559,7 +745,9 @@
     "pron_latin": "min banī",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun"
+    ]
   },
   {
     "id": "59",
@@ -569,7 +757,10 @@
     "pron_ru": "фаддалнаа",
     "pron_latin": "faḍḍalnā",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
   },
   {
     "id": "60",
@@ -579,7 +770,11 @@
     "pron_ru": "биъилми лллахи",
     "pron_latin": "biʿilmi lllahi",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "lam_allah"
+    ]
   },
   {
     "id": "61",
@@ -590,7 +785,12 @@
     "pron_latin": "ʾamanahࣰ nnuʿāsࣰā",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "ghunnah_shadda",
+      "hamza",
+      "idgham_nun",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "62",
@@ -600,7 +800,10 @@
     "pron_ru": "сайуджзавна",
     "pron_latin": "sayujzawna",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "qalqala"
+    ]
   },
   {
     "id": "63",
@@ -610,7 +813,10 @@
     "pron_ru": "ваахидахࣱ١٣",
     "pron_latin": "wāḥidahࣱ١٣",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ta_marbuta"
+    ]
   },
   {
     "id": "64",
@@ -621,7 +827,9 @@
     "pron_latin": "yanhawna",
     "status": "checked",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "izhar_nun"
+    ]
   },
   {
     "id": "65",
@@ -631,7 +839,11 @@
     "pron_ru": "лакум ммавъидࣰаа",
     "pron_latin": "lakum mmawʿidࣰā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
   },
   {
     "id": "66",
@@ -642,7 +854,10 @@
     "pron_latin": "min mmaʿīnࣲ",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "ghunnah_shadda",
+      "idgham_nun"
+    ]
   },
   {
     "id": "67",
@@ -652,7 +867,11 @@
     "pron_ru": "лафии хусрин٢",
     "pron_latin": "lafī khusrin٢",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila",
+      "ra"
+    ]
   },
   {
     "id": "68",
@@ -662,7 +881,10 @@
     "pron_ru": "самааниихࣱ١٧",
     "pron_latin": "thamānīhࣱ١٧",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ta_marbuta"
+    ]
   },
   {
     "id": "69",
@@ -673,7 +895,11 @@
     "pron_latin": "jazāʾa bimā kānūā",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "hamza",
+      "iqlab_nun",
+      "silent"
+    ]
   },
   {
     "id": "70",
@@ -683,7 +909,11 @@
     "pron_ru": "ъасаабахаа",
     "pron_latin": "ʾaṣābahā",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "istila"
+    ]
   },
   {
     "id": "71",
@@ -694,7 +924,9 @@
     "pron_latin": "makāni baʿīdࣲ",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun"
+    ]
   },
   {
     "id": "72",
@@ -705,7 +937,9 @@
     "pron_latin": "liman shiʾta",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "ikhfa_nun"
+    ]
   },
   {
     "id": "73",
@@ -716,7 +950,9 @@
     "pron_latin": "ḥakīmun ʿalīmࣱ",
     "status": "edited",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "izhar_nun"
+    ]
   },
   {
     "id": "74",
@@ -726,7 +962,11 @@
     "pron_ru": "баъсухум байнахум",
     "pron_latin": "baʾsuhum baynahum",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "mim_sakin"
+    ]
   },
   {
     "id": "75",
@@ -736,7 +976,13 @@
     "pron_ru": "субхаанака лллахумма",
     "pron_latin": "subḥānaka lllahumma",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "ghunnah_shadda",
+      "lam_allah",
+      "qalqala"
+    ]
   },
   {
     "id": "76",
@@ -746,7 +992,10 @@
     "pron_ru": "маа шахиднаа",
     "pron_latin": "mā shahidnā",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "qalqala"
+    ]
   },
   {
     "id": "77",
@@ -756,7 +1005,10 @@
     "pron_ru": "таърифу",
     "pron_latin": "taʿrifu",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
   },
   {
     "id": "78",
@@ -766,7 +1018,12 @@
     "pron_ru": "лваакъиъату١٥",
     "pron_latin": "lwāqiʿatu١٥",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "istila",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "79",
@@ -776,7 +1033,12 @@
     "pron_ru": "ъалайкум билхакъкъи",
     "pron_latin": "ʿalaykum bilḥaqqi",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "istila",
+      "mim_sakin"
+    ]
   },
   {
     "id": "80",
@@ -787,7 +1049,10 @@
     "pron_latin": "taḥīhࣰ wasalāmanā",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "81",
@@ -798,7 +1063,10 @@
     "pron_latin": "ʾāyāti bayyinātࣲ",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "hamza",
+      "iqlab_nun"
+    ]
   },
   {
     "id": "82",
@@ -809,7 +1077,10 @@
     "pron_latin": "faʾanjaynākum",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "hamza",
+      "ikhfa_nun"
+    ]
   },
   {
     "id": "83",
@@ -819,7 +1090,10 @@
     "pron_ru": "фабашширху",
     "pron_latin": "fabashshirhu",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
   },
   {
     "id": "84",
@@ -829,7 +1103,10 @@
     "pron_ru": "хашийа",
     "pron_latin": "khashiya",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
   },
   {
     "id": "85",
@@ -839,7 +1116,11 @@
     "pron_ru": "ванатбаъу",
     "pron_latin": "wanaṭbaʿu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "istila",
+      "qalqala"
+    ]
   },
   {
     "id": "86",
@@ -849,7 +1130,12 @@
     "pron_ru": "биъизни лллахи",
     "pron_latin": "biʾidhni lllahi",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "hamza",
+      "lam_allah"
+    ]
   },
   {
     "id": "87",
@@ -860,7 +1146,11 @@
     "pron_latin": "mukhtalifun ʾalwānuhu",
     "status": "edited",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "hamza",
+      "istila",
+      "izhar_nun"
+    ]
   },
   {
     "id": "88",
@@ -870,7 +1160,11 @@
     "pron_ru": "йуматтиъкум мматааъанаа",
     "pron_latin": "yumattiʿkum mmatāʿanā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
   },
   {
     "id": "89",
@@ -881,7 +1175,9 @@
     "pron_latin": "yubayyin llanā",
     "status": "edited",
     "notes": "уточнено: «يُبَيِّنُ لَنَا», не «يُبَيِّن لَّنَا»",
-    "rule": "idgham"
+    "rules": [
+      "idgham_nun"
+    ]
   },
   {
     "id": "90",
@@ -891,7 +1187,11 @@
     "pron_ru": "хум ммухсинууна",
     "pron_latin": "hum mmuḥsinūna",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
   },
   {
     "id": "91",
@@ -902,7 +1202,9 @@
     "pron_latin": "man baʿathanā",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun"
+    ]
   },
   {
     "id": "92",
@@ -912,7 +1214,11 @@
     "pron_ru": "ъарсалнаа",
     "pron_latin": "ʾarsalnā",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
   },
   {
     "id": "93",
@@ -923,7 +1229,12 @@
     "pron_latin": "ʾanzala lllahu",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "article",
+      "hamza",
+      "ikhfa_nun",
+      "lam_allah"
+    ]
   },
   {
     "id": "94",
@@ -933,7 +1244,10 @@
     "pron_ru": "саммайтухаа",
     "pron_latin": "sammaytuhā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda"
+    ]
   },
   {
     "id": "95",
@@ -944,7 +1258,10 @@
     "pron_latin": "ʾādhantukum",
     "status": "edited",
     "notes": "",
-    "rule": "ikhfa"
+    "rules": [
+      "hamza",
+      "ikhfa_nun"
+    ]
   },
   {
     "id": "96",
@@ -955,7 +1272,10 @@
     "pron_latin": "laṭīfu biʿibādihi",
     "status": "edited",
     "notes": "",
-    "rule": "iqlab"
+    "rules": [
+      "iqlab_nun",
+      "istila"
+    ]
   },
   {
     "id": "97",
@@ -965,7 +1285,11 @@
     "pron_ru": "лъааджилата٢٠",
     "pron_latin": "lʿājilata٢٠",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "article",
+      "ta_marbuta"
+    ]
   },
   {
     "id": "98",
@@ -976,7 +1300,9 @@
     "pron_latin": "watanḥitūna",
     "status": "checked",
     "notes": "",
-    "rule": "izhar"
+    "rules": [
+      "izhar_nun"
+    ]
   },
   {
     "id": "99",
@@ -986,7 +1312,11 @@
     "pron_ru": "ъааманнаа",
     "pron_latin": "ʾāmannā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "hamza"
+    ]
   },
   {
     "id": "100",
@@ -997,6 +1327,9 @@
     "pron_latin": "shihābࣱ mmubīnࣱ",
     "status": "edited",
     "notes": "",
-    "rule": "idgham"
+    "rules": [
+      "ghunnah_shadda",
+      "idgham_nun"
+    ]
   }
 ]

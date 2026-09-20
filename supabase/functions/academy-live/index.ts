@@ -146,12 +146,16 @@ function validateQuestionPayload(
   }
   if (type === 'rule_choice') {
     const options = Array.isArray(payload.options) ? payload.options : [];
-    const correct = String(payload.correct_rule_id || '');
+    const correctList = Array.isArray(payload.correct_rule_ids)
+      ? payload.correct_rule_ids
+      : payload.correct_rule_id
+        ? [payload.correct_rule_id]
+        : [];
     if (!String(payload.word || '').trim()) return 'question_invalid';
     if (options.length < 2) return 'question_invalid';
-    if (!correct || !options.some((o) => String((o as Record<string, unknown>)?.id || '') === correct)) {
-      return 'question_invalid';
-    }
+    if (!correctList.length) return 'question_invalid';
+    const ids = new Set(options.map((o) => String((o as Record<string, unknown>)?.id || '')));
+    if (correctList.some((id) => !ids.has(String(id || '')))) return 'question_invalid';
     return null;
   }
   // Unknown future types: accept if prompt exists.
@@ -343,9 +347,16 @@ function formatAnswerLabel(
   }
   if (type === 'rule_choice') {
     const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
-    const id = String(answerPayload.rule_id || '');
-    const opt = options.find((o) => String(o.id) === id);
-    return opt ? String(opt.label ?? id) : id || '—';
+    const ids = Array.isArray(answerPayload.rule_ids)
+      ? (answerPayload.rule_ids as unknown[]).map(String)
+      : answerPayload.rule_id
+        ? [String(answerPayload.rule_id)]
+        : [];
+    const labels = ids
+      .map((id) => options.find((o) => String(o.id) === id))
+      .filter(Boolean)
+      .map((o) => String((o as Record<string, unknown>).label ?? ''));
+    return labels.length ? labels.join(' · ') : ids.join(' · ') || '—';
   }
   if (type === 'free_text') return String(answerPayload.text || '—');
   return 'ответ';
@@ -384,9 +395,16 @@ function formatCorrectLabel(q: Record<string, unknown> | null) {
   }
   if (type === 'rule_choice') {
     const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
-    const id = String(payload.correct_rule_id || '');
-    const opt = options.find((o) => String(o.id) === id);
-    return opt ? String(opt.label ?? id) : id || '—';
+    const ids = Array.isArray(payload.correct_rule_ids)
+      ? (payload.correct_rule_ids as unknown[]).map(String)
+      : payload.correct_rule_id
+        ? [String(payload.correct_rule_id)]
+        : [];
+    const labels = ids
+      .map((id) => options.find((o) => String(o.id) === id))
+      .filter(Boolean)
+      .map((o) => String((o as Record<string, unknown>).label ?? ''));
+    return labels.length ? labels.join(' · ') : ids.join(' · ') || '—';
   }
   return '—';
 }
