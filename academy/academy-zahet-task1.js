@@ -111,7 +111,7 @@
     const part2 = typeof build2 === 'function' ? build2({ count: 12, points: 1.5 }) : [];
     const questions = part1.concat(part2).map((q, position) => ({ ...q, position }));
     return {
-      title: 'Зачёт №3 — таджвид',
+      title: 'Зачёт №3 · нун и правила стр. 68',
       subject: 'quran',
       level: 'beginner',
       description:

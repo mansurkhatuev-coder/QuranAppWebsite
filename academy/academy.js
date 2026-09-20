@@ -987,7 +987,7 @@
 
   function renderHubPicker(lessons) {
     if (!hubLessonPicker) return;
-    const rows = sortLessons(lessons || []);
+    const rows = sortLessons(lessons || []).filter((lesson) => !/архив/i.test(String(lesson.title || '')));
     if (!rows.length) {
       hubLessonPicker.innerHTML = '<p class="academy-muted">Сначала создайте уроки во вкладке «Уроки».</p>';
       return;
