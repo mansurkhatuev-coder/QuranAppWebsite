@@ -1,23 +1,30 @@
-# One-shot: provision madrasa Academy teacher account.
-# Uses SUPABASE_ACCESS_TOKEN → service_role → Auth Admin + academy_teachers upsert.
-# Credentials are passed only as Actions env for this branch job (not printed).
+# Optional: re-provision Academy teacher via workflow_dispatch.
+# Pass email/password/name as inputs (not stored in the repo).
 
-name: Create madrasa Academy teacher
+name: Create Academy teacher
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - cursor/academy-zahet-task1-37e8
-    paths:
-      - .github/workflows/create-madrasa-teacher.yml
-      - scripts/create-academy-teacher.mjs
+    inputs:
+      email:
+        description: Teacher email
+        required: true
+        type: string
+      password:
+        description: Teacher password (min 8)
+        required: true
+        type: string
+      name:
+        description: Display name
+        required: true
+        default: Учитель медресе
+        type: string
 
 permissions:
   contents: read
 
 concurrency:
-  group: create-madrasa-teacher
+  group: create-academy-teacher
   cancel-in-progress: false
 
 jobs:
@@ -31,9 +38,9 @@ jobs:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
           SUPABASE_URL: https://rivjkiksknnesahrvamf.supabase.co
-          TEACHER_EMAIL: abdurahman@waydean.com
-          TEACHER_PASSWORD: medrese95
-          TEACHER_NAME: Абдурахман · медресе
+          TEACHER_EMAIL: ${{ inputs.email }}
+          TEACHER_PASSWORD: ${{ inputs.password }}
+          TEACHER_NAME: ${{ inputs.name }}
         run: |
           set -euo pipefail
           if [ -z "${SUPABASE_ACCESS_TOKEN:-}" ]; then
@@ -46,17 +53,20 @@ jobs:
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+          TEACHER_EMAIL: ${{ inputs.email }}
         run: |
           set -euo pipefail
           BODY=$(mktemp); RESP=$(mktemp)
-          python3 - <<'PY' > "$BODY"
-          import json
-          print(json.dumps({"query": """
+          python3 - "$TEACHER_EMAIL" "$BODY" <<'PY'
+          import json, sys
+          email = sys.argv[1].replace("'", "''")
+          q = f"""
           select t.user_id::text, t.display_name, t.is_active, u.email
           from public.academy_teachers t
           left join auth.users u on u.id = t.user_id
-          where lower(u.email) = lower('abdurahman@waydean.com');
-          """}))
+          where lower(u.email) = lower('{email}');
+          """
+          open(sys.argv[2], "w", encoding="utf-8").write(json.dumps({"query": q}))
           PY
           CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
             -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
@@ -68,16 +78,14 @@ jobs:
           echo "verify HTTP $CODE"
           cat "$RESP"
           echo
-          test "$CODE" = "200" -o "$CODE" = "201"
-          python3 - <<'PY'
-          import json,sys
-          data=json.load(open(sys.argv[1],encoding='utf-8'))
-          rows=data if isinstance(data,list) else data.get('data') or data.get('result') or []
-          if isinstance(data,dict) and not rows and 'email' in str(data):
-              rows=[data]
-          # Management API often returns list of row objects
+          if [[ "$CODE" != "200" && "$CODE" != "201" ]]; then
+            exit 1
+          fi
+          python3 - "$RESP" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          rows = data if isinstance(data, list) else []
           if not rows:
-              raise SystemExit('teacher row not found after provision')
-          print('teacher ok:', rows[0] if isinstance(rows,list) else rows)
+              raise SystemExit("teacher row not found")
+          print("teacher ok:", rows[0].get("email"), rows[0].get("display_name"))
           PY
-          "$RESP"
