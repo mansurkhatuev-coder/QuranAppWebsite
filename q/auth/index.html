@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="../../academy/academy.css?v=13" />
+    <link rel="stylesheet" href="../../academy/academy.css?v=14" />
     <link rel="stylesheet" href="../q.css?v=3" />
   </head>
   <body class="academy-body">
@@ -31,7 +31,7 @@
       <h1 class="academy-title academy-title--sm">Вход</h1>
       <p class="academy-muted">Сохраните результаты и смотрите свою историю.</p>
 
-      <div class="academy-card">
+      <div class="academy-card" id="auth-card">
         <div class="q-auth-tabs" role="tablist">
           <button type="button" class="academy-btn academy-btn--primary" id="tab-login" data-mode="login">Вход</button>
           <button type="button" class="academy-btn" id="tab-register" data-mode="register">Регистрация</button>
@@ -59,6 +59,7 @@
           <button type="button" class="academy-btn academy-btn--ghost" id="btn-recover" style="margin-top:0.5rem">
             Забыли пароль?
           </button>
+          <p id="auth-status" class="academy-muted academy-login-status" hidden aria-live="polite"></p>
           <p id="auth-error" class="academy-error" hidden></p>
           <p id="auth-ok" class="academy-ok" hidden></p>
         </form>
@@ -82,9 +83,16 @@
       </div>
     </div>
 
+    <div id="academy-boot-overlay" class="academy-boot-overlay" hidden>
+      <div class="academy-boot-card" role="status" aria-live="polite">
+        <div class="academy-boot-spinner" aria-hidden="true"></div>
+        <p id="academy-boot-text">Загрузка…</p>
+      </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../admin/supabase-config.js?v=7"></script>
     <script src="../../academy/academy-shared.js?v=7"></script>
-    <script src="./auth.js?v=2"></script>
+    <script src="./auth.js?v=3"></script>
   </body>
 </html>

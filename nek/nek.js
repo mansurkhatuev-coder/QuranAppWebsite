@@ -84,10 +84,16 @@
     busy = on;
     if (loginSubmit) {
       loginSubmit.disabled = on;
-      loginSubmit.textContent = on ? 'Проверяем…' : submitLabel;
+      loginSubmit.innerHTML = on
+        ? '<span class="nek-login-spinner" aria-hidden="true"></span><span>Проверяем…</span>'
+        : submitLabel;
+      loginSubmit.setAttribute('aria-busy', on ? 'true' : 'false');
     }
-    if (loginInput) loginInput.disabled = on;
-    if (passwordInput) passwordInput.disabled = on;
+    // Keep typed values visible — disabled password fields often look empty.
+    if (loginInput) loginInput.readOnly = on;
+    if (passwordInput) passwordInput.readOnly = on;
+    if (passwordToggle) passwordToggle.disabled = on;
+    loginPanel?.classList.toggle('is-busy', on);
   }
 
   function showLoginMode(on) {

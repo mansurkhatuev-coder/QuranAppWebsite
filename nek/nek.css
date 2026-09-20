@@ -212,6 +212,10 @@ input {
 
 /* Stronger glass/sand — enter the tree */
 .btn-enter {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
   color: #1a140c;
   background:
     linear-gradient(160deg, #f0d7a0 0%, #d4b06a 100%);
@@ -372,6 +376,28 @@ input {
 
 .login-panel.is-done {
   animation: settle 0.4s var(--ease) both;
+}
+
+.login-panel.is-busy input[type='text'],
+.login-panel.is-busy input[type='password'] {
+  opacity: 0.85;
+  pointer-events: none;
+}
+
+.nek-login-spinner {
+  width: 1rem;
+  height: 1rem;
+  border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, 0.25);
+  border-top-color: rgba(255, 248, 230, 0.95);
+  animation: nek-login-spin 0.75s linear infinite;
+  flex: none;
+}
+
+@keyframes nek-login-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .linkish {
