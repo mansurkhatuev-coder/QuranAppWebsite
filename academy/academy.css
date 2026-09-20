@@ -248,6 +248,75 @@ body.academy-is-booting {
   pointer-events: none;
 }
 
+.academy-letter-rule {
+  margin: 0.35rem 0 0.25rem;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ac-gold, #d4af37);
+}
+
+.academy-letter-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.academy-letter-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.85rem;
+  direction: rtl;
+}
+
+.academy-letter-cell {
+  appearance: none;
+  min-height: 2.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--ac-line, rgba(255, 255, 255, 0.14));
+  background: var(--ac-surface-2, rgba(255, 255, 255, 0.04));
+  color: var(--ac-text, #fff);
+  font-size: 1.35rem;
+  font-family: 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', serif;
+  line-height: 1;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.academy-letter-cell.is-selected {
+  border-color: rgba(212, 175, 106, 0.85);
+  background: rgba(212, 175, 106, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 106, 0.35);
+}
+
+.academy-letter-cell--ok,
+.academy-letter-cell.academy-letter-cell--ok.is-selected {
+  border-color: rgba(110, 190, 130, 0.9);
+  background: rgba(110, 190, 130, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(110, 190, 130, 0.4);
+}
+
+.academy-letter-cell:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.academy-letter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.academy-letter-count {
+  margin: 0.25rem 0 0;
+}
+
+@media (max-width: 520px) {
+  .academy-letter-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
 /* Global fields: stop iOS zoom (<16px) and light-theme system chrome */
 .academy-body input,
 .academy-body select,

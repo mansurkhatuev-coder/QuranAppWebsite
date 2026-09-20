@@ -49,6 +49,7 @@
   let draftText = '';
   let pendingNext = null;
   let autoNextTimer = null;
+  let letterGridState = null;
 
   function showError(el, message) {
     if (!el) return;
@@ -375,6 +376,71 @@
       }
       return;
     }
+    if (q.type === 'letter_grid' && window.AcademyZahetTask1?.renderLetterGrid) {
+      const Z = window.AcademyZahetTask1;
+      const key = `${session?.current_index}|${q.id || q.prompt || ''}`;
+      if (!letterGridState || letterGridState.questionKey !== key) {
+        letterGridState = {
+          questionKey: key,
+          selected: Array.isArray(selectedAnswer?.letters) ? selectedAnswer.letters.slice() : [],
+          confirmed: Boolean(selectedAnswer?._confirmed),
+        };
+      }
+      Z.renderLetterGrid(playBody, q, {
+        locked,
+        selected: letterGridState.selected,
+        confirmed: letterGridState.confirmed,
+      });
+      playBody.onclick = (event) => {
+        if (locked || myAnswer) return;
+        const cell = event.target.closest('[data-letter]');
+        if (cell && !letterGridState.confirmed) {
+          const L = cell.getAttribute('data-letter');
+          const set = new Set(letterGridState.selected);
+          if (set.has(L)) set.delete(L);
+          else set.add(L);
+          letterGridState.selected = [...set];
+          selectedAnswer = null;
+          Z.renderLetterGrid(playBody, q, {
+            locked: false,
+            selected: letterGridState.selected,
+            confirmed: false,
+          });
+          submitBtn.disabled = true;
+          return;
+        }
+        if (event.target.closest('[data-letter-clear]') && !letterGridState.confirmed) {
+          letterGridState.selected = [];
+          selectedAnswer = null;
+          Z.renderLetterGrid(playBody, q, { locked: false, selected: [], confirmed: false });
+          submitBtn.disabled = true;
+          return;
+        }
+        if (event.target.closest('[data-letter-confirm]') && letterGridState.selected.length) {
+          letterGridState.confirmed = true;
+          selectedAnswer = { letters: letterGridState.selected.slice(), _confirmed: true };
+          Z.renderLetterGrid(playBody, q, {
+            locked: false,
+            selected: letterGridState.selected,
+            confirmed: true,
+          });
+          submitBtn.disabled = false;
+          return;
+        }
+        if (event.target.closest('[data-letter-edit]')) {
+          letterGridState.confirmed = false;
+          selectedAnswer = null;
+          Z.renderLetterGrid(playBody, q, {
+            locked: false,
+            selected: letterGridState.selected,
+            confirmed: false,
+          });
+          submitBtn.disabled = true;
+        }
+      };
+      submitBtn.disabled = locked || !letterGridState.confirmed;
+      return;
+    }
     playBody.innerHTML = `<p class="academy-muted">Этот тип вопроса пока недоступен.</p>`;
   }
 
@@ -603,7 +669,16 @@
       const input = document.getElementById('short-answer');
       if (input) answer = { text: input.value };
     }
-    if (!answer || (answer.option_id == null && answer.value == null && !String(answer.text || '').trim())) {
+    if (session?.current_question?.type === 'letter_grid') {
+      if (!answer?._confirmed || !Array.isArray(answer.letters) || !answer.letters.length) {
+        showError(playError, 'Отметьте буквы и нажмите «Готово».');
+        return;
+      }
+      answer = { letters: answer.letters.slice() };
+    } else if (
+      !answer ||
+      (answer.option_id == null && answer.value == null && !String(answer.text || '').trim())
+    ) {
       showError(playError, 'Выберите или введите ответ.');
       return;
     }
@@ -615,6 +690,7 @@
         answer,
       });
       myAnswer = data.answer;
+      letterGridState = null;
       if (data.finished) {
         clearAutoNextTimer();
         session = { ...session, status: 'finished', phase: 'results' };

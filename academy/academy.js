@@ -57,6 +57,7 @@
   let accessToken = '';
   let questionDrafts = [];
   let pendingStartLesson = null;
+  let zahetDescription = '';
   let historyCache = [];
   let lessonsCache = [];
   let selectedCourse = null;
@@ -669,7 +670,18 @@
             : '';
         return `<div class="academy-card academy-editor-block">
           <strong>Вопрос ${idx + 1}</strong>
-          <label class="academy-field-gap">Тип
+          ${
+            q.type === 'letter_grid'
+              ? `<p class="academy-kicker academy-field-gap">Сетка букв · ${A.escapeHtml(
+                  q.letterPayload?.rule_title || 'правило'
+                )}</p>
+          <label class="academy-field-gap">Текст вопроса
+            <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
+          </label>
+          <p class="academy-muted">Верные буквы: ${A.escapeHtml(
+            (q.letterPayload?.correct_letters || []).join(' · ')
+          )} · ${Number(q.points) || 2.5} балла</p>`
+              : `<label class="academy-field-gap">Тип
             <select data-q="${idx}" class="q-type">
               <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один из вариантов</option>
               <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно</option>
@@ -695,6 +707,7 @@
             <input data-q="${idx}" class="q-accepted" value="${A.escapeHtml(q.accepted)}" placeholder="4|четыре" />
           </label>`
               : ''
+          }`
           }
           <div class="academy-actions">
             <button type="button" class="academy-btn academy-btn--ghost" data-del="${idx}">Удалить вопрос</button>
@@ -708,7 +721,7 @@
     questionDrafts.forEach((q, idx) => {
       const typeEl = questionsEditor.querySelector(`.q-type[data-q="${idx}"]`);
       const promptEl = questionsEditor.querySelector(`.q-prompt[data-q="${idx}"]`);
-      if (typeEl) q.type = typeEl.value;
+      if (typeEl && q.type !== 'letter_grid') q.type = typeEl.value;
       if (promptEl) q.prompt = promptEl.value;
       if (q.type === 'single_choice') {
         questionsEditor.querySelectorAll(`.opt-label[data-q="${idx}"]`).forEach((el) => {
@@ -733,6 +746,7 @@
     setTab('lessons');
     startCard.hidden = true;
     questionDrafts = [defaultQuestion(), defaultQuestion(), defaultQuestion()];
+    zahetDescription = '';
     editorCard.hidden = false;
     document.getElementById('lesson-title').value = '';
     renderQuestionEditor();
@@ -773,6 +787,27 @@
           position,
         };
       }
+      if (q.type === 'letter_grid') {
+        const payload = q.letterPayload || {};
+        const letters = Array.isArray(payload.letters) ? payload.letters : [];
+        const correct = Array.isArray(payload.correct_letters) ? payload.correct_letters : [];
+        if (letters.length < 4 || !correct.length) {
+          throw new Error(`Проверьте сетку букв в вопросе ${position + 1}`);
+        }
+        return {
+          type: 'letter_grid',
+          prompt: q.prompt.trim(),
+          payload: {
+            rule_id: payload.rule_id,
+            rule_title: payload.rule_title,
+            letters,
+            correct_letters: correct,
+            confirm_label: payload.confirm_label || 'Готово',
+          },
+          scoring: { method: 'auto', points: Number(q.points) || 2.5 },
+          position,
+        };
+      }
       const accepted = String(q.accepted || '')
         .split('|')
         .map((s) => s.trim())
@@ -793,7 +828,7 @@
         title,
         subject,
         level: 'beginner',
-        description: '',
+        description: zahetDescription || '',
         questions: rows,
       },
       { accessToken }
@@ -1131,6 +1166,27 @@
       syncDraftsFromDom();
       questionDrafts.push(defaultQuestion());
       renderQuestionEditor();
+    });
+
+    document.getElementById('btn-zahet-task1')?.addEventListener('click', () => {
+      const Z = window.AcademyZahetTask1;
+      if (!Z?.lessonDraft) {
+        showError(editorError, 'Модуль задания 1 не загружен. Обновите страницу.');
+        return;
+      }
+      const draft = Z.lessonDraft();
+      document.getElementById('lesson-title').value = draft.title;
+      document.getElementById('lesson-subject').value = draft.subject || 'quran';
+      zahetDescription = String(draft.description || '');
+      questionDrafts = (draft.questions || []).map((q) => ({
+        type: 'letter_grid',
+        prompt: q.prompt,
+        letterPayload: q.payload,
+        points: q.scoring?.points || 2.5,
+      }));
+      renderQuestionEditor();
+      showError(editorError, '');
+      showError(appStatus, 'Вставлено задание 1: 4 правила нуна (10 баллов). Проверьте и сохраните урок.');
     });
 
     questionsEditor.addEventListener('change', (event) => {

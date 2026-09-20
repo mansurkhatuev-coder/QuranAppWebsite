@@ -52,6 +52,9 @@
     if (q.type === 'short_text' && Array.isArray(p.accepted)) {
       return `Правильные ответы: ${p.accepted.join(', ')}`;
     }
+    if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
+      return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
+    }
     return '';
   }
 
@@ -78,6 +81,9 @@
       html = `<p class="academy-muted">Варианты: Верно / Неверно</p>`;
     } else if (q.type === 'short_text') {
       html = `<p class="academy-muted">Короткий письменный ответ</p>`;
+    } else if (q.type === 'letter_grid') {
+      const title = p.rule_title ? `Сетка букв · ${p.rule_title}` : 'Сетка букв';
+      html = `<p class="academy-muted">${A.escapeHtml(title)}</p>`;
     }
     if (reveal) {
       const correct = formatCorrect(q);

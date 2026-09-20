@@ -134,6 +134,16 @@ function validateQuestionPayload(
     if (!accepted.length || accepted.some((v) => !String(v || '').trim())) return 'question_invalid';
     return null;
   }
+  if (type === 'letter_grid') {
+    const letters = Array.isArray(payload.letters) ? payload.letters : [];
+    const correct = Array.isArray(payload.correct_letters) ? payload.correct_letters : [];
+    if (letters.length < 4) return 'question_invalid';
+    if (!correct.length) return 'question_invalid';
+    const set = new Set(letters.map((v) => String(v || '').trim()).filter(Boolean));
+    if (set.size !== letters.length) return 'question_invalid';
+    if (correct.some((v) => !set.has(String(v || '').trim()))) return 'question_invalid';
+    return null;
+  }
   // Unknown future types: accept if prompt exists.
   return null;
 }
@@ -315,6 +325,12 @@ function formatAnswerLabel(
       .map((o) => String((o as Record<string, unknown>).label ?? ''));
     return labels.length ? labels.join(', ') : ids.join(', ') || '—';
   }
+  if (type === 'letter_grid') {
+    const letters = Array.isArray(answerPayload.letters)
+      ? (answerPayload.letters as unknown[]).map(String).filter(Boolean)
+      : [];
+    return letters.length ? letters.join(' · ') : '—';
+  }
   if (type === 'free_text') return String(answerPayload.text || '—');
   return 'ответ';
 }
@@ -343,6 +359,12 @@ function formatCorrectLabel(q: Record<string, unknown> | null) {
       .filter(Boolean)
       .map((o) => String((o as Record<string, unknown>).label ?? ''));
     return labels.length ? labels.join(', ') : '—';
+  }
+  if (type === 'letter_grid') {
+    const letters = Array.isArray(payload.correct_letters)
+      ? (payload.correct_letters as unknown[]).map(String).filter(Boolean)
+      : [];
+    return letters.length ? letters.join(' · ') : '—';
   }
   return '—';
 }
