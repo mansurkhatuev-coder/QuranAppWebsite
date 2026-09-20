@@ -321,6 +321,7 @@ function formatAnswerLabel(
   answerPayload: Record<string, unknown> | null | undefined,
 ) {
   if (!q || !answerPayload) return '—';
+  if (answerPayload.skipped === true) return 'Пропущен';
   const type = String(q.type || '');
   const payload = (q.payload || {}) as Record<string, unknown>;
   if (type === 'single_choice' || type === 'image_choice') {

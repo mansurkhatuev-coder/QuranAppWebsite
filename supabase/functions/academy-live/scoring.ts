@@ -20,6 +20,10 @@ export function scoreAnswer(
 ): ScoreResult {
   const points = typeof scoring?.points === 'number' ? Number(scoring.points) : 1;
 
+  if (answer?.skipped === true) {
+    return { pending: false, is_correct: false, score: 0 };
+  }
+
   if (type === 'single_choice' || type === 'image_choice') {
     const ok = String(answer?.option_id ?? '') === String(payload?.correct_option_id ?? '');
     return { pending: false, is_correct: ok, score: ok ? points : 0 };
