@@ -613,6 +613,7 @@
     lessons = Courses.sortLessons(data.lessons || []);
     progressByLesson = loadLocalProgress();
     await refreshServerProgress();
+    if (token) A.rememberHubToken?.(token);
     hubTitle.textContent = hub?.title || 'Набор';
     if (data.closed || hub?.is_open === false) {
       hubStatus.textContent = 'Набор закрыт — новые прохождения недоступны.';
