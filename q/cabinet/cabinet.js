@@ -5,8 +5,15 @@
   const historyList = document.getElementById('history-list');
   const leaderboardCard = document.getElementById('leaderboard-card');
   const leaderboardBody = document.getElementById('leaderboard-body');
+  const availableCard = document.getElementById('available-card');
+  const availableTitle = document.getElementById('available-title');
+  const availableList = document.getElementById('available-list');
+  const availableOpen = document.getElementById('available-open');
   const appError = document.getElementById('app-error');
   const btnLogout = document.getElementById('btn-logout');
+
+  /** Fallback hub for medrese students when no link was opened yet. */
+  const DEFAULT_HUB_TOKEN = 'e8b3375d8d7cf981eb9d38fb';
 
   function showError(message) {
     appError.hidden = !message;
@@ -24,6 +31,44 @@
       });
     } catch (_) {
       return String(value);
+    }
+  }
+
+  function resolveAvailableToken() {
+    const fromQuery = A.resolveHubToken?.() || '';
+    if (fromQuery) return fromQuery;
+    const remembered = A.lastHubToken?.() || '';
+    if (remembered) return remembered;
+    return DEFAULT_HUB_TOKEN;
+  }
+
+  async function loadAvailable(accessToken) {
+    const token = resolveAvailableToken();
+    if (!token) return;
+    try {
+      const data = await A.callLive('public_catalog', { token }, { accessToken });
+      if (data?.closed || data?.hub?.is_open === false) return;
+      const lessons = data.lessons || [];
+      if (!lessons.length) return;
+      A.rememberHubToken?.(token);
+      const hubUrl = '/q/?t=' + encodeURIComponent(token);
+      availableCard.hidden = false;
+      availableTitle.textContent = data.hub?.title || 'Домашние задания';
+      availableOpen.href = hubUrl;
+      availableList.innerHTML = lessons
+        .map((lesson) => {
+          const count = lesson.question_count != null ? ` · ${lesson.question_count} вопр.` : '';
+          return `<li class="academy-history-item">
+            <div>
+              <strong>${A.escapeHtml(lesson.title || 'Урок')}</strong>
+              <div class="academy-muted">${A.escapeHtml(A.labelSubject?.(lesson.subject) || lesson.subject || '')}${A.escapeHtml(count)}</div>
+            </div>
+            <a class="academy-btn academy-btn--ghost" href="${A.escapeHtml(hubUrl)}">Начать</a>
+          </li>`;
+        })
+        .join('');
+    } catch (_) {
+      /* Hub optional — cabinet history still works. */
     }
   }
 
@@ -47,6 +92,7 @@
         { accessToken }
       );
       hello.textContent = ensured?.student?.display_name || user.email || 'Ученик';
+      await loadAvailable(accessToken);
       const hist = await A.callLive('student_history', {}, { accessToken });
       const rows = hist.history || [];
       if (!rows.length) {

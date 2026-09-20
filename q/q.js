@@ -207,6 +207,7 @@
     pendingNext = null;
     selectedAnswer = null;
     draftText = '';
+    letterGridState = null;
     showError(playFeedback, '');
     showError(playError, '');
     renderPlay();
@@ -218,6 +219,83 @@
     autoNextTimer = setTimeout(() => {
       goToPendingNext();
     }, 900);
+  }
+
+  function applySubmitResult(data) {
+    myAnswer = data.answer;
+    letterGridState = null;
+    showError(playError, '');
+    if (data.finished) {
+      clearAutoNextTimer();
+      session = { ...session, status: 'finished', phase: 'results' };
+      A.clearAsyncResume(token, activeLessonId);
+      return showResults();
+    }
+    pendingNext = {
+      next_index: data.next_index,
+      next_question: data.next_question,
+    };
+    // After a dropped response the server already advanced — jump without extra tap.
+    if (data.synced) {
+      goToPendingNext();
+      return null;
+    }
+    renderPlay();
+    return null;
+  }
+
+  async function recoverAfterSubmitFailure(submittedIndex, err) {
+    const code = String(err?.code || '');
+    if (code !== 'abort' && code !== 'wrong_question' && code !== 'not_accepting') {
+      return false;
+    }
+    if (code === 'abort') {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+    }
+    try {
+      const state = await A.callLive(
+        'async_state',
+        { resume_token: resumeToken },
+        { timeoutMs: 25000 }
+      );
+      session = { ...session, ...(state.session || {}) };
+      myAnswer = state.my_answer || null;
+      if (String(session.status) === 'finished' || String(session.phase) === 'results') {
+        A.clearAsyncResume(token, activeLessonId);
+        await showResults();
+        return true;
+      }
+      const cur = Number(session.current_index) || 0;
+      if (cur > submittedIndex) {
+        pendingNext = null;
+        selectedAnswer = null;
+        draftText = '';
+        letterGridState = null;
+        myAnswer = null;
+        showError(playError, '');
+        renderPlay();
+        return true;
+      }
+      if (myAnswer) {
+        const again = await A.callLive(
+          'async_submit',
+          {
+            resume_token: resumeToken,
+            question_index: cur,
+            answer: {},
+          },
+          { timeoutMs: 30000 }
+        );
+        await applySubmitResult(again);
+        return true;
+      }
+      if (code === 'abort') {
+        return false;
+      }
+    } catch (_) {
+      /* fall through to original error */
+    }
+    return false;
   }
 
   function updateGuestChrome() {
@@ -613,6 +691,7 @@
     lessons = Courses.sortLessons(data.lessons || []);
     progressByLesson = loadLocalProgress();
     await refreshServerProgress();
+    if (token) A.rememberHubToken?.(token);
     hubTitle.textContent = hub?.title || 'Набор';
     if (data.closed || hub?.is_open === false) {
       hubStatus.textContent = 'Набор закрыт — новые прохождения недоступны.';
@@ -720,35 +799,54 @@
       showError(playError, 'Выберите или введите ответ.');
       return;
     }
+    const submittedIndex = Number(session.current_index) || 0;
     submitBtn.disabled = true;
     try {
-      const data = await A.callLive('async_submit', {
-        resume_token: resumeToken,
-        question_index: Number(session.current_index) || 0,
-        answer,
-      });
-      myAnswer = data.answer;
-      letterGridState = null;
-      if (data.finished) {
-        clearAutoNextTimer();
-        session = { ...session, status: 'finished', phase: 'results' };
-        A.clearAsyncResume(token, activeLessonId);
-        await showResults();
-        return;
-      }
-      pendingNext = {
-        next_index: data.next_index,
-        next_question: data.next_question,
-      };
-      renderPlay();
+      const data = await A.callLive(
+        'async_submit',
+        {
+          resume_token: resumeToken,
+          question_index: submittedIndex,
+          answer,
+        },
+        { timeoutMs: 30000 }
+      );
+      await applySubmitResult(data);
     } catch (err) {
-      showError(playError, friendly(err, 'Не удалось отправить ответ.'));
-      submitBtn.disabled = false;
+      const recovered = await recoverAfterSubmitFailure(submittedIndex, err);
+      if (!recovered) {
+        showError(playError, friendly(err, 'Не удалось отправить ответ.'));
+        submitBtn.disabled = false;
+      }
     }
   });
 
-  nextBtn?.addEventListener('click', () => {
-    goToPendingNext();
+  nextBtn?.addEventListener('click', async () => {
+    if (pendingNext) {
+      goToPendingNext();
+      return;
+    }
+    // Stuck after a dropped submit: answer on screen but no «Дальше» payload.
+    if (myAnswer && resumeToken) {
+      nextBtn.disabled = true;
+      try {
+        const again = await A.callLive(
+          'async_submit',
+          {
+            resume_token: resumeToken,
+            question_index: Number(session?.current_index) || 0,
+            answer: {},
+          },
+          { timeoutMs: 30000 }
+        );
+        await applySubmitResult(again);
+      } catch (err) {
+        const recovered = await recoverAfterSubmitFailure(Number(session?.current_index) || 0, err);
+        if (!recovered) showError(playError, friendly(err, 'Не удалось перейти дальше.'));
+      } finally {
+        nextBtn.disabled = false;
+      }
+    }
   });
 
   async function boot() {

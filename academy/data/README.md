@@ -9,6 +9,7 @@
 | `standalone-banks.json` | Отфильтрованные standalone-вопросы по банкам |
 | `seed-lessons-plan.json` | План уроков (модули / чанки) |
 | `zahet-task2-words.json` | Зачёт №3 · задание 2 — слова со стр. 70–71 (96 шт., без пустых) |
+| `student-default-hub.json` | Токен открытого набора для блока «Доступные» в кабинете ученика |
 | `../admin/supabase-migration-academy-seed-app-banks.sql` | Additive seed (skip по совпадению title у owner) |
 
 ## Фильтр standalone

@@ -579,14 +579,58 @@ export async function handleAsyncSubmit(
   const session = await deps.loadSession(db, participant.session_id);
   if (!session) return deps.json({ error: 'not_found' }, 404);
   if (String(session.pacing) !== 'async') return deps.json({ error: 'not_async' }, 400);
+
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  const curIndex = Number(session.current_index);
+  const finishedNow =
+    String(session.status) === 'finished' || String(session.phase) === 'results';
+
+  // Client retry after a dropped response: answer was saved and index already advanced.
+  // Sync forward instead of wrong_question so guest mode can continue.
+  if (finishedNow || questionIndex < curIndex) {
+    const { data: pastAnswer } = await db
+      .from('academy_answers')
+      .select('*')
+      .eq('participant_id', participant.id)
+      .eq('question_index', questionIndex)
+      .maybeSingle();
+    if (!pastAnswer && !finishedNow) {
+      return deps.json({ error: 'wrong_question' }, 409);
+    }
+    if (finishedNow) {
+      return deps.json({
+        ok: true,
+        already: true,
+        synced: true,
+        answer: deps.publicStudentAnswer(pastAnswer as Record<string, unknown> | null, true),
+        feedback: { accepted: true, is_correct: pastAnswer?.is_correct ?? null },
+        advanced: false,
+        finished: true,
+        next_index: curIndex,
+        next_question: null,
+      });
+    }
+    const nq = snap[curIndex] as Record<string, unknown> | undefined;
+    return deps.json({
+      ok: true,
+      already: true,
+      synced: true,
+      answer: deps.publicStudentAnswer(pastAnswer as Record<string, unknown> | null, true),
+      feedback: { accepted: true, is_correct: pastAnswer?.is_correct ?? null },
+      advanced: true,
+      finished: false,
+      next_index: curIndex,
+      next_question: nq ? publicQuestion(nq, { reveal: false }) : null,
+    });
+  }
+
   if (session.status !== 'live' || session.phase !== 'answering') {
     return deps.json({ error: 'not_accepting' }, 409);
   }
-  if (questionIndex !== Number(session.current_index)) {
+  if (questionIndex !== curIndex) {
     return deps.json({ error: 'wrong_question' }, 409);
   }
 
-  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
   const q = snap[questionIndex] as Record<string, unknown> | undefined;
   if (!q) return deps.json({ error: 'no_question' }, 400);
 

@@ -37,9 +37,18 @@
 
       <p id="app-error" class="academy-error" hidden></p>
 
+      <section class="academy-card" id="available-card" hidden>
+        <p class="academy-kicker">Доступные</p>
+        <p class="academy-muted" id="available-title">—</p>
+        <ul id="available-list" class="academy-history-list"></ul>
+        <p class="academy-actions" style="margin-top:0.75rem">
+          <a class="academy-btn academy-btn--primary" id="available-open" href="#">Открыть набор</a>
+        </p>
+      </section>
+
       <section class="academy-card">
         <p class="academy-kicker">История</p>
-        <p class="academy-muted" id="history-empty" hidden>Пока нет прохождений. Откройте ссылку учителя.</p>
+        <p class="academy-muted" id="history-empty" hidden>Пока нет прохождений.</p>
         <ul id="history-list" class="academy-history-list"></ul>
       </section>
 
@@ -51,7 +60,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../admin/supabase-config.js?v=7"></script>
-    <script src="../../academy/academy-shared.js?v=7"></script>
-    <script src="./cabinet.js?v=1"></script>
+    <script src="../../academy/academy-shared.js?v=8"></script>
+    <script src="./cabinet.js?v=2"></script>
   </body>
 </html>

@@ -96,10 +96,35 @@
     return getStudentClient.instance;
   }
 
+  const LAST_HUB_KEY = 'academy_last_hub_token';
+
+  function rememberHubToken(token) {
+    const t = String(token || '').trim();
+    if (t.length < 8) return;
+    try {
+      localStorage.setItem(LAST_HUB_KEY, t);
+    } catch (_) {
+      /* ignore */
+    }
+  }
+
+  function lastHubToken() {
+    try {
+      const t = String(localStorage.getItem(LAST_HUB_KEY) || '').trim();
+      return t.length >= 8 ? t : '';
+    } catch (_) {
+      return '';
+    }
+  }
+
   function resolveHubToken() {
     const params = new URLSearchParams(location.search);
     const fromQuery = params.get('t') || params.get('token');
-    if (fromQuery && String(fromQuery).trim().length >= 8) return String(fromQuery).trim();
+    if (fromQuery && String(fromQuery).trim().length >= 8) {
+      const t = String(fromQuery).trim();
+      rememberHubToken(t);
+      return t;
+    }
     return '';
   }
 
@@ -353,6 +378,9 @@
     resolveJoinCode,
     resolveSessionId,
     resolveHubToken,
+    rememberHubToken,
+    lastHubToken,
+    LAST_HUB_KEY,
     saveAsyncResume,
     loadAsyncResume,
     clearAsyncResume,
