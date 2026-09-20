@@ -242,6 +242,25 @@
       submitBtn.disabled = locked || Boolean(myAnswer) || !letterGridState.confirmed;
       return;
     }
+    if (q.type === 'rule_choice' && window.AcademyZahetTask2?.renderRuleChoice) {
+      const Z = window.AcademyZahetTask2;
+      Z.renderRuleChoice(playBody, q, {
+        locked: locked || Boolean(myAnswer),
+        selected: selectedAnswer?.rule_id || '',
+      });
+      playBody.onclick = (event) => {
+        if (myAnswer || locked || session?.status === 'paused') return;
+        const btn = event.target.closest('[data-rule]');
+        if (!btn) return;
+        selectedAnswer = { rule_id: btn.getAttribute('data-rule') };
+        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_id });
+        submitBtn.disabled = false;
+        submitBtn.hidden = false;
+      };
+      submitBtn.hidden = locked;
+      submitBtn.disabled = locked || Boolean(myAnswer) || !selectedAnswer?.rule_id;
+      return;
+    }
     playBody.innerHTML = `<p class="academy-muted">Этот тип вопроса пока недоступен. Подождите следующий.</p>`;
     submitBtn.hidden = true;
   }
@@ -261,6 +280,10 @@
     }
     if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
       return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
+    }
+    if (q.type === 'rule_choice' && p.correct_rule_id) {
+      const opt = (p.options || []).find((o) => String(o.id) === String(p.correct_rule_id));
+      return `Правильный ответ: ${opt?.label || p.correct_rule_id}`;
     }
     return '';
   }
@@ -305,6 +328,13 @@
         [...playBody.querySelectorAll('[data-letter]')].forEach((b) => {
           if (correct.has(b.getAttribute('data-letter'))) {
             b.classList.add('is-selected', 'academy-letter-cell--ok');
+          }
+        });
+      }
+      if (q?.type === 'rule_choice' && q.payload?.correct_rule_id) {
+        [...playBody.querySelectorAll('[data-rule]')].forEach((b) => {
+          if (b.getAttribute('data-rule') === String(q.payload.correct_rule_id)) {
+            b.classList.add('academy-btn--primary', 'is-selected');
           }
         });
       }
@@ -508,6 +538,13 @@
         return;
       }
       answer = { letters: answer.letters.slice() };
+    }
+    if (session?.current_question?.type === 'rule_choice') {
+      if (!answer?.rule_id) {
+        showError(playError, 'Выберите правило.');
+        return;
+      }
+      answer = { rule_id: String(answer.rule_id) };
     }
     submitBtn.disabled = true;
     try {

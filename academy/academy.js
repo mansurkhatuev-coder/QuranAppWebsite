@@ -735,6 +735,19 @@
           <p class="academy-muted">Верные буквы: ${A.escapeHtml(
             (q.letterPayload?.correct_letters || []).join(' · ')
           )} · ${Number(q.points) || 2.5} балла</p>`
+              : q.type === 'rule_choice'
+                ? `<p class="academy-kicker academy-field-gap">Слово → правило</p>
+          <p class="academy-rule-word academy-rule-word--editor" lang="ar" dir="rtl">${A.escapeHtml(
+            q.rulePayload?.word || ''
+          )}</p>
+          <label class="academy-field-gap">Текст вопроса
+            <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
+          </label>
+          <p class="academy-muted">Верно: ${A.escapeHtml(
+            (q.rulePayload?.options || []).find((o) => o.id === q.rulePayload?.correct_rule_id)?.label ||
+              q.rulePayload?.correct_rule_id ||
+              '—'
+          )} · ${Number(q.points) || 1.5} балла</p>`
               : `<label class="academy-field-gap">Тип
             <select data-q="${idx}" class="q-type">
               <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один из вариантов</option>
@@ -775,7 +788,7 @@
     questionDrafts.forEach((q, idx) => {
       const typeEl = questionsEditor.querySelector(`.q-type[data-q="${idx}"]`);
       const promptEl = questionsEditor.querySelector(`.q-prompt[data-q="${idx}"]`);
-      if (typeEl && q.type !== 'letter_grid') q.type = typeEl.value;
+      if (typeEl && q.type !== 'letter_grid' && q.type !== 'rule_choice') q.type = typeEl.value;
       if (promptEl) q.prompt = promptEl.value;
       if (q.type === 'single_choice') {
         questionsEditor.querySelectorAll(`.opt-label[data-q="${idx}"]`).forEach((el) => {
@@ -859,6 +872,26 @@
             confirm_label: payload.confirm_label || 'Готово',
           },
           scoring: { method: 'auto', points: Number(q.points) || 2.5 },
+          position,
+        };
+      }
+      if (q.type === 'rule_choice') {
+        const payload = q.rulePayload || {};
+        const options = Array.isArray(payload.options) ? payload.options : [];
+        const correct = String(payload.correct_rule_id || '');
+        if (!String(payload.word || '').trim() || !correct) {
+          throw new Error(`Проверьте слово и правило в вопросе ${position + 1}`);
+        }
+        return {
+          type: 'rule_choice',
+          prompt: q.prompt.trim(),
+          payload: {
+            word: payload.word,
+            word_id: payload.word_id,
+            options,
+            correct_rule_id: correct,
+          },
+          scoring: { method: 'auto', points: Number(q.points) || 1.5 },
           position,
         };
       }
@@ -1281,6 +1314,30 @@
       renderQuestionEditor();
       showError(editorError, '');
       showError(appStatus, 'Вставлено задание 1: 4 правила нуна (10 баллов). Проверьте и сохраните урок.');
+    });
+
+    document.getElementById('btn-zahet-task2')?.addEventListener('click', () => {
+      const Z = window.AcademyZahetTask2;
+      if (!Z?.lessonDraft) {
+        showError(editorError, 'Модуль задания 2 не загружен. Обновите страницу.');
+        return;
+      }
+      const draft = Z.lessonDraft();
+      document.getElementById('lesson-title').value = draft.title;
+      document.getElementById('lesson-subject').value = draft.subject || 'quran';
+      zahetDescription = String(draft.description || '');
+      questionDrafts = (draft.questions || []).map((q) => ({
+        type: 'rule_choice',
+        prompt: q.prompt,
+        rulePayload: q.payload,
+        points: q.scoring?.points || 1.5,
+      }));
+      renderQuestionEditor();
+      showError(editorError, '');
+      showError(
+        appStatus,
+        'Вставлено задание 2: 12 слов → правило (18 баллов). Можно нажать ещё раз для другого набора.',
+      );
     });
 
     questionsEditor.addEventListener('change', (event) => {

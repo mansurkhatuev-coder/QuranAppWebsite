@@ -144,6 +144,16 @@ function validateQuestionPayload(
     if (correct.some((v) => !set.has(String(v || '').trim()))) return 'question_invalid';
     return null;
   }
+  if (type === 'rule_choice') {
+    const options = Array.isArray(payload.options) ? payload.options : [];
+    const correct = String(payload.correct_rule_id || '');
+    if (!String(payload.word || '').trim()) return 'question_invalid';
+    if (options.length < 2) return 'question_invalid';
+    if (!correct || !options.some((o) => String((o as Record<string, unknown>)?.id || '') === correct)) {
+      return 'question_invalid';
+    }
+    return null;
+  }
   // Unknown future types: accept if prompt exists.
   return null;
 }
@@ -331,6 +341,12 @@ function formatAnswerLabel(
       : [];
     return letters.length ? letters.join(' · ') : '—';
   }
+  if (type === 'rule_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const id = String(answerPayload.rule_id || '');
+    const opt = options.find((o) => String(o.id) === id);
+    return opt ? String(opt.label ?? id) : id || '—';
+  }
   if (type === 'free_text') return String(answerPayload.text || '—');
   return 'ответ';
 }
@@ -365,6 +381,12 @@ function formatCorrectLabel(q: Record<string, unknown> | null) {
       ? (payload.correct_letters as unknown[]).map(String).filter(Boolean)
       : [];
     return letters.length ? letters.join(' · ') : '—';
+  }
+  if (type === 'rule_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const id = String(payload.correct_rule_id || '');
+    const opt = options.find((o) => String(o.id) === id);
+    return opt ? String(opt.label ?? id) : id || '—';
   }
   return '—';
 }

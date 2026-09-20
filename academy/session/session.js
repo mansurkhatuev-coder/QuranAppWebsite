@@ -55,6 +55,10 @@
     if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
       return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
     }
+    if (q.type === 'rule_choice' && p.correct_rule_id) {
+      const opt = (p.options || []).find((o) => String(o.id) === String(p.correct_rule_id));
+      return `Правильный ответ: ${opt?.label || p.correct_rule_id}`;
+    }
     return '';
   }
 
@@ -84,6 +88,11 @@
     } else if (q.type === 'letter_grid') {
       const title = p.rule_title ? `Сетка букв · ${p.rule_title}` : 'Сетка букв';
       html = `<p class="academy-muted">${A.escapeHtml(title)}</p>`;
+    } else if (q.type === 'rule_choice') {
+      const word = p.word ? String(p.word) : '';
+      html = word
+        ? `<p class="academy-rule-word" lang="ar" dir="rtl">${A.escapeHtml(word)}</p>`
+        : `<p class="academy-muted">Слово → правило</p>`;
     }
     if (reveal) {
       const correct = formatCorrect(q);

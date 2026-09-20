@@ -441,6 +441,23 @@
       submitBtn.disabled = locked || !letterGridState.confirmed;
       return;
     }
+    if (q.type === 'rule_choice' && window.AcademyZahetTask2?.renderRuleChoice) {
+      const Z = window.AcademyZahetTask2;
+      Z.renderRuleChoice(playBody, q, {
+        locked,
+        selected: selectedAnswer?.rule_id || '',
+      });
+      playBody.onclick = (event) => {
+        if (locked || myAnswer) return;
+        const btn = event.target.closest('[data-rule]');
+        if (!btn) return;
+        selectedAnswer = { rule_id: btn.getAttribute('data-rule') };
+        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_id });
+        submitBtn.disabled = false;
+      };
+      submitBtn.disabled = locked || !selectedAnswer?.rule_id;
+      return;
+    }
     playBody.innerHTML = `<p class="academy-muted">Этот тип вопроса пока недоступен.</p>`;
   }
 
@@ -675,6 +692,12 @@
         return;
       }
       answer = { letters: answer.letters.slice() };
+    } else if (session?.current_question?.type === 'rule_choice') {
+      if (!answer?.rule_id) {
+        showError(playError, 'Выберите правило.');
+        return;
+      }
+      answer = { rule_id: String(answer.rule_id) };
     } else if (
       !answer ||
       (answer.option_id == null && answer.value == null && !String(answer.text || '').trim())

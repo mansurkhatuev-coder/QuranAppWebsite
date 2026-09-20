@@ -14,9 +14,10 @@
 1. SQL `academy_*` (additive) — применена
 2. Bootstrap учителей из `auth.users` — через workflow deploy
 3. Edge Function `academy-live` (create/join/resume/control/submit/host_state/results/heartbeat + hub/async)
-4. Редактор вопросов + `letter_grid` (Зачёт №3 · задание 1) + запуск сессии + join ученика с resume после F5
+4. Редактор вопросов + `letter_grid` (задание 1) + `rule_choice` (задание 2) + запуск сессии + join ученика с resume после F5
 5. Публичный набор домашних (`academy_public_hubs`) + self-paced `/q/`
 6. Режим запуска **Зачёт (строго)**: без опоздавших, без разбора ученикам/проектору до итога; CSV из отчёта
+7. Банк слов задания 2: `data/zahet-task2-words.json` (96 слов)
 
 ## Отдельный аккаунт учителя (медресе)
 

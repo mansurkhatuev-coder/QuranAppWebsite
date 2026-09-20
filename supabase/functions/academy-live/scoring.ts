@@ -62,6 +62,11 @@ export function scoreAnswer(
     return { pending: false, is_correct: ok, score: ok ? points : 0 };
   }
 
+  if (type === 'rule_choice') {
+    const ok = String(answer?.rule_id ?? '') === String(payload?.correct_rule_id ?? '');
+    return { pending: false, is_correct: ok, score: ok ? points : 0 };
+  }
+
   if (type === 'free_text') {
     return { pending: true, is_correct: null, score: null };
   }
@@ -80,6 +85,7 @@ export function publicQuestion(
     delete payload.correct_option_id;
     delete payload.correct_option_ids;
     delete payload.correct_letters;
+    delete payload.correct_rule_id;
     delete payload.correct;
     delete payload.accepted;
     if (Array.isArray(payload.options)) {

@@ -7,7 +7,8 @@
     "pron_ru": "ваман ъаада",
     "pron_latin": "waman ʿāda",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "2",
@@ -37,7 +38,8 @@
     "pron_ru": "маъааъࣰ саджджааджࣰаа",
     "pron_latin": "maʾāʾࣰ thajjājࣰā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "5",
@@ -57,7 +59,8 @@
     "pron_ru": "мин рризкъࣲ",
     "pron_latin": "min rrizqࣲ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "7",
@@ -97,7 +100,8 @@
     "pron_ru": "ъазбࣱ фураатࣱ",
     "pron_latin": "ʿadhbࣱ furātࣱ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "11",
@@ -127,7 +131,8 @@
     "pron_ru": "ман дассаахаа",
     "pron_latin": "man dassāhā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "14",
@@ -167,7 +172,8 @@
     "pron_ru": "лаъин ллам",
     "pron_latin": "laʾin llam",
     "status": "checked",
-    "notes": "уточнено: шадда в «لَّمْ»"
+    "notes": "уточнено: шадда в «لَّمْ»",
+    "rule": "idgham"
   },
   {
     "id": "18",
@@ -187,7 +193,8 @@
     "pron_ru": "мин ннафсࣲ",
     "pron_latin": "min nnafsࣲ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "20",
@@ -217,7 +224,8 @@
     "pron_ru": "калимата баакъиихࣰ",
     "pron_latin": "kalimata bāqīhࣰ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "23",
@@ -267,7 +275,8 @@
     "pron_ru": "малакࣱ кариимࣱ",
     "pron_latin": "malakࣱ karīmࣱ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "28",
@@ -287,7 +296,8 @@
     "pron_ru": "фаакъиъࣱ ллавнухаа",
     "pron_latin": "fāqiʿࣱ llawnuhā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "30",
@@ -317,7 +327,8 @@
     "pron_ru": "ваъин хифтум",
     "pron_latin": "waʾin khiftum",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "33",
@@ -347,7 +358,8 @@
     "pron_ru": "мин хилаафин",
     "pron_latin": "min khilāfin",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "36",
@@ -357,7 +369,8 @@
     "pron_ru": "мин байнинаа",
     "pron_latin": "min bayninā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "37",
@@ -377,7 +390,8 @@
     "pron_ru": "ман заа ллазии",
     "pron_latin": "man dhā lladhī",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "39",
@@ -387,7 +401,8 @@
     "pron_ru": "ъалииму билмуттакъиина",
     "pron_latin": "ʿalīmu bilmuttaqīna",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "40",
@@ -427,7 +442,8 @@
     "pron_ru": "фаминхум ммухтадࣲ",
     "pron_latin": "faminhum mmuhtadࣲ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "44",
@@ -437,7 +453,8 @@
     "pron_ru": "йавмаـизࣲ йатазаккару",
     "pron_latin": "yawmaـidhࣲ yatadhakkaru",
     "status": "edited",
-    "notes": "уточнено: «يَتَذَكَّرُ», не «يَذَّكَّرُ»"
+    "notes": "уточнено: «يَتَذَكَّرُ», не «يَذَّكَّرُ»",
+    "rule": "idgham"
   },
   {
     "id": "45",
@@ -447,7 +464,8 @@
     "pron_ru": "ваакъиъу бихим",
     "pron_latin": "wāqiʿu bihim",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "46",
@@ -457,7 +475,8 @@
     "pron_ru": "ладжамииъун хаазирууна",
     "pron_latin": "lajamīʿun ḥādhirūna",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "47",
@@ -487,7 +506,8 @@
     "pron_ru": "фатанфаъаху",
     "pron_latin": "fatanfaʿahu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "54",
@@ -507,7 +527,8 @@
     "pron_ru": "ъазаабࣱ йухзиихи",
     "pron_latin": "ʿadhābࣱ yukhzīhi",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "56",
@@ -537,7 +558,8 @@
     "pron_ru": "мин бании",
     "pron_latin": "min banī",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "59",
@@ -567,7 +589,8 @@
     "pron_ru": "ъаманахࣰ ннуъаасࣰаа",
     "pron_latin": "ʾamanahࣰ nnuʿāsࣰā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "62",
@@ -597,7 +620,8 @@
     "pron_ru": "йанхавна",
     "pron_latin": "yanhawna",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "65",
@@ -617,7 +641,8 @@
     "pron_ru": "мин ммаъиинࣲ",
     "pron_latin": "min mmaʿīnࣲ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "67",
@@ -647,7 +672,8 @@
     "pron_ru": "джазааъа бимаа каанууаа",
     "pron_latin": "jazāʾa bimā kānūā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "70",
@@ -667,7 +693,8 @@
     "pron_ru": "макаани баъиидࣲ",
     "pron_latin": "makāni baʿīdࣲ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "72",
@@ -677,7 +704,8 @@
     "pron_ru": "лиман шиъта",
     "pron_latin": "liman shiʾta",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "73",
@@ -687,7 +715,8 @@
     "pron_ru": "хакиимун ъалиимࣱ",
     "pron_latin": "ḥakīmun ʿalīmࣱ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "74",
@@ -757,7 +786,8 @@
     "pron_ru": "тахиихࣰ васалааманаа",
     "pron_latin": "taḥīhࣰ wasalāmanā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   },
   {
     "id": "81",
@@ -767,7 +797,8 @@
     "pron_ru": "ъаайаати баййинаатࣲ",
     "pron_latin": "ʾāyāti bayyinātࣲ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "82",
@@ -777,7 +808,8 @@
     "pron_ru": "фаъанджайнаакум",
     "pron_latin": "faʾanjaynākum",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "83",
@@ -827,7 +859,8 @@
     "pron_ru": "мухталифун ъалваануху",
     "pron_latin": "mukhtalifun ʾalwānuhu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "88",
@@ -847,7 +880,8 @@
     "pron_ru": "йубаййин лланаа",
     "pron_latin": "yubayyin llanā",
     "status": "edited",
-    "notes": "уточнено: «يُبَيِّنُ لَنَا», не «يُبَيِّن لَّنَا»"
+    "notes": "уточнено: «يُبَيِّنُ لَنَا», не «يُبَيِّن لَّنَا»",
+    "rule": "idgham"
   },
   {
     "id": "90",
@@ -867,7 +901,8 @@
     "pron_ru": "ман баъасанаа",
     "pron_latin": "man baʿathanā",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "92",
@@ -887,7 +922,8 @@
     "pron_ru": "ъанзала лллаху",
     "pron_latin": "ʾanzala lllahu",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "94",
@@ -907,7 +943,8 @@
     "pron_ru": "ъаазантукум",
     "pron_latin": "ʾādhantukum",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "ikhfa"
   },
   {
     "id": "96",
@@ -917,7 +954,8 @@
     "pron_ru": "латиифу биъибаадихи",
     "pron_latin": "laṭīfu biʿibādihi",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "iqlab"
   },
   {
     "id": "97",
@@ -937,7 +975,8 @@
     "pron_ru": "ватанхитууна",
     "pron_latin": "watanḥitūna",
     "status": "checked",
-    "notes": ""
+    "notes": "",
+    "rule": "izhar"
   },
   {
     "id": "99",
@@ -957,6 +996,7 @@
     "pron_ru": "шихаабࣱ ммубиинࣱ",
     "pron_latin": "shihābࣱ mmubīnࣱ",
     "status": "edited",
-    "notes": ""
+    "notes": "",
+    "rule": "idgham"
   }
 ]

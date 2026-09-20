@@ -71,6 +71,20 @@
         return got.length === correct.length && got.every((v, i) => v === correct[i]);
       },
     },
+    rule_choice: {
+      label: 'Выбор правила',
+      answerShape: 'rule_id',
+      validatePayload(payload) {
+        if (!String(payload?.word || '').trim()) return 'Нужно слово';
+        const options = payload?.options;
+        if (!Array.isArray(options) || options.length < 2) return 'Нужны варианты правил';
+        if (!payload?.correct_rule_id) return 'Не указано верное правило';
+        return null;
+      },
+      previewScore(payload, answer) {
+        return String(answer?.rule_id || '') === String(payload?.correct_rule_id || '');
+      },
+    },
   };
 
   function get(type) {

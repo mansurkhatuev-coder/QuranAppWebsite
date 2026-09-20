@@ -311,9 +311,44 @@ body.academy-is-booting {
   margin: 0.25rem 0 0;
 }
 
+.academy-rule-word {
+  margin: 0.5rem 0 0.75rem;
+  font-family: 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', serif;
+  font-size: clamp(1.75rem, 5vw, 2.35rem);
+  line-height: 1.6;
+  text-align: center;
+  color: var(--ac-text, #fff);
+}
+
+.academy-rule-word--editor {
+  font-size: 1.45rem;
+  margin: 0.35rem 0 0.5rem;
+  text-align: start;
+}
+
+.academy-rule-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.academy-rule-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.academy-rule-choice {
+  min-height: 3rem;
+  font-weight: 600;
+}
+
 @media (max-width: 520px) {
   .academy-letter-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .academy-rule-choices {
+    grid-template-columns: 1fr;
   }
 }
 
