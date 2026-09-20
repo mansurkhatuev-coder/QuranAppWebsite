@@ -148,7 +148,6 @@
     "notes": "",
     "rules": [
       "article",
-      "madd_article",
       "ta_marbuta"
     ]
   },
@@ -383,10 +382,8 @@
     "status": "checked",
     "notes": "уточнено: «أَمْرَهَا», не «أَمَرَهَا»",
     "rules": [
-      "article",
       "hamza",
       "istila",
-      "madd_article",
       "mim_sakin",
       "ra"
     ]

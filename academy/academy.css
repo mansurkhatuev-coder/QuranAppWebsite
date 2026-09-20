@@ -276,8 +276,9 @@ body.academy-is-booting {
   background: var(--ac-surface-2, rgba(255, 255, 255, 0.04));
   color: var(--ac-text, #fff);
   font-size: 1.35rem;
-  font-family: 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', serif;
-  line-height: 1;
+  font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
+  line-height: 1.35;
+  padding-block: 0.35rem;
   cursor: pointer;
   touch-action: manipulation;
 }
@@ -312,17 +313,25 @@ body.academy-is-booting {
 }
 
 .academy-rule-word {
-  margin: 0.5rem 0 0.75rem;
-  font-family: 'Amiri', 'Scheherazade New', 'Noto Naskh Arabic', serif;
-  font-size: clamp(1.75rem, 5vw, 2.35rem);
-  line-height: 1.6;
+  margin: 0.35rem 0 1rem;
+  padding: 0.55rem 0.35rem 0.7rem;
+  font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
+  font-size: clamp(1.85rem, 5.5vw, 2.5rem);
+  font-weight: 400;
+  line-height: 2.15;
   text-align: center;
   color: var(--ac-text, #fff);
+  overflow: visible;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  white-space: normal;
 }
 
 .academy-rule-word--editor {
-  font-size: 1.45rem;
-  margin: 0.35rem 0 0.5rem;
+  font-size: 1.55rem;
+  line-height: 2;
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.35rem 0;
   text-align: start;
 }
 
@@ -349,6 +358,10 @@ body.academy-is-booting {
   font-weight: 600;
   justify-content: flex-start;
   text-align: start;
+}
+
+.academy-letter-rule {
+  line-height: 1.45;
 }
 
 @media (max-width: 520px) {
