@@ -1,4 +1,32 @@
 /* Academy live lessons — mobile-first shell */
+@font-face {
+  font-family: 'Academy KFG Fixed';
+  src: url('fonts/KFGQPC-Uthmanic.otf') format('opentype');
+  unicode-range: U+0000-0626, U+0628-06DE, U+06E0-10FFFF;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Academy KFG Fixed';
+  src: url('fonts/AmiriQuran-Regular.ttf') format('truetype');
+  unicode-range: U+0627, U+06DF;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Academy Hafs Fixed';
+  src: url('fonts/UthmanicHafs1Ver18.ttf') format('truetype');
+  unicode-range: U+0000-0626, U+0628-06DE, U+06E0-10FFFF;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Academy Hafs Fixed';
+  src: url('fonts/AmiriQuran-Regular.ttf') format('truetype');
+  unicode-range: U+0627, U+06DF;
+  font-display: swap;
+}
+
 :root {
   --ac-bg: #0b0f13;
   --ac-bg-2: #151c26;
@@ -314,17 +342,22 @@ body.academy-is-booting {
 
 .academy-rule-word {
   margin: 0.35rem 0 1rem;
-  padding: 0.55rem 0.35rem 0.7rem;
-  font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
-  font-size: clamp(1.85rem, 5.5vw, 2.5rem);
+  padding: 0.55em 0.35em 0.7em;
+  direction: rtl;
+  unicode-bidi: plaintext;
+  font-family: 'Academy KFG Fixed', 'Amiri Quran', 'Amiri', serif;
+  font-size: clamp(3rem, 7vw, 6.5rem);
   font-weight: 400;
-  line-height: 2.15;
+  line-height: 1.8;
+  min-height: 2.6em;
   text-align: center;
   color: var(--ac-text, #fff);
   overflow: visible;
   overflow-wrap: normal;
   word-break: keep-all;
   white-space: normal;
+  font-feature-settings: 'mark' 1, 'mkmk' 1, 'liga' 1, 'calt' 1;
+  text-rendering: optimizeLegibility;
 }
 
 .academy-rule-word--editor {
