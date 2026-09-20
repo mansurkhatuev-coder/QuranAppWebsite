@@ -82,6 +82,11 @@
   flex: 1;
 }
 
+.q-auth-teacher-link {
+  margin: 1.1rem 0 0;
+  text-align: center;
+}
+
 .q-password-wrap {
   position: relative;
 }
