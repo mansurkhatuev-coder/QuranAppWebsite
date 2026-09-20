@@ -660,7 +660,6 @@ export async function handleAsyncSubmit(
       advanced.finished ||
       String(advanced.session?.status) === 'finished' ||
       String(advanced.session?.phase) === 'results';
-    const cur = Number(advanced.session?.current_index);
     const payload = nextPayload(questionIndex, finished);
     return deps.json({
       ok: true,
