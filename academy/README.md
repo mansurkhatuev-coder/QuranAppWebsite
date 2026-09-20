@@ -14,8 +14,37 @@
 1. SQL `academy_*` (additive) — применена
 2. Bootstrap учителей из `auth.users` — через workflow deploy
 3. Edge Function `academy-live` (create/join/resume/control/submit/host_state/results/heartbeat + hub/async)
-4. Редактор 3 типов вопросов + запуск сессии + join ученика с resume после F5
+4. Редактор: задание 1 (`letter_grid`, буквы нуна) + задание 2 (`rule_choice`, мультивыбор правил со стр. 68)
 5. Публичный набор домашних (`academy_public_hubs`) + self-paced `/q/`
+6. Режим запуска **Зачёт (строго)** + CSV
+7. Банк слов задания 2: `data/zahet-task2-words.json` (96 слов с автотегами правил урока 26)
+
+## Отдельный аккаунт учителя (медресе)
+
+Не используйте общий админский логин на занятии. Нужен свой Auth-пользователь + строка в `academy_teachers`.
+
+**Вариант A — Dashboard**
+
+1. Supabase → **Authentication → Users → Add user** (email + пароль)
+2. Скопируйте UUID → SQL Editor → `admin/supabase-create-academy-teacher.sql` (подставьте uuid и имя)
+3. Вход: https://waydean.ru/academy/
+
+**Вариант B — скрипт** (нужен `SUPABASE_SERVICE_ROLE_KEY`):
+
+```bash
+SUPABASE_URL=https://rivjkiksknnesahrvamf.supabase.co \
+SUPABASE_SERVICE_ROLE_KEY=… \
+node scripts/create-academy-teacher.mjs \
+  --email teacher@example.com \
+  --password '••••••••' \
+  --name 'Учитель медресе'
+```
+
+## Зачёт: как запускать
+
+1. Создайте урок («+ Зачёт №3 · задание 1» или свой набор)
+2. **Запустить** → режим **Зачёт (строго)** (подставляется сам, если в названии есть «Зачёт»)
+3. После занятия: **Отчёты → Отчёт → Скачать CSV**
 
 ## Деплой функции
 

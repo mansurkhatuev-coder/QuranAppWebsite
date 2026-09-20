@@ -52,6 +52,22 @@
     if (q.type === 'short_text' && Array.isArray(p.accepted)) {
       return `Правильные ответы: ${p.accepted.join(', ')}`;
     }
+    if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
+      return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
+    }
+    if (q.type === 'rule_choice') {
+      const ids = Array.isArray(p.correct_rule_ids)
+        ? p.correct_rule_ids
+        : p.correct_rule_id
+          ? [p.correct_rule_id]
+          : [];
+      if (!ids.length) return '';
+      const labels = ids.map((id) => {
+        const opt = (p.options || []).find((o) => String(o.id) === String(id));
+        return opt?.label || id;
+      });
+      return `Правильные правила: ${labels.join(' · ')}`;
+    }
     return '';
   }
 
@@ -78,6 +94,14 @@
       html = `<p class="academy-muted">Варианты: Верно / Неверно</p>`;
     } else if (q.type === 'short_text') {
       html = `<p class="academy-muted">Короткий письменный ответ</p>`;
+    } else if (q.type === 'letter_grid') {
+      const title = p.rule_title ? `Сетка букв · ${p.rule_title}` : 'Сетка букв';
+      html = `<p class="academy-muted">${A.escapeHtml(title)}</p>`;
+    } else if (q.type === 'rule_choice') {
+      const word = p.word ? String(p.word) : '';
+      html = word
+        ? `<p class="academy-rule-word" lang="ar" dir="rtl">${A.escapeHtml(word)}</p>`
+        : `<p class="academy-muted">Слово → правило</p>`;
     }
     if (reveal) {
       const correct = formatCorrect(q);
@@ -215,21 +239,29 @@
     `;
 
     const spoil = state.phase === 'reveal' || state.phase === 'results';
+    // Exam / reveal_answers=never: do not leak answers or marks on the projector mid-lesson.
+    const allowSpoil =
+      spoil &&
+      (state.settings?.reveal_answers !== 'never' ||
+        state.phase === 'results' ||
+        state.status === 'finished');
     boardBox.innerHTML = `<ul class="academy-board-list">${board
       .map((row) => {
         let mark = '';
-        if (row.answered && spoil) {
+        if (row.answered && allowSpoil) {
           if (row.is_correct === true) mark = '<span class="academy-pill academy-pill--ok">верно</span>';
           else if (row.is_correct === false) mark = '<span class="academy-pill academy-pill--bad">ошибка</span>';
           else mark = '<span class="academy-pill">принято</span>';
         } else if (row.answered && state.phase === 'answering') {
+          mark = '<span class="academy-pill">ответил</span>';
+        } else if (row.answered && spoil && !allowSpoil) {
           mark = '<span class="academy-pill">ответил</span>';
         } else if (!row.answered && state.phase === 'answering') {
           mark = '<span class="academy-pill academy-pill--wait">думает…</span>';
         }
         const detail = !row.answered
           ? 'ещё не ответил'
-          : spoil
+          : allowSpoil
             ? A.escapeHtml(row.answer_label || '—')
             : 'ответ принят';
         return `<li>
@@ -267,8 +299,10 @@
     const answering = state.phase === 'answering' && state.status === 'live';
     const finished = state.status === 'finished' || state.phase === 'results';
     const autoOn = state.settings?.auto_advance !== false;
+    const examSafe = state.settings?.reveal_answers === 'never';
     btnStart.disabled = finished || (!inLobby && state.status !== 'paused');
     btnReveal.disabled = !answering;
+    btnReveal.textContent = examSafe ? 'Закрыть приём' : 'Показать ответ';
     btnNext.disabled = finished || inLobby || (autoOn && answering);
     btnFinish.disabled = finished;
     if (toggleAuto && !syncingAutoToggle) {
@@ -291,14 +325,18 @@
         ? ` · таймер ${state.settings.timer_seconds} с`
         : ' · без таймера';
     const autoNote = state.settings?.auto_advance === false ? '' : ' · автодалее';
+    const examNote = state.settings?.reveal_answers === 'never' ? ' · зачёт' : '';
+    const lateNote = state.settings?.allow_late_join === false ? ' · без опоздавших' : '';
     metaEl.textContent = `${statusRu} · ${phaseRu} · вопрос ${Number(state.current_index) + 1}/${
       state.question_count
-    } · ответили ${state.answered || 0} из ${state.participants || 0}${timerNote}${autoNote}`;
+    } · ответили ${state.answered || 0} из ${state.participants || 0}${timerNote}${autoNote}${examNote}${lateNote}`;
 
+    const showKeys =
+      state.phase === 'reveal' && state.settings?.reveal_answers !== 'never';
     if (state.current_question && (state.phase === 'answering' || state.phase === 'reveal')) {
       questionBox.hidden = false;
       questionBox.textContent = state.current_question.prompt || '—';
-      renderOptions(state.current_question, state.phase === 'reveal');
+      renderOptions(state.current_question, showKeys);
     } else if (state.phase === 'lobby' || state.status === 'lobby') {
       questionBox.hidden = false;
       questionBox.textContent = 'Лобби — ждём учеников, затем «Начать»';

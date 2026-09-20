@@ -1,0 +1,1332 @@
+[
+  {
+    "id": "1",
+    "file": "page70_01.png",
+    "arabic_text": "وَمَنْ عَادَ",
+    "without_diacritics": "ومن عاد",
+    "pron_ru": "ваман ъаада",
+    "pron_latin": "waman ʿāda",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "2",
+    "file": "page70_02.png",
+    "arabic_text": "تُبْتُمْ",
+    "without_diacritics": "تبتم",
+    "pron_ru": "тубтум",
+    "pron_latin": "tubtum",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "qalqala"
+    ]
+  },
+  {
+    "id": "3",
+    "file": "page70_03.png",
+    "arabic_text": "وَشَاوِرْهُمْ",
+    "without_diacritics": "وشاورهم",
+    "pron_ru": "вашаавирхум",
+    "pron_latin": "washāwirhum",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
+  },
+  {
+    "id": "4",
+    "file": "page70_04.png",
+    "arabic_text": "مَآءࣰ ثَجَّاجࣰا",
+    "without_diacritics": "مآءࣰ ثجاجࣰا",
+    "pron_ru": "маъааъࣰ саджджааджࣰаа",
+    "pron_latin": "maʾāʾࣰ thajjājࣰā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ikhfa_nun"
+    ]
+  },
+  {
+    "id": "5",
+    "file": "page70_05.png",
+    "arabic_text": "تُقَٰتِلُ",
+    "without_diacritics": "تقتل",
+    "pron_ru": "тукъаатилу",
+    "pron_latin": "tuqātilu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
+  },
+  {
+    "id": "6",
+    "file": "page70_06.png",
+    "arabic_text": "مِن رِّزْقࣲ",
+    "without_diacritics": "من رزقࣲ",
+    "pron_ru": "мин рризкъࣲ",
+    "pron_latin": "min rrizqࣲ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "idgham_nun",
+      "istila",
+      "ra"
+    ]
+  },
+  {
+    "id": "7",
+    "file": "page70_07.png",
+    "arabic_text": "لَهُمْ ثِيَابࣱ",
+    "without_diacritics": "لهم ثيابࣱ",
+    "pron_ru": "лахум сииаабࣱ",
+    "pron_latin": "lahum thīābࣱ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "8",
+    "file": "page70_08.png",
+    "arabic_text": "قُلِ ٱللَّهُمَّ",
+    "without_diacritics": "قل ٱللهم",
+    "pron_ru": "къули лллахумма",
+    "pron_latin": "quli lllahumma",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "ghunnah_shadda",
+      "istila",
+      "lam_allah"
+    ]
+  },
+  {
+    "id": "9",
+    "file": "page70_09.png",
+    "arabic_text": "ٱلْمُزَّمِّلُ",
+    "without_diacritics": "ٱلمزمل",
+    "pron_ru": "лмуззаммилу",
+    "pron_latin": "lmuzzammilu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "ghunnah_shadda"
+    ]
+  },
+  {
+    "id": "10",
+    "file": "page70_10.png",
+    "arabic_text": "عَذْبࣱ فُرَاتࣱ",
+    "without_diacritics": "عذبࣱ فراتࣱ",
+    "pron_ru": "ъазбࣱ фураатࣱ",
+    "pron_latin": "ʿadhbࣱ furātࣱ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ikhfa_nun",
+      "ra"
+    ]
+  },
+  {
+    "id": "11",
+    "file": "page70_11.png",
+    "arabic_text": "الْمَيْمَنَةِ٨",
+    "without_diacritics": "الميمنة٨",
+    "pron_ru": "лмайманати٨",
+    "pron_latin": "lmaymanati٨",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "12",
+    "file": "page70_12.png",
+    "arabic_text": "بَأْسُهُم بَيْنَهُمْ",
+    "without_diacritics": "بأسهم بينهم",
+    "pron_ru": "баъсухум байнахум",
+    "pron_latin": "baʾsuhum baynahum",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "13",
+    "file": "page70_13.png",
+    "arabic_text": "مَن دَسَّٰهَا",
+    "without_diacritics": "من دسها",
+    "pron_ru": "ман дассаахаа",
+    "pron_latin": "man dassāhā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ikhfa_nun"
+    ]
+  },
+  {
+    "id": "14",
+    "file": "page70_14.png",
+    "arabic_text": "إِذَا يَسْرِ٤",
+    "without_diacritics": "إذا يسر٤",
+    "pron_ru": "ъизаа йасри٤",
+    "pron_latin": "ʾidhā yasri٤",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
+  },
+  {
+    "id": "15",
+    "file": "page70_15.png",
+    "arabic_text": "مُحَمَّدٌ",
+    "without_diacritics": "محمد",
+    "pron_ru": "мухаммадун",
+    "pron_latin": "muḥammadun",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda"
+    ]
+  },
+  {
+    "id": "16",
+    "file": "page70_16.png",
+    "arabic_text": "يَوْمُ ٱلْقِيَٰمَةِ٦",
+    "without_diacritics": "يوم ٱلقيمة٦",
+    "pron_ru": "йавму лкъиимати٦",
+    "pron_latin": "yawmu lqīmati٦",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "istila",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "17",
+    "file": "page70_17.png",
+    "arabic_text": "لَئِن لَّمْ",
+    "without_diacritics": "لئن لم",
+    "pron_ru": "лаъин ллам",
+    "pron_latin": "laʾin llam",
+    "status": "checked",
+    "notes": "уточнено: шадда в «لَّمْ»",
+    "rules": [
+      "idgham_nun"
+    ]
+  },
+  {
+    "id": "18",
+    "file": "page70_18.png",
+    "arabic_text": "كَتَبَ ٱللَّهُ",
+    "without_diacritics": "كتب ٱلله",
+    "pron_ru": "катаба лллаху",
+    "pron_latin": "kataba lllahu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "lam_allah"
+    ]
+  },
+  {
+    "id": "19",
+    "file": "page70_19.png",
+    "arabic_text": "مِن نَّفْسࣲ",
+    "without_diacritics": "من نفسࣲ",
+    "pron_ru": "мин ннафсࣲ",
+    "pron_latin": "min nnafsࣲ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "idgham_nun"
+    ]
+  },
+  {
+    "id": "20",
+    "file": "page70_20.png",
+    "arabic_text": "وَأَطَعْنَا",
+    "without_diacritics": "وأطعنا",
+    "pron_ru": "ваъатаънаа",
+    "pron_latin": "waʾaṭaʿnā",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "istila"
+    ]
+  },
+  {
+    "id": "21",
+    "file": "page70_21.png",
+    "arabic_text": "وَمِثْلَهُم مَّعَهُمْ",
+    "without_diacritics": "ومثلهم معهم",
+    "pron_ru": "вамислахум ммаъахум",
+    "pron_latin": "wamithlahum mmaʿahum",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "22",
+    "file": "page70_22.png",
+    "arabic_text": "كَلِمَةَۢ بَاقِيَةࣰ",
+    "without_diacritics": "كلمة باقيةࣰ",
+    "pron_ru": "калимата баакъиихࣰ",
+    "pron_latin": "kalimata bāqīhࣰ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun",
+      "istila",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "23",
+    "file": "page70_23.png",
+    "arabic_text": "فَأَثَرْنَ",
+    "without_diacritics": "فأثرن",
+    "pron_ru": "фаъасарна",
+    "pron_latin": "faʾatharna",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
+  },
+  {
+    "id": "24",
+    "file": "page70_24.png",
+    "arabic_text": "لَعَلَّكُمْ تَهْتَدُونَ",
+    "without_diacritics": "لعلكم تهتدون",
+    "pron_ru": "лаъаллакум тахтадууна",
+    "pron_latin": "laʿallakum tahtadūna",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "25",
+    "file": "page70_25.png",
+    "arabic_text": "يَطْمَعُونَ",
+    "without_diacritics": "يطمعون",
+    "pron_ru": "йатмаъууна",
+    "pron_latin": "yaṭmaʿūna",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "istila",
+      "qalqala"
+    ]
+  },
+  {
+    "id": "26",
+    "file": "page70_26.png",
+    "arabic_text": "وَاجِفَةٌ٨",
+    "without_diacritics": "واجفة٨",
+    "pron_ru": "вааджифатун٨",
+    "pron_latin": "wājifatun٨",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "27",
+    "file": "page70_27.png",
+    "arabic_text": "مَلَكࣱ كَرِيمࣱ",
+    "without_diacritics": "ملكࣱ كريمࣱ",
+    "pron_ru": "малакࣱ кариимࣱ",
+    "pron_latin": "malakࣱ karīmࣱ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ikhfa_nun",
+      "ra"
+    ]
+  },
+  {
+    "id": "28",
+    "file": "page70_28.png",
+    "arabic_text": "وَقَالَ أَمْرَهَا",
+    "without_diacritics": "وقال أمرها",
+    "pron_ru": "вакъаала ъамрахаа",
+    "pron_latin": "waqāla ʾamrahā",
+    "status": "checked",
+    "notes": "уточнено: «أَمْرَهَا», не «أَمَرَهَا»",
+    "rules": [
+      "hamza",
+      "istila",
+      "mim_sakin",
+      "ra"
+    ]
+  },
+  {
+    "id": "29",
+    "file": "page70_29.png",
+    "arabic_text": "فَاقِعࣱ لَّوْنُهَا",
+    "without_diacritics": "فاقعࣱ لونها",
+    "pron_ru": "фаакъиъࣱ ллавнухаа",
+    "pron_latin": "fāqiʿࣱ llawnuhā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "idgham_nun",
+      "istila"
+    ]
+  },
+  {
+    "id": "30",
+    "file": "page70_30.png",
+    "arabic_text": "نُمِدُّهُم بِهِ",
+    "without_diacritics": "نمدهم به",
+    "pron_ru": "нумиддухум бихи",
+    "pron_latin": "numidduhum bihi",
+    "status": "edited",
+    "notes": "сверено вручную по изображению",
+    "rules": [
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "31",
+    "file": "page70_31.png",
+    "arabic_text": "بِذِكْرِ ٱللَّهِ",
+    "without_diacritics": "بذكر ٱلله",
+    "pron_ru": "бизикри лллахи",
+    "pron_latin": "bidhikri lllahi",
+    "status": "edited",
+    "notes": "уточнено: окончание «اللَّهِ», не «اللَّهَ»",
+    "rules": [
+      "article",
+      "lam_allah",
+      "ra"
+    ]
+  },
+  {
+    "id": "32",
+    "file": "page70_32.png",
+    "arabic_text": "وَإِنْ خِفْتُمْ",
+    "without_diacritics": "وإن خفتم",
+    "pron_ru": "ваъин хифтум",
+    "pron_latin": "waʾin khiftum",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "istila",
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "33",
+    "file": "page70_33.png",
+    "arabic_text": "لَمْ تَمُتْ",
+    "without_diacritics": "لم تمت",
+    "pron_ru": "лам тамут",
+    "pron_latin": "lam tamut",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "34",
+    "file": "page70_34.png",
+    "arabic_text": "إِنَّكُمْ",
+    "without_diacritics": "إنكم",
+    "pron_ru": "ъиннакум",
+    "pron_latin": "ʾinnakum",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "hamza"
+    ]
+  },
+  {
+    "id": "35",
+    "file": "page70_35.png",
+    "arabic_text": "مِنْ خِلَٰفٍ",
+    "without_diacritics": "من خلف",
+    "pron_ru": "мин хилаафин",
+    "pron_latin": "min khilāfin",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "istila",
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "36",
+    "file": "page70_36.png",
+    "arabic_text": "مِنۢ بَيْنِنَا",
+    "without_diacritics": "من بيننا",
+    "pron_ru": "мин байнинаа",
+    "pron_latin": "min bayninā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun"
+    ]
+  },
+  {
+    "id": "37",
+    "file": "page70_37.png",
+    "arabic_text": "مُرْتَابٌ",
+    "without_diacritics": "مرتاب",
+    "pron_ru": "муртаабун",
+    "pron_latin": "murtābun",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
+  },
+  {
+    "id": "38",
+    "file": "page70_38.png",
+    "arabic_text": "مَن ذَا ٱلَّذِي",
+    "without_diacritics": "من ذا ٱلذي",
+    "pron_ru": "ман заа ллазии",
+    "pron_latin": "man dhā lladhī",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "ikhfa_nun",
+      "madd_article"
+    ]
+  },
+  {
+    "id": "39",
+    "file": "page70_39.png",
+    "arabic_text": "عَلِيمُۢ بِٱلْمُتَّقِينَ",
+    "without_diacritics": "عليم بٱلمتقين",
+    "pron_ru": "ъалииму билмуттакъиина",
+    "pron_latin": "ʿalīmu bilmuttaqīna",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "iqlab_nun",
+      "istila"
+    ]
+  },
+  {
+    "id": "40",
+    "file": "page70_40.png",
+    "arabic_text": "وَعَمَّٰتُكُمْ",
+    "without_diacritics": "وعمتكم",
+    "pron_ru": "ваъаммаатукум",
+    "pron_latin": "waʿammātukum",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda"
+    ]
+  },
+  {
+    "id": "41",
+    "file": "page70_41.png",
+    "arabic_text": "وَعَدَ ٱللَّهُ",
+    "without_diacritics": "وعد ٱلله",
+    "pron_ru": "ваъада лллаху",
+    "pron_latin": "waʿada lllahu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "lam_allah"
+    ]
+  },
+  {
+    "id": "42",
+    "file": "page70_42.png",
+    "arabic_text": "كَمْ لَبِثْتَ",
+    "without_diacritics": "كم لبثت",
+    "pron_ru": "кам лабиста",
+    "pron_latin": "kam labithta",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "43",
+    "file": "page70_43.png",
+    "arabic_text": "فَمِنْهُم مُّهْتَدࣲ",
+    "without_diacritics": "فمنهم مهتدࣲ",
+    "pron_ru": "фаминхум ммухтадࣲ",
+    "pron_latin": "faminhum mmuhtadࣲ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "izhar_nun",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "44",
+    "file": "page70_44.png",
+    "arabic_text": "يَوْمَـِٕذࣲ يَتَذَكَّرُ",
+    "without_diacritics": "يومـذࣲ يتذكر",
+    "pron_ru": "йавмаـизࣲ йатазаккару",
+    "pron_latin": "yawmaـidhࣲ yatadhakkaru",
+    "status": "edited",
+    "notes": "уточнено: «يَتَذَكَّرُ», не «يَذَّكَّرُ»",
+    "rules": [
+      "idgham_nun",
+      "ra"
+    ]
+  },
+  {
+    "id": "45",
+    "file": "page70_45.png",
+    "arabic_text": "وَاقِعُۢ بِهِمْ",
+    "without_diacritics": "واقع بهم",
+    "pron_ru": "ваакъиъу бихим",
+    "pron_latin": "wāqiʿu bihim",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun",
+      "istila"
+    ]
+  },
+  {
+    "id": "46",
+    "file": "page70_46.png",
+    "arabic_text": "لَجَمِيعٌ حَٰذِرُونَ",
+    "without_diacritics": "لجميع حذرون",
+    "pron_ru": "ладжамииъун хаазирууна",
+    "pron_latin": "lajamīʿun ḥādhirūna",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "izhar_nun",
+      "ra"
+    ]
+  },
+  {
+    "id": "47",
+    "file": "page70_47.png",
+    "arabic_text": "غَلَبَتْ",
+    "without_diacritics": "غلبت",
+    "pron_ru": "гъалабат",
+    "pron_latin": "ghalabat",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
+  },
+  {
+    "id": "48",
+    "file": "page70_48.png",
+    "arabic_text": "يُرِيدُ",
+    "without_diacritics": "يريد",
+    "pron_ru": "йурииду",
+    "pron_latin": "yurīdu",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
+  },
+  {
+    "id": "53",
+    "file": "page71_01.png",
+    "arabic_text": "فَتَنفَعَهُ",
+    "without_diacritics": "فتنفعه",
+    "pron_ru": "фатанфаъаху",
+    "pron_latin": "fatanfaʿahu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ikhfa_nun"
+    ]
+  },
+  {
+    "id": "54",
+    "file": "page71_02.png",
+    "arabic_text": "أُمِرْتُ",
+    "without_diacritics": "أمرت",
+    "pron_ru": "ъумирту",
+    "pron_latin": "ʾumirtu",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
+  },
+  {
+    "id": "55",
+    "file": "page71_03.png",
+    "arabic_text": "عَذَابࣱ يُخْزِيهِ",
+    "without_diacritics": "عذابࣱ يخزيه",
+    "pron_ru": "ъазаабࣱ йухзиихи",
+    "pron_latin": "ʿadhābࣱ yukhzīhi",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "idgham_nun",
+      "istila"
+    ]
+  },
+  {
+    "id": "56",
+    "file": "page71_04.png",
+    "arabic_text": "نَجَّيْنَٰهُم بِسَحرࣲ",
+    "without_diacritics": "نجينهم بسحرࣲ",
+    "pron_ru": "наджджайнаахум бисахрࣲ",
+    "pron_latin": "najjaynāhum bisaḥrࣲ",
+    "status": "edited",
+    "notes": "сверено вручную по изображению",
+    "rules": [
+      "mim_sakin",
+      "ra"
+    ]
+  },
+  {
+    "id": "57",
+    "file": "page71_05.png",
+    "arabic_text": "لَكُمْ فَتْحࣱ",
+    "without_diacritics": "لكم فتحࣱ",
+    "pron_ru": "лакум фатхࣱ",
+    "pron_latin": "lakum fatḥࣱ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "58",
+    "file": "page71_06.png",
+    "arabic_text": "مِنۢ بَنِي",
+    "without_diacritics": "من بني",
+    "pron_ru": "мин бании",
+    "pron_latin": "min banī",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun"
+    ]
+  },
+  {
+    "id": "59",
+    "file": "page71_07.png",
+    "arabic_text": "فَضَّلْنَا",
+    "without_diacritics": "فضلنا",
+    "pron_ru": "фаддалнаа",
+    "pron_latin": "faḍḍalnā",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
+  },
+  {
+    "id": "60",
+    "file": "page71_08.png",
+    "arabic_text": "بِعِلْمِ ٱللَّهِ",
+    "without_diacritics": "بعلم ٱلله",
+    "pron_ru": "биъилми лллахи",
+    "pron_latin": "biʿilmi lllahi",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "lam_allah"
+    ]
+  },
+  {
+    "id": "61",
+    "file": "page71_09.png",
+    "arabic_text": "أَمَنَةࣰ نُّعَاسࣰا",
+    "without_diacritics": "أمنةࣰ نعاسࣰا",
+    "pron_ru": "ъаманахࣰ ннуъаасࣰаа",
+    "pron_latin": "ʾamanahࣰ nnuʿāsࣰā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "hamza",
+      "idgham_nun",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "62",
+    "file": "page71_10.png",
+    "arabic_text": "سَيُجْزَوْنَ",
+    "without_diacritics": "سيجزون",
+    "pron_ru": "сайуджзавна",
+    "pron_latin": "sayujzawna",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "qalqala"
+    ]
+  },
+  {
+    "id": "63",
+    "file": "page71_11.png",
+    "arabic_text": "وَٰحِدَةࣱ١٣",
+    "without_diacritics": "وحدةࣱ١٣",
+    "pron_ru": "ваахидахࣱ١٣",
+    "pron_latin": "wāḥidahࣱ١٣",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "64",
+    "file": "page71_12.png",
+    "arabic_text": "يَنْهَوْنَ",
+    "without_diacritics": "ينهون",
+    "pron_ru": "йанхавна",
+    "pron_latin": "yanhawna",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "65",
+    "file": "page71_13.png",
+    "arabic_text": "لَكُم مَّوْعِدࣰا",
+    "without_diacritics": "لكم موعدࣰا",
+    "pron_ru": "лакум ммавъидࣰаа",
+    "pron_latin": "lakum mmawʿidࣰā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "66",
+    "file": "page71_14.png",
+    "arabic_text": "مِن مَّعِينࣲ",
+    "without_diacritics": "من معينࣲ",
+    "pron_ru": "мин ммаъиинࣲ",
+    "pron_latin": "min mmaʿīnࣲ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "idgham_nun"
+    ]
+  },
+  {
+    "id": "67",
+    "file": "page71_15.png",
+    "arabic_text": "لَفِي خُسْرٍ٢",
+    "without_diacritics": "لفي خسر٢",
+    "pron_ru": "лафии хусрин٢",
+    "pron_latin": "lafī khusrin٢",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "istila",
+      "ra"
+    ]
+  },
+  {
+    "id": "68",
+    "file": "page71_16.png",
+    "arabic_text": "ثَمَٰنِيَةࣱ١٧",
+    "without_diacritics": "ثمنيةࣱ١٧",
+    "pron_ru": "самааниихࣱ١٧",
+    "pron_latin": "thamānīhࣱ١٧",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "69",
+    "file": "page71_17.png",
+    "arabic_text": "جَزَاءَۢ بِمَا كَانُوا۟",
+    "without_diacritics": "جزاء بما كانوا",
+    "pron_ru": "джазааъа бимаа каанууаа",
+    "pron_latin": "jazāʾa bimā kānūā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "iqlab_nun",
+      "silent"
+    ]
+  },
+  {
+    "id": "70",
+    "file": "page71_18.png",
+    "arabic_text": "أَصَابَهَا",
+    "without_diacritics": "أصابها",
+    "pron_ru": "ъасаабахаа",
+    "pron_latin": "ʾaṣābahā",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "istila"
+    ]
+  },
+  {
+    "id": "71",
+    "file": "page71_19.png",
+    "arabic_text": "مَكَانِۢ بَعِيدࣲ",
+    "without_diacritics": "مكان بعيدࣲ",
+    "pron_ru": "макаани баъиидࣲ",
+    "pron_latin": "makāni baʿīdࣲ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun"
+    ]
+  },
+  {
+    "id": "72",
+    "file": "page71_20.png",
+    "arabic_text": "لِمَن شِئْتَ",
+    "without_diacritics": "لمن شئت",
+    "pron_ru": "лиман шиъта",
+    "pron_latin": "liman shiʾta",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ikhfa_nun"
+    ]
+  },
+  {
+    "id": "73",
+    "file": "page71_21.png",
+    "arabic_text": "حَكِيمٌ عَلِيمࣱ",
+    "without_diacritics": "حكيم عليمࣱ",
+    "pron_ru": "хакиимун ъалиимࣱ",
+    "pron_latin": "ḥakīmun ʿalīmࣱ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "74",
+    "file": "page71_22.png",
+    "arabic_text": "بَأْسُهُم بَيْنَهُمْ",
+    "without_diacritics": "بأسهم بينهم",
+    "pron_ru": "баъсухум байнахум",
+    "pron_latin": "baʾsuhum baynahum",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "75",
+    "file": "page71_23.png",
+    "arabic_text": "سُبْحَٰنَكَ ٱللَّهُمَّ",
+    "without_diacritics": "سبحنك ٱللهم",
+    "pron_ru": "субхаанака лллахумма",
+    "pron_latin": "subḥānaka lllahumma",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "ghunnah_shadda",
+      "lam_allah",
+      "qalqala"
+    ]
+  },
+  {
+    "id": "76",
+    "file": "page71_24.png",
+    "arabic_text": "مَا شَهِدْنَا",
+    "without_diacritics": "ما شهدنا",
+    "pron_ru": "маа шахиднаа",
+    "pron_latin": "mā shahidnā",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "qalqala"
+    ]
+  },
+  {
+    "id": "77",
+    "file": "page71_25.png",
+    "arabic_text": "تَعْرِفُ",
+    "without_diacritics": "تعرف",
+    "pron_ru": "таърифу",
+    "pron_latin": "taʿrifu",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
+  },
+  {
+    "id": "78",
+    "file": "page71_26.png",
+    "arabic_text": "ٱلْوَاقِعَةُ١٥",
+    "without_diacritics": "ٱلواقعة١٥",
+    "pron_ru": "лваакъиъату١٥",
+    "pron_latin": "lwāqiʿatu١٥",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "istila",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "79",
+    "file": "page71_27.png",
+    "arabic_text": "عَلَيْكُم بِٱلْحَقِّ",
+    "without_diacritics": "عليكم بٱلحق",
+    "pron_ru": "ъалайкум билхакъкъи",
+    "pron_latin": "ʿalaykum bilḥaqqi",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "istila",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "80",
+    "file": "page71_28.png",
+    "arabic_text": "تَحِيَّةࣰ وَسَلَٰمًا",
+    "without_diacritics": "تحيةࣰ وسلما",
+    "pron_ru": "тахиихࣰ васалааманаа",
+    "pron_latin": "taḥīhࣰ wasalāmanā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "idgham_nun",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "81",
+    "file": "page71_29.png",
+    "arabic_text": "ءَايَٰتِۢ بَيِّنَٰتࣲ",
+    "without_diacritics": "ءايت بينتࣲ",
+    "pron_ru": "ъаайаати баййинаатࣲ",
+    "pron_latin": "ʾāyāti bayyinātࣲ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "iqlab_nun"
+    ]
+  },
+  {
+    "id": "82",
+    "file": "page71_30.png",
+    "arabic_text": "فَأَنجَيْنَٰكُمْ",
+    "without_diacritics": "فأنجينكم",
+    "pron_ru": "фаъанджайнаакум",
+    "pron_latin": "faʾanjaynākum",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ikhfa_nun"
+    ]
+  },
+  {
+    "id": "83",
+    "file": "page71_31.png",
+    "arabic_text": "فَبَشِّرْهُ",
+    "without_diacritics": "فبشره",
+    "pron_ru": "фабашширху",
+    "pron_latin": "fabashshirhu",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ra"
+    ]
+  },
+  {
+    "id": "84",
+    "file": "page71_32.png",
+    "arabic_text": "خَشِيَ",
+    "without_diacritics": "خشي",
+    "pron_ru": "хашийа",
+    "pron_latin": "khashiya",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "istila"
+    ]
+  },
+  {
+    "id": "85",
+    "file": "page71_33.png",
+    "arabic_text": "وَنَطْبَعُ",
+    "without_diacritics": "ونطبع",
+    "pron_ru": "ванатбаъу",
+    "pron_latin": "wanaṭbaʿu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "istila",
+      "qalqala"
+    ]
+  },
+  {
+    "id": "86",
+    "file": "page71_34.png",
+    "arabic_text": "بِإِذْنِ ٱللَّهِ",
+    "without_diacritics": "بإذن ٱلله",
+    "pron_ru": "биъизни лллахи",
+    "pron_latin": "biʾidhni lllahi",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "hamza",
+      "lam_allah"
+    ]
+  },
+  {
+    "id": "87",
+    "file": "page71_35.png",
+    "arabic_text": "مُخْتَلِفٌ أَلْوَٰنُهُ",
+    "without_diacritics": "مختلف ألونه",
+    "pron_ru": "мухталифун ъалваануху",
+    "pron_latin": "mukhtalifun ʾalwānuhu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "istila",
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "88",
+    "file": "page71_36.png",
+    "arabic_text": "يُمَتِّعْكُم مَّتَٰعًا",
+    "without_diacritics": "يمتعكم متعا",
+    "pron_ru": "йуматтиъкум мматааъанаа",
+    "pron_latin": "yumattiʿkum mmatāʿanā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "89",
+    "file": "page71_37.png",
+    "arabic_text": "يُبَيِّن لَّنَا",
+    "without_diacritics": "يبين لنا",
+    "pron_ru": "йубаййин лланаа",
+    "pron_latin": "yubayyin llanā",
+    "status": "edited",
+    "notes": "уточнено: «يُبَيِّنُ لَنَا», не «يُبَيِّن لَّنَا»",
+    "rules": [
+      "idgham_nun"
+    ]
+  },
+  {
+    "id": "90",
+    "file": "page71_38.png",
+    "arabic_text": "هُم مُّحْسِنُونَ",
+    "without_diacritics": "هم محسنون",
+    "pron_ru": "хум ммухсинууна",
+    "pron_latin": "hum mmuḥsinūna",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "mim_sakin"
+    ]
+  },
+  {
+    "id": "91",
+    "file": "page71_39.png",
+    "arabic_text": "مَنۢ بَعَثَنَا",
+    "without_diacritics": "من بعثنا",
+    "pron_ru": "ман баъасанаа",
+    "pron_latin": "man baʿathanā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun"
+    ]
+  },
+  {
+    "id": "92",
+    "file": "page71_40.png",
+    "arabic_text": "أَرْسَلْنَا",
+    "without_diacritics": "أرسلنا",
+    "pron_ru": "ъарсалнаа",
+    "pron_latin": "ʾarsalnā",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ra"
+    ]
+  },
+  {
+    "id": "93",
+    "file": "page71_41.png",
+    "arabic_text": "أَنزَلَ ٱللَّهُ",
+    "without_diacritics": "أنزل ٱلله",
+    "pron_ru": "ъанзала лллаху",
+    "pron_latin": "ʾanzala lllahu",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "hamza",
+      "ikhfa_nun",
+      "lam_allah"
+    ]
+  },
+  {
+    "id": "94",
+    "file": "page71_42.png",
+    "arabic_text": "سَمَّيْتُهَا",
+    "without_diacritics": "سميتها",
+    "pron_ru": "саммайтухаа",
+    "pron_latin": "sammaytuhā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda"
+    ]
+  },
+  {
+    "id": "95",
+    "file": "page71_43.png",
+    "arabic_text": "ءَاذَنتُكُمْ",
+    "without_diacritics": "ءاذنتكم",
+    "pron_ru": "ъаазантукум",
+    "pron_latin": "ʾādhantukum",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "hamza",
+      "ikhfa_nun"
+    ]
+  },
+  {
+    "id": "96",
+    "file": "page71_44.png",
+    "arabic_text": "لَطِيفُۢ بِعِبَادِهِ",
+    "without_diacritics": "لطيف بعباده",
+    "pron_ru": "латиифу биъибаадихи",
+    "pron_latin": "laṭīfu biʿibādihi",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "iqlab_nun",
+      "istila"
+    ]
+  },
+  {
+    "id": "97",
+    "file": "page71_45.png",
+    "arabic_text": "ٱلْعَاجِلَةَ٢٠",
+    "without_diacritics": "ٱلعاجلة٢٠",
+    "pron_ru": "лъааджилата٢٠",
+    "pron_latin": "lʿājilata٢٠",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "article",
+      "ta_marbuta"
+    ]
+  },
+  {
+    "id": "98",
+    "file": "page71_46.png",
+    "arabic_text": "وَتَنْحِتُونَ",
+    "without_diacritics": "وتنحتون",
+    "pron_ru": "ватанхитууна",
+    "pron_latin": "watanḥitūna",
+    "status": "checked",
+    "notes": "",
+    "rules": [
+      "izhar_nun"
+    ]
+  },
+  {
+    "id": "99",
+    "file": "page71_47.png",
+    "arabic_text": "ءَامَنَّا",
+    "without_diacritics": "ءامنا",
+    "pron_ru": "ъааманнаа",
+    "pron_latin": "ʾāmannā",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "hamza"
+    ]
+  },
+  {
+    "id": "100",
+    "file": "page71_48.png",
+    "arabic_text": "شِهَابࣱ مُّبِينࣱ",
+    "without_diacritics": "شهابࣱ مبينࣱ",
+    "pron_ru": "шихаабࣱ ммубиинࣱ",
+    "pron_latin": "shihābࣱ mmubīnࣱ",
+    "status": "edited",
+    "notes": "",
+    "rules": [
+      "ghunnah_shadda",
+      "idgham_nun"
+    ]
+  }
+]

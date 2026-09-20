@@ -134,6 +134,30 @@ function validateQuestionPayload(
     if (!accepted.length || accepted.some((v) => !String(v || '').trim())) return 'question_invalid';
     return null;
   }
+  if (type === 'letter_grid') {
+    const letters = Array.isArray(payload.letters) ? payload.letters : [];
+    const correct = Array.isArray(payload.correct_letters) ? payload.correct_letters : [];
+    if (letters.length < 4) return 'question_invalid';
+    if (!correct.length) return 'question_invalid';
+    const set = new Set(letters.map((v) => String(v || '').trim()).filter(Boolean));
+    if (set.size !== letters.length) return 'question_invalid';
+    if (correct.some((v) => !set.has(String(v || '').trim()))) return 'question_invalid';
+    return null;
+  }
+  if (type === 'rule_choice') {
+    const options = Array.isArray(payload.options) ? payload.options : [];
+    const correctList = Array.isArray(payload.correct_rule_ids)
+      ? payload.correct_rule_ids
+      : payload.correct_rule_id
+        ? [payload.correct_rule_id]
+        : [];
+    if (!String(payload.word || '').trim()) return 'question_invalid';
+    if (options.length < 2) return 'question_invalid';
+    if (!correctList.length) return 'question_invalid';
+    const ids = new Set(options.map((o) => String((o as Record<string, unknown>)?.id || '')));
+    if (correctList.some((id) => !ids.has(String(id || '')))) return 'question_invalid';
+    return null;
+  }
   // Unknown future types: accept if prompt exists.
   return null;
 }
@@ -315,6 +339,25 @@ function formatAnswerLabel(
       .map((o) => String((o as Record<string, unknown>).label ?? ''));
     return labels.length ? labels.join(', ') : ids.join(', ') || '—';
   }
+  if (type === 'letter_grid') {
+    const letters = Array.isArray(answerPayload.letters)
+      ? (answerPayload.letters as unknown[]).map(String).filter(Boolean)
+      : [];
+    return letters.length ? letters.join(' · ') : '—';
+  }
+  if (type === 'rule_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const ids = Array.isArray(answerPayload.rule_ids)
+      ? (answerPayload.rule_ids as unknown[]).map(String)
+      : answerPayload.rule_id
+        ? [String(answerPayload.rule_id)]
+        : [];
+    const labels = ids
+      .map((id) => options.find((o) => String(o.id) === id))
+      .filter(Boolean)
+      .map((o) => String((o as Record<string, unknown>).label ?? ''));
+    return labels.length ? labels.join(' · ') : ids.join(' · ') || '—';
+  }
   if (type === 'free_text') return String(answerPayload.text || '—');
   return 'ответ';
 }
@@ -343,6 +386,25 @@ function formatCorrectLabel(q: Record<string, unknown> | null) {
       .filter(Boolean)
       .map((o) => String((o as Record<string, unknown>).label ?? ''));
     return labels.length ? labels.join(', ') : '—';
+  }
+  if (type === 'letter_grid') {
+    const letters = Array.isArray(payload.correct_letters)
+      ? (payload.correct_letters as unknown[]).map(String).filter(Boolean)
+      : [];
+    return letters.length ? letters.join(' · ') : '—';
+  }
+  if (type === 'rule_choice') {
+    const options = Array.isArray(payload.options) ? (payload.options as Array<Record<string, unknown>>) : [];
+    const ids = Array.isArray(payload.correct_rule_ids)
+      ? (payload.correct_rule_ids as unknown[]).map(String)
+      : payload.correct_rule_id
+        ? [String(payload.correct_rule_id)]
+        : [];
+    const labels = ids
+      .map((id) => options.find((o) => String(o.id) === id))
+      .filter(Boolean)
+      .map((o) => String((o as Record<string, unknown>).label ?? ''));
+    return labels.length ? labels.join(' · ') : ids.join(' · ') || '—';
   }
   return '—';
 }

@@ -26,6 +26,7 @@
   let draftText = '';
   let renderedQuestionKey = '';
   let lastSyncKey = '';
+  let letterGridState = null;
 
   let lastResultsKey = '';
   let resultsHtml = '';
@@ -175,6 +176,101 @@
       }
       return;
     }
+    if (q.type === 'letter_grid' && window.AcademyZahetTask1?.renderLetterGrid) {
+      const Z = window.AcademyZahetTask1;
+      if (!letterGridState || letterGridState.questionKey !== questionDomKey()) {
+        letterGridState = {
+          questionKey: questionDomKey(),
+          selected: Array.isArray(selectedAnswer?.letters) ? selectedAnswer.letters.slice() : [],
+          confirmed: Boolean(selectedAnswer?.letters?.length && selectedAnswer._confirmed),
+        };
+      }
+      Z.renderLetterGrid(playBody, q, {
+        locked: locked || Boolean(myAnswer),
+        selected: letterGridState.selected,
+        confirmed: letterGridState.confirmed,
+      });
+      playBody.onclick = (event) => {
+        if (myAnswer || locked || session?.status === 'paused') return;
+        const cell = event.target.closest('[data-letter]');
+        if (cell && !letterGridState.confirmed) {
+          const L = cell.getAttribute('data-letter');
+          const set = new Set(letterGridState.selected);
+          if (set.has(L)) set.delete(L);
+          else set.add(L);
+          letterGridState.selected = [...set];
+          selectedAnswer = null;
+          Z.renderLetterGrid(playBody, q, {
+            locked: false,
+            selected: letterGridState.selected,
+            confirmed: false,
+          });
+          submitBtn.disabled = true;
+          return;
+        }
+        if (event.target.closest('[data-letter-clear]') && !letterGridState.confirmed) {
+          letterGridState.selected = [];
+          selectedAnswer = null;
+          Z.renderLetterGrid(playBody, q, { locked: false, selected: [], confirmed: false });
+          submitBtn.disabled = true;
+          return;
+        }
+        if (event.target.closest('[data-letter-confirm]')) {
+          if (!letterGridState.selected.length) return;
+          letterGridState.confirmed = true;
+          selectedAnswer = { letters: letterGridState.selected.slice(), _confirmed: true };
+          Z.renderLetterGrid(playBody, q, {
+            locked: false,
+            selected: letterGridState.selected,
+            confirmed: true,
+          });
+          submitBtn.disabled = false;
+          submitBtn.hidden = false;
+        }
+        if (event.target.closest('[data-letter-edit]')) {
+          letterGridState.confirmed = false;
+          selectedAnswer = null;
+          Z.renderLetterGrid(playBody, q, {
+            locked: false,
+            selected: letterGridState.selected,
+            confirmed: false,
+          });
+          submitBtn.disabled = true;
+        }
+      };
+      submitBtn.hidden = locked;
+      submitBtn.disabled = locked || Boolean(myAnswer) || !letterGridState.confirmed;
+      return;
+    }
+    if (q.type === 'rule_choice' && window.AcademyZahetTask2?.renderRuleChoice) {
+      const Z = window.AcademyZahetTask2;
+      const selected = Array.isArray(selectedAnswer?.rule_ids)
+        ? selectedAnswer.rule_ids.slice()
+        : selectedAnswer?.rule_id
+          ? [selectedAnswer.rule_id]
+          : [];
+      Z.renderRuleChoice(playBody, q, {
+        locked: locked || Boolean(myAnswer),
+        selected,
+      });
+      playBody.onclick = (event) => {
+        if (myAnswer || locked || session?.status === 'paused') return;
+        const btn = event.target.closest('[data-rule]');
+        if (!btn) return;
+        const id = btn.getAttribute('data-rule');
+        const current = Array.isArray(selectedAnswer?.rule_ids) ? selectedAnswer.rule_ids : [];
+        const set = new Set(current);
+        if (set.has(id)) set.delete(id);
+        else set.add(id);
+        selectedAnswer = { rule_ids: [...set] };
+        Z.renderRuleChoice(playBody, q, { locked: false, selected: selectedAnswer.rule_ids });
+        submitBtn.disabled = !selectedAnswer.rule_ids.length;
+        submitBtn.hidden = false;
+      };
+      submitBtn.hidden = locked;
+      submitBtn.disabled = locked || Boolean(myAnswer) || !selected.length;
+      return;
+    }
     playBody.innerHTML = `<p class="academy-muted">Этот тип вопроса пока недоступен. Подождите следующий.</p>`;
     submitBtn.hidden = true;
   }
@@ -191,6 +287,22 @@
     }
     if (q.type === 'short_text' && Array.isArray(p.accepted) && p.accepted.length) {
       return `Правильные ответы: ${p.accepted.join(', ')}`;
+    }
+    if (q.type === 'letter_grid' && Array.isArray(p.correct_letters)) {
+      return `Правильные буквы: ${p.correct_letters.join(' · ')}`;
+    }
+    if (q.type === 'rule_choice') {
+      const ids = Array.isArray(p.correct_rule_ids)
+        ? p.correct_rule_ids
+        : p.correct_rule_id
+          ? [p.correct_rule_id]
+          : [];
+      if (!ids.length) return '';
+      const labels = ids.map((id) => {
+        const opt = (p.options || []).find((o) => String(o.id) === String(id));
+        return opt?.label || id;
+      });
+      return `Правильные правила: ${labels.join(' · ')}`;
     }
     return '';
   }
@@ -228,6 +340,29 @@
         [...playBody.querySelectorAll('[data-tf]')].forEach((b) => {
           const val = b.getAttribute('data-tf') === 'true';
           if (val === q.payload.correct) b.classList.add('academy-btn--primary');
+        });
+      }
+      if (q?.type === 'letter_grid' && Array.isArray(q.payload?.correct_letters)) {
+        const correct = new Set(q.payload.correct_letters.map(String));
+        [...playBody.querySelectorAll('[data-letter]')].forEach((b) => {
+          if (correct.has(b.getAttribute('data-letter'))) {
+            b.classList.add('is-selected', 'academy-letter-cell--ok');
+          }
+        });
+      }
+      if (q?.type === 'rule_choice') {
+        const ids = new Set(
+          (Array.isArray(q.payload?.correct_rule_ids)
+            ? q.payload.correct_rule_ids
+            : q.payload?.correct_rule_id
+              ? [q.payload.correct_rule_id]
+              : []
+          ).map(String),
+        );
+        [...playBody.querySelectorAll('[data-rule]')].forEach((b) => {
+          if (ids.has(b.getAttribute('data-rule'))) {
+            b.classList.add('academy-btn--primary', 'is-selected');
+          }
         });
       }
       return;
@@ -317,6 +452,7 @@
         if (String(session.current_index) !== prevIndex) {
           selectedAnswer = null;
           draftText = '';
+          letterGridState = null;
         } else {
           captureDraft();
         }
@@ -422,6 +558,25 @@
     if (!answer) {
       showError(playError, 'Выберите ответ');
       return;
+    }
+    if (session?.current_question?.type === 'letter_grid') {
+      if (!answer._confirmed || !Array.isArray(answer.letters) || !answer.letters.length) {
+        showError(playError, 'Отметьте буквы и нажмите «Готово».');
+        return;
+      }
+      answer = { letters: answer.letters.slice() };
+    }
+    if (session?.current_question?.type === 'rule_choice') {
+      const ids = Array.isArray(answer?.rule_ids)
+        ? answer.rule_ids
+        : answer?.rule_id
+          ? [answer.rule_id]
+          : [];
+      if (!ids.length) {
+        showError(playError, 'Отметьте хотя бы одно правило.');
+        return;
+      }
+      answer = { rule_ids: ids.map(String) };
     }
     submitBtn.disabled = true;
     try {

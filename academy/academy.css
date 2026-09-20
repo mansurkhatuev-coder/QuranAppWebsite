@@ -248,6 +248,132 @@ body.academy-is-booting {
   pointer-events: none;
 }
 
+.academy-letter-rule {
+  margin: 0.35rem 0 0.25rem;
+  font-weight: 700;
+  font-size: 1.15rem;
+  color: var(--ac-gold, #d4af37);
+}
+
+.academy-letter-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.academy-letter-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.85rem;
+  direction: rtl;
+}
+
+.academy-letter-cell {
+  appearance: none;
+  min-height: 2.75rem;
+  border-radius: 12px;
+  border: 1px solid var(--ac-line, rgba(255, 255, 255, 0.14));
+  background: var(--ac-surface-2, rgba(255, 255, 255, 0.04));
+  color: var(--ac-text, #fff);
+  font-size: 1.35rem;
+  font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
+  line-height: 1.35;
+  padding-block: 0.35rem;
+  cursor: pointer;
+  touch-action: manipulation;
+}
+
+.academy-letter-cell.is-selected {
+  border-color: rgba(212, 175, 106, 0.85);
+  background: rgba(212, 175, 106, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(212, 175, 106, 0.35);
+}
+
+.academy-letter-cell--ok,
+.academy-letter-cell.academy-letter-cell--ok.is-selected {
+  border-color: rgba(110, 190, 130, 0.9);
+  background: rgba(110, 190, 130, 0.22);
+  box-shadow: inset 0 0 0 1px rgba(110, 190, 130, 0.4);
+}
+
+.academy-letter-cell:disabled {
+  opacity: 0.85;
+  cursor: default;
+}
+
+.academy-letter-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.academy-letter-count {
+  margin: 0.25rem 0 0;
+}
+
+.academy-rule-word {
+  margin: 0.35rem 0 1rem;
+  padding: 0.55rem 0.35rem 0.7rem;
+  font-family: 'Scheherazade New', 'Amiri', 'Noto Naskh Arabic', serif;
+  font-size: clamp(1.85rem, 5.5vw, 2.5rem);
+  font-weight: 400;
+  line-height: 2.15;
+  text-align: center;
+  color: var(--ac-text, #fff);
+  overflow: visible;
+  overflow-wrap: normal;
+  word-break: keep-all;
+  white-space: normal;
+}
+
+.academy-rule-word--editor {
+  font-size: 1.55rem;
+  line-height: 2;
+  margin: 0.35rem 0 0.65rem;
+  padding: 0.35rem 0;
+  text-align: start;
+}
+
+.academy-rule-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.92rem;
+}
+
+.academy-rule-choices {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
+}
+
+.academy-rule-choices--many {
+  grid-template-columns: 1fr;
+  max-height: min(55vh, 28rem);
+  overflow: auto;
+  padding-right: 0.15rem;
+}
+
+.academy-rule-choice {
+  min-height: 2.75rem;
+  font-weight: 600;
+  justify-content: flex-start;
+  text-align: start;
+}
+
+.academy-letter-rule {
+  line-height: 1.45;
+}
+
+@media (max-width: 520px) {
+  .academy-letter-grid {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .academy-rule-choices:not(.academy-rule-choices--many) {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* Global fields: stop iOS zoom (<16px) and light-theme system chrome */
 .academy-body input,
 .academy-body select,

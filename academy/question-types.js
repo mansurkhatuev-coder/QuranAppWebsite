@@ -55,6 +55,47 @@
         return list.includes(got);
       },
     },
+    letter_grid: {
+      label: 'Сетка букв',
+      answerShape: 'letters',
+      validatePayload(payload) {
+        const letters = payload?.letters;
+        const correct = payload?.correct_letters;
+        if (!Array.isArray(letters) || letters.length < 4) return 'Нужна сетка букв';
+        if (!Array.isArray(correct) || !correct.length) return 'Нужны верные буквы';
+        return null;
+      },
+      previewScore(payload, answer) {
+        const got = [...new Set((answer?.letters || []).map(String))].sort();
+        const correct = [...new Set((payload?.correct_letters || []).map(String))].sort();
+        return got.length === correct.length && got.every((v, i) => v === correct[i]);
+      },
+    },
+    rule_choice: {
+      label: 'Правила (стр. 68)',
+      answerShape: 'rule_ids',
+      validatePayload(payload) {
+        if (!String(payload?.word || '').trim()) return 'Нужно слово';
+        const options = payload?.options;
+        if (!Array.isArray(options) || options.length < 2) return 'Нужны варианты правил';
+        const correct = Array.isArray(payload?.correct_rule_ids)
+          ? payload.correct_rule_ids
+          : payload?.correct_rule_id
+            ? [payload.correct_rule_id]
+            : [];
+        if (!correct.length) return 'Не указаны верные правила';
+        return null;
+      },
+      previewScore(payload, answer) {
+        const got = [...new Set((answer?.rule_ids || (answer?.rule_id ? [answer.rule_id] : [])).map(String))].sort();
+        const correct = [
+          ...new Set(
+            (payload?.correct_rule_ids || (payload?.correct_rule_id ? [payload.correct_rule_id] : [])).map(String),
+          ),
+        ].sort();
+        return got.length === correct.length && got.every((v, i) => v === correct[i]);
+      },
+    },
   };
 
   function get(type) {

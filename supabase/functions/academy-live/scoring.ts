@@ -50,6 +50,33 @@ export function scoreAnswer(
     return { pending: false, is_correct: ok, score: ok ? points : 0 };
   }
 
+  if (type === 'letter_grid') {
+    const normalizeLetter = (v: unknown) => String(v ?? '').trim();
+    const got = Array.isArray(answer?.letters)
+      ? [...new Set((answer.letters as unknown[]).map(normalizeLetter).filter(Boolean))].sort()
+      : [];
+    const correct = Array.isArray(payload?.correct_letters)
+      ? [...new Set((payload.correct_letters as unknown[]).map(normalizeLetter).filter(Boolean))].sort()
+      : [];
+    const ok = got.length === correct.length && got.every((id, i) => id === correct[i]);
+    return { pending: false, is_correct: ok, score: ok ? points : 0 };
+  }
+
+  if (type === 'rule_choice') {
+    const got = Array.isArray(answer?.rule_ids)
+      ? [...new Set((answer.rule_ids as unknown[]).map(String).filter(Boolean))].sort()
+      : answer?.rule_id
+        ? [String(answer.rule_id)]
+        : [];
+    const correct = Array.isArray(payload?.correct_rule_ids)
+      ? [...new Set((payload.correct_rule_ids as unknown[]).map(String).filter(Boolean))].sort()
+      : payload?.correct_rule_id
+        ? [String(payload.correct_rule_id)]
+        : [];
+    const ok = got.length === correct.length && got.every((id, i) => id === correct[i]);
+    return { pending: false, is_correct: ok, score: ok ? points : 0 };
+  }
+
   if (type === 'free_text') {
     return { pending: true, is_correct: null, score: null };
   }
@@ -67,6 +94,9 @@ export function publicQuestion(
   if (!opts.reveal) {
     delete payload.correct_option_id;
     delete payload.correct_option_ids;
+    delete payload.correct_letters;
+    delete payload.correct_rule_id;
+    delete payload.correct_rule_ids;
     delete payload.correct;
     delete payload.accepted;
     if (Array.isArray(payload.options)) {

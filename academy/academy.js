@@ -57,6 +57,8 @@
   let accessToken = '';
   let questionDrafts = [];
   let pendingStartLesson = null;
+  let zahetDescription = '';
+  let reportCache = null;
   let historyCache = [];
   let lessonsCache = [];
   let selectedCourse = null;
@@ -346,6 +348,49 @@
     reportCard.hidden = true;
     document.body.classList.remove('academy-modal-open');
     showError(reportError, '');
+    reportCache = null;
+    const csvBtn = document.getElementById('btn-export-csv');
+    if (csvBtn) csvBtn.hidden = true;
+  }
+
+  function csvEscape(value) {
+    const text = String(value ?? '');
+    if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+  }
+
+  function downloadReportCsv() {
+    if (!reportCache?.rows?.length) return;
+    const { title, code, rows, questions } = reportCache;
+    const qHeaders = (questions || []).map((q, i) => `В${i + 1}`);
+    const header = ['Имя', 'Верно', 'Всего', '%', ...qHeaders];
+    const lines = [header.map(csvEscape).join(',')];
+    rows.forEach((person) => {
+      const byIdx = new Map((person.answers || []).map((a) => [Number(a.question_index), a]));
+      const cells = (questions || []).map((_, i) => {
+        const a = byIdx.get(i);
+        if (!a) return '';
+        if (a.is_correct === true) return '1';
+        if (a.is_correct === false) return '0';
+        return a.answer_label === 'нет ответа' ? '' : '?';
+      });
+      const pct =
+        person.total > 0 ? Math.round((100 * person.correct) / person.total) : '';
+      lines.push(
+        [person.name, person.correct, person.total, pct, ...cells].map(csvEscape).join(',')
+      );
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    const safeTitle = String(title || 'otchet')
+      .replace(/[^\wа-яёА-ЯЁ0-9\-]+/gi, '_')
+      .slice(0, 40);
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeTitle}_${code || 'session'}_${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function renderPersonReport(row) {
@@ -384,6 +429,9 @@
       : 'Загрузка…';
     reportStats.hidden = true;
     reportList.innerHTML = '<li class="academy-muted">Загрузка…</li>';
+    reportCache = null;
+    const csvBtn = document.getElementById('btn-export-csv');
+    if (csvBtn) csvBtn.hidden = true;
 
     try {
       const data = await A.callLive('results', { session_id: sessionId }, { accessToken });
@@ -438,6 +486,13 @@
       reportList.innerHTML = rows.length
         ? rows.map((r) => renderPersonReport(r)).join('')
         : '<li class="academy-muted">В этом занятии ещё нет учеников</li>';
+      reportCache = {
+        title: item?.lesson_title || 'Отчёт',
+        code: item?.code || '',
+        rows,
+        questions,
+      };
+      if (csvBtn) csvBtn.hidden = !rows.length;
     } catch (err) {
       reportList.innerHTML = '';
       showError(reportError, friendly(err, 'Не удалось открыть отчёт'));
@@ -669,7 +724,34 @@
             : '';
         return `<div class="academy-card academy-editor-block">
           <strong>Вопрос ${idx + 1}</strong>
-          <label class="academy-field-gap">Тип
+          ${
+            q.type === 'letter_grid'
+              ? `<p class="academy-kicker academy-field-gap">Сетка букв · ${A.escapeHtml(
+                  q.letterPayload?.rule_title || 'правило'
+                )}</p>
+          <label class="academy-field-gap">Текст вопроса
+            <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
+          </label>
+          <p class="academy-muted">Верные буквы: ${A.escapeHtml(
+            (q.letterPayload?.correct_letters || []).join(' · ')
+          )} · ${Number(q.points) || 2.5} балла</p>`
+              : q.type === 'rule_choice'
+                ? `<p class="academy-kicker academy-field-gap">Слово → правило</p>
+          <p class="academy-rule-word academy-rule-word--editor" lang="ar" dir="rtl">${A.escapeHtml(
+            q.rulePayload?.word || ''
+          )}</p>
+          <label class="academy-field-gap">Текст вопроса
+            <input data-q="${idx}" class="q-prompt" value="${A.escapeHtml(q.prompt)}" required />
+          </label>
+          <p class="academy-muted">Верно: ${A.escapeHtml(
+            (q.rulePayload?.correct_rule_ids || [])
+              .map(
+                (id) =>
+                  (q.rulePayload?.options || []).find((o) => o.id === id)?.label || id
+              )
+              .join(' · ') || '—'
+          )} · ${Number(q.points) || 1.5} балла</p>`
+              : `<label class="academy-field-gap">Тип
             <select data-q="${idx}" class="q-type">
               <option value="single_choice" ${q.type === 'single_choice' ? 'selected' : ''}>Один из вариантов</option>
               <option value="true_false" ${q.type === 'true_false' ? 'selected' : ''}>Верно / неверно</option>
@@ -695,6 +777,7 @@
             <input data-q="${idx}" class="q-accepted" value="${A.escapeHtml(q.accepted)}" placeholder="4|четыре" />
           </label>`
               : ''
+          }`
           }
           <div class="academy-actions">
             <button type="button" class="academy-btn academy-btn--ghost" data-del="${idx}">Удалить вопрос</button>
@@ -708,7 +791,7 @@
     questionDrafts.forEach((q, idx) => {
       const typeEl = questionsEditor.querySelector(`.q-type[data-q="${idx}"]`);
       const promptEl = questionsEditor.querySelector(`.q-prompt[data-q="${idx}"]`);
-      if (typeEl) q.type = typeEl.value;
+      if (typeEl && q.type !== 'letter_grid' && q.type !== 'rule_choice') q.type = typeEl.value;
       if (promptEl) q.prompt = promptEl.value;
       if (q.type === 'single_choice') {
         questionsEditor.querySelectorAll(`.opt-label[data-q="${idx}"]`).forEach((el) => {
@@ -733,6 +816,7 @@
     setTab('lessons');
     startCard.hidden = true;
     questionDrafts = [defaultQuestion(), defaultQuestion(), defaultQuestion()];
+    zahetDescription = '';
     editorCard.hidden = false;
     document.getElementById('lesson-title').value = '';
     renderQuestionEditor();
@@ -773,6 +857,51 @@
           position,
         };
       }
+      if (q.type === 'letter_grid') {
+        const payload = q.letterPayload || {};
+        const letters = Array.isArray(payload.letters) ? payload.letters : [];
+        const correct = Array.isArray(payload.correct_letters) ? payload.correct_letters : [];
+        if (letters.length < 4 || !correct.length) {
+          throw new Error(`Проверьте сетку букв в вопросе ${position + 1}`);
+        }
+        return {
+          type: 'letter_grid',
+          prompt: q.prompt.trim(),
+          payload: {
+            rule_id: payload.rule_id,
+            rule_title: payload.rule_title,
+            letters,
+            correct_letters: correct,
+            confirm_label: payload.confirm_label || 'Готово',
+          },
+          scoring: { method: 'auto', points: Number(q.points) || 2.5 },
+          position,
+        };
+      }
+      if (q.type === 'rule_choice') {
+        const payload = q.rulePayload || {};
+        const options = Array.isArray(payload.options) ? payload.options : [];
+        const correct = Array.isArray(payload.correct_rule_ids)
+          ? payload.correct_rule_ids.map(String)
+          : payload.correct_rule_id
+            ? [String(payload.correct_rule_id)]
+            : [];
+        if (!String(payload.word || '').trim() || !correct.length) {
+          throw new Error(`Проверьте слово и правила в вопросе ${position + 1}`);
+        }
+        return {
+          type: 'rule_choice',
+          prompt: q.prompt.trim(),
+          payload: {
+            word: payload.word,
+            word_id: payload.word_id,
+            options,
+            correct_rule_ids: correct,
+          },
+          scoring: { method: 'auto', points: Number(q.points) || 1.5 },
+          position,
+        };
+      }
       const accepted = String(q.accepted || '')
         .split('|')
         .map((s) => s.trim())
@@ -793,7 +922,7 @@
         title,
         subject,
         level: 'beginner',
-        description: '',
+        description: zahetDescription || '',
         questions: rows,
       },
       { accessToken }
@@ -803,25 +932,57 @@
   }
 
   async function startSession(lessonId, settings) {
+    const reveal = settings?.reveal_answers === 'after_question' ? 'after_question' : 'never';
     const data = await A.callLive(
       'create',
       {
         lesson_id: lessonId,
         settings: {
-          mode: 'quiz',
+          mode: settings?.mode === 'exam' ? 'exam' : 'quiz',
           timer_seconds: Number(settings?.timer_seconds || 0),
           auto_advance: settings?.auto_advance !== false,
           auto_advance_on_all: settings?.auto_advance_on_all !== false,
           show_instant_feedback: false,
           leaderboard: false,
-          allow_late_join: true,
-          reveal_answers: 'after_question',
+          allow_late_join: settings?.allow_late_join !== false,
+          reveal_answers: reveal,
         },
       },
       { accessToken }
     );
     if (!data?.session?.id) throw new Error(friendly(data?.error, 'Не удалось запустить урок'));
     location.href = `./session/?id=${encodeURIComponent(data.session.id)}`;
+  }
+
+  function applyStartPreset(preset) {
+    const lateJoin = document.getElementById('start-late-join');
+    const reveal = document.getElementById('start-reveal');
+    const timer = document.getElementById('start-timer');
+    const auto = document.getElementById('start-auto');
+    const autoAll = document.getElementById('start-auto-all');
+    const hint = document.getElementById('start-preset-hint');
+    if (preset === 'exam') {
+      if (lateJoin) lateJoin.checked = false;
+      if (reveal) reveal.checked = false;
+      if (timer && timer.value === '30') timer.value = '60';
+      if (auto) auto.checked = false;
+      if (autoAll) autoAll.checked = true;
+      if (hint) {
+        hint.textContent =
+          'Зачёт: опоздавших не пускаем, разбор ученикам не показываем, на проекторе только «ответил / думает».';
+      }
+    } else {
+      if (lateJoin) lateJoin.checked = true;
+      if (reveal) reveal.checked = true;
+      if (hint) {
+        hint.textContent =
+          'Урок: ответы можно показать ученикам. Зачёт: без подсказок на проекторе и без опоздавших.';
+      }
+    }
+  }
+
+  function looksLikeExamTitle(title) {
+    return /зач[её]т|экзамен|контрол/i.test(String(title || ''));
   }
 
   function renderHubPicker(lessons) {
@@ -930,6 +1091,10 @@
     editorCard.hidden = true;
     pendingStartLesson = lesson;
     startLessonTitle.textContent = lesson?.title || 'Урок';
+    const presetEl = document.getElementById('start-preset');
+    const exam = looksLikeExamTitle(lesson?.title);
+    if (presetEl) presetEl.value = exam ? 'exam' : 'lesson';
+    applyStartPreset(exam ? 'exam' : 'lesson');
     startCard.hidden = false;
     showError(startError, '');
     startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1096,6 +1261,10 @@
     });
 
     document.getElementById('btn-close-report').addEventListener('click', closeReport);
+    document.getElementById('btn-export-csv')?.addEventListener('click', downloadReportCsv);
+    document.getElementById('start-preset')?.addEventListener('change', (event) => {
+      applyStartPreset(event.target.value === 'exam' ? 'exam' : 'lesson');
+    });
     reportCard.addEventListener('click', (event) => {
       if (event.target.closest('[data-close-report]')) closeReport();
     });
@@ -1131,6 +1300,51 @@
       syncDraftsFromDom();
       questionDrafts.push(defaultQuestion());
       renderQuestionEditor();
+    });
+
+    document.getElementById('btn-zahet-task1')?.addEventListener('click', () => {
+      const Z = window.AcademyZahetTask1;
+      if (!Z?.lessonDraft) {
+        showError(editorError, 'Модуль задания 1 не загружен. Обновите страницу.');
+        return;
+      }
+      const draft = Z.lessonDraft();
+      document.getElementById('lesson-title').value = draft.title;
+      document.getElementById('lesson-subject').value = draft.subject || 'quran';
+      zahetDescription = String(draft.description || '');
+      questionDrafts = (draft.questions || []).map((q) => ({
+        type: 'letter_grid',
+        prompt: q.prompt,
+        letterPayload: q.payload,
+        points: q.scoring?.points || 2.5,
+      }));
+      renderQuestionEditor();
+      showError(editorError, '');
+      showError(appStatus, 'Вставлено задание 1: 4 правила нуна (10 баллов). Проверьте и сохраните урок.');
+    });
+
+    document.getElementById('btn-zahet-task2')?.addEventListener('click', () => {
+      const Z = window.AcademyZahetTask2;
+      if (!Z?.lessonDraft) {
+        showError(editorError, 'Модуль задания 2 не загружен. Обновите страницу.');
+        return;
+      }
+      const draft = Z.lessonDraft();
+      document.getElementById('lesson-title').value = draft.title;
+      document.getElementById('lesson-subject').value = draft.subject || 'quran';
+      zahetDescription = String(draft.description || '');
+      questionDrafts = (draft.questions || []).map((q) => ({
+        type: 'rule_choice',
+        prompt: q.prompt,
+        rulePayload: q.payload,
+        points: q.scoring?.points || 1.5,
+      }));
+      renderQuestionEditor();
+      showError(editorError, '');
+      showError(
+        appStatus,
+        'Вставлено задание 2: 12 слов → правила стр. 68 (18 баллов). Можно нажать ещё раз для другого набора.',
+      );
     });
 
     questionsEditor.addEventListener('change', (event) => {
@@ -1225,9 +1439,14 @@
       if (submitBtn) submitBtn.disabled = true;
       try {
         await startSession(pendingStartLesson.id, {
+          mode: document.getElementById('start-preset')?.value === 'exam' ? 'exam' : 'quiz',
           timer_seconds: Number(document.getElementById('start-timer').value),
           auto_advance: document.getElementById('start-auto').checked,
           auto_advance_on_all: document.getElementById('start-auto-all').checked,
+          allow_late_join: document.getElementById('start-late-join')?.checked !== false,
+          reveal_answers: document.getElementById('start-reveal')?.checked
+            ? 'after_question'
+            : 'never',
         });
       } catch (err) {
         showError(startError, friendly(err, 'Не удалось запустить урок'));
