@@ -5,6 +5,12 @@
   const appView = document.getElementById('app-view');
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
+  const loginStatus = document.getElementById('login-status');
+  const bootOverlay = document.getElementById('academy-boot-overlay');
+  const bootText = document.getElementById('academy-boot-text');
+  const loginSubmit = document.getElementById('login-submit');
+  const loginEmail = document.getElementById('login-email');
+  const loginPassword = document.getElementById('login-password');
   const appError = document.getElementById('app-error');
   const appStatus = document.getElementById('app-status');
   const teacherHello = document.getElementById('teacher-hello');
@@ -94,6 +100,35 @@
   function setLoggedIn(on) {
     loginView.hidden = on;
     appView.hidden = !on;
+  }
+
+  function setLoginBusy(busy, message) {
+    const label = message || (busy ? 'Вход…' : '');
+    if (loginSubmit) {
+      loginSubmit.disabled = busy;
+      loginSubmit.textContent = busy ? 'Подождите…' : 'Войти';
+      loginSubmit.setAttribute('aria-busy', busy ? 'true' : 'false');
+    }
+    if (loginForm) loginForm.classList.toggle('is-busy', busy);
+    // Keep values visible: readonly, not disabled (disabled password often looks empty).
+    if (loginEmail) loginEmail.readOnly = busy;
+    if (loginPassword) loginPassword.readOnly = busy;
+    if (loginStatus) {
+      if (busy && label) {
+        loginStatus.hidden = false;
+        loginStatus.innerHTML = `<span class="academy-boot-spinner" style="width:1rem;height:1rem;border-width:2px" aria-hidden="true"></span><span>${A.escapeHtml(
+          label
+        )}</span>`;
+      } else {
+        loginStatus.hidden = true;
+        loginStatus.textContent = '';
+      }
+    }
+    if (bootOverlay) {
+      bootOverlay.hidden = !busy;
+      if (bootText) bootText.textContent = label || 'Загрузка…';
+    }
+    document.body.classList.toggle('academy-is-booting', busy);
   }
 
   function setTab(tab) {
@@ -931,32 +966,38 @@
       return;
     }
     const client = A.getClient();
+    setLoginBusy(true, 'Проверка сессии…');
     const { data: authData } = await client.auth.getSession();
     if (authData?.session) {
       try {
+        setLoginBusy(true, 'Загрузка кабинета…');
         await bootApp(client, authData.session);
+        setLoginBusy(false);
       } catch (err) {
+        setLoginBusy(false);
         setLoggedIn(false);
         showError(loginError, friendly(err, 'Не удалось войти.'));
       }
+    } else {
+      setLoginBusy(false);
     }
 
     loginForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       showError(loginError, '');
-      const email = document.getElementById('login-email').value.trim();
-      const password = document.getElementById('login-password').value;
-      const submit = document.getElementById('login-submit');
-      submit.disabled = true;
+      const email = loginEmail.value.trim();
+      const password = loginPassword.value;
+      setLoginBusy(true, 'Вход…');
       try {
         const { data, error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        setLoginBusy(true, 'Загрузка кабинета…');
         await bootApp(client, data.session);
+        setLoginBusy(false);
       } catch (err) {
+        setLoginBusy(false);
         showError(loginError, friendly(err, 'Не удалось войти'));
         setLoggedIn(false);
-      } finally {
-        submit.disabled = false;
       }
     });
 

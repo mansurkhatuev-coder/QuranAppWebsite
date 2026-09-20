@@ -20,6 +20,9 @@
   const recoveryOk = document.getElementById('recovery-ok');
   const recoverySubmit = document.getElementById('recovery-submit');
   const tabs = document.querySelector('.q-auth-tabs');
+  const authStatus = document.getElementById('auth-status');
+  const bootOverlay = document.getElementById('academy-boot-overlay');
+  const bootText = document.getElementById('academy-boot-text');
 
   const token = A.resolveHubToken();
   if (token) backHub.href = '/q/?t=' + encodeURIComponent(token);
@@ -37,6 +40,40 @@
     okEl.hidden = !message;
     okEl.textContent = message || '';
     if (message) errorEl.hidden = true;
+  }
+
+  function setAuthBusy(busy, message) {
+    const label = message || (busy ? 'Вход…' : '');
+    const idleLabel = mode === 'register' ? 'Зарегистрироваться' : 'Войти';
+    if (submitBtn) {
+      submitBtn.disabled = busy;
+      submitBtn.textContent = busy ? 'Подождите…' : idleLabel;
+      submitBtn.setAttribute('aria-busy', busy ? 'true' : 'false');
+    }
+    if (form) form.classList.toggle('is-busy', busy);
+    if (nameInput) nameInput.readOnly = busy;
+    if (emailInput) emailInput.readOnly = busy;
+    if (passwordInput) passwordInput.readOnly = busy;
+    if (toggleBtn) toggleBtn.disabled = busy;
+    if (recoverBtn) recoverBtn.disabled = busy || mode === 'register' || recoveryMode;
+    if (tabLogin) tabLogin.disabled = busy;
+    if (tabRegister) tabRegister.disabled = busy;
+    if (authStatus) {
+      if (busy && label) {
+        authStatus.hidden = false;
+        authStatus.innerHTML = `<span class="academy-boot-spinner" style="width:1rem;height:1rem;border-width:2px" aria-hidden="true"></span><span>${A.escapeHtml(
+          label
+        )}</span>`;
+      } else {
+        authStatus.hidden = true;
+        authStatus.textContent = '';
+      }
+    }
+    if (bootOverlay) {
+      bootOverlay.hidden = !busy;
+      if (bootText) bootText.textContent = label || 'Загрузка…';
+    }
+    document.body.classList.toggle('academy-is-booting', busy);
   }
 
   function showRecoveryError(message) {
@@ -188,7 +225,7 @@
     const client = A.getStudentClient();
     const email = emailInput.value.trim();
     const password = passwordInput.value;
-    submitBtn.disabled = true;
+    setAuthBusy(true, mode === 'register' ? 'Регистрация…' : 'Вход…');
     try {
       if (mode === 'register') {
         const displayName = nameInput.value.trim();
@@ -199,10 +236,12 @@
         });
         if (error) throw error;
         if (!data.session) {
+          setAuthBusy(false);
           showOk('Проверьте почту и подтвердите email, затем войдите.');
           setMode('login');
           return;
         }
+        setAuthBusy(true, 'Сохраняем профиль…');
         await A.callLive(
           'ensure_student',
           { display_name: displayName },
@@ -211,18 +250,19 @@
       } else {
         const { data, error } = await client.auth.signInWithPassword({ email, password });
         if (error) throw error;
+        setAuthBusy(true, 'Загрузка…');
         await A.callLive(
           'ensure_student',
           { display_name: data.user?.user_metadata?.display_name || '' },
           { accessToken: data.session.access_token }
         );
       }
+      setAuthBusy(true, 'Переход…');
       if (token) location.href = '/q/?t=' + encodeURIComponent(token);
       else location.href = '/q/cabinet/';
     } catch (err) {
+      setAuthBusy(false);
       showError(A.humanizeError(err?.message || err, 'Не удалось войти.'));
-    } finally {
-      submitBtn.disabled = false;
     }
   });
 
@@ -239,11 +279,15 @@
       return;
     }
 
+    setAuthBusy(true, 'Проверка сессии…');
     const { data } = await client.auth.getSession();
     if (data?.session && !recoveryMode) {
+      setAuthBusy(true, 'Переход…');
       if (token) location.replace('/q/?t=' + encodeURIComponent(token));
       else location.replace('/q/cabinet/');
+      return;
     }
+    setAuthBusy(false);
   }
 
   setMode('login');
