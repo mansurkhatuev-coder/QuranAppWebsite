@@ -25,6 +25,7 @@
   const playFeedback = document.getElementById('play-feedback');
   const playError = document.getElementById('play-error');
   const submitBtn = document.getElementById('btn-submit-answer');
+  const skipBtn = document.getElementById('btn-skip-question');
   const nextBtn = document.getElementById('btn-next-question');
   const autoNextToggle = document.getElementById('toggle-auto-next');
   const resultTitle = document.getElementById('result-title');
@@ -560,8 +561,14 @@
     renderQuestion(q, locked);
     submitBtn.hidden = locked;
     submitBtn.disabled = locked;
+    if (skipBtn) {
+      skipBtn.hidden = locked;
+      skipBtn.disabled = locked;
+    }
     nextBtn.hidden = !pendingNext || Boolean(autoNextToggle?.checked);
-    if (myAnswer && myAnswer.is_correct === true) {
+    if (myAnswer && myAnswer.answer_payload?.skipped) {
+      showError(playFeedback, 'Пропущено');
+    } else if (myAnswer && myAnswer.is_correct === true) {
       showError(playFeedback, 'Верно');
     } else if (myAnswer && myAnswer.is_correct === false) {
       showError(playFeedback, 'Ошибка — смотрите правильный разбор в итоге');
@@ -801,6 +808,7 @@
     }
     const submittedIndex = Number(session.current_index) || 0;
     submitBtn.disabled = true;
+    if (skipBtn) skipBtn.disabled = true;
     try {
       const data = await A.callLive(
         'async_submit',
@@ -817,6 +825,36 @@
       if (!recovered) {
         showError(playError, friendly(err, 'Не удалось отправить ответ.'));
         submitBtn.disabled = false;
+        if (skipBtn) skipBtn.disabled = false;
+      }
+    }
+  });
+
+  skipBtn?.addEventListener('click', async () => {
+    showError(playError, '');
+    if (myAnswer || pendingNext) return;
+    const ok = window.confirm('Пропустить этот вопрос?\nБалл за него не будет засчитан.');
+    if (!ok) return;
+    const submittedIndex = Number(session?.current_index) || 0;
+    submitBtn.disabled = true;
+    skipBtn.disabled = true;
+    try {
+      const data = await A.callLive(
+        'async_submit',
+        {
+          resume_token: resumeToken,
+          question_index: submittedIndex,
+          answer: { skipped: true },
+        },
+        { timeoutMs: 30000 }
+      );
+      await applySubmitResult(data);
+    } catch (err) {
+      const recovered = await recoverAfterSubmitFailure(submittedIndex, err);
+      if (!recovered) {
+        showError(playError, friendly(err, 'Не удалось пропустить вопрос.'));
+        submitBtn.disabled = false;
+        skipBtn.disabled = false;
       }
     }
   });

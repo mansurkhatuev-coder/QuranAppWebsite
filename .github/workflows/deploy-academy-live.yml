@@ -15,6 +15,7 @@ on:
       - cursor/academy-dedupe-auto-next-37e8
       - cursor/academy-zahet-task1-37e8
       - cursor/academy-cabinet-zahet-37e8
+      - cursor/academy-skip-question-37e8
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml
