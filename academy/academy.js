@@ -59,6 +59,7 @@
   let pendingStartLesson = null;
   let zahetDescription = '';
   let reportCache = null;
+  let reportSessionId = '';
   let historyCache = [];
   let lessonsCache = [];
   let selectedCourse = null;
@@ -338,7 +339,12 @@
         } уч. · ${A.escapeHtml(percentLabel(h.score.correct, h.score.total))}</div>
             <div class="academy-muted academy-history-names">${studentsLine}</div>
           </div>
-          <button type="button" class="academy-btn" data-report="${A.escapeHtml(h.id)}">Отчёт</button>
+          <div class="academy-actions academy-actions--compact">
+            <button type="button" class="academy-btn" data-report="${A.escapeHtml(h.id)}">Отчёт</button>
+            <button type="button" class="academy-btn academy-btn--ghost" data-delete-report="${A.escapeHtml(
+              h.id
+            )}">Удалить</button>
+          </div>
         </li>`;
       })
       .join('');
@@ -349,8 +355,11 @@
     document.body.classList.remove('academy-modal-open');
     showError(reportError, '');
     reportCache = null;
+    reportSessionId = '';
     const csvBtn = document.getElementById('btn-export-csv');
     if (csvBtn) csvBtn.hidden = true;
+    const delBtn = document.getElementById('btn-delete-report');
+    if (delBtn) delBtn.hidden = true;
   }
 
   function csvEscape(value) {
@@ -423,6 +432,7 @@
     showError(reportError, '');
     reportCard.hidden = false;
     document.body.classList.add('academy-modal-open');
+    reportSessionId = sessionId;
     reportTitle.textContent = item?.lesson_title || 'Отчёт';
     reportMeta.textContent = item
       ? `${formatDate(item.finished_at || item.started_at)} · код ${item.code}`
@@ -432,6 +442,8 @@
     reportCache = null;
     const csvBtn = document.getElementById('btn-export-csv');
     if (csvBtn) csvBtn.hidden = true;
+    const delBtn = document.getElementById('btn-delete-report');
+    if (delBtn) delBtn.hidden = false;
 
     try {
       const data = await A.callLive('results', { session_id: sessionId }, { accessToken });
@@ -1068,9 +1080,12 @@
               names
             )}</div>
           </div>
-          <div>
+          <div class="academy-actions academy-actions--compact">
             <span class="academy-muted">${A.escapeHtml(pct)}</span>
             <button type="button" class="academy-btn academy-btn--ghost" data-report="${A.escapeHtml(row.id)}">Отчёт</button>
+            <button type="button" class="academy-btn academy-btn--ghost" data-delete-report="${A.escapeHtml(
+              row.id
+            )}">Удалить</button>
           </div>
         </li>`;
       })
@@ -1084,6 +1099,50 @@
     }
     const data = await A.callLive('hub_reports', { hub_id: hubCache.id }, { accessToken });
     renderHubReports(data.runs || []);
+  }
+
+  async function refreshReportsAfterDelete() {
+    const client = A.getClient();
+    const { data } = await client.auth.getSession();
+    if (!data?.session) return setLoggedIn(false);
+    accessToken = data.session.access_token;
+    const history = await loadFinishedSessions(client);
+    renderHistory(history);
+    renderSummary({
+      lessons: lessonsCache,
+      active: await loadActiveSessions(client).catch(() => []),
+      history,
+    });
+    if (hubCache?.id) {
+      try {
+        await loadHubReports();
+      } catch (_) {
+        /* hub reports optional */
+      }
+    }
+  }
+
+  async function deleteReport(sessionId, opts) {
+    const id = String(sessionId || '').trim();
+    if (!id) return false;
+    const fromModal = Boolean(opts?.fromModal);
+    const ok = window.confirm(
+      'Удалить этот отчёт?\nДанные прохождения учеников восстановить будет нельзя.'
+    );
+    if (!ok) return false;
+
+    const { data } = await A.getClient().auth.getSession();
+    if (!data?.session) {
+      setLoggedIn(false);
+      return false;
+    }
+    accessToken = data.session.access_token;
+
+    await A.callLive('delete_report', { session_id: id }, { accessToken });
+    if (fromModal || reportSessionId === id) closeReport();
+    await refreshReportsAfterDelete();
+    showError(appStatus, 'Отчёт удалён.');
+    return true;
   }
 
   function openStartSettings(lesson) {
@@ -1247,6 +1306,21 @@
     });
 
     hubReportsList?.addEventListener('click', async (event) => {
+      const delBtn = event.target.closest('[data-delete-report]');
+      if (delBtn) {
+        const { data } = await client.auth.getSession();
+        if (!data?.session) return setLoggedIn(false);
+        accessToken = data.session.access_token;
+        delBtn.disabled = true;
+        try {
+          await deleteReport(delBtn.getAttribute('data-delete-report'));
+        } catch (err) {
+          showError(hubError, friendly(err, 'Не удалось удалить отчёт.'));
+        } finally {
+          delBtn.disabled = false;
+        }
+        return;
+      }
       const btn = event.target.closest('[data-report]');
       if (!btn) return;
       const { data } = await client.auth.getSession();
@@ -1262,6 +1336,18 @@
 
     document.getElementById('btn-close-report').addEventListener('click', closeReport);
     document.getElementById('btn-export-csv')?.addEventListener('click', downloadReportCsv);
+    document.getElementById('btn-delete-report')?.addEventListener('click', async () => {
+      if (!reportSessionId) return;
+      const btn = document.getElementById('btn-delete-report');
+      if (btn) btn.disabled = true;
+      try {
+        await deleteReport(reportSessionId, { fromModal: true });
+      } catch (err) {
+        showError(reportError, friendly(err, 'Не удалось удалить отчёт.'));
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
     document.getElementById('start-preset')?.addEventListener('change', (event) => {
       applyStartPreset(event.target.value === 'exam' ? 'exam' : 'lesson');
     });
@@ -1273,6 +1359,21 @@
     });
 
     historyList.addEventListener('click', async (event) => {
+      const delBtn = event.target.closest('[data-delete-report]');
+      if (delBtn) {
+        const { data } = await client.auth.getSession();
+        if (!data?.session) return setLoggedIn(false);
+        accessToken = data.session.access_token;
+        delBtn.disabled = true;
+        try {
+          await deleteReport(delBtn.getAttribute('data-delete-report'));
+        } catch (err) {
+          showError(appError, friendly(err, 'Не удалось удалить отчёт.'));
+        } finally {
+          delBtn.disabled = false;
+        }
+        return;
+      }
       const btn = event.target.closest('[data-report]');
       if (!btn) return;
       const { data } = await client.auth.getSession();

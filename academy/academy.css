@@ -464,6 +464,12 @@ body.academy-is-booting {
   margin-top: 1rem;
 }
 
+.academy-actions--compact {
+  margin-top: 0;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .academy-hub-group {
   display: grid;
   gap: 0.4rem;
