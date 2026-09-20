@@ -14,7 +14,7 @@
 1. SQL `academy_*` (additive) — применена
 2. Bootstrap учителей из `auth.users` — через workflow deploy
 3. Edge Function `academy-live` (create/join/resume/control/submit/host_state/results/heartbeat + hub/async)
-4. Редактор: задание 1 (`letter_grid`, буквы нуна) + задание 2 (`rule_choice`, мультивыбор правил со стр. 68)
+4. Редактор: **Зачёт №3** одним уроком (`letter_grid` нуна + `rule_choice` стр. 68)
 5. Публичный набор домашних (`academy_public_hubs`) + self-paced `/q/`
 6. Режим запуска **Зачёт (строго)** + CSV
 7. Банк слов задания 2: `data/zahet-task2-words.json` (96 слов с автотегами правил урока 26)
@@ -42,7 +42,7 @@ node scripts/create-academy-teacher.mjs \
 
 ## Зачёт: как запускать
 
-1. Создайте урок («+ Зачёт №3 · задание 1» или свой набор)
+1. Создайте урок («+ Зачёт №3» — оба задания сразу, или свой набор)
 2. **Запустить** → режим **Зачёт (строго)** (подставляется сам, если в названии есть «Зачёт»)
 3. После занятия: **Отчёты → Отчёт → Скачать CSV**
 
