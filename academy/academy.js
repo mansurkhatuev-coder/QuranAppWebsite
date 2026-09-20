@@ -1106,13 +1106,13 @@
     const { data } = await client.auth.getSession();
     if (!data?.session) return setLoggedIn(false);
     accessToken = data.session.access_token;
-    const history = await loadFinishedSessions(client);
+    const [lessons, active, history] = await Promise.all([
+      Promise.resolve(lessonsCache),
+      loadActiveSessions(client).catch(() => []),
+      loadFinishedSessions(client),
+    ]);
     renderHistory(history);
-    renderSummary({
-      lessons: lessonsCache,
-      active: await loadActiveSessions(client).catch(() => []),
-      history,
-    });
+    renderSummary({ lessons, active, history });
     if (hubCache?.id) {
       try {
         await loadHubReports();
