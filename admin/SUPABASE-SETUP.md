@@ -101,6 +101,8 @@ on conflict (user_id) do update
 4. Проверка: откройте `https://waydean.ru/academy/` → вход тем email/паролем → кабинет без ошибки про `academy_teachers`.
 5. Ученик: `https://waydean.ru/join/` (live join через Edge Functions — следующим шагом).
 
+Для **отдельного** учителя медресе (не общий админский аккаунт): шаблон SQL `website/admin/supabase-create-academy-teacher.sql` или скрипт `website/scripts/create-academy-teacher.mjs` (см. `website/academy/README.md`).
+
 **Table Editor** после миграции: `academy_teachers`, `academy_lessons`, `academy_questions`, `academy_sessions`, `academy_participants`, `academy_answers` (+ org stubs).
 
 Если нужна вкладка аналитики «Сторы · скачивания»:

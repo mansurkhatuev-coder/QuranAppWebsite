@@ -123,6 +123,16 @@
             <p class="academy-muted" id="start-lesson-title">—</p>
             <form id="start-form" class="academy-form academy-start-settings">
               <label>
+                Режим
+                <select id="start-preset">
+                  <option value="lesson" selected>Обычный урок</option>
+                  <option value="exam">Зачёт (строго)</option>
+                </select>
+              </label>
+              <p class="academy-muted" id="start-preset-hint">
+                Урок: ответы можно показать ученикам. Зачёт: без подсказок на проекторе и без опоздавших.
+              </p>
+              <label>
                 Таймер на вопрос
                 <select id="start-timer">
                   <option value="20">20 секунд</option>
@@ -140,6 +150,14 @@
               <label class="academy-check">
                 <input id="start-auto-all" type="checkbox" checked />
                 <span>Переходить сразу, когда ответили все</span>
+              </label>
+              <label class="academy-check">
+                <input id="start-late-join" type="checkbox" checked />
+                <span>Пускать опоздавших после старта</span>
+              </label>
+              <label class="academy-check">
+                <input id="start-reveal" type="checkbox" checked />
+                <span>Показывать разбор ученикам (и на проекторе)</span>
               </label>
               <div class="academy-actions">
                 <button type="submit" class="academy-btn academy-btn--primary">Запустить</button>
@@ -246,7 +264,10 @@
             <p class="academy-question-prompt" id="report-title">—</p>
             <p class="academy-muted" id="report-meta">—</p>
           </div>
-          <button type="button" class="academy-btn academy-btn--ghost" id="btn-close-report">Закрыть</button>
+          <div class="academy-actions">
+            <button type="button" class="academy-btn" id="btn-export-csv" hidden>Скачать CSV</button>
+            <button type="button" class="academy-btn academy-btn--ghost" id="btn-close-report">Закрыть</button>
+          </div>
         </div>
         <div id="report-stats" class="academy-home-stats academy-home-stats--compact" hidden></div>
         <ul id="report-list" class="academy-board-list"></ul>
@@ -260,6 +281,6 @@
     <script src="./academy-courses.js?v=1"></script>
     <script src="./question-types.js?v=2"></script>
     <script src="./academy-zahet-task1.js?v=1"></script>
-    <script src="./academy.js?v=18"></script>
+    <script src="./academy.js?v=19"></script>
   </body>
 </html>

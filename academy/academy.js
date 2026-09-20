@@ -58,6 +58,7 @@
   let questionDrafts = [];
   let pendingStartLesson = null;
   let zahetDescription = '';
+  let reportCache = null;
   let historyCache = [];
   let lessonsCache = [];
   let selectedCourse = null;
@@ -347,6 +348,49 @@
     reportCard.hidden = true;
     document.body.classList.remove('academy-modal-open');
     showError(reportError, '');
+    reportCache = null;
+    const csvBtn = document.getElementById('btn-export-csv');
+    if (csvBtn) csvBtn.hidden = true;
+  }
+
+  function csvEscape(value) {
+    const text = String(value ?? '');
+    if (/[",\n\r]/.test(text)) return `"${text.replace(/"/g, '""')}"`;
+    return text;
+  }
+
+  function downloadReportCsv() {
+    if (!reportCache?.rows?.length) return;
+    const { title, code, rows, questions } = reportCache;
+    const qHeaders = (questions || []).map((q, i) => `В${i + 1}`);
+    const header = ['Имя', 'Верно', 'Всего', '%', ...qHeaders];
+    const lines = [header.map(csvEscape).join(',')];
+    rows.forEach((person) => {
+      const byIdx = new Map((person.answers || []).map((a) => [Number(a.question_index), a]));
+      const cells = (questions || []).map((_, i) => {
+        const a = byIdx.get(i);
+        if (!a) return '';
+        if (a.is_correct === true) return '1';
+        if (a.is_correct === false) return '0';
+        return a.answer_label === 'нет ответа' ? '' : '?';
+      });
+      const pct =
+        person.total > 0 ? Math.round((100 * person.correct) / person.total) : '';
+      lines.push(
+        [person.name, person.correct, person.total, pct, ...cells].map(csvEscape).join(',')
+      );
+    });
+    const stamp = new Date().toISOString().slice(0, 10);
+    const safeTitle = String(title || 'otchet')
+      .replace(/[^\wа-яёА-ЯЁ0-9\-]+/gi, '_')
+      .slice(0, 40);
+    const blob = new Blob(['\uFEFF' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${safeTitle}_${code || 'session'}_${stamp}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   function renderPersonReport(row) {
@@ -385,6 +429,9 @@
       : 'Загрузка…';
     reportStats.hidden = true;
     reportList.innerHTML = '<li class="academy-muted">Загрузка…</li>';
+    reportCache = null;
+    const csvBtn = document.getElementById('btn-export-csv');
+    if (csvBtn) csvBtn.hidden = true;
 
     try {
       const data = await A.callLive('results', { session_id: sessionId }, { accessToken });
@@ -439,6 +486,13 @@
       reportList.innerHTML = rows.length
         ? rows.map((r) => renderPersonReport(r)).join('')
         : '<li class="academy-muted">В этом занятии ещё нет учеников</li>';
+      reportCache = {
+        title: item?.lesson_title || 'Отчёт',
+        code: item?.code || '',
+        rows,
+        questions,
+      };
+      if (csvBtn) csvBtn.hidden = !rows.length;
     } catch (err) {
       reportList.innerHTML = '';
       showError(reportError, friendly(err, 'Не удалось открыть отчёт'));
@@ -838,25 +892,57 @@
   }
 
   async function startSession(lessonId, settings) {
+    const reveal = settings?.reveal_answers === 'after_question' ? 'after_question' : 'never';
     const data = await A.callLive(
       'create',
       {
         lesson_id: lessonId,
         settings: {
-          mode: 'quiz',
+          mode: settings?.mode === 'exam' ? 'exam' : 'quiz',
           timer_seconds: Number(settings?.timer_seconds || 0),
           auto_advance: settings?.auto_advance !== false,
           auto_advance_on_all: settings?.auto_advance_on_all !== false,
           show_instant_feedback: false,
           leaderboard: false,
-          allow_late_join: true,
-          reveal_answers: 'after_question',
+          allow_late_join: settings?.allow_late_join !== false,
+          reveal_answers: reveal,
         },
       },
       { accessToken }
     );
     if (!data?.session?.id) throw new Error(friendly(data?.error, 'Не удалось запустить урок'));
     location.href = `./session/?id=${encodeURIComponent(data.session.id)}`;
+  }
+
+  function applyStartPreset(preset) {
+    const lateJoin = document.getElementById('start-late-join');
+    const reveal = document.getElementById('start-reveal');
+    const timer = document.getElementById('start-timer');
+    const auto = document.getElementById('start-auto');
+    const autoAll = document.getElementById('start-auto-all');
+    const hint = document.getElementById('start-preset-hint');
+    if (preset === 'exam') {
+      if (lateJoin) lateJoin.checked = false;
+      if (reveal) reveal.checked = false;
+      if (timer && timer.value === '30') timer.value = '60';
+      if (auto) auto.checked = false;
+      if (autoAll) autoAll.checked = true;
+      if (hint) {
+        hint.textContent =
+          'Зачёт: опоздавших не пускаем, разбор ученикам не показываем, на проекторе только «ответил / думает».';
+      }
+    } else {
+      if (lateJoin) lateJoin.checked = true;
+      if (reveal) reveal.checked = true;
+      if (hint) {
+        hint.textContent =
+          'Урок: ответы можно показать ученикам. Зачёт: без подсказок на проекторе и без опоздавших.';
+      }
+    }
+  }
+
+  function looksLikeExamTitle(title) {
+    return /зач[её]т|экзамен|контрол/i.test(String(title || ''));
   }
 
   function renderHubPicker(lessons) {
@@ -965,6 +1051,10 @@
     editorCard.hidden = true;
     pendingStartLesson = lesson;
     startLessonTitle.textContent = lesson?.title || 'Урок';
+    const presetEl = document.getElementById('start-preset');
+    const exam = looksLikeExamTitle(lesson?.title);
+    if (presetEl) presetEl.value = exam ? 'exam' : 'lesson';
+    applyStartPreset(exam ? 'exam' : 'lesson');
     startCard.hidden = false;
     showError(startError, '');
     startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1131,6 +1221,10 @@
     });
 
     document.getElementById('btn-close-report').addEventListener('click', closeReport);
+    document.getElementById('btn-export-csv')?.addEventListener('click', downloadReportCsv);
+    document.getElementById('start-preset')?.addEventListener('change', (event) => {
+      applyStartPreset(event.target.value === 'exam' ? 'exam' : 'lesson');
+    });
     reportCard.addEventListener('click', (event) => {
       if (event.target.closest('[data-close-report]')) closeReport();
     });
@@ -1281,9 +1375,14 @@
       if (submitBtn) submitBtn.disabled = true;
       try {
         await startSession(pendingStartLesson.id, {
+          mode: document.getElementById('start-preset')?.value === 'exam' ? 'exam' : 'quiz',
           timer_seconds: Number(document.getElementById('start-timer').value),
           auto_advance: document.getElementById('start-auto').checked,
           auto_advance_on_all: document.getElementById('start-auto-all').checked,
+          allow_late_join: document.getElementById('start-late-join')?.checked !== false,
+          reveal_answers: document.getElementById('start-reveal')?.checked
+            ? 'after_question'
+            : 'never',
         });
       } catch (err) {
         showError(startError, friendly(err, 'Не удалось запустить урок'));
