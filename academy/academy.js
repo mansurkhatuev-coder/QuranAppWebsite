@@ -204,7 +204,7 @@
       .select('id, title, subject, level, updated_at')
       .order('updated_at', { ascending: false });
     if (error) throw new Error(friendly(error, 'Не удалось загрузить уроки.'));
-    return data || [];
+    return (data || []).filter((lesson) => !/архив/i.test(String(lesson.title || '')));
   }
 
   async function loadActiveSessions(client) {
