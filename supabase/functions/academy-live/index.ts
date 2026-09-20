@@ -266,6 +266,36 @@ async function handleDeleteLesson(
   return json({ ok: true, deleted: lessonId, title: lesson.title });
 }
 
+async function handleDeleteReport(
+  db: SupabaseClient,
+  userId: string,
+  body: Record<string, unknown>,
+) {
+  await requireTeacher(db, userId);
+  const sessionId = String(body.session_id || '').trim();
+  if (!sessionId) return json({ error: 'session_id' }, 400);
+
+  const { data: session } = await db
+    .from('academy_sessions')
+    .select('id, host_user_id, status, phase, code, pacing, lesson_id')
+    .eq('id', sessionId)
+    .maybeSingle();
+  if (!session) return json({ error: 'session_not_found' }, 404);
+  if (!(await canHost(db, sessionId, userId))) return json({ error: 'forbidden' }, 403);
+
+  await db.from('academy_session_hosts').delete().eq('session_id', sessionId);
+  await db.from('academy_answers').delete().eq('session_id', sessionId);
+  await db.from('academy_participants').delete().eq('session_id', sessionId);
+  const { error } = await db.from('academy_sessions').delete().eq('id', sessionId);
+  if (error) return json({ error: 'report_delete_failed', detail: error.message }, 500);
+  return json({
+    ok: true,
+    deleted: sessionId,
+    code: session.code,
+    pacing: session.pacing,
+  });
+}
+
 async function canHost(db: SupabaseClient, sessionId: string, userId: string) {
   const { data: session } = await db
     .from('academy_sessions')
@@ -1339,6 +1369,7 @@ Deno.serve(async (req) => {
         'ensure_teacher',
         'save_lesson',
         'delete_lesson',
+        'delete_report',
         'hub_get',
         'hub_upsert',
         'hub_toggle',
@@ -1358,6 +1389,9 @@ Deno.serve(async (req) => {
       }
       if (action === 'delete_lesson') {
         return await handleDeleteLesson(db, userId, body);
+      }
+      if (action === 'delete_report') {
+        return await handleDeleteReport(db, userId, body);
       }
       if (action === 'hub_get') return await handleHubGet(db, userId, body, deps);
       if (action === 'hub_upsert') return await handleHubUpsert(db, userId, body, deps);

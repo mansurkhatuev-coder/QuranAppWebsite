@@ -17,6 +17,7 @@ on:
       - cursor/academy-cabinet-zahet-37e8
       - cursor/academy-skip-question-37e8
       - cursor/academy-delete-old-zahet-37e8
+      - cursor/academy-delete-report-37e8
     paths:
       - supabase/functions/academy-live/**
       - .github/workflows/deploy-academy-live.yml
