@@ -442,7 +442,7 @@ export async function handleAsyncStart(
       code = deps.randomCode();
       continue;
     }
-    return deps.json({ error: error?.message || 'create_failed' }, 500);
+    return deps.json({ error: 'create_failed' }, 500);
   }
   if (!created) return deps.json({ error: 'code_collision' }, 500);
 
@@ -596,14 +596,81 @@ export async function handleAsyncSubmit(
     .eq('participant_id', participant.id)
     .eq('question_index', questionIndex)
     .maybeSingle();
+
+  async function ensureAdvancedPast(index: number) {
+    const live = await deps.loadSession(db, participant.session_id);
+    if (!live) return { session: null as Record<string, unknown> | null, finished: false };
+    if (String(live.status) === 'finished' || String(live.phase) === 'results') {
+      return { session: live, finished: true };
+    }
+    if (Number(live.current_index) !== index) {
+      return { session: live, finished: false };
+    }
+    const nextIndex = index + 1;
+    const done = nextIndex >= snap.length;
+    const now = new Date();
+    const patch: Record<string, unknown> = {
+      version: Number(live.version) + 1,
+      last_activity_at: now.toISOString(),
+    };
+    if (done) {
+      patch.status = 'finished';
+      patch.phase = 'results';
+      patch.finished_at = now.toISOString();
+      patch.phase_ends_at = null;
+      patch.phase_started_at = null;
+    } else {
+      patch.current_index = nextIndex;
+      patch.phase_started_at = now.toISOString();
+    }
+    const { data: updated } = await db
+      .from('academy_sessions')
+      .update(patch)
+      .eq('id', live.id)
+      .eq('version', live.version)
+      .select('*')
+      .maybeSingle();
+    if (updated) return { session: updated as Record<string, unknown>, finished: done };
+    const again = await deps.loadSession(db, participant.session_id);
+    const finishedAgain =
+      Boolean(again) &&
+      (String(again?.status) === 'finished' || String(again?.phase) === 'results');
+    return { session: again, finished: finishedAgain };
+  }
+
+  function nextPayload(fromIndex: number, finished: boolean) {
+    if (finished) {
+      return { finished: true, next_index: fromIndex, next_question: null as Record<string, unknown> | null };
+    }
+    const nextIndex = fromIndex + 1;
+    if (nextIndex >= snap.length) {
+      return { finished: true, next_index: fromIndex, next_question: null as Record<string, unknown> | null };
+    }
+    const nq = snap[nextIndex] as Record<string, unknown>;
+    return {
+      finished: false,
+      next_index: nextIndex,
+      next_question: publicQuestion(nq, { reveal: false }),
+    };
+  }
+
   if (existing) {
+    const advanced = await ensureAdvancedPast(questionIndex);
+    const finished =
+      advanced.finished ||
+      String(advanced.session?.status) === 'finished' ||
+      String(advanced.session?.phase) === 'results';
+    const cur = Number(advanced.session?.current_index);
+    const payload = nextPayload(questionIndex, finished);
     return deps.json({
       ok: true,
       already: true,
       answer: deps.publicStudentAnswer(existing as Record<string, unknown>, true),
       feedback: { accepted: true, is_correct: existing.is_correct },
-      advanced: false,
-      finished: false,
+      advanced: !payload.finished,
+      finished: payload.finished,
+      next_index: payload.next_index,
+      next_question: payload.next_question,
     });
   }
 
@@ -636,45 +703,37 @@ export async function handleAsyncSubmit(
         .eq('participant_id', participant.id)
         .eq('question_index', questionIndex)
         .maybeSingle();
+      const advanced = await ensureAdvancedPast(questionIndex);
+      const finished =
+        advanced.finished ||
+        String(advanced.session?.status) === 'finished' ||
+        String(advanced.session?.phase) === 'results';
+      const payload = nextPayload(questionIndex, finished);
       return deps.json({
         ok: true,
         already: true,
         answer: deps.publicStudentAnswer(again as Record<string, unknown> | null, true),
         feedback: { accepted: true },
+        advanced: !payload.finished,
+        finished: payload.finished,
+        next_index: payload.next_index,
+        next_question: payload.next_question,
       });
     }
     return deps.json({ error: 'submit_failed' }, 500);
   }
 
-  const nextIndex = questionIndex + 1;
-  const finished = nextIndex >= snap.length;
-  const now = new Date();
-  const patch: Record<string, unknown> = {
-    version: Number(session.version) + 1,
-    last_activity_at: now.toISOString(),
-  };
-  if (finished) {
-    patch.status = 'finished';
-    patch.phase = 'results';
-    patch.finished_at = now.toISOString();
-    patch.phase_ends_at = null;
-    patch.phase_started_at = null;
-  } else {
-    patch.current_index = nextIndex;
-    patch.phase_started_at = now.toISOString();
-  }
+  const advanced = await ensureAdvancedPast(questionIndex);
+  const finished =
+    advanced.finished ||
+    String(advanced.session?.status) === 'finished' ||
+    String(advanced.session?.phase) === 'results';
+  const payload = nextPayload(questionIndex, finished);
 
-  await db.from('academy_sessions').update(patch).eq('id', session.id).eq('version', session.version);
   await db
     .from('academy_participants')
-    .update({ last_seen_at: now.toISOString() })
+    .update({ last_seen_at: new Date().toISOString() })
     .eq('id', participant.id);
-
-  let next_question = null as Record<string, unknown> | null;
-  if (!finished) {
-    const nq = snap[nextIndex] as Record<string, unknown>;
-    next_question = publicQuestion(nq, { reveal: false });
-  }
 
   return deps.json({
     ok: true,
@@ -682,10 +741,10 @@ export async function handleAsyncSubmit(
     feedback: scored.pending
       ? { accepted: true }
       : { accepted: true, is_correct: scored.is_correct },
-    advanced: !finished,
-    finished,
-    next_index: finished ? questionIndex : nextIndex,
-    next_question,
+    advanced: !payload.finished,
+    finished: payload.finished,
+    next_index: payload.next_index,
+    next_question: payload.next_question,
   });
 }
 

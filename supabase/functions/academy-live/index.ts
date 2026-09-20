@@ -1191,6 +1191,11 @@ async function handleResults(db: SupabaseClient, body: Record<string, unknown>, 
     .eq('resume_token_hash', hash)
     .maybeSingle();
   if (!participant || participant.session_id !== sessionId) return json({ error: 'forbidden' }, 403);
+
+  // Students may only see answer keys after the session is finished
+  // (live reveal policy is separate; mid-lesson peeking via results is blocked).
+  if (!finished) return json({ error: 'not_finished' }, 403);
+
   const { data: answers } = await db
     .from('academy_answers')
     .select('question_index, is_correct, score, answer_payload')

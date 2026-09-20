@@ -25,6 +25,7 @@
   let finalResultsKey = '';
   let finalResultsLoading = false;
   let syncingAutoToggle = false;
+  let controlBusy = false;
 
   function showError(message) {
     errorEl.hidden = !message;
@@ -213,21 +214,28 @@
       <div><strong>${formatMs(stats.fastest_ms)}</strong><span>быстрее всех</span></div>
     `;
 
-    const showMark = state.phase === 'reveal' || state.phase === 'results' || state.phase === 'answering';
+    const spoil = state.phase === 'reveal' || state.phase === 'results';
     boardBox.innerHTML = `<ul class="academy-board-list">${board
       .map((row) => {
         let mark = '';
-        if (row.answered && showMark) {
+        if (row.answered && spoil) {
           if (row.is_correct === true) mark = '<span class="academy-pill academy-pill--ok">верно</span>';
           else if (row.is_correct === false) mark = '<span class="academy-pill academy-pill--bad">ошибка</span>';
           else mark = '<span class="academy-pill">принято</span>';
+        } else if (row.answered && state.phase === 'answering') {
+          mark = '<span class="academy-pill">ответил</span>';
         } else if (!row.answered && state.phase === 'answering') {
           mark = '<span class="academy-pill academy-pill--wait">думает…</span>';
         }
+        const detail = !row.answered
+          ? 'ещё не ответил'
+          : spoil
+            ? A.escapeHtml(row.answer_label || '—')
+            : 'ответ принят';
         return `<li>
           <div>
             <strong>${A.escapeHtml(row.display_name)}</strong>
-            <div class="academy-muted">${row.answered ? A.escapeHtml(row.answer_label || '—') : 'ещё не ответил'}</div>
+            <div class="academy-muted">${detail}</div>
           </div>
           <div class="academy-board-meta">
             <span class="academy-time">${row.answered ? formatMs(row.response_ms) : '—'}</span>
@@ -322,8 +330,13 @@
   }
 
   async function control(command, extra) {
-    if (!state) return;
+    if (!state || controlBusy) return;
     showError('');
+    controlBusy = true;
+    btnStart.disabled = true;
+    btnReveal.disabled = true;
+    btnNext.disabled = true;
+    btnFinish.disabled = true;
     try {
       const data = await A.callLive(
         'control',
@@ -342,6 +355,9 @@
         await refresh();
       }
       showError(err.message || String(err));
+    } finally {
+      controlBusy = false;
+      updateButtons();
     }
   }
 

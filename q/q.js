@@ -221,13 +221,20 @@
 
   function updateGuestChrome() {
     guestBanner.hidden = !isGuest || !hub?.is_open;
+    const authHref = '/q/auth/' + (token ? `?t=${encodeURIComponent(token)}` : '');
     if (isGuest) {
       topAuthLink.textContent = 'Войти';
-      topAuthLink.href = '/q/auth/' + (token ? `?t=${encodeURIComponent(token)}` : '');
+      topAuthLink.href = authHref;
     } else {
       topAuthLink.textContent = 'Кабинет';
       topAuthLink.href = '/q/cabinet/';
     }
+    guestBanner?.querySelectorAll('a[href^="/q/auth"]').forEach((a) => {
+      a.setAttribute('href', authHref);
+    });
+    resultCta?.querySelectorAll('a[href^="/q/auth"]').forEach((a) => {
+      a.setAttribute('href', authHref);
+    });
   }
 
   async function refreshStudentAuth() {
@@ -448,6 +455,31 @@
         if (String(session.status) === 'finished' || String(session.phase) === 'results') {
           await showResults();
           return;
+        }
+        // Recover stuck mid-lesson (answered current question but UI has no «Дальше»)
+        if (myAnswer) {
+          try {
+            const again = await A.callLive('async_submit', {
+              resume_token: resumeToken,
+              question_index: Number(session.current_index) || 0,
+              answer: {},
+            });
+            myAnswer = again.answer || myAnswer;
+            if (again.finished) {
+              session = { ...session, status: 'finished', phase: 'results' };
+              A.clearAsyncResume(token, activeLessonId);
+              await showResults();
+              return;
+            }
+            if (again.next_question != null || again.next_index != null) {
+              pendingNext = {
+                next_index: again.next_index,
+                next_question: again.next_question,
+              };
+            }
+          } catch (_) {
+            /* keep current screen */
+          }
         }
         selectedAnswer = null;
         draftText = '';

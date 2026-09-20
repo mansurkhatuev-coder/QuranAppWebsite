@@ -193,21 +193,22 @@
   async function loadFinishedSessions(client) {
     let { data, error } = await client
       .from('academy_sessions')
-      .select('id, code, status, started_at, finished_at, lesson_id, academy_lessons(title, subject)')
+      .select('id, code, status, started_at, finished_at, lesson_id, pacing, academy_lessons(title, subject)')
       .in('status', ['finished', 'abandoned'])
+      .neq('pacing', 'async')
       .order('finished_at', { ascending: false })
       .limit(20);
 
     if (error) {
-      // Fallback if embed is unavailable
+      // Fallback if embed / pacing filter is unavailable
       const plain = await client
         .from('academy_sessions')
-        .select('id, code, status, started_at, finished_at, lesson_id')
+        .select('id, code, status, started_at, finished_at, lesson_id, pacing')
         .in('status', ['finished', 'abandoned'])
         .order('finished_at', { ascending: false })
-        .limit(20);
+        .limit(40);
       if (plain.error) throw new Error(friendly(plain.error, 'Не удалось загрузить историю занятий.'));
-      data = plain.data || [];
+      data = (plain.data || []).filter((s) => String(s.pacing || 'live') !== 'async').slice(0, 20);
       error = null;
       const lessonIds = [...new Set(data.map((r) => r.lesson_id).filter(Boolean))];
       let lessonMap = {};
@@ -779,7 +780,7 @@
           show_instant_feedback: false,
           leaderboard: false,
           allow_late_join: true,
-          reveal_answers: 'never',
+          reveal_answers: 'after_question',
         },
       },
       { accessToken }
