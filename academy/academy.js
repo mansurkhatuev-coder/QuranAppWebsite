@@ -1302,48 +1302,38 @@
       renderQuestionEditor();
     });
 
-    document.getElementById('btn-zahet-task1')?.addEventListener('click', () => {
-      const Z = window.AcademyZahetTask1;
-      if (!Z?.lessonDraft) {
-        showError(editorError, 'Модуль задания 1 не загружен. Обновите страницу.');
+    document.getElementById('btn-zahet-exam')?.addEventListener('click', () => {
+      const Z1 = window.AcademyZahetTask1;
+      const Z2 = window.AcademyZahetTask2;
+      if (!Z1?.examDraft || !Z2?.buildTask2Questions) {
+        showError(editorError, 'Модуль зачёта не загружен. Обновите страницу.');
         return;
       }
-      const draft = Z.lessonDraft();
+      const draft = Z1.examDraft();
       document.getElementById('lesson-title').value = draft.title;
       document.getElementById('lesson-subject').value = draft.subject || 'quran';
       zahetDescription = String(draft.description || '');
-      questionDrafts = (draft.questions || []).map((q) => ({
-        type: 'letter_grid',
-        prompt: q.prompt,
-        letterPayload: q.payload,
-        points: q.scoring?.points || 2.5,
-      }));
-      renderQuestionEditor();
-      showError(editorError, '');
-      showError(appStatus, 'Вставлено задание 1: 4 правила нуна (10 баллов). Проверьте и сохраните урок.');
-    });
-
-    document.getElementById('btn-zahet-task2')?.addEventListener('click', () => {
-      const Z = window.AcademyZahetTask2;
-      if (!Z?.lessonDraft) {
-        showError(editorError, 'Модуль задания 2 не загружен. Обновите страницу.');
-        return;
-      }
-      const draft = Z.lessonDraft();
-      document.getElementById('lesson-title').value = draft.title;
-      document.getElementById('lesson-subject').value = draft.subject || 'quran';
-      zahetDescription = String(draft.description || '');
-      questionDrafts = (draft.questions || []).map((q) => ({
-        type: 'rule_choice',
-        prompt: q.prompt,
-        rulePayload: q.payload,
-        points: q.scoring?.points || 1.5,
-      }));
+      questionDrafts = (draft.questions || []).map((q) => {
+        if (q.type === 'letter_grid') {
+          return {
+            type: 'letter_grid',
+            prompt: q.prompt,
+            letterPayload: q.payload,
+            points: q.scoring?.points || 2.5,
+          };
+        }
+        return {
+          type: 'rule_choice',
+          prompt: q.prompt,
+          rulePayload: q.payload,
+          points: q.scoring?.points || 1.5,
+        };
+      });
       renderQuestionEditor();
       showError(editorError, '');
       showError(
         appStatus,
-        'Вставлено задание 2: 12 слов → правила стр. 68 (18 баллов). Можно нажать ещё раз для другого набора.',
+        `Вставлен Зачёт №3: ${questionDrafts.length} вопросов (нун + правила стр. 68, 28 баллов). Проверьте и сохраните.`,
       );
     });
 

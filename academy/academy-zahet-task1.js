@@ -104,6 +104,22 @@
     };
   }
 
+  /** Full Зачёт №3: задание 1 (нун) + задание 2 (правила стр. 68) as one lesson. */
+  function examDraft() {
+    const part1 = buildTask1Questions({ shuffle: true });
+    const build2 = global.AcademyZahetTask2?.buildTask2Questions;
+    const part2 = typeof build2 === 'function' ? build2({ count: 12, points: 1.5 }) : [];
+    const questions = part1.concat(part2).map((q, position) => ({ ...q, position }));
+    return {
+      title: 'Зачёт №3 — таджвид',
+      subject: 'quran',
+      level: 'beginner',
+      description:
+        'Учебник Медресе 2021, стр. 68–71. Часть 1: буквы сукунированного нуна (10 б.). Часть 2: двенадцать слов → правила стр. 68 (18 б.). Всего 28 баллов.',
+      questions,
+    };
+  }
+
   /** Shared play UI for letter_grid (join + homework). */
   function renderLetterGrid(container, q, state) {
     const locked = Boolean(state?.locked);
@@ -170,6 +186,7 @@
     RULES,
     buildTask1Questions,
     lessonDraft,
+    examDraft,
     renderLetterGrid,
     shuffle,
   };
