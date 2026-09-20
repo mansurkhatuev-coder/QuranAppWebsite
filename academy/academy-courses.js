@@ -15,6 +15,8 @@
 
   function courseKeyFromTitle(title) {
     const t = String(title || '').toLowerCase();
+    // Exams stay outside Тухфа/Муаллим track even if title mentions таджвид.
+    if (/зач[её]т|экзамен|контрол|архив/.test(t)) return 'other';
     if (t.includes('знани')) return 'knowledge';
     if (
       t.includes('тухф') ||
@@ -114,6 +116,9 @@
   function lessonDisplayTitle(lessonOrTitle, courseKey) {
     const title = typeof lessonOrTitle === 'string' ? lessonOrTitle : String(lessonOrTitle?.title || '');
     const key = courseKey || courseKeyFromTitle(title);
+
+    // Keep exam titles intact (do not collapse «Зачёт №3 — таджвид» → «Таджвид»).
+    if (/зач[её]т|экзамен|контрол|архив/i.test(title)) return title;
 
     if (key === 'names99') {
       const range = namesRange(title);
