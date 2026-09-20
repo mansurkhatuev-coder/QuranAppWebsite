@@ -737,7 +737,7 @@ export async function handleHubReports(
       .select('session_id, display_name, status, user_id')
       .in('session_id', ids);
     (people || []).forEach((p) => {
-      if (p.status === 'kicked') return;
+      if (p.status === 'kicked' || p.status === 'left') return;
       if (!peopleBySession[p.session_id]) peopleBySession[p.session_id] = [];
       const name = String(p.display_name || '').trim();
       if (name && !peopleBySession[p.session_id].includes(name)) {

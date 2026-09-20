@@ -177,6 +177,11 @@ a:hover {
   accent-color: var(--ac-gold);
 }
 
+.academy-check--inline {
+  margin: 0.85rem 0 0.35rem;
+  max-width: 28rem;
+}
+
 /* Global fields: stop iOS zoom (<16px) and light-theme system chrome */
 .academy-body input,
 .academy-body select,

@@ -393,6 +393,9 @@
     const name = nameInput.value.trim();
     if (!/^\d{4,8}$/.test(code)) return showError(errorEl, 'Код — от 4 до 8 цифр');
     if (name.length < 2) return showError(errorEl, 'Введите имя');
+    const submit = document.getElementById('join-submit');
+    if (submit?.disabled) return;
+    if (submit) submit.disabled = true;
     const url = new URL(location.href);
     url.searchParams.set('c', code);
     history.replaceState(null, '', url.pathname + '?' + url.searchParams.toString());
@@ -402,6 +405,7 @@
       if (!tickTimer) tickTimer = setInterval(updatePlayTimer, 200);
     } catch (err) {
       showError(errorEl, softError(err.message || err));
+      if (submit) submit.disabled = false;
     }
   });
 
@@ -420,6 +424,8 @@
     lastSyncKey = '';
     codeCard.hidden = false;
     playCard.hidden = true;
+    const submit = document.getElementById('join-submit');
+    if (submit) submit.disabled = false;
   });
 
   async function boot() {

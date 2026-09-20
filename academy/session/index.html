@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="../academy.css?v=7" />
+    <link rel="stylesheet" href="../academy.css?v=13" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -42,6 +42,10 @@
           <p id="question-box" class="academy-question-prompt" hidden></p>
           <div id="options-box" class="academy-host-options-wrap" hidden></div>
           <p id="session-error" class="academy-error" hidden></p>
+          <label class="academy-check academy-check--inline" id="auto-toggle-wrap">
+            <input id="toggle-auto" type="checkbox" />
+            <span>Автодалее (без кнопки «Далее»)</span>
+          </label>
           <div class="academy-actions">
             <button type="button" class="academy-btn academy-btn--primary" id="btn-start">Начать</button>
             <button type="button" class="academy-btn" id="btn-reveal">Показать ответ</button>
@@ -63,7 +67,7 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../admin/supabase-config.js?v=7"></script>
-    <script src="../academy-shared.js?v=5"></script>
-    <script src="./session.js?v=6"></script>
+    <script src="../academy-shared.js?v=6"></script>
+    <script src="./session.js?v=7"></script>
   </body>
 </html>
