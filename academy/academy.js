@@ -986,6 +986,9 @@
     } else {
       if (lateJoin) lateJoin.checked = true;
       if (reveal) reveal.checked = true;
+      if (timer) timer.value = '0';
+      if (auto) auto.checked = true;
+      if (autoAll) autoAll.checked = true;
       if (hint) {
         hint.textContent =
           'Урок: ответы можно показать ученикам. Зачёт: без подсказок на проекторе и без опоздавших.';
