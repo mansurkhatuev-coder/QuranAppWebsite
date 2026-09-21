@@ -9,7 +9,9 @@ import type {
   OrganizationSettings,
   PaymentSchedule,
 } from "@/types/database";
-import { fillContractTemplate, formatScheduleForContract, generateContractPdf } from "@/lib/contract";
+import { fillContractTemplate, formatScheduleForContract } from "@/lib/contract";
+import { BackLink } from "@/components/BackLink";
+import { ContractEditorModal } from "@/components/ContractEditorModal";
 import {
   PaymentConfirmModal,
   type PaymentConfirmValues,
@@ -54,6 +56,10 @@ export function LoanDetail({
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [openingReceipt, setOpeningReceipt] = useState<string | null>(null);
+  const [contractDraft, setContractDraft] = useState<{
+    title: string;
+    body: string;
+  } | null>(null);
 
   const downPayment = Number(loan.down_payment ?? 0);
   const scheduleOnFull = Boolean(loan.schedule_on_full_amount);
@@ -168,7 +174,7 @@ export function LoanDetail({
     ]);
   }
 
-  function printContract() {
+  function openContractEditor() {
     const scheduleText = formatScheduleForContract(
       schedules,
       formatDateShort,
@@ -206,11 +212,15 @@ export function LoanDetail({
       guarantors: guarantorsText,
     });
 
-    generateContractPdf(`Договор_${loan.clients?.full_name ?? "client"}`, body);
+    setContractDraft({
+      title: `Договор_${loan.clients?.full_name ?? "client"}`,
+      body,
+    });
   }
 
   return (
     <div className="space-y-4">
+      <BackLink href="/loans" label="К списку рассрочек" />
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">{loan.clients?.full_name}</h1>
@@ -234,8 +244,8 @@ export function LoanDetail({
           <button type="button" className="btn-secondary" onClick={exportSchedule}>
             Скачать график
           </button>
-          <button type="button" className="btn-primary" onClick={printContract}>
-            Печать договора
+          <button type="button" className="btn-primary" onClick={openContractEditor}>
+            Договор
           </button>
         </div>
       </div>
@@ -461,6 +471,14 @@ export function LoanDetail({
           loanRemaining={loanRemaining}
           onClose={() => setPendingSchedule(null)}
           onConfirm={confirmPayment}
+        />
+      )}
+
+      {contractDraft && (
+        <ContractEditorModal
+          title={contractDraft.title}
+          initialBody={contractDraft.body}
+          onClose={() => setContractDraft(null)}
         />
       )}
     </div>

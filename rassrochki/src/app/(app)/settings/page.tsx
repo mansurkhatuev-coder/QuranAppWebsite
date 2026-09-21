@@ -384,11 +384,11 @@ export default function SettingsPage() {
         <div className="card space-y-3">
           <h2 className="font-semibold">Шаблон договора</h2>
           <p className="text-xs text-[var(--muted)]">
-            Текст договора. При скачивании подставятся данные клиента, суммы, график и
-            поручители. Можно отредактировать под себя.
+            Базовый текст для всех рассрочек. При открытии договора по сделке данные
+            подставятся автоматически — там текст можно ещё разправить перед печатью.
           </p>
           <textarea
-            className="input min-h-64"
+            className="input min-h-64 font-serif text-sm leading-relaxed"
             value={value.contract_template}
             onChange={(e) => setValue({ ...value, contract_template: e.target.value })}
           />
