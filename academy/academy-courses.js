@@ -3,9 +3,10 @@
  * Тухфа + Муаллим = один курс «Таджвид», как в приложении.
  */
 (function (global) {
-  const COURSE_ORDER = ['knowledge', 'tajweed', 'madina', 'names99', 'other'];
+  const COURSE_ORDER = ['assessment', 'knowledge', 'tajweed', 'madina', 'names99', 'other'];
 
   const COURSE_META = {
+    assessment: { label: 'Зачёты', hint: 'Проверка знаний' },
     knowledge: { label: 'Знания', hint: 'Исламская викторина' },
     tajweed: { label: 'Таджвид', hint: 'Тухфа, затем Муаллим — по порядку' },
     madina: { label: 'Мединский арабский', hint: 'Уроки с 1-го по порядку' },
@@ -13,10 +14,14 @@
     other: { label: 'Другие уроки', hint: 'Свои и прочие материалы' },
   };
 
+  function isAssessmentLesson(title) {
+    return /зач[её]т|экзамен|контрол/i.test(String(title || ''));
+  }
+
   function courseKeyFromTitle(title) {
     const t = String(title || '').toLowerCase();
-    // Exams stay outside Тухфа/Муаллим track even if title mentions таджвид.
-    if (/зач[её]т|экзамен|контрол|архив/.test(t)) return 'other';
+    if (isAssessmentLesson(t)) return 'assessment';
+    if (/архив/.test(t)) return 'other';
     if (t.includes('знани')) return 'knowledge';
     if (
       t.includes('тухф') ||
@@ -177,6 +182,7 @@
     courseKeyFromTitle,
     courseLabel,
     courseHint,
+    isAssessmentLesson,
     namesRange,
     tajweedTrack,
     lessonSortTuple,

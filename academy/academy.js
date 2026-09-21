@@ -581,7 +581,20 @@
       </div>
       <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(lesson.id)}" data-title="${A.escapeHtml(
       lesson.title
-    )}">Запустить</button>
+    )}">Настроить и начать</button>
+    </li>`;
+  }
+
+  function renderAssessmentItem(lesson) {
+    return `<li class="academy-assessment-item">
+      <div>
+        <p class="academy-kicker">Зачёт</p>
+        <strong>${A.escapeHtml(lessonDisplayTitle(lesson, 'assessment'))}</strong>
+        <div class="academy-muted">${A.escapeHtml(A.labelSubject(lesson.subject))}</div>
+      </div>
+      <button type="button" class="academy-btn academy-btn--primary" data-start="${A.escapeHtml(
+        lesson.id
+      )}" data-title="${A.escapeHtml(lesson.title)}">Настроить и начать</button>
     </li>`;
   }
 
@@ -627,15 +640,19 @@
       return;
     }
 
-    const courses = presentCourses(q);
+    const assessments = sortLessons(lessonsCache).filter(
+      (lesson) => Courses.isAssessmentLesson(lesson.title) && lessonMatchesQuery(lesson, q)
+    );
+    const courses = presentCourses(q).filter((course) => course.key !== 'assessment');
     if (lessonsMeta) {
       lessonsMeta.hidden = false;
-      lessonsMeta.textContent = q
+      const courseText = q
         ? `Найдено курсов: ${courses.length}`
         : `${courses.length} ${courses.length === 1 ? 'курс' : courses.length < 5 ? 'курса' : 'курсов'} · откройте нужный`;
+      lessonsMeta.textContent = assessments.length ? `Зачётов: ${assessments.length} · ${courseText}` : courseText;
     }
 
-    if (!courses.length) {
+    if (!courses.length && !assessments.length) {
       lessonsEmpty.hidden = false;
       lessonsEmpty.textContent = 'Ничего не найдено — измените поиск.';
       lessonsList.hidden = true;
@@ -645,7 +662,17 @@
 
     lessonsEmpty.hidden = true;
     lessonsList.hidden = false;
-    lessonsList.innerHTML = `<div class="academy-course-catalog">${courses.map(renderCourseCard).join('')}</div>`;
+    lessonsList.innerHTML = `${
+      assessments.length
+        ? `<section class="academy-assessments" id="academy-assessments" aria-label="Зачёты">
+            <div class="academy-section-heading">
+              <div><p class="academy-kicker">Главное</p><h2>Зачёты</h2></div>
+              <p class="academy-muted">Откройте и начните проверку</p>
+            </div>
+            <ul class="academy-list academy-list--course">${assessments.map(renderAssessmentItem).join('')}</ul>
+          </section>`
+        : ''
+    }${courses.length ? `<div class="academy-course-catalog">${courses.map(renderCourseCard).join('')}</div>` : ''}`;
   }
 
   function renderSessions(sessions) {
@@ -1158,6 +1185,10 @@
     const exam = looksLikeExamTitle(lesson?.title);
     if (presetEl) presetEl.value = exam ? 'exam' : 'lesson';
     applyStartPreset(exam ? 'exam' : 'lesson');
+    const lessonOnlySettings = document.getElementById('start-settings-lesson-only');
+    if (lessonOnlySettings) lessonOnlySettings.hidden = exam;
+    const startButton = document.getElementById('btn-start-lesson');
+    if (startButton) startButton.textContent = exam ? 'Начать зачёт' : 'Начать урок';
     startCard.hidden = false;
     showError(startError, '');
     startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1351,9 +1382,6 @@
       } finally {
         if (btn) btn.disabled = false;
       }
-    });
-    document.getElementById('start-preset')?.addEventListener('change', (event) => {
-      applyStartPreset(event.target.value === 'exam' ? 'exam' : 'lesson');
     });
     reportCard.addEventListener('click', (event) => {
       if (event.target.closest('[data-close-report]')) closeReport();
