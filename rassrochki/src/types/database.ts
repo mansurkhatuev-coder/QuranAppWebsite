@@ -83,7 +83,7 @@ export type Loan = {
   principal: number;
   /** Первоначальный взнос; график считается от (principal - down_payment), если не schedule_on_full_amount */
   down_payment: number;
-  /** true — график на всю сумму к возврату; взнос отдельно */
+  /** true (по умолчанию) — график на всю сумму к возврату; взнос отдельно */
   schedule_on_full_amount: boolean;
   term_months: number;
   start_date: string;

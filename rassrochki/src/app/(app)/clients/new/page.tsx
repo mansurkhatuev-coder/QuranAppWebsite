@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { useDraft } from "@/hooks/useDraft";
@@ -69,7 +70,8 @@ export default function NewClientPage() {
   return (
     <form onSubmit={onSubmit} className="mx-auto max-w-xl space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Новый клиент</h1>
+        <BackLink href="/clients" label="К списку клиентов" />
+        <h1 className="mt-2 text-2xl font-bold">Новый клиент</h1>
         <DraftIndicator status={status} />
       </div>
       {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700">{error}</p>}

@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { DraftIndicator } from "@/components/ui";
+import { BackLink } from "@/components/BackLink";
 import { FormSkeleton } from "@/components/Skeleton";
 import { NumericInput } from "@/components/NumericInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
@@ -74,7 +75,7 @@ export default function NewLoanPage() {
     cost_amount: "",
     markup_percent: "30",
     down_payment: "",
-    schedule_on_full_amount: false,
+    schedule_on_full_amount: true,
     term_months: "12",
     start_date: new Date().toISOString().slice(0, 10),
     monthly_payment: "",
@@ -84,7 +85,7 @@ export default function NewLoanPage() {
   };
 
   const { value, setValue, status, clearDraft } = useDraft<LoanDraft>(
-    "draft:new-loan-v5",
+    "draft:new-loan-v6",
     initial
   );
 
@@ -422,7 +423,8 @@ export default function NewLoanPage() {
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div>
-        <h1 className="text-2xl font-bold">Новая рассрочка</h1>
+        <BackLink href="/loans" label="К списку рассрочек" />
+        <h1 className="mt-2 text-2xl font-bold">Новая рассрочка</h1>
         <p className="text-sm text-[var(--muted)]">
           Цена товара + наценка = сумма к возврату. Прибыль делят владелец и инвестор.
         </p>
