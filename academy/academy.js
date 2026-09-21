@@ -15,6 +15,7 @@
   const appStatus = document.getElementById('app-status');
   const teacherHello = document.getElementById('teacher-hello');
   const lessonsList = document.getElementById('lessons-list');
+  const lessonsCatalogCard = document.getElementById('lessons-catalog-card');
   const lessonsEmpty = document.getElementById('lessons-empty');
   const lessonsSearch = document.getElementById('lessons-search');
   const lessonsMeta = document.getElementById('lessons-meta');
@@ -855,6 +856,7 @@
   function openEditor() {
     setTab('lessons');
     startCard.hidden = true;
+    lessonsCatalogCard.hidden = false;
     questionDrafts = [defaultQuestion(), defaultQuestion(), defaultQuestion()];
     zahetDescription = '';
     editorCard.hidden = false;
@@ -1179,6 +1181,7 @@
   function openStartSettings(lesson) {
     setTab('lessons');
     editorCard.hidden = true;
+    lessonsCatalogCard.hidden = true;
     pendingStartLesson = lesson;
     startLessonTitle.textContent = lesson?.title || 'Урок';
     const presetEl = document.getElementById('start-preset');
@@ -1426,6 +1429,7 @@
     });
     document.getElementById('btn-cancel-start').addEventListener('click', () => {
       startCard.hidden = true;
+      lessonsCatalogCard.hidden = false;
       pendingStartLesson = null;
       showError(startError, '');
     });
