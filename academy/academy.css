@@ -368,6 +368,14 @@ body.academy-is-booting {
   text-align: start;
 }
 
+.academy-rule-word--report {
+  min-height: 0;
+  margin: 0.5rem 0;
+  padding: 0.2rem 0;
+  font-size: clamp(2rem, 5vw, 3.4rem);
+  line-height: 1.55;
+}
+
 .academy-rule-hint {
   margin: 0 0 0.75rem;
   font-size: 0.92rem;

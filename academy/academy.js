@@ -479,6 +479,7 @@
             question_index: idx,
             prompt: q.prompt,
             is_correct: null,
+            word: q.word,
             answer_label: 'нет ответа',
             correct_label: q.correct_label,
           });

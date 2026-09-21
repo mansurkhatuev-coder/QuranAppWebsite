@@ -96,7 +96,7 @@
 
   function lessonDraft() {
     return {
-      title: 'Зачёт №3 · Задание 1 (нун с сукуном)',
+      title: 'Зачёт 3 · Медресе, стр. 68–71 · Задание 1',
       subject: 'quran',
       level: 'beginner',
       description: 'Учебник Медресе 2021, стр. 69. Отметить буквы для каждого правила сукунированного нуна.',
@@ -111,7 +111,7 @@
     const part2 = typeof build2 === 'function' ? build2({ count: 12, points: 1.5 }) : [];
     const questions = part1.concat(part2).map((q, position) => ({ ...q, position }));
     return {
-      title: 'Зачёт №3 · нун и правила стр. 68',
+      title: 'Зачёт 3 · Медресе, стр. 68–71',
       subject: 'quran',
       level: 'beginner',
       description:

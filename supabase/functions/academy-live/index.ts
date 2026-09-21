@@ -475,6 +475,12 @@ function formatCorrectLabel(q: Record<string, unknown> | null) {
   return '—';
 }
 
+function resultWord(q: Record<string, unknown> | null) {
+  if (String(q?.type || '') !== 'rule_choice') return '';
+  const payload = (q?.payload || {}) as Record<string, unknown>;
+  return String(payload.word || '');
+}
+
 function buildResultsQuestions(session: Record<string, unknown>) {
   const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
   return snap.map((raw, index) => {
@@ -483,6 +489,7 @@ function buildResultsQuestions(session: Record<string, unknown>) {
       index,
       prompt: String(q.prompt || ''),
       type: String(q.type || ''),
+      word: resultWord(q),
       correct_label: formatCorrectLabel(q),
     };
   });
@@ -504,6 +511,7 @@ function enrichResultsAnswers(
       answer_label: formatAnswerLabel(q, ans.answer_payload as Record<string, unknown>),
       correct_label: formatCorrectLabel(q),
       prompt: q ? String(q.prompt || '') : `Вопрос ${idx + 1}`,
+      word: resultWord(q),
     };
   });
 }

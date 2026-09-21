@@ -65,7 +65,7 @@
 
   function lessonDraft() {
     return {
-      title: 'Зачёт №3 · Задание 2 (слово → правила стр. 68)',
+      title: 'Зачёт 3 · Медресе, стр. 68–71 · Задание 2',
       subject: 'quran',
       level: 'beginner',
       description:

@@ -351,6 +351,7 @@
     const prompt = String(answer?.prompt || `Вопрос ${idx + 1}`);
     const given = String(answer?.answer_label || '—');
     const correct = String(answer?.correct_label || '—');
+    const word = String(answer?.word || '');
     const wrong = answer?.is_correct === false;
     const showCorrect = options.showCorrectAlways || wrong || answer?.is_correct == null;
     return `<li class="academy-answer-review">
@@ -358,6 +359,7 @@
         ${correctnessPill(answer?.is_correct)}
         <strong>${escapeHtml(`${idx + 1}. ${prompt}`)}</strong>
       </div>
+      ${word ? `<p class="academy-rule-word academy-rule-word--report" lang="ar" dir="rtl">${escapeHtml(word)}</p>` : ''}
       <div class="academy-muted">Ответ ученика: ${escapeHtml(given)}</div>
       ${
         showCorrect
