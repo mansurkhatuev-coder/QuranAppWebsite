@@ -21,9 +21,10 @@
   let state = null;
   let pollTimer = null;
   let tickTimer = null;
-  let finalResults = null;
-  let finalResultsKey = '';
-  let finalResultsLoading = false;
+  let detailedResults = null;
+  let detailedResultsKey = '';
+  let detailedResultsLoading = false;
+  let lastBoardContentKey = '';
   let syncingAutoToggle = false;
   let controlBusy = false;
 
@@ -111,24 +112,90 @@
     optionsBox.hidden = !html;
   }
 
-  function renderFinalResults() {
-    if (!finalResults) {
-      boardBox.innerHTML = '<p class="academy-muted">Загружаем итоги по всем вопросам…</p>';
-      statsBox.hidden = true;
-      return;
-    }
-    const people = finalResults.participants || [];
-    const answers = finalResults.answers || [];
-    const questions = finalResults.questions || [];
+  function isOpenLesson() {
+    return state?.settings?.mode === 'open';
+  }
+
+  function isFinishedPhase() {
+    return state?.phase === 'results' || state?.status === 'finished';
+  }
+
+  function captureBoardUi() {
+    const scroller = boardBox.querySelector('.academy-report-list, .academy-board-list');
+    const openIds = Array.from(boardBox.querySelectorAll('details[open]'))
+      .map((el) => el.getAttribute('data-participant-id'))
+      .filter(Boolean);
+    return {
+      scrollTop: scroller ? scroller.scrollTop : 0,
+      openIds,
+    };
+  }
+
+  function restoreBoardUi(ui) {
+    if (!ui) return;
+    const apply = () => {
+      (ui.openIds || []).forEach((id) => {
+        const el = boardBox.querySelector(`details[data-participant-id="${CSS.escape(id)}"]`);
+        if (el) el.open = true;
+      });
+      const scroller = boardBox.querySelector('.academy-report-list, .academy-board-list');
+      if (scroller && Number(ui.scrollTop) > 0) scroller.scrollTop = ui.scrollTop;
+    };
+    apply();
+    requestAnimationFrame(apply);
+  }
+
+  function setBoardHtml(contentKey, html) {
+    if (contentKey && contentKey === lastBoardContentKey) return false;
+    const ui = captureBoardUi();
+    lastBoardContentKey = contentKey || '';
+    boardBox.innerHTML = html;
+    restoreBoardUi(ui);
+    return true;
+  }
+
+  function boardProgressFingerprint(board) {
+    return (board || [])
+      .map(
+        (r) =>
+          `${r.participant_id}:${r.progress_answered || 0}:${r.progress_correct || 0}:${
+            r.personal_finished ? 1 : 0
+          }:${r.answered ? 1 : 0}:${r.is_correct}`
+      )
+      .join('|');
+  }
+
+  function resultsFingerprint(data) {
+    const people = data?.participants || [];
+    const answers = data?.answers || [];
+    const peoplePart = people.map((p) => `${p.id}:${p.display_name}`).join(',');
+    const answersPart = answers
+      .map(
+        (a) =>
+          `${a.participant_id}:${a.question_index}:${a.is_correct}:${a.answer_label || ''}:${
+            a.score || 0
+          }`
+      )
+      .join('|');
+    return `${peoplePart}#${answersPart}`;
+  }
+
+  function buildPersonRows(results, unansweredLabel) {
+    const people = results?.participants || [];
+    const answers = results?.answers || [];
+    const questions = results?.questions || [];
     const byPerson = {};
     people.forEach((p) => {
-      byPerson[p.id] = { name: p.display_name, correct: 0, total: 0, answers: [] };
+      byPerson[p.id] = { id: p.id, name: p.display_name, correct: 0, answered: 0, total: 0, answers: [] };
     });
     answers.forEach((a) => {
-      if (!byPerson[a.participant_id]) {
-        byPerson[a.participant_id] = { name: 'Ученик', correct: 0, total: 0, answers: [] };
+      const pid = a.participant_id;
+      if (!pid) return;
+      if (!byPerson[pid]) {
+        byPerson[pid] = { id: pid, name: 'Ученик', correct: 0, answered: 0, total: 0, answers: [] };
       }
-      const person = byPerson[a.participant_id];
+      const person = byPerson[pid];
+      person.answered += 1;
       person.total += 1;
       if (a.is_correct === true) person.correct += 1;
       person.answers.push(a);
@@ -142,25 +209,47 @@
           question_index: idx,
           prompt: q.prompt,
           is_correct: null,
-          answer_label: 'нет ответа',
+          word: q.word,
+          answer_label: unansweredLabel,
           correct_label: q.correct_label,
         });
         person.total += 1;
       });
     });
-    const rows = Object.values(byPerson).sort(
+    return Object.values(byPerson).sort(
       (a, b) => b.correct - a.correct || a.name.localeCompare(b.name, 'ru')
     );
+  }
+
+  function renderDetailedReportBoard(results, opts) {
+    const options = opts || {};
+    const live = Boolean(options.live);
+    const unansweredLabel = live ? 'ещё нет ответа' : 'нет ответа';
+    const rows = buildPersonRows(results, unansweredLabel);
+    const questions = results?.questions || [];
     const allCorrect = rows.reduce((s, r) => s + r.correct, 0);
+    const allAnswered = rows.reduce((s, r) => s + r.answered, 0);
     const allTotal = rows.reduce((s, r) => s + r.total, 0);
+
     statsBox.hidden = false;
-    statsBox.innerHTML = `
+    if (live) {
+      statsBox.innerHTML = `
+      <div><strong>${rows.length}</strong><span>учеников</span></div>
+      <div><strong>${questions.length}</strong><span>вопросов</span></div>
+      <div><strong>${allCorrect}</strong><span>верно</span></div>
+      <div><strong>${allAnswered}</strong><span>ответов</span></div>
+    `;
+    } else {
+      statsBox.innerHTML = `
       <div><strong>${rows.length}</strong><span>учеников</span></div>
       <div><strong>${questions.length}</strong><span>вопросов</span></div>
       <div><strong>${allCorrect}</strong><span>верно</span></div>
       <div><strong>${Math.max(0, allTotal - allCorrect)}</strong><span>ошибки / пропуск</span></div>
     `;
-    boardBox.innerHTML = rows.length
+    }
+
+    const contentKey = `detailed|${live ? 'live' : 'final'}|${resultsFingerprint(results)}`;
+    const html = rows.length
       ? `<ul class="academy-report-list">${rows
           .map((r) => {
             const details = r.answers
@@ -168,63 +257,73 @@
               .sort((a, b) => (Number(a.question_index) || 0) - (Number(b.question_index) || 0))
               .map((a) => A.renderAnswerReviewItem(a, { showCorrectAlways: true }))
               .join('');
+            const summary = live
+              ? `${r.correct} верно · ${r.answered}/${questions.length || r.total} ответов`
+              : `${r.correct} из ${r.total} верно`;
+            const pct =
+              live && r.answered
+                ? Math.round((r.correct / r.answered) * 100) + '%'
+                : r.total
+                  ? Math.round((r.correct / r.total) * 100) + '%'
+                  : '—';
             return `<li class="academy-report-person">
-              <details>
+              <details data-participant-id="${A.escapeHtml(String(r.id || ''))}">
                 <summary>
                   <span class="academy-report-person__main">
                     <strong>${A.escapeHtml(r.name)}</strong>
-                    <span class="academy-muted">${r.correct} из ${r.total} верно</span>
+                    <span class="academy-muted">${A.escapeHtml(summary)}</span>
                   </span>
-                  <span class="academy-time">${
-                    r.total ? Math.round((r.correct / r.total) * 100) + '%' : '—'
-                  }</span>
+                  <span class="academy-time">${pct}</span>
                 </summary>
-                <ul class="academy-answer-review-list">${details}</ul>
+                <ul class="academy-answer-review-list">${
+                  details ||
+                  '<li class="academy-muted">Этот ученик ещё не ответил ни на один вопрос</li>'
+                }</ul>
               </details>
             </li>`;
           })
           .join('')}</ul>`
       : '<p class="academy-muted">В этом занятии не было учеников</p>';
+    setBoardHtml(contentKey, html);
   }
 
-  async function loadFinalResults() {
+  async function loadDetailedResults(key, { live = false } = {}) {
     if (!state) return;
-    const key = `${state.id}|${state.version}|final`;
-    if (key === finalResultsKey && finalResults) return;
-    if (key === finalResultsKey && finalResultsLoading) return;
-    finalResultsKey = key;
-    finalResultsLoading = true;
-    boardBox.innerHTML = '<p class="academy-muted">Загружаем итоги по всем вопросам…</p>';
-    statsBox.hidden = true;
-    try {
-      finalResults = await A.callLive('results', { session_id: state.id }, { accessToken });
-      if (finalResultsKey === key) renderFinalResults();
-    } catch (_) {
-      if (finalResultsKey === key) {
-        boardBox.innerHTML = '<p class="academy-muted">Не удалось загрузить полный разбор ответов</p>';
-      }
-    } finally {
-      if (finalResultsKey === key) finalResultsLoading = false;
-    }
-  }
-
-  function renderBoard() {
-    if (state?.phase === 'results' || state?.status === 'finished') {
-      if (finalResults && finalResultsKey === `${state.id}|${state.version}|final`) {
-        // Keep existing DOM so open student details stay expanded across polls.
-        return;
-      }
-      loadFinalResults();
+    if (key === detailedResultsKey && detailedResults) {
+      renderDetailedReportBoard(detailedResults, { live });
       return;
     }
-    finalResults = null;
-    finalResultsKey = '';
-    finalResultsLoading = false;
+    if (key === detailedResultsKey && detailedResultsLoading) return;
+    detailedResultsKey = key;
+    detailedResultsLoading = true;
+    if (!detailedResults) {
+      setBoardHtml(`loading|${key}`, '<p class="academy-muted">Загружаем разбор ответов…</p>');
+      statsBox.hidden = true;
+    }
+    try {
+      const data = await A.callLive('results', { session_id: state.id }, { accessToken });
+      if (detailedResultsKey !== key) return;
+      detailedResults = data;
+      renderDetailedReportBoard(detailedResults, { live });
+    } catch (_) {
+      if (detailedResultsKey !== key) return;
+      if (!detailedResults) {
+        setBoardHtml(
+          `error|${key}`,
+          '<p class="academy-muted">Не удалось загрузить полный разбор ответов</p>'
+        );
+      }
+    } finally {
+      if (detailedResultsKey === key) detailedResultsLoading = false;
+    }
+  }
+
+  function renderSimpleBoard() {
     const board = state?.board || [];
     const stats = state?.stats || {};
     if (!board.length) {
       statsBox.hidden = true;
-      boardBox.innerHTML = '<p class="academy-muted">Пока никого — ждите вход по коду</p>';
+      setBoardHtml('empty', '<p class="academy-muted">Пока никого — ждите вход по коду</p>');
       return;
     }
 
@@ -254,7 +353,10 @@
         state.phase === 'results' ||
         state.status === 'finished');
     const open = isOpenLesson() || state?.stats?.open_mode;
-    boardBox.innerHTML = `<ul class="academy-board-list">${board
+    const contentKey = `simple|${open ? 1 : 0}|${allowSpoil ? 1 : 0}|${state.phase}|${boardProgressFingerprint(
+      board
+    )}`;
+    const html = `<ul class="academy-board-list">${board
       .map((row) => {
         let mark = '';
         if (open) {
@@ -297,6 +399,40 @@
         </li>`;
       })
       .join('')}</ul>`;
+    setBoardHtml(contentKey, html);
+  }
+
+  function renderBoard() {
+    if (isFinishedPhase()) {
+      const key = `${state.id}|${state.version}|final`;
+      loadDetailedResults(key, { live: false });
+      return;
+    }
+
+    const open = isOpenLesson() || state?.stats?.open_mode;
+    if (open) {
+      // Live open lesson: host can see per-question review without finishing the session.
+      const board = state?.board || [];
+      if (!board.length && !detailedResults) {
+        renderSimpleBoard();
+        return;
+      }
+      const key = `${state.id}|open|${boardProgressFingerprint(board)}`;
+      if (key === detailedResultsKey && detailedResults) {
+        renderDetailedReportBoard(detailedResults, { live: true });
+        return;
+      }
+      // Keep the last detailed snapshot on screen while a newer one loads.
+      if (detailedResults) renderDetailedReportBoard(detailedResults, { live: true });
+      else renderSimpleBoard();
+      loadDetailedResults(key, { live: true });
+      return;
+    }
+
+    detailedResults = null;
+    detailedResultsKey = '';
+    detailedResultsLoading = false;
+    renderSimpleBoard();
   }
 
   function updateTimer() {
@@ -312,10 +448,6 @@
     const pct = Math.max(0, Math.min(100, (left / total) * 100));
     timerBar.style.width = pct + '%';
     timerBox.classList.toggle('academy-timer--urgent', left <= 5000);
-  }
-
-  function isOpenLesson() {
-    return state?.settings?.mode === 'open';
   }
 
   function updateButtons() {
@@ -375,7 +507,7 @@
     if (open) {
       questionBox.hidden = false;
       questionBox.textContent =
-        'Открытый урок: ученики проходят сами по ссылке. Здесь — кто зашёл и кто уже закончил.';
+        'Открытый урок: ученики проходят сами. Раскройте ученика — видно каждый вопрос, верно/ошибка и ответы.';
       renderOptions(null, false);
     } else if (state.current_question && (state.phase === 'answering' || state.phase === 'reveal')) {
       questionBox.hidden = false;
