@@ -599,6 +599,47 @@
     </li>`;
   }
 
+  function isZahet3Lesson(lesson) {
+    const title = String(lesson?.title || '');
+    return /зач[её]т\s*№?\s*3/i.test(title) || /медресе,\s*стр\.\s*68/i.test(title);
+  }
+
+  function teacherHasZahet3() {
+    return (lessonsCache || []).some(isZahet3Lesson);
+  }
+
+  function zahetTemplateMatchesQuery(q) {
+    if (!q) return true;
+    return /зач|экзамен|контрол|медресе|68|нун/.test(q);
+  }
+
+  function renderZahetTemplateItem() {
+    return `<li class="academy-assessment-item">
+      <div>
+        <p class="academy-kicker">Зачёт</p>
+        <strong>Зачёт 3 · Медресе, стр. 68–71</strong>
+        <div class="academy-muted">Шаблон для всех учителей · нун + правила стр. 68</div>
+      </div>
+      <button type="button" class="academy-btn academy-btn--primary" data-start-zahet-template="1">
+        Настроить и начать
+      </button>
+    </li>`;
+  }
+
+  function renderAssessmentsSection(assessments, includeTemplate) {
+    if (!assessments.length && !includeTemplate) return '';
+    const items = `${assessments.map(renderAssessmentItem).join('')}${
+      includeTemplate ? renderZahetTemplateItem() : ''
+    }`;
+    return `<section class="academy-assessments" id="academy-assessments" aria-label="Зачёты">
+      <div class="academy-section-heading">
+        <div><p class="academy-kicker">Главное</p><h2>Зачёты</h2></div>
+        <p class="academy-muted">Откройте и начните проверку</p>
+      </div>
+      <ul class="academy-list academy-list--course">${items}</ul>
+    </section>`;
+  }
+
   function renderLessons(lessons) {
     if (Array.isArray(lessons)) lessonsCache = lessons;
     const q = lessonsQuery.trim().toLowerCase();
@@ -608,15 +649,6 @@
     }
 
     updateCourseNav();
-
-    if (!lessonsCache.length) {
-      if (lessonsMeta) lessonsMeta.hidden = true;
-      lessonsEmpty.hidden = false;
-      lessonsEmpty.textContent = 'Уроков пока нет — нажмите «+ Урок».';
-      lessonsList.hidden = true;
-      lessonsList.innerHTML = '';
-      return;
-    }
 
     if (selectedCourse) {
       const rows = lessonsForCourse(selectedCourse, q);
@@ -644,18 +676,22 @@
     const assessments = sortLessons(lessonsCache).filter(
       (lesson) => Courses.isAssessmentLesson(lesson.title) && lessonMatchesQuery(lesson, q)
     );
+    const includeZahetTemplate = !teacherHasZahet3() && zahetTemplateMatchesQuery(q);
     const courses = presentCourses(q).filter((course) => course.key !== 'assessment');
+    const assessmentCount = assessments.length + (includeZahetTemplate ? 1 : 0);
     if (lessonsMeta) {
       lessonsMeta.hidden = false;
       const courseText = q
         ? `Найдено курсов: ${courses.length}`
         : `${courses.length} ${courses.length === 1 ? 'курс' : courses.length < 5 ? 'курса' : 'курсов'} · откройте нужный`;
-      lessonsMeta.textContent = assessments.length ? `Зачётов: ${assessments.length} · ${courseText}` : courseText;
+      lessonsMeta.textContent = assessmentCount ? `Зачётов: ${assessmentCount} · ${courseText}` : courseText;
     }
 
-    if (!courses.length && !assessments.length) {
+    if (!courses.length && !assessmentCount) {
       lessonsEmpty.hidden = false;
-      lessonsEmpty.textContent = 'Ничего не найдено — измените поиск.';
+      lessonsEmpty.textContent = lessonsCache.length
+        ? 'Ничего не найдено — измените поиск.'
+        : 'Уроков пока нет — нажмите «+ Урок» или откройте шаблон зачёта.';
       lessonsList.hidden = true;
       lessonsList.innerHTML = '';
       return;
@@ -663,17 +699,9 @@
 
     lessonsEmpty.hidden = true;
     lessonsList.hidden = false;
-    lessonsList.innerHTML = `${
-      assessments.length
-        ? `<section class="academy-assessments" id="academy-assessments" aria-label="Зачёты">
-            <div class="academy-section-heading">
-              <div><p class="academy-kicker">Главное</p><h2>Зачёты</h2></div>
-              <p class="academy-muted">Откройте и начните проверку</p>
-            </div>
-            <ul class="academy-list academy-list--course">${assessments.map(renderAssessmentItem).join('')}</ul>
-          </section>`
-        : ''
-    }${courses.length ? `<div class="academy-course-catalog">${courses.map(renderCourseCard).join('')}</div>` : ''}`;
+    lessonsList.innerHTML = `${renderAssessmentsSection(assessments, includeZahetTemplate)}${
+      courses.length ? `<div class="academy-course-catalog">${courses.map(renderCourseCard).join('')}</div>` : ''
+    }`;
   }
 
   function renderSessions(sessions) {
@@ -1006,7 +1034,7 @@
     if (preset === 'exam') {
       if (lateJoin) lateJoin.checked = false;
       if (reveal) reveal.checked = false;
-      if (timer && timer.value === '30') timer.value = '60';
+      if (timer && (timer.value === '30' || timer.value === '0')) timer.value = '60';
       if (auto) auto.checked = false;
       if (autoAll) autoAll.checked = true;
       if (hint) {
@@ -1021,13 +1049,61 @@
       if (autoAll) autoAll.checked = true;
       if (hint) {
         hint.textContent =
-          'Урок: ответы можно показать ученикам. Зачёт: без подсказок на проекторе и без опоздавших.';
+          'Урок: ответы можно показать ученикам. Можно включить автопереход и опоздавших.';
       }
     }
   }
 
+  function syncStartModeUi(preset) {
+    const mode = preset === 'exam' ? 'exam' : 'lesson';
+    const presetEl = document.getElementById('start-preset');
+    if (presetEl) presetEl.value = mode;
+    applyStartPreset(mode);
+    const lessonOnlySettings = document.getElementById('start-settings-lesson-only');
+    if (lessonOnlySettings) lessonOnlySettings.hidden = mode === 'exam';
+    const startButton = document.getElementById('btn-start-lesson');
+    if (startButton) startButton.textContent = mode === 'exam' ? 'Начать зачёт' : 'Начать урок';
+  }
+
   function looksLikeExamTitle(title) {
     return /зач[её]т|экзамен|контрол/i.test(String(title || ''));
+  }
+
+  async function ensureZahet3Lesson() {
+    const existing = (lessonsCache || []).find(isZahet3Lesson);
+    if (existing?.id) return existing;
+
+    const Z1 = window.AcademyZahetTask1;
+    const Z2 = window.AcademyZahetTask2;
+    if (!Z1?.examDraft || !Z2?.buildTask2Questions) {
+      throw new Error('Модуль зачёта не загружен. Обновите страницу.');
+    }
+    const draft = Z1.examDraft();
+    const questions = Array.isArray(draft.questions) ? draft.questions : [];
+    if (!questions.length) throw new Error('Шаблон зачёта пуст.');
+
+    const data = await A.callLive(
+      'save_lesson',
+      {
+        title: draft.title,
+        subject: draft.subject || 'quran',
+        level: draft.level || 'beginner',
+        description: draft.description || '',
+        questions,
+      },
+      { accessToken }
+    );
+    if (!data?.lesson?.id) throw new Error(friendly(data?.error, 'Не удалось сохранить зачёт'));
+    const lesson = {
+      id: data.lesson.id,
+      title: data.lesson.title || draft.title,
+      subject: data.lesson.subject || draft.subject || 'quran',
+      level: data.lesson.level || draft.level || 'beginner',
+      updated_at: data.lesson.updated_at || new Date().toISOString(),
+    };
+    lessonsCache = [lesson, ...(lessonsCache || []).filter((row) => row.id !== lesson.id)];
+    renderLessons(lessonsCache);
+    return lesson;
   }
 
   function renderHubPicker(lessons) {
@@ -1178,20 +1254,15 @@
     return true;
   }
 
-  function openStartSettings(lesson) {
+  function openStartSettings(lesson, opts) {
     setTab('lessons');
     editorCard.hidden = true;
     lessonsCatalogCard.hidden = true;
     pendingStartLesson = lesson;
     startLessonTitle.textContent = lesson?.title || 'Урок';
-    const presetEl = document.getElementById('start-preset');
-    const exam = looksLikeExamTitle(lesson?.title);
-    if (presetEl) presetEl.value = exam ? 'exam' : 'lesson';
-    applyStartPreset(exam ? 'exam' : 'lesson');
-    const lessonOnlySettings = document.getElementById('start-settings-lesson-only');
-    if (lessonOnlySettings) lessonOnlySettings.hidden = exam;
-    const startButton = document.getElementById('btn-start-lesson');
-    if (startButton) startButton.textContent = exam ? 'Начать зачёт' : 'Начать урок';
+    const forceExam = opts?.forceExam === true;
+    const exam = forceExam || looksLikeExamTitle(lesson?.title);
+    syncStartModeUi(exam ? 'exam' : 'lesson');
     startCard.hidden = false;
     showError(startError, '');
     startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1433,6 +1504,9 @@
       pendingStartLesson = null;
       showError(startError, '');
     });
+    document.getElementById('start-preset')?.addEventListener('change', (event) => {
+      syncStartModeUi(event.target.value === 'exam' ? 'exam' : 'lesson');
+    });
     document.getElementById('btn-add-question').addEventListener('click', () => {
       syncDraftsFromDom();
       questionDrafts.push(defaultQuestion());
@@ -1565,15 +1639,18 @@
       const submitBtn = startForm.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
       try {
+        const isExam = document.getElementById('start-preset')?.value === 'exam';
         await startSession(pendingStartLesson.id, {
-          mode: document.getElementById('start-preset')?.value === 'exam' ? 'exam' : 'quiz',
+          mode: isExam ? 'exam' : 'quiz',
           timer_seconds: Number(document.getElementById('start-timer').value),
-          auto_advance: document.getElementById('start-auto').checked,
-          auto_advance_on_all: document.getElementById('start-auto-all').checked,
-          allow_late_join: document.getElementById('start-late-join')?.checked !== false,
-          reveal_answers: document.getElementById('start-reveal')?.checked
-            ? 'after_question'
-            : 'never',
+          auto_advance: isExam ? false : document.getElementById('start-auto').checked,
+          auto_advance_on_all: document.getElementById('start-auto-all')?.checked !== false,
+          allow_late_join: isExam ? false : document.getElementById('start-late-join')?.checked !== false,
+          reveal_answers: isExam
+            ? 'never'
+            : document.getElementById('start-reveal')?.checked
+              ? 'after_question'
+              : 'never',
         });
       } catch (err) {
         showError(startError, friendly(err, 'Не удалось запустить урок'));
@@ -1581,11 +1658,28 @@
       }
     });
 
-    lessonsList.addEventListener('click', (event) => {
+    lessonsList.addEventListener('click', async (event) => {
       const openCourse = event.target.closest('[data-open-course]');
       if (openCourse) {
         selectedCourse = openCourse.getAttribute('data-open-course') || null;
         renderLessons();
+        return;
+      }
+      const templateBtn = event.target.closest('[data-start-zahet-template]');
+      if (templateBtn) {
+        showError(appError, '');
+        templateBtn.disabled = true;
+        try {
+          const { data } = await client.auth.getSession();
+          if (!data?.session) return setLoggedIn(false);
+          accessToken = data.session.access_token;
+          const lesson = await ensureZahet3Lesson();
+          openStartSettings(lesson, { forceExam: true });
+        } catch (err) {
+          showError(appError, friendly(err, 'Не удалось подготовить зачёт.'));
+        } finally {
+          templateBtn.disabled = false;
+        }
         return;
       }
       const btn = event.target.closest('[data-start]');
