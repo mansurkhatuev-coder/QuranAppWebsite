@@ -19,8 +19,12 @@ assert.match(app, /lessonsCatalogCard\.hidden = true/);
 assert.match(app, /lessonsCatalogCard\.hidden = false/);
 assert.match(markup, /id="start-settings-lesson-only"/);
 assert.match(markup, /id="lessons-catalog-card"/);
-assert.match(markup, /id="start-preset-row" hidden/);
+assert.match(markup, /id="start-preset-row"/);
+assert.doesNotMatch(markup, /id="start-preset-row"\s+hidden/);
 assert.match(styles, /#start-settings-lesson-only\[hidden\]\s*\{\s*display:\s*none;/);
 assert.match(app, /Начать зачёт/);
+assert.match(app, /syncStartModeUi/);
+assert.match(app, /data-start-zahet-template/);
+assert.match(app, /ensureZahet3Lesson/);
 
 console.log('academy teacher flow checks passed');
