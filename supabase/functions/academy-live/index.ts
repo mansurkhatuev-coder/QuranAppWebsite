@@ -319,19 +319,29 @@ function settingsDefaults(input: Record<string, unknown> | null | undefined) {
     typeof rawTimer === 'number' && Number.isFinite(rawTimer)
       ? Math.max(0, Math.min(300, Math.floor(rawTimer)))
       : 30;
+  const mode = typeof input?.mode === 'string' ? input.mode : 'quiz';
+  const isOpen = mode === 'open';
   return {
-    mode: typeof input?.mode === 'string' ? input.mode : 'quiz',
-    timer_seconds: timer,
-    auto_advance: input?.auto_advance !== false,
-    auto_advance_on_all: input?.auto_advance_on_all !== false,
-    show_instant_feedback: Boolean(input?.show_instant_feedback),
+    mode,
+    timer_seconds: isOpen ? 0 : timer,
+    auto_advance: isOpen ? false : input?.auto_advance !== false,
+    auto_advance_on_all: isOpen ? false : input?.auto_advance_on_all !== false,
+    show_instant_feedback: isOpen ? true : Boolean(input?.show_instant_feedback),
     leaderboard: Boolean(input?.leaderboard),
     shuffle_questions: Boolean(input?.shuffle_questions),
     shuffle_options: Boolean(input?.shuffle_options),
     // Student never sees correct keys until an explicit reveal policy allows it.
-    reveal_answers: typeof input?.reveal_answers === 'string' ? input.reveal_answers : 'never',
-    allow_late_join: input?.allow_late_join !== false,
+    reveal_answers: typeof input?.reveal_answers === 'string'
+      ? input.reveal_answers
+      : isOpen
+        ? 'always'
+        : 'never',
+    allow_late_join: isOpen ? true : input?.allow_late_join !== false,
   };
+}
+
+function isOpenMode(settings: Record<string, unknown> | null | undefined) {
+  return String(settings?.mode || '') === 'open';
 }
 
 function shouldReveal(settings: Record<string, unknown>, phase: string): boolean {
@@ -365,6 +375,34 @@ async function answeredCount(db: SupabaseClient, sessionId: string, questionInde
     .eq('session_id', sessionId)
     .eq('question_index', questionIndex);
   return count ?? 0;
+}
+
+async function getPersonalProgress(
+  db: SupabaseClient,
+  participantId: string,
+  questionCount: number,
+) {
+  const { data: answers } = await db
+    .from('academy_answers')
+    .select('question_index, is_correct, score, answer_payload, response_ms')
+    .eq('participant_id', participantId)
+    .order('question_index');
+  const rows = (answers || []) as Array<Record<string, unknown>>;
+  const answered = new Set(rows.map((a) => Number(a.question_index)));
+  let index = questionCount;
+  for (let i = 0; i < questionCount; i += 1) {
+    if (!answered.has(i)) {
+      index = i;
+      break;
+    }
+  }
+  return {
+    index,
+    answeredCount: answered.size,
+    finished: questionCount > 0 && answered.size >= questionCount,
+    answers: rows,
+    correctCount: rows.filter((a) => a.is_correct === true).length,
+  };
 }
 
 function currentPublicQuestion(session: Record<string, unknown>, reveal: boolean) {
@@ -560,8 +598,10 @@ async function maybeAutoAdvance(db: SupabaseClient, session: Record<string, unkn
   if (!session?.id) return session;
   // Self-paced async runs advance only on student submit — never auto-advance.
   if (String(session.pacing) === 'async') return session;
-  if (session.status !== 'live' || session.phase !== 'answering') return session;
   const settings = settingsDefaults(session.settings as Record<string, unknown>);
+  // Open lesson: each student advances alone — do not move the shared cursor.
+  if (isOpenMode(settings)) return session;
+  if (session.status !== 'live' || session.phase !== 'answering') return session;
   let due = false;
 
   if (settings.auto_advance && session.phase_ends_at) {
@@ -593,21 +633,46 @@ async function maybeAutoAdvance(db: SupabaseClient, session: Record<string, unkn
 }
 
 async function buildHostBoard(db: SupabaseClient, session: Record<string, unknown>) {
+  const settings = settingsDefaults(session.settings as Record<string, unknown>);
+  const open = isOpenMode(settings);
   const q = currentRawQuestion(session);
   const idx = Number(session.current_index) || 0;
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  const questionCount = snap.length;
   const { data: peopleRaw } = await db
     .from('academy_participants')
     .select('id, display_name, last_seen_at, status, joined_at, client_fingerprint')
     .eq('session_id', String(session.id))
     .eq('status', 'active')
     .order('joined_at', { ascending: true });
-  const { data: answers } = await db
-    .from('academy_answers')
-    .select('participant_id, is_correct, score, response_ms, created_at, answer_payload')
-    .eq('session_id', String(session.id))
-    .eq('question_index', idx);
 
-  const byParticipant = new Map((answers || []).map((a) => [a.participant_id, a]));
+  const answerQuery = open
+    ? await db
+        .from('academy_answers')
+        .select('participant_id, question_index, is_correct, score, response_ms, created_at, answer_payload')
+        .eq('session_id', String(session.id))
+    : await db
+        .from('academy_answers')
+        .select('participant_id, is_correct, score, response_ms, created_at, answer_payload')
+        .eq('session_id', String(session.id))
+        .eq('question_index', idx);
+  const answerRows = (answerQuery.data || []) as Array<Record<string, unknown>>;
+
+  const byParticipant = new Map<string, Record<string, unknown>>();
+  const progressByParticipant = new Map<string, { answered: number; correct: number }>();
+  if (open) {
+    for (const a of answerRows) {
+      const pid = String(a.participant_id);
+      const prev = progressByParticipant.get(pid) || { answered: 0, correct: 0 };
+      prev.answered += 1;
+      if (a.is_correct === true) prev.correct += 1;
+      progressByParticipant.set(pid, prev);
+    }
+  } else {
+    for (const a of answerRows) {
+      byParticipant.set(String(a.participant_id), a);
+    }
+  }
 
   // Hide name-duplicates that slipped past join races (prefer seat with an answer).
   const bestByName = new Map<string, ParticipantRow>();
@@ -622,13 +687,37 @@ async function buildHostBoard(db: SupabaseClient, session: Record<string, unknow
       bestByName.set(key, p);
       continue;
     }
-    const prevAns = byParticipant.has(prev.id);
-    const thisAns = byParticipant.has(p.id);
+    const prevAns = open
+      ? (progressByParticipant.get(prev.id)?.answered || 0) > 0
+      : byParticipant.has(prev.id);
+    const thisAns = open
+      ? (progressByParticipant.get(p.id)?.answered || 0) > 0
+      : byParticipant.has(p.id);
     if (!prevAns && thisAns) bestByName.set(key, p);
   }
   const people = [...bestByName.values()];
 
   const board = people.map((p) => {
+    if (open) {
+      const prog = progressByParticipant.get(p.id) || { answered: 0, correct: 0 };
+      const done = questionCount > 0 && prog.answered >= questionCount;
+      return {
+        participant_id: p.id,
+        display_name: p.display_name,
+        status: p.status,
+        answered: prog.answered > 0,
+        progress_answered: prog.answered,
+        progress_total: questionCount,
+        progress_correct: prog.correct,
+        personal_finished: done,
+        is_correct: null,
+        response_ms: null,
+        answer_label: done
+          ? `готово · ${prog.correct}/${questionCount}`
+          : `${prog.answered}/${questionCount}`,
+        answered_at: null,
+      };
+    }
     const ans = byParticipant.get(p.id);
     return {
       participant_id: p.id,
@@ -647,19 +736,31 @@ async function buildHostBoard(db: SupabaseClient, session: Record<string, unknow
   const correct = board.filter((b) => b.is_correct === true).length;
   const wrong = board.filter((b) => b.is_correct === false).length;
   const avg_ms = times.length ? Math.round(times.reduce((s, n) => s + n, 0) / times.length) : null;
+  const finishedPeople = open ? board.filter((b) => b.personal_finished).length : 0;
 
   return {
     people,
     board,
-    stats: {
-      participants: board.length,
-      answered,
-      correct,
-      wrong,
-      waiting: Math.max(0, board.length - answered),
-      avg_ms,
-      fastest_ms: times.length ? Math.min(...times) : null,
-    },
+    stats: open
+      ? {
+          participants: board.length,
+          answered: finishedPeople,
+          correct: board.reduce((s, b) => s + (Number(b.progress_correct) || 0), 0),
+          wrong: 0,
+          waiting: Math.max(0, board.length - finishedPeople),
+          avg_ms: null,
+          fastest_ms: null,
+          open_mode: true,
+        }
+      : {
+          participants: board.length,
+          answered,
+          correct,
+          wrong,
+          waiting: Math.max(0, board.length - answered),
+          avg_ms,
+          fastest_ms: times.length ? Math.min(...times) : null,
+        },
   };
 }
 
@@ -720,22 +821,41 @@ function pickPreferredParticipant(
 function sessionPublicPayload(
   liveSession: Record<string, unknown>,
   settings: ReturnType<typeof settingsDefaults>,
+  opts?: {
+    personalIndex?: number;
+    personalFinished?: boolean;
+    currentQuestion?: Record<string, unknown> | null;
+  },
 ) {
-  const reveal = shouldReveal(settings, String(liveSession.phase));
+  const open = isOpenMode(settings);
+  const personalFinished = Boolean(opts?.personalFinished);
+  const usePersonal = open && opts && typeof opts.personalIndex === 'number';
+  const phase = personalFinished
+    ? 'results'
+    : String(liveSession.phase);
+  const status = personalFinished ? 'finished' : String(liveSession.status);
+  const reveal = shouldReveal(settings, phase);
+  const currentIndex = usePersonal ? Number(opts?.personalIndex) : liveSession.current_index;
+  let currentQuestion = null as Record<string, unknown> | null;
+  if (opts && 'currentQuestion' in (opts || {})) {
+    currentQuestion = opts?.currentQuestion ?? null;
+  } else if (['answering', 'reveal'].includes(String(liveSession.phase)) && !personalFinished) {
+    currentQuestion = currentPublicQuestion(liveSession, reveal);
+  }
   return {
     id: liveSession.id,
     code: liveSession.code,
-    status: liveSession.status,
-    phase: liveSession.phase,
-    current_index: liveSession.current_index,
+    status,
+    phase,
+    current_index: currentIndex,
     version: liveSession.version,
-    phase_ends_at: liveSession.phase_ends_at,
+    phase_ends_at: open ? null : liveSession.phase_ends_at,
     phase_started_at: liveSession.phase_started_at,
     settings,
     question_count: Array.isArray(liveSession.question_snapshot) ? liveSession.question_snapshot.length : 0,
-    current_question: ['answering', 'reveal'].includes(String(liveSession.phase))
-      ? currentPublicQuestion(liveSession, reveal)
-      : null,
+    current_question: currentQuestion,
+    personal_finished: personalFinished,
+    open_mode: open,
   };
 }
 
@@ -771,11 +891,13 @@ async function handleCreate(db: SupabaseClient, userId: string, body: Record<str
   if (!questions?.length) return json({ error: 'no_questions' }, 400);
 
   const settings = settingsDefaults(body.settings as Record<string, unknown>);
+  const open = isOpenMode(settings);
   let snapshot = questions.map((q, i) => ({ ...q, position: i }));
   if (settings.shuffle_questions) {
     snapshot = [...snapshot].sort(() => Math.random() - 0.5).map((q, i) => ({ ...q, position: i }));
   }
 
+  const nowIso = new Date().toISOString();
   let code = randomCode();
   let created = null;
   for (let attempt = 0; attempt < 8; attempt += 1) {
@@ -786,14 +908,17 @@ async function handleCreate(db: SupabaseClient, userId: string, body: Record<str
         org_id: lesson.org_id,
         host_user_id: userId,
         code,
-        status: 'lobby',
-        phase: 'lobby',
+        status: open ? 'live' : 'lobby',
+        phase: open ? 'answering' : 'lobby',
         pacing: 'live',
         settings,
         current_index: 0,
         question_snapshot: snapshot,
         version: 1,
-        last_activity_at: new Date().toISOString(),
+        started_at: open ? nowIso : null,
+        phase_started_at: open ? nowIso : null,
+        phase_ends_at: null,
+        last_activity_at: nowIso,
       })
       .select('*')
       .maybeSingle();
@@ -945,11 +1070,24 @@ async function handleJoin(db: SupabaseClient, body: Record<string, unknown>) {
     .update({ last_activity_at: nowIso })
     .eq('id', liveSession.id);
 
+  const snap = Array.isArray(liveSession.question_snapshot) ? liveSession.question_snapshot : [];
+  let sessionPayload = sessionPublicPayload(liveSession, settings);
+  if (isOpenMode(settings) && participant?.id) {
+    const progress = await getPersonalProgress(db, participant.id, snap.length);
+    const q = snap[progress.index] as Record<string, unknown> | undefined;
+    sessionPayload = sessionPublicPayload(liveSession, settings, {
+      personalIndex: progress.index,
+      personalFinished: progress.finished,
+      currentQuestion:
+        progress.finished || !q ? null : publicQuestion(q, { reveal: false }),
+    });
+  }
+
   return json({
     resume_token: resumeToken,
     participant,
     rejoined,
-    session: sessionPublicPayload(liveSession, settings),
+    session: sessionPayload,
   });
 }
 
@@ -977,6 +1115,41 @@ async function handleResume(db: SupabaseClient, body: Record<string, unknown>) {
     .eq('id', participant.id);
 
   const settings = settingsDefaults(session.settings);
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+
+  if (isOpenMode(settings)) {
+    const progress = await getPersonalProgress(db, participant.id, snap.length);
+    const q = snap[progress.index] as Record<string, unknown> | undefined;
+    const sessionFinished =
+      String(session.status) === 'finished' || String(session.phase) === 'results';
+    const personalFinished = progress.finished || sessionFinished;
+    const myAnswerRow = progress.answers.find((a) => Number(a.question_index) === progress.index) || null;
+    return json({
+      participant: {
+        id: participant.id,
+        display_name: participant.display_name,
+        session_id: participant.session_id,
+      },
+      session: sessionPublicPayload(session, settings, {
+        personalIndex: progress.index,
+        personalFinished,
+        currentQuestion:
+          personalFinished || !q ? null : publicQuestion(q, { reveal: false }),
+      }),
+      my_answer: personalFinished
+        ? null
+        : publicStudentAnswer(
+            myAnswerRow as Record<string, unknown> | null,
+            Boolean(settings.show_instant_feedback),
+          ),
+      progress: {
+        answered: progress.answeredCount,
+        total: snap.length,
+        correct: progress.correctCount,
+      },
+    });
+  }
+
   const reveal = shouldReveal(settings, session.phase);
 
   let myAnswer = null;
@@ -1002,10 +1175,12 @@ async function handleResume(db: SupabaseClient, body: Record<string, unknown>) {
       phase_ends_at: session.phase_ends_at,
       phase_started_at: session.phase_started_at,
       settings,
-      question_count: Array.isArray(session.question_snapshot) ? session.question_snapshot.length : 0,
+      question_count: snap.length,
       current_question: ['answering', 'reveal'].includes(session.phase)
         ? currentPublicQuestion(session, reveal)
         : null,
+      open_mode: false,
+      personal_finished: false,
     },
     my_answer: myAnswer,
   });
@@ -1040,14 +1215,16 @@ async function handleControl(db: SupabaseClient, userId: string, body: Record<st
     patch.current_index = session.status === 'paused' ? session.current_index : 0;
     patch.started_at = session.started_at || now.toISOString();
     patch.phase_started_at = now.toISOString();
-    if (settings.timer_seconds > 0) {
+    if (settings.timer_seconds > 0 && !isOpenMode(settings)) {
       patch.phase_ends_at = new Date(now.getTime() + settings.timer_seconds * 1000).toISOString();
     } else patch.phase_ends_at = null;
   } else if (command === 'reveal') {
+    if (isOpenMode(settings)) return json({ error: 'open_mode' }, 400);
     if (session.phase !== 'answering') return json({ error: 'bad_state' }, 400);
     patch.phase = 'reveal';
     patch.phase_ends_at = null;
   } else if (command === 'next') {
+    if (isOpenMode(settings)) return json({ error: 'open_mode' }, 400);
     if (!['answering', 'reveal', 'lobby'].includes(session.phase) && session.status !== 'paused') {
       return json({ error: 'bad_state' }, 400);
     }
@@ -1154,6 +1331,12 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
   if (String(sessionRaw.pacing) === 'async') {
     return handleAsyncSubmit(db, body, publicAsyncDeps());
   }
+
+  const settings = settingsDefaults(sessionRaw.settings as Record<string, unknown>);
+  if (isOpenMode(settings)) {
+    return handleOpenSubmit(db, body, sessionRaw, participant, settings);
+  }
+
   const session = await maybeAutoAdvance(db, sessionRaw);
   if (session.status !== 'live' || session.phase !== 'answering') return json({ error: 'not_accepting' }, 409);
   if (questionIndex !== session.current_index) return json({ error: 'wrong_question' }, 409);
@@ -1169,7 +1352,6 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     .eq('question_index', questionIndex)
     .maybeSingle();
   if (existing) {
-    const settings = settingsDefaults(session.settings);
     return json({
       ok: true,
       already: true,
@@ -1225,7 +1407,6 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     .update({ last_seen_at: new Date().toISOString() })
     .eq('id', participant.id);
 
-  const settings = settingsDefaults(session.settings);
   const feedback = settings.show_instant_feedback && !scored.pending
     ? { is_correct: scored.is_correct, accepted: true }
     : { accepted: true };
@@ -1235,6 +1416,131 @@ async function handleSubmit(db: SupabaseClient, body: Record<string, unknown>) {
     ok: true,
     answer: publicStudentAnswer(inserted, Boolean(settings.show_instant_feedback)),
     feedback,
+  });
+}
+
+async function handleOpenSubmit(
+  db: SupabaseClient,
+  body: Record<string, unknown>,
+  session: Record<string, unknown>,
+  participant: { id: string; session_id: string; status: string },
+  settings: ReturnType<typeof settingsDefaults>,
+) {
+  const questionIndex = Number(body.question_index);
+  const answerPayload = (body.answer || {}) as Record<string, unknown>;
+  if (String(session.status) === 'finished' || String(session.phase) === 'results') {
+    return json({ error: 'not_accepting' }, 409);
+  }
+  if (String(session.status) === 'paused') return json({ error: 'not_accepting' }, 409);
+  if (!['lobby', 'live'].includes(String(session.status))) return json({ error: 'not_accepting' }, 409);
+
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  const progress = await getPersonalProgress(db, participant.id, snap.length);
+  if (progress.finished) {
+    return json({
+      ok: true,
+      already: true,
+      finished: true,
+      advanced: false,
+      next_index: snap.length,
+      next_question: null,
+      answer: null,
+      feedback: { accepted: true },
+    });
+  }
+  if (questionIndex !== progress.index) {
+    // Client lag: sync forward if they already answered this one.
+    if (questionIndex < progress.index) {
+      const past = progress.answers.find((a) => Number(a.question_index) === questionIndex);
+      const nextQ = snap[progress.index] as Record<string, unknown> | undefined;
+      return json({
+        ok: true,
+        already: true,
+        synced: true,
+        answer: publicStudentAnswer(past as Record<string, unknown> | null, true),
+        feedback: { accepted: true, is_correct: past?.is_correct ?? null },
+        advanced: true,
+        finished: false,
+        next_index: progress.index,
+        next_question: nextQ ? publicQuestion(nextQ, { reveal: false }) : null,
+      });
+    }
+    return json({ error: 'wrong_question' }, 409);
+  }
+
+  const q = snap[questionIndex] as Record<string, unknown> | undefined;
+  if (!q) return json({ error: 'no_question' }, 400);
+
+  const scored = scoreAnswer(
+    String(q.type),
+    (q.payload || {}) as Record<string, unknown>,
+    answerPayload,
+    (q.scoring || {}) as Record<string, unknown>,
+  );
+
+  const row = {
+    session_id: session.id,
+    participant_id: participant.id,
+    question_index: questionIndex,
+    question_id: String(q.id || ''),
+    answer_payload: answerPayload,
+    is_correct: scored.is_correct,
+    score: scored.score,
+    response_ms: null,
+    scored_at: scored.pending ? null : new Date().toISOString(),
+    scored_by: scored.pending ? null : 'auto',
+  };
+
+  const { data: inserted, error } = await db.from('academy_answers').insert(row).select('*').maybeSingle();
+  if (error) {
+    if (error.code === '23505') {
+      const { data: again } = await db
+        .from('academy_answers')
+        .select('*')
+        .eq('participant_id', participant.id)
+        .eq('question_index', questionIndex)
+        .maybeSingle();
+      const nextProgress = await getPersonalProgress(db, participant.id, snap.length);
+      const nextQ = snap[nextProgress.index] as Record<string, unknown> | undefined;
+      return json({
+        ok: true,
+        already: true,
+        answer: publicStudentAnswer(again, true),
+        feedback: { accepted: true },
+        advanced: !nextProgress.finished,
+        finished: nextProgress.finished,
+        next_index: nextProgress.index,
+        next_question:
+          nextProgress.finished || !nextQ ? null : publicQuestion(nextQ, { reveal: false }),
+      });
+    }
+    return json({ error: 'submit_failed' }, 500);
+  }
+
+  await db
+    .from('academy_participants')
+    .update({ last_seen_at: new Date().toISOString() })
+    .eq('id', participant.id);
+  await db
+    .from('academy_sessions')
+    .update({ last_activity_at: new Date().toISOString() })
+    .eq('id', session.id);
+
+  const nextIndex = questionIndex + 1;
+  const finished = nextIndex >= snap.length;
+  const nextQ = finished ? null : (snap[nextIndex] as Record<string, unknown> | undefined);
+
+  return json({
+    ok: true,
+    answer: publicStudentAnswer(inserted, Boolean(settings.show_instant_feedback)),
+    feedback:
+      settings.show_instant_feedback && !scored.pending
+        ? { is_correct: scored.is_correct, accepted: true }
+        : { accepted: true },
+    advanced: !finished,
+    finished,
+    next_index: finished ? snap.length : nextIndex,
+    next_question: finished || !nextQ ? null : publicQuestion(nextQ, { reveal: false }),
   });
 }
 
@@ -1328,9 +1634,18 @@ async function handleResults(db: SupabaseClient, body: Record<string, unknown>, 
     .maybeSingle();
   if (!participant || participant.session_id !== sessionId) return json({ error: 'forbidden' }, 403);
 
+  const settings = settingsDefaults(session.settings as Record<string, unknown>);
+  const snap = Array.isArray(session.question_snapshot) ? session.question_snapshot : [];
+  const open = isOpenMode(settings);
+  let personalFinished = finished;
+  if (open && !finished) {
+    const progress = await getPersonalProgress(db, participant.id, snap.length);
+    personalFinished = progress.finished;
+  }
+
   // Students may only see answer keys after the session is finished
-  // (live reveal policy is separate; mid-lesson peeking via results is blocked).
-  if (!finished) return json({ error: 'not_finished' }, 403);
+  // (or after they personally finish an open lesson).
+  if (!personalFinished) return json({ error: 'not_finished' }, 403);
 
   const { data: answers } = await db
     .from('academy_answers')
@@ -1342,7 +1657,7 @@ async function handleResults(db: SupabaseClient, body: Record<string, unknown>, 
   const correct = enriched.filter((a) => a.is_correct === true).length;
   return json({
     role: 'student',
-    finished,
+    finished: personalFinished,
     participant,
     questions,
     answers: enriched,

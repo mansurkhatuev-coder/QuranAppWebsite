@@ -26,5 +26,8 @@ assert.match(app, /Начать зачёт/);
 assert.match(app, /syncStartModeUi/);
 assert.match(app, /data-start-zahet-template/);
 assert.match(app, /ensureZahet3Lesson/);
+assert.match(markup, /value="open"/);
+assert.match(app, /Открытый урок|mode === 'open'|preset === 'open'/);
+assert.match(app, /Открыть урок/);
 
 console.log('academy teacher flow checks passed');
