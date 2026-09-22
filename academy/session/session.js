@@ -229,7 +229,14 @@
     }
 
     statsBox.hidden = false;
-    statsBox.innerHTML = `
+    if (state?.stats?.open_mode || isOpenLesson()) {
+      statsBox.innerHTML = `
+      <div><strong>${stats.answered || 0}</strong><span>готовы</span></div>
+      <div><strong>${stats.waiting || 0}</strong><span>ещё идут</span></div>
+      <div><strong>${stats.participants || 0}</strong><span>всего</span></div>
+    `;
+    } else {
+      statsBox.innerHTML = `
       <div><strong>${stats.answered || 0}</strong><span>ответили</span></div>
       <div><strong>${stats.waiting || 0}</strong><span>ждут</span></div>
       <div><strong>${stats.correct || 0}</strong><span>верно</span></div>
@@ -237,6 +244,7 @@
       <div><strong>${formatMs(stats.avg_ms)}</strong><span>среднее</span></div>
       <div><strong>${formatMs(stats.fastest_ms)}</strong><span>быстрее всех</span></div>
     `;
+    }
 
     const spoil = state.phase === 'reveal' || state.phase === 'results';
     // Exam / reveal_answers=never: do not leak answers or marks on the projector mid-lesson.
@@ -245,10 +253,21 @@
       (state.settings?.reveal_answers !== 'never' ||
         state.phase === 'results' ||
         state.status === 'finished');
+    const open = isOpenLesson() || state?.stats?.open_mode;
     boardBox.innerHTML = `<ul class="academy-board-list">${board
       .map((row) => {
         let mark = '';
-        if (row.answered && allowSpoil) {
+        if (open) {
+          if (row.personal_finished) {
+            mark = '<span class="academy-pill academy-pill--ok">готово</span>';
+          } else if (row.answered) {
+            mark = `<span class="academy-pill">${A.escapeHtml(
+              String(row.progress_answered || 0)
+            )}/${A.escapeHtml(String(row.progress_total || state.question_count || '—'))}</span>`;
+          } else {
+            mark = '<span class="academy-pill academy-pill--wait">ждёт…</span>';
+          }
+        } else if (row.answered && allowSpoil) {
           if (row.is_correct === true) mark = '<span class="academy-pill academy-pill--ok">верно</span>';
           else if (row.is_correct === false) mark = '<span class="academy-pill academy-pill--bad">ошибка</span>';
           else mark = '<span class="academy-pill">принято</span>';
@@ -259,18 +278,20 @@
         } else if (!row.answered && state.phase === 'answering') {
           mark = '<span class="academy-pill academy-pill--wait">думает…</span>';
         }
-        const detail = !row.answered
-          ? 'ещё не ответил'
-          : allowSpoil
-            ? A.escapeHtml(row.answer_label || '—')
-            : 'ответ принят';
+        const detail = open
+          ? A.escapeHtml(row.answer_label || 'ещё не начал')
+          : !row.answered
+            ? 'ещё не ответил'
+            : allowSpoil
+              ? A.escapeHtml(row.answer_label || '—')
+              : 'ответ принят';
         return `<li>
           <div>
             <strong>${A.escapeHtml(row.display_name)}</strong>
             <div class="academy-muted">${detail}</div>
           </div>
           <div class="academy-board-meta">
-            <span class="academy-time">${row.answered ? formatMs(row.response_ms) : '—'}</span>
+            <span class="academy-time">${!open && row.answered ? formatMs(row.response_ms) : '—'}</span>
             ${mark}
           </div>
         </li>`;
@@ -293,26 +314,37 @@
     timerBox.classList.toggle('academy-timer--urgent', left <= 5000);
   }
 
+  function isOpenLesson() {
+    return state?.settings?.mode === 'open';
+  }
+
   function updateButtons() {
     if (!state) return;
+    const open = isOpenLesson();
     const inLobby = state.status === 'lobby' || state.phase === 'lobby';
     const answering = state.phase === 'answering' && state.status === 'live';
     const finished = state.status === 'finished' || state.phase === 'results';
     const autoOn = state.settings?.auto_advance !== false;
     const examSafe = state.settings?.reveal_answers === 'never';
-    btnStart.disabled = finished || (!inLobby && state.status !== 'paused');
-    btnReveal.disabled = !answering;
+    btnStart.disabled = finished || open || (!inLobby && state.status !== 'paused');
+    btnReveal.disabled = open || !answering;
     btnReveal.textContent = examSafe ? 'Закрыть приём' : 'Показать ответ';
-    btnNext.disabled = finished || inLobby || (autoOn && answering);
+    btnNext.disabled = open || finished || inLobby || (autoOn && answering);
     btnFinish.disabled = finished;
     if (toggleAuto && !syncingAutoToggle) {
-      toggleAuto.checked = autoOn;
-      toggleAuto.disabled = finished;
+      toggleAuto.checked = open ? false : autoOn;
+      toggleAuto.disabled = finished || open;
     }
+    const autoWrap = document.getElementById('auto-toggle-wrap');
+    if (autoWrap) autoWrap.hidden = open;
+    btnReveal.hidden = open;
+    btnNext.hidden = open;
+    btnStart.hidden = open;
   }
 
   function render() {
     if (!state) return;
+    const open = isOpenLesson();
     pinEl.hidden = false;
     pinEl.textContent = state.code;
     joinLink.innerHTML = `Ссылка для учеников: <a href="${A.escapeHtml(state.join_url)}" target="_blank" rel="noopener">${A.escapeHtml(
@@ -324,16 +356,28 @@
       state.settings?.timer_seconds > 0
         ? ` · таймер ${state.settings.timer_seconds} с`
         : ' · без таймера';
-    const autoNote = state.settings?.auto_advance === false ? '' : ' · автодалее';
+    const autoNote = open || state.settings?.auto_advance === false ? '' : ' · автодалее';
     const examNote = state.settings?.reveal_answers === 'never' ? ' · зачёт' : '';
+    const openNote = open ? ' · открытый урок' : '';
     const lateNote = state.settings?.allow_late_join === false ? ' · без опоздавших' : '';
-    metaEl.textContent = `${statusRu} · ${phaseRu} · вопрос ${Number(state.current_index) + 1}/${
-      state.question_count
-    } · ответили ${state.answered || 0} из ${state.participants || 0}${timerNote}${autoNote}${examNote}${lateNote}`;
+    if (open) {
+      metaEl.textContent = `${statusRu}${openNote} · учеников ${state.participants || 0} · готовы ${
+        state.answered || 0
+      } · ещё идут ${state.stats?.waiting ?? Math.max(0, (state.participants || 0) - (state.answered || 0))}${lateNote}`;
+    } else {
+      metaEl.textContent = `${statusRu} · ${phaseRu} · вопрос ${Number(state.current_index) + 1}/${
+        state.question_count
+      } · ответили ${state.answered || 0} из ${state.participants || 0}${timerNote}${autoNote}${examNote}${lateNote}`;
+    }
 
     const showKeys =
       state.phase === 'reveal' && state.settings?.reveal_answers !== 'never';
-    if (state.current_question && (state.phase === 'answering' || state.phase === 'reveal')) {
+    if (open) {
+      questionBox.hidden = false;
+      questionBox.textContent =
+        'Открытый урок: ученики проходят сами по ссылке. Здесь — кто зашёл и кто уже закончил.';
+      renderOptions(null, false);
+    } else if (state.current_question && (state.phase === 'answering' || state.phase === 'reveal')) {
       questionBox.hidden = false;
       questionBox.textContent = state.current_question.prompt || '—';
       renderOptions(state.current_question, showKeys);

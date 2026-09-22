@@ -93,8 +93,13 @@
       session?.current_index,
       session?.question_count,
       session?.phase_ends_at || '',
+      session?.personal_finished ? '1' : '0',
       myAnswer ? '1' : '0',
     ].join('|');
+  }
+
+  function isOpenLesson() {
+    return session?.settings?.mode === 'open' || session?.open_mode === true;
   }
 
   function applySelectionHighlight() {
@@ -308,6 +313,32 @@
   }
 
   function updateAnswerChrome() {
+    if (isOpenLesson()) {
+      const locked = session.status === 'paused' || session.status === 'finished' || session.personal_finished;
+      submitBtn.hidden = locked || Boolean(myAnswer);
+      submitBtn.disabled = locked || Boolean(myAnswer);
+      if (session.status === 'paused') {
+        showError(playFeedback, 'Пауза — подождите учителя');
+        playFeedback.hidden = false;
+        setControlsLocked(true);
+        return;
+      }
+      if (myAnswer) {
+        const ok = myAnswer.is_correct;
+        const msg =
+          ok === true ? 'Верно! Переходим дальше…' : ok === false ? 'Ответ принят. Дальше…' : 'Ответ принят';
+        showError(playFeedback, msg);
+        playFeedback.hidden = false;
+        setControlsLocked(true);
+        playTimer.hidden = true;
+      } else {
+        playFeedback.hidden = true;
+        setControlsLocked(false);
+        applySelectionHighlight();
+      }
+      return;
+    }
+
     const locked =
       session.phase !== 'answering' || session.status === 'paused' || session.status === 'finished';
     submitBtn.hidden = session.phase !== 'answering' || session.status === 'paused';
@@ -386,7 +417,9 @@
     playCard.hidden = false;
     showError(playError, '');
 
-    if (session.phase === 'lobby' || session.status === 'lobby') {
+    const openDone = isOpenLesson() && (session.personal_finished || session.phase === 'results');
+
+    if (!openDone && (session.phase === 'lobby' || session.status === 'lobby') && !isOpenLesson()) {
       renderedQuestionKey = '';
       playKicker.textContent = 'Лобби';
       playTitle.textContent = 'Ожидание учителя…';
@@ -399,14 +432,14 @@
       return;
     }
 
-    if (session.phase === 'results' || session.status === 'finished') {
+    if (openDone || session.phase === 'results' || session.status === 'finished') {
       renderedQuestionKey = '';
-      playKicker.textContent = 'Итог';
-      playTitle.textContent = 'Урок завершён';
+      playKicker.textContent = isOpenLesson() ? 'Ваш итог' : 'Итог';
+      playTitle.textContent = isOpenLesson() ? 'Вы прошли урок' : 'Урок завершён';
       submitBtn.hidden = true;
       playFeedback.hidden = true;
       playTimer.hidden = true;
-      const resultsKey = `${session.id}|${session.version || ''}|results`;
+      const resultsKey = `${session.id}|${session.version || ''}|results|${session.personal_finished ? 'p' : 's'}`;
       if (resultsKey !== lastResultsKey) {
         lastResultsKey = resultsKey;
         resultsHtml = '<p class="academy-muted">Загружаем разбор ответов…</p>';
@@ -441,9 +474,11 @@
       return;
     }
 
-    if (session.phase === 'answering' || session.phase === 'reveal') {
+    if (session.phase === 'answering' || session.phase === 'reveal' || isOpenLesson()) {
       const q = session.current_question;
-      playKicker.textContent = `Вопрос ${Number(session.current_index) + 1}/${session.question_count}`;
+      playKicker.textContent = isOpenLesson()
+        ? `Вопрос ${Number(session.current_index) + 1}/${session.question_count} · сами`
+        : `Вопрос ${Number(session.current_index) + 1}/${session.question_count}`;
       playTitle.textContent = q?.prompt || '—';
 
       const qKey = questionDomKey();
@@ -457,7 +492,9 @@
           captureDraft();
         }
         renderedQuestionKey = qKey;
-        renderQuestion(q, { locked: session.phase === 'reveal' || session.status === 'paused' });
+        renderQuestion(q, {
+          locked: (!isOpenLesson() && session.phase === 'reveal') || session.status === 'paused',
+        });
       }
       updateAnswerChrome();
       updatePlayTimer();
@@ -541,8 +578,14 @@
 
   async function submitAnswer() {
     showError(playError, '');
-    if (!session || session.phase !== 'answering' || session.status === 'paused') {
-      showError(playError, 'Сейчас нельзя ответить — подождите учителя.');
+    const open = isOpenLesson();
+    if (
+      !session ||
+      session.status === 'paused' ||
+      (!open && session.phase !== 'answering') ||
+      (open && (session.personal_finished || session.status === 'finished'))
+    ) {
+      showError(playError, open ? 'Сейчас нельзя ответить.' : 'Сейчас нельзя ответить — подождите учителя.');
       return;
     }
     let answer = selectedAnswer;
@@ -586,6 +629,36 @@
         answer,
       });
       myAnswer = data.answer;
+      if (open) {
+        if (data.finished) {
+          session.personal_finished = true;
+          session.phase = 'results';
+          session.status = 'finished';
+          session.current_question = null;
+          myAnswer = null;
+          lastSyncKey = '';
+          render(true);
+          return;
+        }
+        if (data.next_question != null || data.advanced) {
+          const advance = () => {
+            session.current_index = data.next_index;
+            session.current_question = data.next_question;
+            session.personal_finished = false;
+            session.phase = 'answering';
+            session.status = 'live';
+            myAnswer = null;
+            selectedAnswer = null;
+            draftText = '';
+            letterGridState = null;
+            lastSyncKey = '';
+            render(true);
+          };
+          updateAnswerChrome();
+          setTimeout(advance, data.feedback?.is_correct != null ? 700 : 350);
+          return;
+        }
+      }
       lastSyncKey = syncKey();
       showError(playFeedback, 'Ответ принят');
       playFeedback.hidden = false;

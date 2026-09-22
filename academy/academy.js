@@ -1002,19 +1002,27 @@
   }
 
   async function startSession(lessonId, settings) {
-    const reveal = settings?.reveal_answers === 'after_question' ? 'after_question' : 'never';
+    const mode =
+      settings?.mode === 'exam' ? 'exam' : settings?.mode === 'open' ? 'open' : 'quiz';
+    const isOpen = mode === 'open';
+    const isExam = mode === 'exam';
+    const reveal = isOpen
+      ? 'always'
+      : settings?.reveal_answers === 'after_question'
+        ? 'after_question'
+        : 'never';
     const data = await A.callLive(
       'create',
       {
         lesson_id: lessonId,
         settings: {
-          mode: settings?.mode === 'exam' ? 'exam' : 'quiz',
-          timer_seconds: Number(settings?.timer_seconds || 0),
-          auto_advance: settings?.auto_advance !== false,
-          auto_advance_on_all: settings?.auto_advance_on_all !== false,
-          show_instant_feedback: false,
+          mode,
+          timer_seconds: isOpen ? 0 : Number(settings?.timer_seconds || 0),
+          auto_advance: isOpen || isExam ? false : settings?.auto_advance !== false,
+          auto_advance_on_all: isOpen ? false : settings?.auto_advance_on_all !== false,
+          show_instant_feedback: isOpen,
           leaderboard: false,
-          allow_late_join: settings?.allow_late_join !== false,
+          allow_late_join: isExam ? false : true,
           reveal_answers: reveal,
         },
       },
@@ -1041,6 +1049,16 @@
         hint.textContent =
           'Зачёт: опоздавших не пускаем, разбор ученикам не показываем, на проекторе только «ответил / думает».';
       }
+    } else if (preset === 'open') {
+      if (lateJoin) lateJoin.checked = true;
+      if (reveal) reveal.checked = true;
+      if (timer) timer.value = '0';
+      if (auto) auto.checked = false;
+      if (autoAll) autoAll.checked = false;
+      if (hint) {
+        hint.textContent =
+          'Открытый урок: кто хочет — проходит сам по ссылке, без вашей кнопки «Далее». В конце у каждого свой результат.';
+      }
     } else {
       if (lateJoin) lateJoin.checked = true;
       if (reveal) reveal.checked = true;
@@ -1055,14 +1073,17 @@
   }
 
   function syncStartModeUi(preset) {
-    const mode = preset === 'exam' ? 'exam' : 'lesson';
+    const mode = preset === 'exam' ? 'exam' : preset === 'open' ? 'open' : 'lesson';
     const presetEl = document.getElementById('start-preset');
     if (presetEl) presetEl.value = mode;
     applyStartPreset(mode);
     const lessonOnlySettings = document.getElementById('start-settings-lesson-only');
-    if (lessonOnlySettings) lessonOnlySettings.hidden = mode === 'exam';
+    if (lessonOnlySettings) lessonOnlySettings.hidden = mode !== 'lesson';
     const startButton = document.getElementById('btn-start-lesson');
-    if (startButton) startButton.textContent = mode === 'exam' ? 'Начать зачёт' : 'Начать урок';
+    if (startButton) {
+      startButton.textContent =
+        mode === 'exam' ? 'Начать зачёт' : mode === 'open' ? 'Открыть урок' : 'Начать урок';
+    }
   }
 
   function looksLikeExamTitle(title) {
@@ -1261,8 +1282,9 @@
     pendingStartLesson = lesson;
     startLessonTitle.textContent = lesson?.title || 'Урок';
     const forceExam = opts?.forceExam === true;
+    const forceOpen = opts?.forceOpen === true;
     const exam = forceExam || looksLikeExamTitle(lesson?.title);
-    syncStartModeUi(exam ? 'exam' : 'lesson');
+    syncStartModeUi(forceOpen ? 'open' : exam ? 'exam' : 'lesson');
     startCard.hidden = false;
     showError(startError, '');
     startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -1505,7 +1527,8 @@
       showError(startError, '');
     });
     document.getElementById('start-preset')?.addEventListener('change', (event) => {
-      syncStartModeUi(event.target.value === 'exam' ? 'exam' : 'lesson');
+      const value = event.target.value;
+      syncStartModeUi(value === 'exam' ? 'exam' : value === 'open' ? 'open' : 'lesson');
     });
     document.getElementById('btn-add-question').addEventListener('click', () => {
       syncDraftsFromDom();
@@ -1639,16 +1662,20 @@
       const submitBtn = startForm.querySelector('button[type="submit"]');
       if (submitBtn) submitBtn.disabled = true;
       try {
-        const isExam = document.getElementById('start-preset')?.value === 'exam';
+        const preset = document.getElementById('start-preset')?.value;
+        const isExam = preset === 'exam';
+        const isOpen = preset === 'open';
         await startSession(pendingStartLesson.id, {
-          mode: isExam ? 'exam' : 'quiz',
+          mode: isExam ? 'exam' : isOpen ? 'open' : 'quiz',
           timer_seconds: Number(document.getElementById('start-timer').value),
-          auto_advance: isExam ? false : document.getElementById('start-auto').checked,
-          auto_advance_on_all: document.getElementById('start-auto-all')?.checked !== false,
-          allow_late_join: isExam ? false : document.getElementById('start-late-join')?.checked !== false,
+          auto_advance: isExam || isOpen ? false : document.getElementById('start-auto').checked,
+          auto_advance_on_all: isOpen
+            ? false
+            : document.getElementById('start-auto-all')?.checked !== false,
+          allow_late_join: isExam ? false : true,
           reveal_answers: isExam
             ? 'never'
-            : document.getElementById('start-reveal')?.checked
+            : isOpen || document.getElementById('start-reveal')?.checked
               ? 'after_question'
               : 'never',
         });
