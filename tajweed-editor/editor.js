@@ -15,10 +15,11 @@
     { id: "silent", label: "Слияние", color: "#8f959b", key: "8" },
     {
       id: "interdental",
-      label: "Межзубн.",
+      label: "Межзубные",
       color: "#8a6a28",
       key: "9",
       hint: "ث ذ ظ — язык между зубами",
+      strip: false, // pinned chip next to layers, not in scroll strip
     },
   ];
   const RULE_MAP = Object.fromEntries(RULES.map((r) => [r.id, r]));
@@ -50,6 +51,7 @@
     fileInput: $("fileInput"),
     btnAccent: $("btnAccent"),
     btnHidden: $("btnHidden"),
+    btnInterdental: $("btnInterdental"),
     docSelect: $("docSelect"),
     addDialog: $("addDocDialog"),
     addForm: $("addDocForm"),
@@ -334,6 +336,12 @@
     const overlapping = selectionMarks();
     els.btnAccent.classList.toggle("active", overlapping.some((m) => m.accent));
     els.btnHidden.classList.toggle("active", overlapping.some((m) => m.hidden));
+    if (els.btnInterdental) {
+      els.btnInterdental.classList.toggle(
+        "active",
+        overlapping.some((m) => m.rules.includes("interdental")),
+      );
+    }
     for (const btn of els.ruleGrid.querySelectorAll(".rule-btn")) {
       const id = btn.dataset.rule;
       btn.classList.toggle("active", overlapping.some((m) => m.rules.includes(id)));
@@ -401,6 +409,7 @@
   function renderRulesUi() {
     els.ruleGrid.innerHTML = "";
     for (const rule of RULES) {
+      if (rule.strip === false) continue; // pinned chip elsewhere
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "rule-btn";
@@ -806,6 +815,9 @@
 
     $("btnAccent").addEventListener("click", toggleAccent);
     $("btnHidden").addEventListener("click", toggleHidden);
+    if (els.btnInterdental) {
+      els.btnInterdental.addEventListener("click", () => toggleRule("interdental"));
+    }
     $("btnClearSel").addEventListener("click", clearSelectionMarks);
     $("btnUndo").addEventListener("click", undo);
     $("btnRedo").addEventListener("click", redo);
