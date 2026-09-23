@@ -2,6 +2,7 @@
   "use strict";
 
   const STORAGE_KEY = "tajweed-azkar-editor:v2";
+  const STORAGE_BACKUP_KEY = "tajweed-azkar-editor:v2:backup";
   const SCHEMA_VERSION = 2;
 
   const RULES = [
@@ -221,6 +222,42 @@
       .join("");
   }
 
+
+  function libraryStats(lib) {
+    const docs = (lib && Array.isArray(lib.docs)) ? lib.docs : [];
+    let marks = 0;
+    let translit = 0;
+    for (const d of docs) {
+      marks += Array.isArray(d.marks) ? d.marks.length : 0;
+      translit += String(d.transliteration || "").trim().length;
+    }
+    return { docs: docs.length, marks, translit };
+  }
+
+  function isRicherLibrary(candidate, baseline) {
+    const a = libraryStats(candidate);
+    const b = libraryStats(baseline);
+    if (a.marks !== b.marks) return a.marks > b.marks;
+    if (a.translit !== b.translit) return a.translit > b.translit;
+    return a.docs > b.docs;
+  }
+
+  function readBackupLibrary() {
+    try {
+      const raw = localStorage.getItem(STORAGE_BACKUP_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (!parsed || !Array.isArray(parsed.docs)) return null;
+      return ensureSeeds({
+        version: LIBRARY_VERSION,
+        activeId: String(parsed.activeId || ""),
+        docs: parsed.docs.map((d) => seedDoc(d)),
+      });
+    } catch {
+      return null;
+    }
+  }
+
   function scheduleSave() {
     els.saveStatus.textContent = "Сохранение…";
     els.saveStatus.classList.remove("ok");
@@ -229,6 +266,20 @@
       try {
         commitCurrentToLibrary();
         renderDocSelect();
+        // Keep previous snapshot so a bad boot cannot silently wipe marks.
+        const prev = localStorage.getItem(STORAGE_KEY);
+        if (prev) {
+          try {
+            const prevObj = JSON.parse(prev);
+            if (prevObj && Array.isArray(prevObj.docs) && isRicherLibrary(prevObj, library)) {
+              localStorage.setItem(STORAGE_BACKUP_KEY, prev);
+            } else if (!localStorage.getItem(STORAGE_BACKUP_KEY)) {
+              localStorage.setItem(STORAGE_BACKUP_KEY, prev);
+            }
+          } catch {
+            localStorage.setItem(STORAGE_BACKUP_KEY, prev);
+          }
+        }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(library));
         els.saveStatus.textContent = "Сохранено";
         els.saveStatus.classList.add("ok");
@@ -945,7 +996,15 @@
     bindChrome();
 
     const stored = loadStored();
-    library = stored || emptyLibrary();
+    const backup = readBackupLibrary();
+    let recoveredFromBackup = false;
+    if (stored && backup && isRicherLibrary(backup, stored)) {
+      library = backup;
+      recoveredFromBackup = true;
+    } else {
+      library = stored || backup || emptyLibrary();
+      recoveredFromBackup = !stored && Boolean(backup);
+    }
     ensureSeeds(library);
     const active = library.docs.find((d) => d.id === library.activeId) || library.docs[0];
     doc = normalizeDoc(active || emptyDoc());
@@ -954,6 +1013,11 @@
     renderDocSelect();
     renderAll();
     scheduleSave();
+    if (recoveredFromBackup) {
+      const st = libraryStats(library);
+      els.saveStatus.textContent = `Восстановлен бэкап · меток ${st.marks}`;
+      els.saveStatus.classList.add("ok");
+    }
   }
 
   boot();
