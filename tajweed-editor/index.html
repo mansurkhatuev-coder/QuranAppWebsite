@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css?v=interdental-vis3" />
+  <link rel="stylesheet" href="./editor.css?v=backup1" />
 </head>
 <body>
   <div class="atmosphere" aria-hidden="true"></div>
@@ -184,7 +184,9 @@
         <li><strong>Добавить</strong> — пустой документ, копия текущего или шаблон (Фатиха, Каусар и др.). Свои черновики не затираются.</li>
         <li><strong>Транслитерация</strong> — поле под арабским: вставь чеченский текст, затем размечай на «бумаге».</li>
         <li><strong>Экспорт всего</strong> — скачивает все документы одним JSON, когда будешь готов.</li>
-        <li><strong>Автосейв</strong> — черновики только в этом браузере. Прод‑JSON азкаров не меняется.</li>
+        <li><strong>Автосейв</strong> — черновики только в <em>этом</em> браузере и на <em>этом же адресе сайта</em>. Другая ссылка (githack / прод / телефон) = другое хранилище.</li>
+        <li><strong>Бэкап</strong> — перед записью хранится предыдущий снимок; если меток стало меньше, при открытии подтянется более полный бэкап.</li>
+        <li><strong>Экспорт всего</strong> — лучшая страховка: скачай JSON себе на устройство.</li>
         <li>Горячие клавиши: <kbd>1–9</kbd>, <kbd>A</kbd>, <kbd>H</kbd>, <kbd>Del</kbd>, <kbd>Ctrl+Z</kbd>.</li>
       </ul>
       <div class="modal-actions">
@@ -193,7 +195,7 @@
     </div>
   </dialog>
 
-  <script src="./catalog.js?v=interdental-vis3"></script>
-  <script src="./editor.js?v=interdental-vis3"></script>
+  <script src="./catalog.js?v=backup1"></script>
+  <script src="./editor.js?v=backup1"></script>
 </body>
 </html>
