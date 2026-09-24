@@ -14,6 +14,8 @@ type PublishBody = {
   dailyAyahPool?: unknown[];
   dailyDuaPool?: unknown[];
   appRelease?: Record<string, unknown>;
+  azkarTajweed?: { version?: number; docs?: unknown[]; builtAt?: string; publishedAt?: string };
+  azkarTajweedManifest?: Record<string, unknown>;
 };
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -111,25 +113,104 @@ Deno.serve(async (request) => {
     }
 
     const body = (await request.json()) as PublishBody;
-    const supportDua = Array.isArray(body.supportDua) ? body.supportDua : [];
-    const generalDua = Array.isArray(body.generalDua) ? body.generalDua : [];
-    const manifest = body.manifest ?? {};
-    const homeManifest = body.homeManifest ?? {};
-    const homeAnnouncements = Array.isArray(body.homeAnnouncements) ? body.homeAnnouncements : [];
-    const dailyAyahPool = Array.isArray(body.dailyAyahPool) ? body.dailyAyahPool : [];
-    const dailyDuaPool = Array.isArray(body.dailyDuaPool) ? body.dailyDuaPool : [];
-    const appRelease = body.appRelease ?? {};
+    if (body.azkarTajweed || body.azkarTajweedManifest) {
+      const { data: editorRole, error: editorRoleError } = await supabase
+        .from('azkar_tajweed_admins')
+        .select('user_id')
+        .eq('user_id', userData.user.id)
+        .maybeSingle();
+      if (editorRoleError || !editorRole) {
+        return jsonResponse({ error: 'Azkar tajweed publishing requires editor access' }, 403);
+      }
+    }
+    const files: { path: string; content: string }[] = [];
 
-    const files = [
-      { path: 'data/support-dua.json', content: `${JSON.stringify(supportDua, null, 2)}\n` },
-      { path: 'data/general-dua.json', content: `${JSON.stringify(generalDua, null, 2)}\n` },
-      { path: 'data/remote-dua.manifest.json', content: `${JSON.stringify(manifest, null, 2)}\n` },
-      { path: 'data/home-announcements.json', content: `${JSON.stringify(homeAnnouncements, null, 2)}\n` },
-      { path: 'data/daily-ayah-pool.json', content: `${JSON.stringify(dailyAyahPool, null, 2)}\n` },
-      { path: 'data/daily-dua-pool.json', content: `${JSON.stringify(dailyDuaPool, null, 2)}\n` },
-      { path: 'data/remote-home.manifest.json', content: `${JSON.stringify(homeManifest, null, 2)}\n` },
-      { path: 'data/app-release.json', content: `${JSON.stringify(appRelease, null, 2)}\n` },
-    ];
+    // Selective publish: only write keys that were explicitly provided.
+    // Avoids wiping dua when publishing azkar tajweed alone (and vice versa).
+    if (Array.isArray(body.supportDua)) {
+      files.push({
+        path: 'data/support-dua.json',
+        content: `${JSON.stringify(body.supportDua, null, 2)}\n`,
+      });
+    }
+    if (Array.isArray(body.generalDua)) {
+      files.push({
+        path: 'data/general-dua.json',
+        content: `${JSON.stringify(body.generalDua, null, 2)}\n`,
+      });
+    }
+    if (body.manifest && typeof body.manifest === 'object') {
+      files.push({
+        path: 'data/remote-dua.manifest.json',
+        content: `${JSON.stringify(body.manifest, null, 2)}\n`,
+      });
+    }
+    if (Array.isArray(body.homeAnnouncements)) {
+      files.push({
+        path: 'data/home-announcements.json',
+        content: `${JSON.stringify(body.homeAnnouncements, null, 2)}\n`,
+      });
+    }
+    if (Array.isArray(body.dailyAyahPool)) {
+      files.push({
+        path: 'data/daily-ayah-pool.json',
+        content: `${JSON.stringify(body.dailyAyahPool, null, 2)}\n`,
+      });
+    }
+    if (Array.isArray(body.dailyDuaPool)) {
+      files.push({
+        path: 'data/daily-dua-pool.json',
+        content: `${JSON.stringify(body.dailyDuaPool, null, 2)}\n`,
+      });
+    }
+    if (body.homeManifest && typeof body.homeManifest === 'object') {
+      files.push({
+        path: 'data/remote-home.manifest.json',
+        content: `${JSON.stringify(body.homeManifest, null, 2)}\n`,
+      });
+    }
+    if (body.appRelease && typeof body.appRelease === 'object') {
+      files.push({
+        path: 'data/app-release.json',
+        content: `${JSON.stringify(body.appRelease, null, 2)}\n`,
+      });
+    }
+
+    if (body.azkarTajweed && typeof body.azkarTajweed === 'object') {
+      const docs = Array.isArray(body.azkarTajweed.docs) ? body.azkarTajweed.docs : [];
+      const pack = {
+        version: typeof body.azkarTajweed.version === 'number' ? body.azkarTajweed.version : 2,
+        publishedAt: new Date().toISOString(),
+        docs,
+      };
+      files.push({
+        path: 'data/azkar-tajweed-translit.json',
+        content: `${JSON.stringify(pack, null, 2)}\n`,
+      });
+
+      const tajweedManifest =
+        body.azkarTajweedManifest && typeof body.azkarTajweedManifest === 'object'
+          ? body.azkarTajweedManifest
+          : {
+              version: pack.version,
+              publishedAt: pack.publishedAt,
+              url: '/data/azkar-tajweed-translit.json',
+              docCount: docs.length,
+            };
+      files.push({
+        path: 'data/remote-azkar-tajweed.manifest.json',
+        content: `${JSON.stringify(tajweedManifest, null, 2)}\n`,
+      });
+    } else if (body.azkarTajweedManifest && typeof body.azkarTajweedManifest === 'object') {
+      files.push({
+        path: 'data/remote-azkar-tajweed.manifest.json',
+        content: `${JSON.stringify(body.azkarTajweedManifest, null, 2)}\n`,
+      });
+    }
+
+    if (!files.length) {
+      return jsonResponse({ error: 'Nothing to publish' }, 400);
+    }
 
     for (const file of files) {
       const sha = await githubGetFileSha(githubToken, githubRepo, file.path);
@@ -148,14 +229,30 @@ Deno.serve(async (request) => {
     });
 
     if (Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')) {
-      await serviceClient.from('content_manifest').upsert({
+      const upsertRow: Record<string, unknown> = {
         id: 1,
-        remote_dua: manifest,
-        remote_home: homeManifest,
-        app_release: appRelease,
         published_at: new Date().toISOString(),
         published_by: userData.user.email,
-      });
+      };
+      if (body.manifest && typeof body.manifest === 'object') upsertRow.remote_dua = body.manifest;
+      if (body.homeManifest && typeof body.homeManifest === 'object') {
+        upsertRow.remote_home = body.homeManifest;
+      }
+      if (body.appRelease && typeof body.appRelease === 'object') {
+        upsertRow.app_release = body.appRelease;
+      }
+      if (body.azkarTajweedManifest && typeof body.azkarTajweedManifest === 'object') {
+        upsertRow.remote_azkar_tajweed = body.azkarTajweedManifest;
+      } else if (body.azkarTajweed && typeof body.azkarTajweed === 'object') {
+        const docs = Array.isArray(body.azkarTajweed.docs) ? body.azkarTajweed.docs : [];
+        upsertRow.remote_azkar_tajweed = {
+          version: typeof body.azkarTajweed.version === 'number' ? body.azkarTajweed.version : 2,
+          publishedAt: new Date().toISOString(),
+          url: '/data/azkar-tajweed-translit.json',
+          docCount: docs.length,
+        };
+      }
+      await serviceClient.from('content_manifest').upsert(upsertRow);
     }
 
     return jsonResponse({

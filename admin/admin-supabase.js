@@ -527,6 +527,51 @@
     return { ok: true, updatedBy: email };
   }
 
+  async function loadAzkarTajweedDraft() {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const session = await getSession();
+    if (!session) throw new Error('Нужен вход в Supabase');
+
+    const { data, error } = await client
+      .from('azkar_tajweed_draft')
+      .select('payload,updated_at,updated_by')
+      .eq('id', 1)
+      .maybeSingle();
+    if (error) {
+      const hint =
+        error.code === '42P01' || /does not exist/i.test(error.message ?? '')
+          ? 'Таблица azkar_tajweed_draft не найдена — выполните миграцию в Supabase'
+          : error.message;
+      throw new Error(hint || 'Не удалось загрузить черновик');
+    }
+    if (!data?.payload) return null;
+    return data;
+  }
+
+  async function saveAzkarTajweedDraft(payload) {
+    const client = getClient();
+    if (!client) throw new Error('Supabase не настроен');
+    const session = await getSession();
+    if (!session) throw new Error('Нужен вход в Supabase');
+
+    const email = session.user?.email || 'admin';
+    const { error } = await client.from('azkar_tajweed_draft').upsert({
+      id: 1,
+      payload,
+      updated_at: new Date().toISOString(),
+      updated_by: email,
+    });
+    if (error) {
+      const hint =
+        error.code === '42P01' || /does not exist/i.test(error.message ?? '')
+          ? 'Таблица azkar_tajweed_draft не найдена — выполните миграцию в Supabase'
+          : error.message;
+      throw new Error(hint || 'Не удалось сохранить в Supabase');
+    }
+    return { ok: true, updatedBy: email };
+  }
+
   global.AdminSupabase = {
     isEnabled,
     getClient,
@@ -553,5 +598,7 @@
     refreshAppleDownloads,
     loadCeLocaleDraft,
     saveCeLocaleDraft,
+    loadAzkarTajweedDraft,
+    saveAzkarTajweedDraft,
   };
 })(window);

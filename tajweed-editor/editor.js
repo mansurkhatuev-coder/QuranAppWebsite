@@ -75,6 +75,7 @@
       version: SCHEMA_VERSION,
       id: "",
       title: "",
+      azkarIds: [],
       arabic: "",
       transliteration: "",
       marks: [],
@@ -104,6 +105,9 @@
     const src = raw && typeof raw === "object" ? raw : {};
     base.id = String(src.id || "");
     base.title = String(src.title || "");
+    base.azkarIds = Array.isArray(src.azkarIds)
+      ? src.azkarIds.map(String).filter(Boolean)
+      : [];
     base.arabic = String(src.arabic || "");
     base.transliteration = String(src.transliteration || src.text || "");
     const marks = Array.isArray(src.marks) ? src.marks : [];
@@ -185,6 +189,13 @@
       }
       if (!lib.docs[idx].arabic && seed.arabic) lib.docs[idx].arabic = seed.arabic;
       if (!lib.docs[idx].title && seed.title) lib.docs[idx].title = seed.title;
+      if (
+        (!lib.docs[idx].azkarIds || !lib.docs[idx].azkarIds.length) &&
+        Array.isArray(seed.azkarIds) &&
+        seed.azkarIds.length
+      ) {
+        lib.docs[idx].azkarIds = seed.azkarIds.map(String);
+      }
     }
     if (!lib.activeId || !lib.docs.some((d) => d.id === lib.activeId)) {
       lib.activeId = lib.docs[0] ? lib.docs[0].id : "";
@@ -326,6 +337,7 @@
       version: SCHEMA_VERSION,
       id: doc.id,
       title: doc.title,
+      azkarIds: Array.isArray(doc.azkarIds) ? doc.azkarIds.slice() : [],
       arabic: doc.arabic,
       transliteration: doc.transliteration,
       marks: doc.marks
@@ -716,6 +728,134 @@
     els.saveStatus.classList.add("ok");
   }
 
+  function applyCloudLibrary(payload, label) {
+    if (!payload || !Array.isArray(payload.docs)) {
+      throw new Error("В облаке нет библиотеки docs[]");
+    }
+    library = {
+      version: LIBRARY_VERSION,
+      activeId: payload.activeId || payload.docs[0]?.id || "",
+      docs: payload.docs.map((d) => seedDoc(d)),
+    };
+    ensureSeeds(library);
+    const active =
+      library.docs.find((d) => d.id === library.activeId) || library.docs[0];
+    doc = normalizeDoc(active || emptyDoc());
+    if (!doc.id && active) doc.id = active.id;
+    selection = null;
+    activeMarkIndex = -1;
+    history.length = 0;
+    future.length = 0;
+    syncForm();
+    renderDocSelect();
+    renderAll();
+    scheduleSave();
+    els.saveStatus.textContent = label;
+    els.saveStatus.classList.add("ok");
+  }
+
+  async function cloudSaveDraft() {
+    if (!globalThis.TajweedCloud) {
+      alert("Cloud-модуль не загружен");
+      return;
+    }
+    commitCurrentToLibrary();
+    els.saveStatus.textContent = "Облако…";
+    els.saveStatus.classList.remove("ok");
+    try {
+      const result = await globalThis.TajweedCloud.saveDraftLibrary({
+        version: LIBRARY_VERSION,
+        activeId: library.activeId,
+        docs: library.docs.map((d) => normalizeDoc(d)),
+        savedAt: nowIso(),
+      });
+      els.saveStatus.textContent = `Облако · ${result.updatedBy || "ok"}`;
+      els.saveStatus.classList.add("ok");
+    } catch (error) {
+      els.saveStatus.textContent =
+        error instanceof Error ? error.message : "Ошибка облака";
+      els.saveStatus.classList.remove("ok");
+    }
+  }
+
+  async function cloudLoadDraft() {
+    if (!globalThis.TajweedCloud) {
+      alert("Cloud-модуль не загружен");
+      return;
+    }
+    els.saveStatus.textContent = "Загрузка…";
+    els.saveStatus.classList.remove("ok");
+    try {
+      const row = await globalThis.TajweedCloud.loadDraftLibrary();
+      if (!row?.library) {
+        els.saveStatus.textContent = "Черновик пуст";
+        return;
+      }
+      applyCloudLibrary(
+        row.library,
+        `Черновик · ${row.updatedBy || "cloud"}${row.updatedAt ? ` · ${row.updatedAt.slice(0, 16)}` : ""}`
+      );
+    } catch (error) {
+      els.saveStatus.textContent =
+        error instanceof Error ? error.message : "Ошибка загрузки";
+      els.saveStatus.classList.remove("ok");
+    }
+  }
+
+  async function cloudPublish() {
+    if (!globalThis.TajweedCloud) {
+      alert("Cloud-модуль не загружен");
+      return;
+    }
+    commitCurrentToLibrary();
+    const st = libraryStats(library);
+    if (
+      !confirm(
+        `Опубликовать на waydean.ru?\nДокументов: ${st.docs}\nС метками: ${st.marks}\n(приложение подтянет через 1–2 мин)`
+      )
+    ) {
+      return;
+    }
+    els.saveStatus.textContent = "Публикация…";
+    els.saveStatus.classList.remove("ok");
+    try {
+      await globalThis.TajweedCloud.saveDraftLibrary({
+        version: LIBRARY_VERSION,
+        activeId: library.activeId,
+        docs: library.docs.map((d) => normalizeDoc(d)),
+        savedAt: nowIso(),
+      });
+      const result = await globalThis.TajweedCloud.publishLibrary({
+        version: LIBRARY_VERSION,
+        docs: library.docs.map((d) => normalizeDoc(d)),
+      });
+      els.saveStatus.textContent = `Опубликовано · ${result.publishedAt || "ok"}`;
+      els.saveStatus.classList.add("ok");
+    } catch (error) {
+      els.saveStatus.textContent =
+        error instanceof Error ? error.message : "Ошибка публикации";
+      els.saveStatus.classList.remove("ok");
+    }
+  }
+
+  async function cloudPullLive() {
+    if (!globalThis.TajweedCloud) {
+      alert("Cloud-модуль не загружен");
+      return;
+    }
+    if (!confirm("Подтянуть текущий пак с waydean.ru в редактор?")) return;
+    els.saveStatus.textContent = "Прод…";
+    els.saveStatus.classList.remove("ok");
+    try {
+      const pack = await globalThis.TajweedCloud.fetchLivePack();
+      applyCloudLibrary(pack, `Прод · ${Array.isArray(pack.docs) ? pack.docs.length : 0} док.`);
+    } catch (error) {
+      els.saveStatus.textContent =
+        error instanceof Error ? error.message : "Ошибка прод-пака";
+      els.saveStatus.classList.remove("ok");
+    }
+  }
+
   function importPayload(parsed) {
     if (parsed && Array.isArray(parsed.docs)) {
       for (const item of parsed.docs) {
@@ -915,6 +1055,14 @@
     });
     $("btnExport").addEventListener("click", downloadJson);
     $("btnExportAll").addEventListener("click", downloadLibrary);
+    const btnCloudSave = $("btnCloudSave");
+    const btnCloudLoad = $("btnCloudLoad");
+    const btnCloudPublish = $("btnCloudPublish");
+    const btnCloudPull = $("btnCloudPull");
+    if (btnCloudSave) btnCloudSave.addEventListener("click", () => void cloudSaveDraft());
+    if (btnCloudLoad) btnCloudLoad.addEventListener("click", () => void cloudLoadDraft());
+    if (btnCloudPublish) btnCloudPublish.addEventListener("click", () => void cloudPublish());
+    if (btnCloudPull) btnCloudPull.addEventListener("click", () => void cloudPullLive());
     $("btnCopyJson").addEventListener("click", copyJson);
     $("btnImport").addEventListener("click", () => els.fileInput.click());
     $("btnSortMarks").addEventListener("click", () => {

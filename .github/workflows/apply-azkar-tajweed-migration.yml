@@ -1,0 +1,111 @@
+name: Apply azkar tajweed migration + deploy publish-content
+
+# Creates azkar_tajweed_* tables/policies and deploys publish-content Edge Function.
+# Additive only. Uses Supabase Management API + CLI.
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  migrate-and-deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: .
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply azkar tajweed SQL migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-azkar-tajweed.sql
+
+      - name: Verify tables and admin seed
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          BODY=$(mktemp)
+          RESP=$(mktemp)
+          python3 - <<'PY' > "$BODY"
+          import json
+          print(json.dumps({
+            "query": """
+          select
+            (select count(*)::int from information_schema.tables
+              where table_schema = 'public' and table_name = 'azkar_tajweed_draft') as has_draft,
+            (select count(*)::int from information_schema.tables
+              where table_schema = 'public' and table_name = 'azkar_tajweed_admins') as has_admins,
+            (select count(*)::int from information_schema.columns
+              where table_schema = 'public' and table_name = 'content_manifest'
+                and column_name = 'remote_azkar_tajweed') as has_manifest_col,
+            (select count(*)::int from public.azkar_tajweed_admins) as admin_count;
+          """
+          }))
+          PY
+          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+            --data-binary @"$BODY")
+          echo "HTTP $CODE"
+          cat "$RESP"
+          echo
+          python3 - "$RESP" <<'PY'
+          import json, sys
+          data = json.load(open(sys.argv[1], encoding="utf-8"))
+          if not isinstance(data, list) or not data:
+              raise SystemExit(f"Unexpected response: {data!r}"[:500])
+          row = data[0]
+          if int(row.get("has_draft") or 0) != 1:
+              raise SystemExit("Missing azkar_tajweed_draft")
+          if int(row.get("has_admins") or 0) != 1:
+              raise SystemExit("Missing azkar_tajweed_admins")
+          if int(row.get("has_manifest_col") or 0) != 1:
+              raise SystemExit("Missing content_manifest.remote_azkar_tajweed")
+          if int(row.get("admin_count") or 0) < 1:
+              raise SystemExit("No azkar_tajweed_admins rows — create an Auth user first")
+          print(f"OK: schema ready, admins={row['admin_count']}")
+          PY
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Configure GitHub secrets for publish-content
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          WEBSITE_PUBLISH_TOKEN: ${{ secrets.WEBSITE_PUBLISH_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "Missing SUPABASE_ACCESS_TOKEN repository secret"
+            exit 1
+          fi
+          if [ -z "$WEBSITE_PUBLISH_TOKEN" ]; then
+            echo "Missing WEBSITE_PUBLISH_TOKEN repository secret"
+            exit 1
+          fi
+          supabase secrets set \
+            --project-ref rivjkiksknnesahrvamf \
+            GITHUB_TOKEN="$WEBSITE_PUBLISH_TOKEN" \
+            GITHUB_REPO=mansurkhatuev-coder/QuranAppWebsite
+
+      - name: Deploy publish-content Edge Function
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          supabase functions deploy publish-content \
+            --project-ref rivjkiksknnesahrvamf \
+            --no-verify-jwt \
+            --use-api
