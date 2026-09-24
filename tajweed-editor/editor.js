@@ -658,8 +658,8 @@
     renderAll();
   }
 
-  function switchToDoc(id) {
-    commitCurrentToLibrary();
+  function switchToDoc(id, { commitCurrent = true } = {}) {
+    if (commitCurrent) commitCurrentToLibrary();
     const found = library.docs.find((d) => d.id === id);
     if (!found) return;
     library.activeId = id;
@@ -1049,9 +1049,13 @@
         return;
       }
       if (!confirm(`Удалить «${doc.title || doc.id}»?`)) return;
+      // Preserve edits made just before deletion, but don't let a pending autosave
+      // or the subsequent switch put this document back into the library.
+      commitCurrentToLibrary();
+      clearTimeout(saveTimer);
       library.docs = library.docs.filter((d) => d.id !== doc.id);
       library.activeId = library.docs[0].id;
-      switchToDoc(library.activeId);
+      switchToDoc(library.activeId, { commitCurrent: false });
     });
     $("btnExport").addEventListener("click", downloadJson);
     $("btnExportAll").addEventListener("click", downloadLibrary);
