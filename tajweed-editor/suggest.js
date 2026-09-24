@@ -1,7 +1,7 @@
 /**
- * Suggest tajweed marks on Chechen-style transliteration.
- * Learns phrase snippets from marked example docs + orthography heuristics.
- * Shared by editor (browser) and scripts/suggest_azkar_tajweed_marks.js (Node).
+ * Conservative tajweed mark suggestions for Chechen-style transliteration.
+ * Orthography-only (no “paint every а/и” phrase transfer).
+ * Shared by editor + scripts/suggest_azkar_tajweed_marks.js
  */
 (function initTajweedSuggest(root) {
   'use strict';
@@ -18,8 +18,22 @@
     'interdental',
   ]);
 
-  const ACUTE = /[\u0301\u00B4´]/;
-  const MACRON_BELOW = /\u0331/;
+  /** Precomposed vowels with acute (common in azkar packs). */
+  const ACUTE_VOWELS = new Map([
+    ['á', 'а'],
+    ['Á', 'А'],
+    ['é', 'е'],
+    ['É', 'Е'],
+    ['í', 'и'],
+    ['Í', 'И'],
+    ['ó', 'о'],
+    ['Ó', 'О'],
+    ['ú', 'у'],
+    ['Ú', 'У'],
+    ['ý', 'ы'],
+    ['Ý', 'Ы'],
+    ['é', 'е'],
+  ]);
 
   function clampMark(mark, len) {
     const start = Math.max(0, Math.min(Number(mark.start) || 0, len));
@@ -42,176 +56,16 @@
     return `${m.start}:${m.end}:${m.rules.join(',')}:${m.accent ? 1 : 0}:${m.hidden ? 1 : 0}`;
   }
 
-  function mergeMarkLists(lists, len) {
-    const byKey = new Map();
-    for (const list of lists) {
-      for (const raw of list) {
-        const m = clampMark(raw, len);
-        if (!m || (!m.rules.length && !m.accent && !m.hidden)) continue;
-        const key = `${m.start}:${m.end}`;
-        const prev = byKey.get(key);
-        if (!prev) {
-          byKey.set(key, m);
-          continue;
-        }
-        const rules = [...new Set([...prev.rules, ...m.rules])];
-        byKey.set(key, {
-          ...prev,
-          rules,
-          accent: prev.accent || m.accent,
-          hidden: prev.hidden || m.hidden,
-          note: prev.note || m.note,
-        });
-      }
-    }
-    return [...byKey.values()].sort((a, b) => a.start - b.start || a.end - b.end);
-  }
-
-  /** Build phrase → mark template from example docs (snippet length 1–12). */
-  function buildPhraseBook(examples) {
-    /** @type {Map<string, { rules: string[], accent: boolean, hidden: boolean, hits: number }>} */
-    const book = new Map();
-    for (const doc of examples || []) {
-      const text = String(doc.transliteration || '');
-      if (!text) continue;
-      for (const raw of doc.marks || []) {
-        const m = clampMark(raw, text.length);
-        if (!m) continue;
-        const snippet = text.slice(m.start, m.end);
-        if (!snippet || snippet.length > 12) continue;
-        if (/^\s+$/.test(snippet)) continue;
-        // Single-char phrases over-match; keep only accent/hidden/interdental cues
-        if (
-          snippet.length === 1 &&
-          !m.accent &&
-          !m.hidden &&
-          !(m.rules.length === 1 && m.rules[0] === 'interdental')
-        ) {
-          continue;
-        }
-        const prev = book.get(snippet);
-        if (!prev || prev.hits < 1) {
-          book.set(snippet, {
-            rules: m.rules.slice(),
-            accent: m.accent,
-            hidden: m.hidden,
-            hits: 1,
-          });
-        } else {
-          prev.hits += 1;
-          // Prefer richer rule set when conflict
-          if (m.rules.length > prev.rules.length) prev.rules = m.rules.slice();
-          prev.accent = prev.accent || m.accent;
-          prev.hidden = prev.hidden || m.hidden;
-        }
-      }
-    }
-    return [...book.entries()]
-      .map(([snippet, meta]) => ({ snippet, ...meta }))
-      .sort((a, b) => b.snippet.length - a.snippet.length || b.hits - a.hits);
-  }
-
-  function applyPhraseBook(text, phraseBook) {
-    const marks = [];
-    const covered = new Uint8Array(text.length);
-    for (const entry of phraseBook) {
-      const sn = entry.snippet;
-      if (!sn) continue;
-      let from = 0;
-      while (from < text.length) {
-        const idx = text.indexOf(sn, from);
-        if (idx < 0) break;
-        let overlap = false;
-        for (let i = idx; i < idx + sn.length; i += 1) {
-          if (covered[i]) {
-            overlap = true;
-            break;
-          }
-        }
-        if (!overlap) {
-          marks.push({
-            start: idx,
-            end: idx + sn.length,
-            rules: entry.rules.slice(),
-            accent: entry.accent,
-            hidden: entry.hidden,
-            note: '',
-          });
-          for (let i = idx; i < idx + sn.length; i += 1) covered[i] = 1;
-        }
-        from = idx + 1;
-      }
-    }
-    return marks;
-  }
-
-  function isLetter(ch) {
-    return /[A-Za-zА-Яа-яЁёIІӀӏ]/.test(ch);
-  }
-
-  function applyHeuristics(text) {
-    const marks = [];
-    const n = text.length;
-
-    const pushRange = (start, end, rules, accent = false) => {
-      if (end <= start) return;
-      marks.push({ start, end, rules, accent, hidden: false, note: '' });
-    };
-
-    // Combining acute / ´ → madd2 + accent on that char (or previous letter)
-    for (let i = 0; i < n; i += 1) {
-      const ch = text[i];
-      if (ACUTE.test(ch) || ch === '´' || ch === '\u00B4') {
-        let t = i;
-        if (!isLetter(ch) && i > 0 && isLetter(text[i - 1])) t = i - 1;
-        if (isLetter(text[t]) || ACUTE.test(text[t])) {
-          pushRange(t, t + 1, ['madd2'], true);
-        }
-      }
-      if (MACRON_BELOW.test(ch) || ch === '\u0331') {
-        const t = i > 0 ? i - 1 : i;
-        pushRange(t, t + 1, ['interdental'], false);
-      }
-    }
-
-    // Digraphs / orthography tokens
-    const patterns = [
-      { re: /х[1IІ]/gi, rules: ['tafkheem'] },
-      { re: /Х[1IІ]/g, rules: ['tafkheem'] },
-      { re: /г[1IІ]/gi, rules: ['tafkheem'] },
-      { re: /къ/gi, rules: ['tafkheem'] },
-      { re: /хь/gi, rules: ['tafkheem'] },
-      { re: /т[1IІ]/gi, rules: ['tafkheem'] },
-      { re: /с̣|с\u0323/gi, rules: ['tafkheem'] },
-      { re: /нн/gi, rules: ['ghunna'] },
-      { re: /мм/gi, rules: ['ghunna'] },
-      { re: /вв/gi, rules: ['ghunna'] },
-      { re: /рр/gi, rules: ['tafkheem'] },
-      { re: /з̱|з\u0331|ҙ/gi, rules: ['interdental'] },
-      { re: /з(?=[уУ])/g, rules: ['interdental'] }, // аlузу / аIузу style
-    ];
-
-    for (const { re, rules } of patterns) {
-      re.lastIndex = 0;
-      let m;
-      const flags = re.flags.includes('g') ? re.flags : `${re.flags}g`;
-      const rx = new RegExp(re.source, flags);
-      while ((m = rx.exec(text)) !== null) {
-        pushRange(m.index, m.index + m[0].length, rules, false);
-        if (m[0].length === 0) rx.lastIndex += 1;
-      }
-    }
-
-    // Isolated qalqala-ish: final къ at word end after vowel often qalqala in examples (холакъ)
-    {
-      const rx = /([аеиоуыэюяАЕИОУЫЭЮЯ])(къ)(?=[\s.,!?;:]|$)/g;
-      let m;
-      while ((m = rx.exec(text)) !== null) {
-        pushRange(m.index + m[1].length, m.index + m[0].length, ['qalqala'], false);
-      }
-    }
-
-    return marks;
+  function push(marks, start, end, rules, accent) {
+    if (end <= start) return;
+    marks.push({
+      start,
+      end,
+      rules: rules.slice(),
+      accent: Boolean(accent),
+      hidden: false,
+      note: '',
+    });
   }
 
   function collapseAdjacent(marks) {
@@ -220,13 +74,13 @@
     const out = [];
     for (const m of sorted) {
       const prev = out[out.length - 1];
-      const sameRules =
+      const same =
         prev &&
         prev.rules.join(',') === m.rules.join(',') &&
         prev.accent === m.accent &&
         prev.hidden === m.hidden &&
         prev.end >= m.start;
-      if (sameRules) {
+      if (same) {
         prev.end = Math.max(prev.end, m.end);
         continue;
       }
@@ -235,40 +89,9 @@
     return out;
   }
 
-  /**
-   * @param {string} text
-   * @param {{ examples?: object[], preferExisting?: object[] }} [opts]
-   */
-  function suggestMarksForText(text, opts) {
-    const src = String(text || '');
-    if (!src.trim()) return [];
-    const examples = opts && Array.isArray(opts.examples) ? opts.examples : [];
-    const phraseBook = buildPhraseBook(examples);
-    const fromPhrases = applyPhraseBook(src, phraseBook);
-
-    const covered = new Uint8Array(src.length);
-    for (const m of fromPhrases) {
-      for (let i = m.start; i < m.end; i += 1) covered[i] = 1;
-    }
-
-    const rawHeuristics = applyHeuristics(src);
-    const fromHeuristics = rawHeuristics.filter((m) => {
-      for (let i = m.start; i < m.end; i += 1) {
-        if (covered[i]) return false;
-      }
-      return true;
-    });
-
-    let merged = mergeMarkLists([fromPhrases, fromHeuristics], src.length);
-    merged = collapseAdjacent(merged);
-
-    if (opts && Array.isArray(opts.preferExisting) && opts.preferExisting.length) {
-      merged = mergeMarkLists([opts.preferExisting, merged], src.length);
-      merged = collapseAdjacent(merged);
-    }
-
+  function dedupe(marks) {
     const seen = new Set();
-    return merged.filter((m) => {
+    return marks.filter((m) => {
       const k = markKey(m);
       if (seen.has(k)) return false;
       seen.add(k);
@@ -276,9 +99,119 @@
     });
   }
 
+  /**
+   * Safe orthography suggestions only:
+   * - acute / combining acute → madd2 + accent
+   * - macron-below / ҙ → interdental
+   * - х1/хI, г1, т1 → tafkheem
+   * - рр → tafkheem; нн/мм/вв → ghunna
+   * - къ word-final after vowel → qalqala, else tafkheem
+   * - аIузу / аlузу style з before у → interdental
+   */
+  function applyHeuristics(text) {
+    const marks = [];
+    const n = text.length;
+
+    for (let i = 0; i < n; i += 1) {
+      const ch = text[i];
+
+      // Precomposed á ó í …
+      if (ACUTE_VOWELS.has(ch)) {
+        push(marks, i, i + 1, ['madd2'], true);
+        continue;
+      }
+
+      // Combining acute on previous letter
+      if (ch === '\u0301' || ch === '\u00B4' || ch === '´') {
+        if (i > 0) push(marks, i - 1, i, ['madd2'], true);
+        continue;
+      }
+
+      // Combining macron below → interdental on previous
+      if (ch === '\u0331') {
+        if (i > 0) push(marks, i - 1, i, ['interdental'], false);
+        continue;
+      }
+    }
+
+    // Digraphs (case-insensitive where useful)
+    const digraphs = [
+      // х1 / хI / хl (латинская L часто вместо единицы)
+      { re: /х[1IІlL]/g, rules: ['tafkheem'], accent: false },
+      { re: /Х[1IІlL]/g, rules: ['tafkheem'], accent: false },
+      { re: /г[1IІlL]/gi, rules: ['tafkheem'], accent: false },
+      { re: /т[1IІlL]/gi, rules: ['tafkheem'], accent: false },
+      { re: /с̣|с\u0323/gi, rules: ['tafkheem'], accent: false },
+      { re: /рр/gi, rules: ['tafkheem'], accent: false },
+      { re: /нн/gi, rules: ['ghunna'], accent: false },
+      { re: /мм/gi, rules: ['ghunna'], accent: false },
+      { re: /вв/gi, rules: ['ghunna'], accent: false },
+      { re: /з̱|ҙ/gi, rules: ['interdental'], accent: false },
+    ];
+
+    for (const { re, rules, accent } of digraphs) {
+      const rx = new RegExp(re.source, re.flags.includes('g') ? re.flags : `${re.flags}g`);
+      let m;
+      while ((m = rx.exec(text)) !== null) {
+        push(marks, m.index, m.index + m[0].length, rules, accent);
+        if (!m[0].length) rx.lastIndex += 1;
+      }
+    }
+
+    // къ: qalqala at word end after vowel; otherwise tafkheem (Қаф)
+    {
+      const rx = /къ/gi;
+      let m;
+      while ((m = rx.exec(text)) !== null) {
+        const start = m.index;
+        const end = start + m[0].length;
+        const before = start > 0 ? text[start - 1] : '';
+        const after = end < n ? text[end] : '';
+        const afterIsBoundary = !after || /[\s.,!?;:\n\-]/.test(after);
+        const beforeIsVowel = /[аеиоуыэюяАЕИОУЫЭЮЯáéíóúýÁÉÍÓÚÝ]/.test(before);
+        if (beforeIsVowel && afterIsBoundary) {
+          push(marks, start, end, ['qalqala'], false);
+        } else {
+          push(marks, start, end, ['tafkheem'], false);
+        }
+      }
+    }
+
+    // аIузу / аlузу — з before у (interdental in Фалкъ/Нас)
+    {
+      const rx = /[аaAА][IІlл]?[уuУ]зу/gi;
+      let m;
+      while ((m = rx.exec(text)) !== null) {
+        const sn = m[0];
+        const zAt = sn.toLowerCase().lastIndexOf('з');
+        if (zAt >= 0) push(marks, m.index + zAt, m.index + zAt + 1, ['interdental'], false);
+      }
+    }
+
+    return marks;
+  }
+
+  /**
+   * @param {string} text
+   * @param {{ examples?: object[] }} [opts] examples ignored (kept for API compat)
+   */
+  function suggestMarksForText(text, opts) {
+    void opts;
+    const src = String(text || '');
+    if (!src.trim()) return [];
+    const raw = applyHeuristics(src)
+      .map((m) => clampMark(m, src.length))
+      .filter(Boolean);
+    return dedupe(collapseAdjacent(raw));
+  }
+
   function suggestMarksForDoc(doc, examples) {
-    const text = String(doc?.transliteration || '');
-    return suggestMarksForText(text, { examples });
+    return suggestMarksForText(String(doc?.transliteration || ''), { examples });
+  }
+
+  /** Kept for CLI/debug; empty — phrase transfer disabled (was over-painting vowels). */
+  function buildPhraseBook() {
+    return [];
   }
 
   const api = {

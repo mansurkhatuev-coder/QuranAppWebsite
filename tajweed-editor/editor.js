@@ -74,6 +74,8 @@
   const history = [];
   const future = [];
   let saveTimer = null;
+  /** Per-doc: true after «Предложить цвета» — next press clears marks. */
+  const suggestToggleByDoc = new Map();
 
   function emptyDoc() {
     return {
@@ -799,6 +801,22 @@
       alert("Сначала вставьте транслитерацию");
       return;
     }
+    const toggleKey = String(doc.id || library.activeId || "active");
+
+    // Second press → clear suggestions
+    if (suggestToggleByDoc.get(toggleKey) && doc.marks.length) {
+      pushHistory();
+      doc.marks = [];
+      suggestToggleByDoc.set(toggleKey, false);
+      selection = null;
+      activeMarkIndex = -1;
+      renderAll();
+      scheduleSave();
+      els.saveStatus.textContent = "Подсказки сняты";
+      els.saveStatus.classList.add("ok");
+      return;
+    }
+
     const examples = markedExampleDocs();
     if (!examples.length && Array.isArray(SEEDS)) {
       for (const s of SEEDS) {
@@ -808,26 +826,19 @@
     }
     const suggested = globalThis.TajweedSuggest.suggestMarksForText(text, { examples });
     if (!suggested.length) {
-      alert("Подсказок нет — разметьте вручную или улучшите эталоны");
-      return;
-    }
-    if (
-      doc.marks.length &&
-      !confirm(
-        `Заменить текущие ${doc.marks.length} меток на ${suggested.length} подсказок?\n(Undo вернёт назад)`
-      )
-    ) {
+      alert("Подсказок нет по орфографии (´ х1 рр нн къ …). Разметьте вручную.");
       return;
     }
     pushHistory();
     doc.marks = suggested
       .map((m) => clampMark(m, text.length))
       .filter(Boolean);
+    suggestToggleByDoc.set(toggleKey, true);
     selection = null;
     activeMarkIndex = -1;
     renderAll();
     scheduleSave();
-    els.saveStatus.textContent = `Подсказки · ${doc.marks.length} меток`;
+    els.saveStatus.textContent = `Подсказки · ${doc.marks.length} (ещё раз — очистить)`;
     els.saveStatus.classList.add("ok");
   }
 
