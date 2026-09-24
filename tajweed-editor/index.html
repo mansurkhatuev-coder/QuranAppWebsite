@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css?v=backup1" />
+  <link rel="stylesheet" href="./editor.css?v=publish1" />
 </head>
 <body>
   <div class="atmosphere" aria-hidden="true"></div>
@@ -26,11 +26,11 @@
         <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z" aria-label="Отменить">↩</button>
         <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z" aria-label="Повторить">↪</button>
       </div>
-      <div class="action-group" role="group" aria-label="Облако">
-        <button type="button" class="btn ghost compact" id="btnCloudLoad" title="Загрузить черновик из Supabase"><span class="label-full">Облако ↓</span><span class="label-short">↓☁</span></button>
-        <button type="button" class="btn ghost compact" id="btnCloudSave" title="Сохранить черновик в Supabase"><span class="label-full">Облако ↑</span><span class="label-short">↑☁</span></button>
+      <div class="action-group" role="group" aria-label="Черновик и прод">
+        <button type="button" class="btn ghost compact" id="btnCloudLoad" title="Загрузить черновик из Supabase (не прод)"><span class="label-full">Черновик ↓</span><span class="label-short">↓☁</span></button>
+        <button type="button" class="btn ghost compact" id="btnCloudSave" title="Сохранить черновик в Supabase (не уходит в приложение)"><span class="label-full">Черновик ↑</span><span class="label-short">↑☁</span></button>
         <button type="button" class="btn ghost compact" id="btnCloudPull" title="Подтянуть пак с waydean.ru"><span class="label-full">Прод</span><span class="label-short">Live</span></button>
-        <button type="button" class="btn primary compact" id="btnCloudPublish" title="Опубликовать в приложение"><span class="label-full">Опубликовать</span><span class="label-short">Pub</span></button>
+        <button type="button" class="btn primary compact" id="btnCloudPublish" title="Выборочная публикация в приложение"><span class="label-full">Опубликовать…</span><span class="label-short">Pub…</span></button>
       </div>
       <div class="action-group" role="group" aria-label="Файл">
         <button type="button" class="btn ghost compact" id="btnHelp"><span class="label-full">Справка</span><span class="label-short">?</span></button>
@@ -65,6 +65,7 @@
       <input id="docId" type="text" autocomplete="off" placeholder="azkar-ikhlaas" />
     </label>
     <div class="meta-actions">
+      <button type="button" class="btn ghost compact" id="btnSuggestMarks" title="Автоподсказки цветов по эталонам (можно откатить Undo)"><span class="label-full">Предложить цвета</span><span class="label-short">Цвета</span></button>
       <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Большое окно</span><span class="label-short">Окно</span></button>
     </div>
   </div>
@@ -176,6 +177,24 @@
     </form>
   </dialog>
 
+  <dialog id="publishDialog" class="modal">
+    <form method="dialog" class="modal-card publish-card" id="publishForm">
+      <h2>Публикация на прод</h2>
+      <p class="hint" id="publishHint">Отметьте документы, которые уйдут на waydean.ru. Черновик в Supabase сохранится целиком. Неотмеченные live-документы не изменятся и не удалятся.</p>
+      <div class="publish-toolbar">
+        <button type="button" class="btn ghost compact" id="btnPublishSelectReady">Только с метками</button>
+        <button type="button" class="btn ghost compact" id="btnPublishSelectAll">Все изменения</button>
+        <button type="button" class="btn ghost compact" id="btnPublishSelectNone">Снять все</button>
+      </div>
+      <div id="publishList" class="publish-list" role="group" aria-label="Документы к публикации"></div>
+      <p class="publish-summary" id="publishSummary" aria-live="polite"></p>
+      <div class="modal-actions">
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
+        <button type="submit" class="btn primary" value="ok" id="btnConfirmPublish">Опубликовать отмеченные</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="helpDialog" class="modal">
     <div class="modal-card">
       <h2>Как работать</h2>
@@ -190,9 +209,12 @@
         <li><strong>Добавить</strong> — пустой документ, копия текущего или шаблон (Фатиха, Каусар и др.). Свои черновики не затираются.</li>
         <li><strong>Транслитерация</strong> — поле под арабским: вставь чеченский текст, затем размечай на «бумаге».</li>
         <li><strong>Экспорт всего</strong> — скачивает все документы одним JSON, когда будешь готов.</li>
-        <li><strong>Облако</strong> — «Облако ↑/↓» пишет черновик в Supabase; «Опубликовать» кладёт JSON на waydean.ru для приложения.</li>
-        <li><strong>Прод</strong> — подтянуть уже опубликованный пак с сайта.</li>
-        <li><strong>Автосейв</strong> — локальный черновик в этом браузере; облако — общий для админов.</li>
+        <li><strong>Черновик ↑/↓</strong> — сохраняет/грузит WIP в Supabase; в приложение и на waydean.ru <em>не</em> уходит.</li>
+        <li><strong>Опубликовать…</strong> — чеклист: на прод уходят только отмеченные документы (остальное live не трогается).</li>
+        <li><strong>Прод</strong> — подтянуть уже опубликованный пак с сайта в редактор.</li>
+        <li><strong>Предложить цвета</strong> — черновые метки по эталонам + орфографии; правьте вручную, Undo откатывает. Не публикует.</li>
+        <li><strong>Автосейв</strong> — локальный черновик в этом браузере; облачный черновик — общий для админов.</li>
+        <li><strong>Привязка к приложению</strong> — по полю <code>azkarIds</code>, не по названию. Title можно менять свободно.</li>
         <li><strong>Бэкап</strong> — перед записью хранится предыдущий снимок; если меток стало меньше, при открытии подтянется более полный бэкап.</li>
         <li><strong>Экспорт всего</strong> — лучшая страховка: скачай JSON себе на устройство.</li>
         <li>Горячие клавиши: <kbd>1–9</kbd>, <kbd>A</kbd>, <kbd>H</kbd>, <kbd>Del</kbd>, <kbd>Ctrl+Z</kbd>.</li>
@@ -206,8 +228,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../admin/supabase-config.js?v=6"></script>
   <script src="../admin/admin-supabase.js?v=15"></script>
-  <script src="./cloud.js?v=2"></script>
+  <script src="./cloud.js?v=3"></script>
+  <script src="./suggest.js?v=1"></script>
   <script src="./catalog.js?v=2"></script>
-  <script src="./editor.js?v=2"></script>
+  <script src="./editor.js?v=3"></script>
 </body>
 </html>
