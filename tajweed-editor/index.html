@@ -10,7 +10,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css?v=publish1" />
+  <link rel="stylesheet" href="./editor.css?v=remote-toggle1" />
 </head>
 <body>
   <div class="atmosphere" aria-hidden="true"></div>
@@ -40,6 +40,21 @@
       <input id="fileInput" type="file" accept="application/json,.json" hidden />
     </div>
   </header>
+
+  <section class="availability-panel" aria-labelledby="availabilityTitle" aria-describedby="availabilityHint">
+    <div class="availability-copy">
+      <h2 id="availabilityTitle">Цветная транскрипция в приложении</h2>
+      <p id="availabilityHint">Для всех совместимых версий после проверки обновлений. Офлайн — после подключения. Черновик публикуется отдельно.</p>
+      <p id="availabilityStatus" class="availability-status" role="status" aria-live="polite">Проверяем состояние</p>
+    </div>
+    <div class="availability-actions">
+      <button type="button" id="btnAvailability" class="availability-switch" role="switch" aria-checked="false" aria-label="Цветная транскрипция в приложении" aria-describedby="availabilityStatus" hidden disabled>
+        <span class="switch-track" aria-hidden="true"><span></span></span>
+        <span id="availabilityValue">Выключено</span>
+      </button>
+      <button type="button" id="btnAvailabilityRefresh" class="btn ghost compact">Проверить состояние</button>
+    </div>
+  </section>
 
   <div class="library-bar">
     <label class="meta-field library-select-field">
@@ -180,7 +195,7 @@
   <dialog id="publishDialog" class="modal">
     <form method="dialog" class="modal-card publish-card" id="publishForm">
       <h2>Публикация на прод</h2>
-      <p class="hint" id="publishHint">Отметьте документы, которые уйдут на waydean.ru. Черновик в Supabase сохранится целиком. Неотмеченные live-документы не изменятся и не удалятся.</p>
+      <p class="hint" id="publishHint">Проверьте изменения по каждому документу. Снятая галочка исключает документ только из этой публикации; live-версия останется в приложении.</p>
       <div class="publish-toolbar">
         <button type="button" class="btn ghost compact" id="btnPublishSelectReady">Только с метками</button>
         <button type="button" class="btn ghost compact" id="btnPublishSelectAll">Все изменения</button>
@@ -228,9 +243,9 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../admin/supabase-config.js?v=6"></script>
   <script src="../admin/admin-supabase.js?v=15"></script>
-  <script src="./cloud.js?v=3"></script>
+  <script src="./cloud.js?v=remote-toggle1"></script>
   <script src="./suggest.js?v=2"></script>
   <script src="./catalog.js?v=2"></script>
-  <script src="./editor.js?v=4"></script>
+  <script src="./editor.js?v=remote-toggle1"></script>
 </body>
 </html>

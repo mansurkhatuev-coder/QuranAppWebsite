@@ -74,6 +74,7 @@
   const history = [];
   const future = [];
   let saveTimer = null;
+  let pendingPublishSelection = null;
   /** Per-doc: true after «Предложить цвета» — next press clears marks. */
   const suggestToggleByDoc = new Map();
 
@@ -847,22 +848,57 @@
     const checked = [...els.publishList.querySelectorAll('input[type="checkbox"]:checked')];
     const n = checked.length;
     const liveCount = Number(els.publishDialog?.dataset.liveCount || 0);
-    const names = checked
-      .slice(0, 8)
-      .map((input) => input.dataset.title || input.value)
-      .join(", ");
-    const more = n > 8 ? ` и ещё ${n - 8}` : "";
+    const selectedCandidates = checked.map((box) => ({ kind: box.dataset.kind }));
+    const finalCount = globalThis.TajweedCloud.estimatePublishedDocCount(liveCount, selectedCandidates);
+    for (const box of els.publishList.querySelectorAll('input[type="checkbox"]')) {
+      const label = box.closest("label")?.querySelector(".publish-choice-label");
+      if (label) label.textContent = box.checked ? "Включён в публикацию" : "Исключён из публикации";
+    }
     els.publishSummary.innerHTML =
       n === 0
         ? "Ничего не отмечено — на прод ничего не уйдёт."
-        : `На прод уйдёт <strong>${n}</strong> док.${names ? `: ${escapeHtml(names)}${more}` : ""}. Итоговый пак ≈ <strong>${liveCount}</strong> (live) с заменой отмеченных.`;
+        : `В список публикации включено <strong>${n}</strong> ${n === 1 ? "изменение" : "документа"}. Итоговый пакет будет содержать <strong>${finalCount}</strong> документов: отмеченные версии заменят live, новые документы добавятся, остальные останутся без изменений.`;
   }
 
-  function renderPublishList(candidates, liveCount) {
+  function publishValue(doc, key) {
+    if (!doc) return "";
+    if (key === "azkarIds") return JSON.stringify(Array.isArray(doc.azkarIds) ? doc.azkarIds : [], null, 2);
+    if (key === "marks") return JSON.stringify(Array.isArray(doc.marks) ? doc.marks : [], null, 2);
+    return String(doc[key] || "");
+  }
+
+  function renderPublishPreview(candidate, draftDoc, liveDoc) {
+    const fields = [
+      ["title", "Название"],
+      ["arabic", "Арабский текст"],
+      ["azkarIds", "Связи с азкарами"],
+      ["transliteration", "Транслитерация"],
+      ["marks", "Метки таджвида"],
+    ];
+    const changed = globalThis.TajweedCloud.describeDocChanges(liveDoc, draftDoc);
+    const changedFields = liveDoc
+      ? fields.filter(([, label]) => changed.includes(label))
+      : fields;
+    return `<details class="publish-preview">
+      <summary>${liveDoc ? `Показать ${changedFields.length} изменённых полей` : "Показать содержимое нового документа"}</summary>
+      ${changedFields.map(([key, label]) => `<section class="publish-diff-field">
+        <h4>${label}</h4>
+        ${liveDoc ? `<div class="publish-diff-side"><span>Сейчас в приложении</span><pre>${escapeHtml(publishValue(liveDoc, key) || "—")}</pre></div>` : ""}
+        <div class="publish-diff-side next"><span>${liveDoc ? "После публикации" : "В новый документ"}</span><pre>${escapeHtml(publishValue(draftDoc, key) || "—")}</pre></div>
+      </section>`).join("")}
+      <button type="button" class="btn ghost compact publish-edit" data-action="edit" data-id="${escapeHtml(candidate.id)}">Открыть документ в редакторе</button>
+    </details>`;
+  }
+
+  function renderPublishList(candidates, liveCount, draftDocs, liveDocs) {
     if (!els.publishList) return;
     els.publishDialog.dataset.liveCount = String(liveCount);
+    const draftById = new Map(draftDocs.map((d) => [String(d.id), d]));
+    const liveById = new Map(liveDocs.filter((d) => d?.id).map((d) => [String(d.id), d]));
     els.publishList.innerHTML = candidates
       .map((c) => {
+        const draftDoc = draftById.get(c.id);
+        const liveDoc = liveById.get(c.id) || null;
         const badges = [
           `<span class="publish-badge ${c.kind}">${c.kind === "new" ? "новый" : "изменён"}</span>`,
           c.hasTranslit ? "" : `<span class="publish-badge warn">нет транслита</span>`,
@@ -870,15 +906,25 @@
         ]
           .filter(Boolean)
           .join("");
-        return `<label class="publish-row">
-          <input type="checkbox" value="${escapeHtml(c.id)}" data-title="${escapeHtml(c.title)}" data-ready="${c.defaultChecked ? "1" : "0"}" ${c.defaultChecked ? "checked" : ""} />
+        return `<article class="publish-row">
+          <label class="publish-choice">
+          <input type="checkbox" value="${escapeHtml(c.id)}" data-title="${escapeHtml(c.title)}" data-kind="${c.kind}" data-ready="${c.defaultChecked ? "1" : "0"}" ${c.defaultChecked ? "checked" : ""} />
           <span>
+            <span class="publish-choice-label"></span>
             <span class="publish-row-title">${escapeHtml(c.title)}</span>
             <div class="publish-row-meta">${badges}<br /><code>${escapeHtml(c.id)}</code></div>
           </span>
-        </label>`;
+          </label>
+          ${renderPublishPreview(c, draftDoc, liveDoc)}
+        </article>`;
       })
       .join("");
+    if (pendingPublishSelection) {
+      const selected = new Set(pendingPublishSelection);
+      for (const box of els.publishList.querySelectorAll('input[type="checkbox"]')) {
+        box.checked = selected.has(box.value);
+      }
+    }
     updatePublishSummary();
   }
 
@@ -898,21 +944,26 @@
   /**
    * Opens checklist; resolves with selected ids or null if cancelled.
    */
-  function openPublishChecklist(candidates, liveCount) {
+  function openPublishChecklist(candidates, liveCount, draftDocs, liveDocs) {
     return new Promise((resolve) => {
       if (!els.publishDialog || !els.publishForm) {
         resolve(null);
         return;
       }
-      renderPublishList(candidates, liveCount);
+      renderPublishList(candidates, liveCount, draftDocs, liveDocs);
       if (els.publishHint) {
         els.publishHint.textContent =
-          `Изменений относительно прод: ${candidates.length}. Черновик уже/будет сохранён целиком. На waydean.ru уйдут только отмеченные.`;
+          `Ниже — точные значения изменённых полей для каждого документа. Снятая галочка исключит его из этой публикации. Сохранение черновика в облаке само по себе не отправляет изменения в приложение.`;
       }
 
       const onClose = () => {
         els.publishDialog.removeEventListener("close", onClose);
         if (els.publishDialog.returnValue !== "ok") {
+          const editId = els.publishDialog.returnValue.match(/^edit:(.+)$/)?.[1];
+          if (editId) {
+            resolve({ editId });
+            return;
+          }
           resolve(null);
           return;
         }
@@ -935,6 +986,7 @@
     const draftDocs = library.docs.map((d) => normalizeDoc(d));
     els.saveStatus.textContent = "Подготовка…";
     els.saveStatus.classList.remove("ok");
+    let writeAttempted = false;
     try {
       await globalThis.TajweedCloud.saveDraftLibrary({
         version: LIBRARY_VERSION,
@@ -942,18 +994,28 @@
         docs: draftDocs,
         savedAt: nowIso(),
       });
-      const livePack = await globalThis.TajweedCloud.fetchLivePack();
+      const prepared = await globalThis.TajweedCloud.preparePublication();
+      const livePack = prepared.pack;
       const liveDocs = Array.isArray(livePack?.docs) ? livePack.docs : [];
       const candidates = globalThis.TajweedCloud.listPublishCandidates(draftDocs, liveDocs);
       if (!candidates.length) {
+        pendingPublishSelection = null;
         els.saveStatus.textContent = "Нет изменений vs прод";
         els.saveStatus.classList.add("ok");
         alert("Черновик совпадает с прод-паком — публиковать нечего.");
         return;
       }
-      const selectedIds = await openPublishChecklist(candidates, liveDocs.length);
+      const selectedIds = await openPublishChecklist(candidates, liveDocs.length, draftDocs, liveDocs);
       if (!selectedIds) {
         els.saveStatus.textContent = "Публикация отменена";
+        return;
+      }
+      if (!Array.isArray(selectedIds) && selectedIds.editId) {
+        switchToDoc(selectedIds.editId);
+        els.saveStatus.textContent = "Документ открыт для правки · после изменений нажмите «Опубликовать…» снова";
+        els.saveStatus.classList.remove("ok");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        els.title?.focus();
         return;
       }
       if (!selectedIds.length) {
@@ -966,29 +1028,37 @@
         draftDocs,
         selectedIds
       );
-      const titles = selectedIds
-        .map((id) => draftDocs.find((d) => d.id === id)?.title || id)
-        .slice(0, 12);
+      const selectedCandidates = candidates.filter((candidate) => selectedIds.includes(candidate.id));
+      const changeList = selectedCandidates.map((candidate) => {
+        const draft = draftDocs.find((d) => String(d.id) === candidate.id);
+        const live = liveDocs.find((d) => String(d?.id) === candidate.id) || null;
+        const changes = globalThis.TajweedCloud.describeDocChanges(live, draft).join(", ");
+        return `• ${candidate.kind === "new" ? "Новый" : "Изменённый"}: ${candidate.title} [${candidate.id}]\n  Поля: ${changes}`;
+      });
       if (
         !confirm(
-          `Опубликовать ${selectedIds.length} док. на waydean.ru?\n` +
-            `${titles.join("\n")}${selectedIds.length > 12 ? "\n…" : ""}\n\n` +
-            `Итоговый пак: ${mergedDocs.length} docs (остальной live без изменений).`
+          `Проверьте итоговый список. Опубликовать на waydean.ru?\n\n` +
+            `${changeList.join("\n")}\n\n` +
+            `Итоговый пакет: ${mergedDocs.length} документов. Неотмеченные и остальные live-документы останутся без изменений.`
         )
       ) {
         els.saveStatus.textContent = "Публикация отменена";
         return;
       }
       els.saveStatus.textContent = "Публикация…";
+      writeAttempted = true;
       const result = await globalThis.TajweedCloud.publishLibrary({
         version: LIBRARY_VERSION,
         docs: mergedDocs,
-      });
-      els.saveStatus.textContent = `Прод · ${selectedIds.length} из ${mergedDocs.length} · ${result.publishedAt || "ok"}`;
-      els.saveStatus.classList.add("ok");
+      }, prepared.expectedVersion);
+      const deployed = await globalThis.TajweedCloud.checkDeployment(result.azkarTajweedManifest);
+      els.saveStatus.textContent = `${deployed ? "Сайт обновлён" : "Сохранено, ожидается обновление сайта"} · ${selectedIds.length} из ${mergedDocs.length}`;
+      els.saveStatus.classList.toggle("ok", deployed);
     } catch (error) {
+      if (writeAttempted) await globalThis.TajweedCloud.reconcileWrite(error);
       els.saveStatus.textContent =
-        error instanceof Error ? error.message : "Ошибка публикации";
+        writeAttempted ? "Результат публикации не подтверждён. См. состояние выше; перед повтором подготовьте список заново." :
+          error instanceof Error ? error.message : "Ошибка публикации";
       els.saveStatus.classList.remove("ok");
     }
   }
@@ -1242,10 +1312,44 @@
     const btnCloudLoad = $("btnCloudLoad");
     const btnCloudPublish = $("btnCloudPublish");
     const btnCloudPull = $("btnCloudPull");
-    if (btnCloudSave) btnCloudSave.addEventListener("click", () => void cloudSaveDraft());
-    if (btnCloudLoad) btnCloudLoad.addEventListener("click", () => void cloudLoadDraft());
-    if (btnCloudPublish) btnCloudPublish.addEventListener("click", () => void cloudPublish());
-    if (btnCloudPull) btnCloudPull.addEventListener("click", () => void cloudPullLive());
+    const cloudButtons = [btnCloudSave, btnCloudLoad, btnCloudPublish, btnCloudPull];
+    const performCloudOperation = (operation) => {
+      if (!globalThis.TajweedCloud) { alert("Cloud-модуль не загружен"); return; }
+      void globalThis.TajweedCloud.runExclusive(operation).catch((error) => {
+        els.saveStatus.textContent = error.message;
+        els.saveStatus.classList.remove("ok");
+      });
+    };
+    if (btnCloudSave) btnCloudSave.addEventListener("click", () => performCloudOperation(cloudSaveDraft));
+    if (btnCloudLoad) btnCloudLoad.addEventListener("click", () => performCloudOperation(cloudLoadDraft));
+    if (btnCloudPublish) btnCloudPublish.addEventListener("click", () => performCloudOperation(cloudPublish));
+    if (btnCloudPull) btnCloudPull.addEventListener("click", () => performCloudOperation(cloudPullLive));
+    const toggle = $("btnAvailability");
+    const refresh = $("btnAvailabilityRefresh");
+    const controlStatus = $("availabilityStatus");
+    if (globalThis.TajweedCloud && toggle && refresh && controlStatus) {
+      globalThis.TajweedCloud.subscribeControl((state) => {
+        const known = Boolean(state.manifest) && !["error", "auth", "loading"].includes(state.phase);
+        toggle.hidden = !known;
+        toggle.disabled = state.busy || !known;
+        toggle.setAttribute("aria-checked", String(state.manifest?.enabled === true));
+        $("availabilityValue").textContent = state.manifest?.enabled ? "Включено" : "Выключено";
+        controlStatus.textContent = state.message;
+        controlStatus.classList.toggle("ok", state.phase === "published");
+        refresh.disabled = state.busy;
+        refresh.textContent = state.phase === "auth" ? "Войти и проверить" : "Проверить состояние";
+        for (const button of cloudButtons) if (button) button.disabled = state.busy;
+      });
+      refresh.addEventListener("click", () => { void globalThis.TajweedCloud.refreshControl(true).catch((error) => { controlStatus.textContent = error.message; }); });
+      toggle.addEventListener("click", () => {
+        const state = globalThis.TajweedCloud.getControlState();
+        if (state.busy || !state.manifest) return;
+        const enabled = !state.manifest.enabled;
+        if (!confirm(`${enabled ? "Включить" : "Выключить"} цветную транскрипцию для всех совместимых приложений?\n\nИзменение поступит при следующей проверке обновлений; офлайн — после подключения. Текущий черновик не публикуется.`)) return;
+        void globalThis.TajweedCloud.setAvailability(enabled).catch((error) => { controlStatus.textContent = error.message; });
+      });
+      void globalThis.TajweedCloud.refreshControl().catch((error) => { controlStatus.textContent = error.message; });
+    }
     const btnSuggest = $("btnSuggestMarks");
     if (btnSuggest) btnSuggest.addEventListener("click", applySuggestedMarks);
     const btnPubReady = $("btnPublishSelectReady");
@@ -1256,7 +1360,19 @@
     if (btnPubNone) btnPubNone.addEventListener("click", () => setPublishChecks("none"));
     if (els.publishList) {
       els.publishList.addEventListener("change", (e) => {
-        if (e.target && e.target.matches('input[type="checkbox"]')) updatePublishSummary();
+        if (e.target && e.target.matches('input[type="checkbox"]')) {
+          updatePublishSummary();
+        }
+      });
+      pendingPublishSelection = null;
+      els.publishList.addEventListener("click", (e) => {
+        const button = e.target?.closest?.('button[data-action="edit"]');
+        if (button) {
+          pendingPublishSelection = [
+            ...els.publishList.querySelectorAll('input[type="checkbox"]:checked'),
+          ].map((box) => box.value);
+          els.publishDialog.close(`edit:${button.dataset.id}`);
+        }
       });
     }
     if (els.publishForm) {
