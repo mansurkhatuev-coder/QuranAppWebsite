@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
+import { executeAzkarTajweedOperation, readPublishBody, TajweedPublishError } from './azkar-tajweed-control.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -16,6 +17,8 @@ type PublishBody = {
   appRelease?: Record<string, unknown>;
   azkarTajweed?: { version?: number; docs?: unknown[]; builtAt?: string; publishedAt?: string };
   azkarTajweedManifest?: Record<string, unknown>;
+  azkarTajweedControl?: unknown;
+  azkarTajweedExpectedVersion?: unknown;
 };
 
 function jsonResponse(body: Record<string, unknown>, status = 200) {
@@ -89,13 +92,13 @@ Deno.serve(async (request) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
     const githubToken = Deno.env.get('GITHUB_TOKEN');
-    const githubRepo = Deno.env.get('GITHUB_REPO') ?? 'mansurkhatuev-coder/QuranAppWebsite';
+    const githubRepo = Deno.env.get('GITHUB_REPO');
 
     if (!supabaseUrl || !supabaseAnonKey) {
       return jsonResponse({ error: 'Supabase env is not configured' }, 500);
     }
-    if (!githubToken) {
-      return jsonResponse({ error: 'GITHUB_TOKEN secret is missing' }, 500);
+    if (!githubToken || !githubRepo) {
+      return jsonResponse({ error: 'GITHUB_TOKEN and GITHUB_REPO secrets are required' }, 500);
     }
 
     const authHeader = request.headers.get('Authorization');
@@ -112,8 +115,12 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'Unauthorized' }, 401);
     }
 
-    const body = (await request.json()) as PublishBody;
-    if (body.azkarTajweed || body.azkarTajweedManifest) {
+    const body = (await readPublishBody(request)) as PublishBody;
+    if (!body || typeof body !== 'object' || Array.isArray(body)) {
+      return jsonResponse({ error: 'Invalid request body' }, 400);
+    }
+    if (['azkarTajweed', 'azkarTajweedManifest', 'azkarTajweedControl', 'azkarTajweedExpectedVersion']
+      .some(key => Object.prototype.hasOwnProperty.call(body, key))) {
       const { data: editorRole, error: editorRoleError } = await supabase
         .from('azkar_tajweed_admins')
         .select('user_id')
@@ -122,6 +129,31 @@ Deno.serve(async (request) => {
       if (editorRoleError || !editorRole) {
         return jsonResponse({ error: 'Azkar tajweed publishing requires editor access' }, 403);
       }
+      const result = await executeAzkarTajweedOperation(body, {
+        token: githubToken,
+        repo: githubRepo,
+        isEditor: true,
+        contentOrigin: Deno.env.get('AZKAR_TAJWEED_CONTENT_ORIGIN'),
+      });
+      let mirrorWarning: string | undefined;
+      const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+      if (result.files.length && serviceKey) {
+        // Git is already authoritative. Mirror failure must never report that the
+        // successful commit failed, or tempt the editor into repeating a toggle.
+        try {
+          const serviceClient = createClient(supabaseUrl, serviceKey, { auth: { persistSession: false } });
+          const { error } = await serviceClient.from('content_manifest').upsert({
+            id: 1,
+            published_at: result.publishedAt,
+            published_by: userData.user.email,
+            remote_azkar_tajweed: result.azkarTajweedManifest,
+          });
+          if (error) mirrorWarning = 'Saved to GitHub; the Supabase mirror could not be updated';
+        } catch {
+          mirrorWarning = 'Saved to GitHub; the Supabase mirror could not be updated';
+        }
+      }
+      return jsonResponse({ ...result, ...(mirrorWarning ? { mirrorWarning } : {}) });
     }
     const files: { path: string; content: string }[] = [];
 
@@ -176,38 +208,6 @@ Deno.serve(async (request) => {
       });
     }
 
-    if (body.azkarTajweed && typeof body.azkarTajweed === 'object') {
-      const docs = Array.isArray(body.azkarTajweed.docs) ? body.azkarTajweed.docs : [];
-      const pack = {
-        version: typeof body.azkarTajweed.version === 'number' ? body.azkarTajweed.version : 2,
-        publishedAt: new Date().toISOString(),
-        docs,
-      };
-      files.push({
-        path: 'data/azkar-tajweed-translit.json',
-        content: `${JSON.stringify(pack, null, 2)}\n`,
-      });
-
-      const tajweedManifest =
-        body.azkarTajweedManifest && typeof body.azkarTajweedManifest === 'object'
-          ? body.azkarTajweedManifest
-          : {
-              version: pack.version,
-              publishedAt: pack.publishedAt,
-              url: '/data/azkar-tajweed-translit.json',
-              docCount: docs.length,
-            };
-      files.push({
-        path: 'data/remote-azkar-tajweed.manifest.json',
-        content: `${JSON.stringify(tajweedManifest, null, 2)}\n`,
-      });
-    } else if (body.azkarTajweedManifest && typeof body.azkarTajweedManifest === 'object') {
-      files.push({
-        path: 'data/remote-azkar-tajweed.manifest.json',
-        content: `${JSON.stringify(body.azkarTajweedManifest, null, 2)}\n`,
-      });
-    }
-
     if (!files.length) {
       return jsonResponse({ error: 'Nothing to publish' }, 400);
     }
@@ -241,17 +241,6 @@ Deno.serve(async (request) => {
       if (body.appRelease && typeof body.appRelease === 'object') {
         upsertRow.app_release = body.appRelease;
       }
-      if (body.azkarTajweedManifest && typeof body.azkarTajweedManifest === 'object') {
-        upsertRow.remote_azkar_tajweed = body.azkarTajweedManifest;
-      } else if (body.azkarTajweed && typeof body.azkarTajweed === 'object') {
-        const docs = Array.isArray(body.azkarTajweed.docs) ? body.azkarTajweed.docs : [];
-        upsertRow.remote_azkar_tajweed = {
-          version: typeof body.azkarTajweed.version === 'number' ? body.azkarTajweed.version : 2,
-          publishedAt: new Date().toISOString(),
-          url: '/data/azkar-tajweed-translit.json',
-          docCount: docs.length,
-        };
-      }
       await serviceClient.from('content_manifest').upsert(upsertRow);
     }
 
@@ -262,6 +251,9 @@ Deno.serve(async (request) => {
       repo: githubRepo,
     });
   } catch (error) {
+    if (error instanceof TajweedPublishError) {
+      return jsonResponse({ error: error.message, code: error.code }, error.status);
+    }
     const message = error instanceof Error ? error.message : 'Unknown publish error';
     return jsonResponse({ error: message }, 500);
   }
