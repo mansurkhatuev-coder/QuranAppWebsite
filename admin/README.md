@@ -7,4 +7,6 @@
 
 **Полная пошаговая инструкция:** [SUPABASE-SETUP.md](./SUPABASE-SETUP.md)
 
+**Голос в Jarvis** (аналитика и отзывы, только чтение): [jarvis-mcp/README.md](../jarvis-mcp/README.md).
+
 Кратко: проект Supabase → SQL → **создать пользователя** → `supabase-config.js` → импорт дуа → Edge Function → кнопка «Опубликовать».
