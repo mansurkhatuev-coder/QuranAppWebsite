@@ -97,8 +97,16 @@ CODE="$(
     -H "Content-Type: application/json" \
     -d "{\"id\":\"${BUCKET}\",\"name\":\"${BUCKET}\",\"public\":false,\"fileSizeLimit\":524288000}"
 )"
-# 200/201 created, 409 already exists
-if [[ "$CODE" != "200" && "$CODE" != "201" && "$CODE" != "409" ]]; then
+# 200/201 created, 409 already exists.
+# Storage also returns HTTP 400 with a JSON body of BucketAlreadyExists / Duplicate
+# when the bucket is already there (statusCode "409" inside the body).
+bucket_ok=0
+if [[ "$CODE" == "200" || "$CODE" == "201" || "$CODE" == "409" ]]; then
+  bucket_ok=1
+elif [[ "$CODE" == "400" ]] && grep -qE 'BucketAlreadyExists|"Duplicate"' "$RESP"; then
+  bucket_ok=1
+fi
+if [[ "$bucket_ok" != "1" ]]; then
   echo "create bucket HTTP $CODE" >&2
   head -c 800 "$RESP" >&2 || true
   echo >&2
