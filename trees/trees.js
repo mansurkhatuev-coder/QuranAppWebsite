@@ -1381,7 +1381,9 @@
     const lock = authLockApi();
     if (lock?.getState(AUTH_LOCK_SCOPE).locked) startAuthLockTicker();
 
+    if (document.hidden) document.documentElement.classList.add('is-bg-paused');
     document.addEventListener('visibilitychange', () => {
+      document.documentElement.classList.toggle('is-bg-paused', document.hidden);
       if (document.visibilityState === 'visible' && !$('#app-screen').hidden) {
         void refresh();
       }
