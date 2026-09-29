@@ -26,8 +26,18 @@
       <path d="M7 218 42 177 77 196 119 143 157 189 200 151 245 192 292 139 337 190 383 163V340H7Z"/>
       <path d="M7 244 62 210 101 230 149 185 190 226 236 190 276 227 322 197 383 237V340H7Z"/>
     </g>
-    <g fill="#302f28" stroke="#c09a58" stroke-opacity=".25" opacity=".58"><path d="M303 151 316 145 329 151 332 218 300 218Z"/><path d="M307 147 316 130 325 147Z"/><path d="M312 167h8v15h-8Z" fill="#071014" stroke="none"/></g>
-    <g fill="url(#silhouette)"><circle cx="195" cy="166" r="30"/><path d="M173 193h44l10 18 29 42v25H134v-25l29-42Z"/></g>
+    <g opacity=".7" stroke-linejoin="round">
+      <path d="M291 245h53l-4-12h-45Z" fill="#171c1b" stroke="#a58b5b" stroke-opacity=".42"/>
+      <path d="M296 233 300 151 304 143h29l4 8 4 82Z" fill="#514a39" stroke="#d0b276" stroke-opacity=".55" stroke-width="1.2"/>
+      <path d="M300 143v-12h5v7h5v-7h5v7h5v-7h5v7h5v-7h4v12Z" fill="#665b43" stroke="#d0b276" stroke-opacity=".62" stroke-width="1"/>
+      <path d="M299 154h40M298 177h42M297 199h44M296 221h46" fill="none" stroke="#c8ab72" stroke-opacity=".28" stroke-width="1"/>
+      <path d="M309 155v17m17-17v17m-24 6v16m18-16v16m-24 6v16m17-16v16m-22 6v12m18-12v12" fill="none" stroke="#1c211f" stroke-opacity=".58" stroke-width="1"/>
+      <path d="M305 174v-9q5-10 10 0v9Zm18 0v-7q4-8 8 0v7Zm-17 22v-8q5-9 10 0v8Zm18 0v-7q4-8 8 0v7Zm-18 35v-18q6-12 12 0v18Z" fill="#0a1111" stroke="#b99b62" stroke-opacity=".5" stroke-width="1.1"/>
+      <path d="M300 151 298 233m40-82 3 82" fill="none" stroke="#e0c487" stroke-opacity=".33" stroke-width="1.2"/>
+    </g>
+    <ellipse cx="195" cy="194" rx="82" ry="117" fill="url(#sun)" opacity=".2"/>
+    <path d="M195 118c-18 0-30 14-30 35 0 21 10 38 25 45v8c-13 5-23 12-31 23-9 14-14 29-16 44h104c-2-15-7-30-16-44-8-11-18-18-31-23v-8c15-7 25-24 25-45 0-21-12-35-30-35Z" fill="url(#silhouette)" stroke="#c4b18a" stroke-opacity=".48" stroke-width="1.2" stroke-linejoin="round"/>
+    <path d="M178 207c5 7 11 10 17 10s12-3 17-10M159 246c9-8 20-12 36-12s27 4 36 12" fill="none" stroke="#d0bf9b" stroke-opacity=".22" stroke-width="1.3" stroke-linecap="round"/>
     <path d="M7 244v96h376v-96c-71 45-127 54-188 54S70 282 7 244Z" fill="#040b0e" opacity=".58"/>
     <text x="24" y="299" fill="#f2e7d1" font-family="Georgia,serif" font-size="23" font-weight="bold">Магомед</text>
     <text x="25" y="321" fill="#d6c7a8" font-family="Arial,sans-serif" font-size="12">1825–1890</text>
