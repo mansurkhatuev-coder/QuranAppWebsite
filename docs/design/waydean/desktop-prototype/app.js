@@ -25,6 +25,13 @@
   let selectedId = "p06";
   let mode = "all";
   let zoom = 100;
+  let cameraScale = 1;
+  let cameraX = 0;
+  let cameraY = 0;
+  const activePointers = new Map();
+  let pointerGesture = null;
+  let suppressClickUntil = 0;
+  let wheelEndTimer = 0;
   let filters = { min:1,max:5,photos:false,main:false };
   let toastTimer;
   const yearText = person => person.born == null && person.died == null ? "Даты неизвестны" : person.born == null ? `до ${person.died}` : person.died == null ? `с ${person.born}` : `${person.born}–${person.died}`;
@@ -84,6 +91,96 @@
   function openPopover(id) { closePopovers(); const item=$(id); item.hidden=false; const input=item.querySelector("input[type=search]"); if(input) { renderSearch(input.value); input.focus(); } }
   function renderSearch(value="") { const query=value.trim().toLocaleLowerCase("ru"); const matches=people.filter(person=>`${person.name} ${person.born??""} ${person.died??""} ${person.branch}`.toLocaleLowerCase("ru").includes(query)); $("#searchResults").innerHTML=matches.length?matches.map(person=>`<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join(""):`<p class="empty-result">По запросу «${value}» никого не найдено.</p>`; $$("[data-result]").forEach(button=>button.addEventListener("click",()=>{selectedId=button.dataset.result;drawTree();renderProfile();closePopovers();})); }
 
+  function setCameraTransform(x, y, scale, moving = false) {
+    cameraX = x;
+    cameraY = y;
+    cameraScale = scale;
+    zoom = Math.round(cameraScale * 100);
+    $("#zoomValue").textContent = `${zoom}%`;
+    $("#graph").style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${cameraScale})`;
+    $("#treeStage").classList.toggle("camera-moving", moving);
+  }
+  function stagePoint(event) {
+    const rect = $("#treeStage").getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+  const distance = (first, second) => Math.hypot(second.x - first.x, second.y - first.y);
+  const midpoint = (first, second) => ({ x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 });
+  function beginGestureFrame() {
+    const pointers = [...activePointers.values()];
+    if (pointers.length > 1) {
+      pointerGesture = { type: "pinch", startDistance: Math.max(1, distance(pointers[0], pointers[1])), startMidpoint: midpoint(pointers[0], pointers[1]), startZoom: cameraScale, startX: cameraX, startY: cameraY, moved: pointerGesture?.moved || false };
+    } else if (pointers.length === 1) {
+      pointerGesture = { type: "pan", startPoint: pointers[0], startX: cameraX, startY: cameraY, moved: pointerGesture?.moved || false };
+    } else pointerGesture = null;
+  }
+  function installCameraGestures() {
+    const stage = $("#treeStage");
+    const center = () => ({ x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 });
+    stage.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || event.target.closest(".tree-controls, .minimap, .mode-label, .empty-state")) return;
+      activePointers.set(event.pointerId, stagePoint(event));
+      beginGestureFrame();
+    });
+    stage.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId) || !pointerGesture) return;
+      const point = stagePoint(event);
+      activePointers.set(event.pointerId, point);
+      let x = cameraX, y = cameraY, scale = cameraScale;
+      if (pointerGesture.type === "pan") {
+        const dx = point.x - pointerGesture.startPoint.x, dy = point.y - pointerGesture.startPoint.y;
+        if (!pointerGesture.moved && Math.hypot(dx, dy) < 4) return;
+        pointerGesture.moved = true;
+        x = pointerGesture.startX + dx;
+        y = pointerGesture.startY + dy;
+      } else {
+        const pointers = [...activePointers.values()];
+        if (pointers.length < 2) return;
+        const currentMidpoint = midpoint(pointers[0], pointers[1]);
+        const currentDistance = distance(pointers[0], pointers[1]);
+        if (!pointerGesture.moved && Math.abs(currentDistance - pointerGesture.startDistance) < 3 && distance(currentMidpoint, pointerGesture.startMidpoint) < 3) return;
+        pointerGesture.moved = true;
+        scale = Math.max(0.5, Math.min(1.75, pointerGesture.startZoom * currentDistance / pointerGesture.startDistance));
+        const ratio = scale / pointerGesture.startZoom, origin = center();
+        x = currentMidpoint.x - origin.x - (pointerGesture.startMidpoint.x - origin.x - pointerGesture.startX) * ratio;
+        y = currentMidpoint.y - origin.y - (pointerGesture.startMidpoint.y - origin.y - pointerGesture.startY) * ratio;
+      }
+      event.preventDefault();
+      suppressClickUntil = performance.now() + 250;
+      if (!stage.hasPointerCapture(event.pointerId)) stage.setPointerCapture(event.pointerId);
+      setCameraTransform(x, y, scale, true);
+    });
+    const endPointer = event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.delete(event.pointerId);
+      if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
+      if (!activePointers.size) {
+        const moved = pointerGesture?.moved;
+        pointerGesture = null;
+        stage.classList.remove("camera-moving");
+        if (moved) suppressClickUntil = performance.now() + 250;
+      } else beginGestureFrame();
+    };
+    stage.addEventListener("pointerup", endPointer);
+    stage.addEventListener("pointercancel", endPointer);
+    stage.addEventListener("lostpointercapture", endPointer);
+    stage.addEventListener("click", event => {
+      if (performance.now() > suppressClickUntil) return;
+      suppressClickUntil = 0;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+    stage.addEventListener("wheel", event => {
+      if (event.target.closest(".tree-controls, .minimap, .mode-label, .empty-state")) return;
+      event.preventDefault();
+      const point = stagePoint(event), origin = center(), currentScale = cameraScale;
+      const scale = Math.max(0.5, Math.min(1.75, currentScale * Math.exp(-event.deltaY * 0.00012)));
+      const ratio = scale / currentScale;
+      setCameraTransform(point.x - origin.x - (point.x - origin.x - cameraX) * ratio, point.y - origin.y - (point.y - origin.y - cameraY) * ratio, scale, true);
+      clearTimeout(wheelEndTimer);
+      wheelEndTimer = window.setTimeout(() => { wheelEndTimer = 0; stage.classList.remove("camera-moving"); }, 180);
+    }, { passive: false });
+  }
   $("#searchButton").addEventListener("click",()=>openPopover("#searchPopover")); $("#railSearch").addEventListener("click",()=>openPopover("#searchPopover"));
   $("#searchInput").addEventListener("input",event=>renderSearch(event.target.value));
   $("#filtersButton").addEventListener("click",()=>openPopover("#filterPopover")); $("#statsButton").addEventListener("click",()=>openPopover("#statsPopover")); $("#statsButton").addEventListener("dblclick",()=>openPopover("#statsPopover")); $("[data-nav=stats]").addEventListener("click",()=>openPopover("#statsPopover"));
@@ -93,8 +190,8 @@
   $("#applyFilters").addEventListener("click",()=>{filters={min:Number($("#minGeneration").value),max:Number($("#maxGeneration").value),photos:$("#photosOnly").checked,main:$("#mainOnly").checked};drawTree();closePopovers();});
   $("#resetFilters").addEventListener("click",()=>{filters={min:1,max:5,photos:false,main:false};$("#photosOnly").checked=false;$("#mainOnly").checked=false;drawTree();closePopovers();});
   $("#resetEmpty").addEventListener("click",()=>{$("#resetFilters").click();});
-  $("#zoomIn").addEventListener("click",()=>{zoom=Math.min(140,zoom+10);$("#zoomValue").textContent=`${zoom}%`;$("#graph").style.transform=`scale(${zoom/100})`;});
-  $("#zoomOut").addEventListener("click",()=>{zoom=Math.max(60,zoom-10);$("#zoomValue").textContent=`${zoom}%`;$("#graph").style.transform=`scale(${zoom/100})`;});
+  $("#zoomIn").addEventListener("click",()=>{const next=Math.min(175,zoom+10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
+  $("#zoomOut").addEventListener("click",()=>{const next=Math.max(50,zoom-10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
   $("#whoAmI").addEventListener("click",()=>{selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");});
   $$("[data-nav]").forEach(button=>button.addEventListener("click",()=>{const nav=button.dataset.nav;setActive(nav);if(nav==="tree")setMode("all");if(nav==="branches")openPopover("#filterPopover");if(nav==="people")openPopover("#searchPopover");}));
   document.addEventListener("keydown",event=>{if(event.key==="Escape")closePopovers();});
@@ -107,6 +204,7 @@
   if(state==="menu") openPopover("#morePopover");
   if(state==="path") setMode("path"); if(state==="branch") setMode("branch");
   if(state==="focus") {document.querySelector('[data-person="p07"]')?.focus();}
-  if(state==="dense") {zoom=80;$("#zoomValue").textContent="80%";$("#graph").style.transform="scale(.8)";}
+  installCameraGestures();
+  if(state==="dense") setCameraTransform(0,0,.8);
   window.waydeanDesktopPrototype={people,drawTree,renderProfile,setMode};
 })();

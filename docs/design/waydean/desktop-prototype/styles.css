@@ -4,3 +4,5 @@
 .more-popover{left:auto;right:126px;width:310px}.more-item{display:flex;flex-direction:column;gap:4px;width:100%;min-height:52px;padding:9px 10px;border:1px solid transparent;border-radius:7px;background:rgba(255,255,255,.035);text-align:left}.more-item:hover{border-color:var(--line);background:#182327}.more-item strong{font-size:12px}.more-item small{color:var(--muted);font-size:10px}.more-item.disabled{opacity:.5}
 .graph{transition:none}
 .graph.dense .person-node[data-person="p11"]{width:190px;height:132px}.graph.dense .person-node[data-person="p11"] strong{display:-webkit-box;max-width:100%;overflow:hidden;white-space:normal;font-size:11px;line-height:1.12;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+
+.tree-stage{touch-action:none;user-select:none;cursor:grab}.tree-stage.camera-moving{cursor:grabbing}.tree-stage.camera-moving .graph{transition:none;will-change:transform}

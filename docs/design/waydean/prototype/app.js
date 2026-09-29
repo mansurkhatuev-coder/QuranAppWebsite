@@ -38,7 +38,13 @@
   let lastSearchFocusId = null;
   let zoomScale = 1;
   let zoomAnchor = "stage";
+  let cameraX = 0;
+  let cameraY = 0;
   let lodLevel = "detail";
+  const activePointers = new Map();
+  let pointerGesture = null;
+  let suppressClickUntil = 0;
+  let wheelEndTimer = 0;
   let flightFrame = 0;
   let finishFlight = null;
 
@@ -140,10 +146,12 @@
     const targetY = (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
     zoomScale = focusScale;
     zoomAnchor = "person";
-    camera.style.setProperty("--camera-x", `${camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1)}px`);
+    cameraX = camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1);
+    camera.style.setProperty("--camera-x", `${cameraX}px`);
     const anchorRatio = Number(camera.dataset.focusAnchorRatio);
     const anchorY = Number.isFinite(anchorRatio) && anchorRatio > 0 ? camera.clientHeight * anchorRatio : camera.clientHeight * 0.5;
-    camera.style.setProperty("--camera-y", `${anchorY - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1)}px`);
+    cameraY = anchorY - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1);
+    camera.style.setProperty("--camera-y", `${cameraY}px`);
     camera.style.setProperty("--camera-scale", `${focusScale}`);
     camera.style.removeProperty("transform");
     camera.classList.remove("camera-moving");
@@ -233,6 +241,151 @@
     $("#zoomOut").disabled = zoomScale <= 0.5;
   }
 
+  function setCameraTransform({ x = cameraX, y = cameraY, scale = zoomScale, moving = false } = {}) {
+    const camera = $("#treeCamera");
+    cameraX = x;
+    cameraY = y;
+    zoomScale = scale;
+    zoomAnchor = "stage";
+    camera.style.setProperty("--camera-x", `${cameraX}px`);
+    camera.style.setProperty("--camera-y", `${cameraY}px`);
+    camera.style.setProperty("--camera-scale", `${zoomScale}`);
+    camera.style.removeProperty("transform");
+    camera.classList.add("camera-focused");
+    camera.classList.toggle("camera-moving", moving);
+  }
+
+  function stagePoint(event) {
+    const rect = $("#treeStage").getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function pointerDistance(first, second) {
+    return Math.hypot(second.x - first.x, second.y - first.y);
+  }
+
+  function pointerMidpoint(first, second) {
+    return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+  }
+
+  function beginGestureFrame() {
+    const pointers = [...activePointers.values()];
+    if (pointers.length > 1) {
+      const midpoint = pointerMidpoint(pointers[0], pointers[1]);
+      pointerGesture = {
+        type: "pinch",
+        startDistance: Math.max(1, pointerDistance(pointers[0], pointers[1])),
+        startMidpoint: midpoint,
+        startScale: zoomScale,
+        startX: cameraX,
+        startY: cameraY,
+        moved: pointerGesture?.moved || false
+      };
+    } else if (pointers.length === 1) {
+      pointerGesture = {
+        type: "pan",
+        startPoint: pointers[0],
+        startX: cameraX,
+        startY: cameraY,
+        moved: pointerGesture?.moved || false
+      };
+    } else pointerGesture = null;
+  }
+
+  function installCameraGestures() {
+    if (!motionPreview) return;
+    const stage = $("#treeStage");
+    const camera = $("#treeCamera");
+    const center = () => ({ x: stage.clientWidth / 2, y: stage.clientHeight / 2 });
+
+    stage.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || event.target.closest(".tree-tools, .stage-mode, .stage-empty")) return;
+      if (!activePointers.size) cancelMotionSequence();
+      activePointers.set(event.pointerId, stagePoint(event));
+      beginGestureFrame();
+    });
+
+    stage.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId) || !pointerGesture) return;
+      const point = stagePoint(event);
+      activePointers.set(event.pointerId, point);
+      let x = cameraX;
+      let y = cameraY;
+      let scale = zoomScale;
+      if (pointerGesture.type === "pan") {
+        const dx = point.x - pointerGesture.startPoint.x;
+        const dy = point.y - pointerGesture.startPoint.y;
+        if (!pointerGesture.moved && Math.hypot(dx, dy) < 4) return;
+        pointerGesture.moved = true;
+        x = pointerGesture.startX + dx;
+        y = pointerGesture.startY + dy;
+      } else {
+        const pointers = [...activePointers.values()];
+        if (pointers.length < 2) return;
+        const midpoint = pointerMidpoint(pointers[0], pointers[1]);
+        const distance = pointerDistance(pointers[0], pointers[1]);
+        if (!pointerGesture.moved && Math.abs(distance - pointerGesture.startDistance) < 3 && pointerDistance(midpoint, pointerGesture.startMidpoint) < 3) return;
+        pointerGesture.moved = true;
+        scale = Math.max(0.5, Math.min(1.75, pointerGesture.startScale * distance / pointerGesture.startDistance));
+        const ratio = scale / pointerGesture.startScale;
+        const origin = center();
+        x = midpoint.x - origin.x - (pointerGesture.startMidpoint.x - origin.x - pointerGesture.startX) * ratio;
+        y = midpoint.y - origin.y - (pointerGesture.startMidpoint.y - origin.y - pointerGesture.startY) * ratio;
+      }
+      if (!pointerGesture.moved) return;
+      event.preventDefault();
+      suppressClickUntil = performance.now() + 350;
+      if (!stage.hasPointerCapture(event.pointerId)) stage.setPointerCapture(event.pointerId);
+      setCameraTransform({ x, y, scale, moving: true });
+    });
+
+    const endPointer = event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.delete(event.pointerId);
+      if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
+      if (!activePointers.size) {
+        const didMove = pointerGesture?.moved;
+        pointerGesture = null;
+        camera.classList.remove("camera-moving");
+        if (didMove) {
+          suppressClickUntil = performance.now() + 350;
+          updateLod();
+        }
+      } else beginGestureFrame();
+    };
+    stage.addEventListener("pointerup", endPointer);
+    stage.addEventListener("pointercancel", endPointer);
+    stage.addEventListener("lostpointercapture", endPointer);
+    stage.addEventListener("click", event => {
+      if (performance.now() > suppressClickUntil) return;
+      suppressClickUntil = 0;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+
+    stage.addEventListener("wheel", event => {
+      if (event.target.closest(".tree-tools, .stage-mode, .stage-empty")) return;
+      event.preventDefault();
+      if (!wheelEndTimer) cancelMotionSequence();
+      const point = stagePoint(event);
+      const origin = center();
+      const scale = Math.max(0.5, Math.min(1.75, zoomScale * Math.exp(-event.deltaY * 0.00012)));
+      const ratio = scale / zoomScale;
+      setCameraTransform({
+        x: point.x - origin.x - (point.x - origin.x - cameraX) * ratio,
+        y: point.y - origin.y - (point.y - origin.y - cameraY) * ratio,
+        scale,
+        moving: true
+      });
+      clearTimeout(wheelEndTimer);
+      wheelEndTimer = window.setTimeout(() => {
+        wheelEndTimer = 0;
+        camera.classList.remove("camera-moving");
+        updateLod();
+      }, 180);
+    }, { passive: false });
+  }
+
   function zoomBy(step) {
     if (!motionPreview) {
       announce(step > 0 ? "Масштаб увеличен в макете." : "Масштаб уменьшен в макете.");
@@ -245,15 +398,8 @@
     if (keepPersonCentered) {
       applyCameraFocus(selectedId, nextScale);
     } else {
-      const camera = $("#treeCamera");
-      camera.style.setProperty("--camera-x", "0px");
-      camera.style.setProperty("--camera-y", "0px");
-      camera.style.setProperty("--camera-scale", `${nextScale}`);
-      camera.style.removeProperty("transform");
-      camera.classList.remove("camera-moving");
-      camera.classList.add("camera-focused");
-      zoomScale = nextScale;
-      zoomAnchor = "stage";
+      const ratio = nextScale / zoomScale;
+      setCameraTransform({ x: cameraX * ratio, y: cameraY * ratio, scale: nextScale });
     }
     const sequence = motionSequence;
     if (reducedMotion.matches) updateLod();
@@ -569,6 +715,8 @@
     nodes.get(route[0])?.classList.remove("path-origin");
     stage.classList.add("is-focus-settled");
     const endFrame = frameFor(destinationPoint, finalScale, 1);
+    cameraX = endFrame.x;
+    cameraY = endFrame.y;
     camera.style.setProperty("--camera-x", `${endFrame.x}px`);
     camera.style.setProperty("--camera-y", `${endFrame.y}px`);
     camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
@@ -858,6 +1006,8 @@
       mode = "all";
       const camera = $("#treeCamera");
       camera.classList.remove("camera-focused");
+      cameraX = 0;
+      cameraY = 0;
       camera.style.setProperty("--camera-x", "0px");
       camera.style.setProperty("--camera-y", "0px");
       camera.style.setProperty("--camera-scale", "1");
@@ -900,6 +1050,7 @@
   }
 
   if (motionPreview) document.body.classList.add("motion-preview");
+  installCameraGestures();
   $("#treeCamera").addEventListener("transitionend", event => {
     if (event.target === event.currentTarget && event.propertyName === "transform") updateLod();
   });
