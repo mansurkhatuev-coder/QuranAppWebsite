@@ -132,9 +132,11 @@
     const scaleX = cameraRect.width / camera.clientWidth || 1;
     const targetX = (rect.left + rect.width / 2 - cameraRect.left) / scaleX;
     const targetY = (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
-    const focusScale = 1.09;
+    const focusScale = 1.29;
     camera.style.setProperty("--camera-x", `${camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1)}px`);
-    camera.style.setProperty("--camera-y", `${camera.clientHeight * 0.56 - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1)}px`);
+    const anchorRatio = Number(camera.dataset.focusAnchorRatio);
+    const anchorY = Number.isFinite(anchorRatio) && anchorRatio > 0 ? camera.clientHeight * anchorRatio : camera.clientHeight * 0.56;
+    camera.style.setProperty("--camera-y", `${anchorY - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1)}px`);
     camera.style.setProperty("--camera-scale", `${focusScale}`);
     camera.style.removeProperty("transform");
     camera.classList.remove("camera-moving");
@@ -242,18 +244,17 @@
       };
     };
     const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
-    const frameFor = (point, scale) => {
-      return {
-        x: camera.clientWidth * 0.5 - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
-        y: camera.clientHeight * 0.56 - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
-        scale
-      };
-    };
+    const originPoint = centerOf(localRect(originNode));
+    const destinationPoint = centerOf(localRect(destinationNode));
+    const flightAnchor = { x: camera.clientWidth / 2, y: originPoint.y };
+    camera.dataset.focusAnchorRatio = String(flightAnchor.y / camera.clientHeight);
+    const frameFor = (point, scale) => ({
+      x: flightAnchor.x - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
+      y: flightAnchor.y - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
+      scale
+    });
     const transformFor = frame => `translate(${frame.x}px, ${frame.y}px) scale(${frame.scale})`;
-    const originRect = localRect(originNode);
-    const originPoint = centerOf(originRect);
-    let currentPoint = { x: camera.clientWidth / 2, y: camera.clientHeight / 2 };
-    let currentScale = 1;
+    const finalScale = 1.46;
     nodes.get(route[0])?.classList.add("path-origin", "path-current");
     nodes.get(selectedId)?.classList.add("path-destination");
 
@@ -263,11 +264,38 @@
       return;
     }
 
-    stage.classList.add("is-flight");
     const miniWindow = $("#miniMap .mini-window");
-    miniWindow.style.transform = "translateY(-9px)";
+    const routeSegments = [];
+    const appendStraight = (from, to, currentId) => {
+      const length = Math.hypot(to.x - from.x, to.y - from.y);
+      if (length > 0.5) routeSegments.push({ kind: "straight", from, to, length, currentId });
+    };
+    const routeLines = edges.map((edge, index) => {
+      const line = $(`[data-edge="${edge}"]`);
+      const parentNode = nodes.get(route[index]);
+      const childNode = nodes.get(route[index + 1]);
+      if (!line || !parentNode || !childNode || line.classList.contains("is-hidden")) return null;
+      const parentRect = localRect(parentNode);
+      const childRect = localRect(childNode);
+      const parentCenter = centerOf(parentRect);
+      const childCenter = centerOf(childRect);
+      appendStraight(parentCenter, { x: parentCenter.x, y: parentRect.top + parentRect.height }, route[index]);
+      const length = line.getTotalLength();
+      routeSegments.push({ kind: "connector", line, length, currentId: route[index] });
+      appendStraight({ x: childCenter.x, y: childRect.top }, childCenter, route[index + 1]);
+      line.style.strokeDasharray = `${length}`;
+      line.style.strokeDashoffset = `${length}`;
+      return { line, length };
+    });
+    const totalLength = routeSegments.reduce((sum, segment) => sum + segment.length, 0);
+    if (!totalLength) {
+      applyCameraFocus();
+      return;
+    }
 
-    const animateFlight = (from, to, duration, onProgress) => new Promise(resolve => {
+    stage.classList.add("is-flight");
+    miniWindow.style.transform = "translateY(-9px)";
+    const animateFlight = (duration, sampleAt, onProgress) => new Promise(resolve => {
       const startTime = performance.now();
       finishFlight = resolve;
       const tick = now => {
@@ -279,13 +307,9 @@
         }
         const raw = Math.min(1, (now - startTime) / duration);
         const eased = raw * raw * (3 - 2 * raw);
-        const point = { x: from.x + (to.x - from.x) * eased, y: from.y + (to.y - from.y) * eased };
-        const scale = from.scale + (to.scale - from.scale) * eased;
-        const frame = frameFor(point, scale);
-        camera.style.transform = transformFor(frame);
-        currentPoint = point;
-        currentScale = scale;
-        onProgress?.(raw, eased);
+        const sample = sampleAt(eased, raw);
+        camera.style.transform = transformFor(frameFor(sample.point, sample.scale));
+        onProgress?.(raw, eased, sample);
         if (raw >= 1) {
           flightFrame = 0;
           finishFlight = null;
@@ -297,61 +321,80 @@
       flightFrame = requestAnimationFrame(tick);
     });
 
-    const firstFrame = { ...originPoint, scale: 1.07 };
-    const firstOk = await animateFlight({ ...currentPoint, scale: currentScale }, firstFrame, 620);
-    if (!firstOk || sequence !== motionSequence) return;
+    const duration = Math.min(4200, Math.max(2600, totalLength * 5.4));
+    const routeProgress = progress => {
+      const distance = totalLength * progress;
+      let consumed = 0;
+      for (const [index, segment] of routeSegments.entries()) {
+        const end = consumed + segment.length;
+        if (distance <= end || index === routeSegments.length - 1) {
+          const localProgress = Math.min(1, Math.max(0, (distance - consumed) / segment.length));
+          let point;
+          if (segment.kind === "connector") {
+            const sample = segment.line.getPointAtLength(segment.length * localProgress);
+            point = { x: sample.x, y: sample.y };
+          } else {
+            point = {
+              x: segment.from.x + (segment.to.x - segment.from.x) * localProgress,
+              y: segment.from.y + (segment.to.y - segment.from.y) * localProgress
+            };
+          }
+          return { point, segmentIndex: index, localProgress, distance };
+        }
+        consumed = end;
+      }
+      return { point: centerOf(localRect(destinationNode)), segmentIndex: routeSegments.length - 1, localProgress: 1, distance };
+    };
 
-    for (const [index, edge] of edges.entries()) {
-      if (sequence !== motionSequence) return;
-      const line = $(`[data-edge="${edge}"]`);
-      if (!line || line.classList.contains("is-hidden")) continue;
-      const parentId = route[index];
-      const childId = route[index + 1];
-      const parentNode = nodes.get(parentId);
-      const childNode = nodes.get(childId);
-      if (!parentNode || !childNode) continue;
-      const parentRect = localRect(parentNode);
-      const childRect = localRect(childNode);
-      const parentCenter = centerOf(parentRect);
-      const parentExit = { x: parentCenter.x, y: parentRect.top + parentRect.height };
-      const childEntry = { x: childRect.left + childRect.width / 2, y: childRect.top };
-      const childCenter = centerOf(childRect);
-      const length = line.getTotalLength();
-      line.style.strokeDasharray = `${length}`;
-      line.style.strokeDashoffset = `${length}`;
-      line.classList.add("is-tracing");
+    let currentId = route[0];
+    const traveled = await animateFlight(duration, progress => {
+      const sample = routeProgress(progress);
+      sample.scale = 1 + (finalScale - 1) * progress;
+      return sample;
+    }, (raw, progress, sample) => {
+      const activeSegment = routeSegments[sample.segmentIndex];
+      if (activeSegment?.currentId !== currentId) {
+        nodes.get(currentId)?.classList.remove("path-current");
+        currentId = activeSegment?.currentId || currentId;
+        nodes.get(currentId)?.classList.add("path-current");
+      }
+      if (activeSegment?.kind === "connector") {
+        activeSegment.line.classList.add("is-tracing");
+        activeSegment.line.style.strokeDashoffset = `${activeSegment.length * (1 - sample.localProgress)}`;
+      }
+      for (let i = 0; i < routeLines.length; i += 1) {
+        const routeLine = routeLines[i];
+        if (!routeLine) continue;
+        const connectorIndex = routeSegments.findIndex(segment => segment.kind === "connector" && segment.line === routeLine.line);
+        if (connectorIndex < sample.segmentIndex) {
+          routeLine.line.style.strokeDasharray = "";
+          routeLine.line.style.strokeDashoffset = "";
+          routeLine.line.classList.remove("is-tracing");
+        } else if (connectorIndex === sample.segmentIndex && activeSegment?.kind === "connector") {
+          routeLine.line.classList.add("is-tracing");
+          routeLine.line.style.strokeDashoffset = `${routeLine.length * (1 - sample.localProgress)}`;
+        } else if (connectorIndex > sample.segmentIndex) {
+          routeLine.line.style.strokeDasharray = `${routeLine.length}`;
+          routeLine.line.style.strokeDashoffset = `${routeLine.length}`;
+        }
+      }
+      miniWindow.style.transform = `translateY(${-9 + progress * 18}px)`;
+    });
+    if (!traveled || sequence !== motionSequence) return;
 
-      const passCardDuration = 300;
-      const passParent = await animateFlight({ ...currentPoint, scale: currentScale }, { ...parentExit, scale: Math.min(1.12, 1.075 + index * 0.025) }, passCardDuration);
-      if (!passParent || sequence !== motionSequence) return;
-      const pathStart = line.getPointAtLength(0);
-      const pathEnd = line.getPointAtLength(length);
-      const connectorStart = { x: pathStart.x, y: pathStart.y, scale: currentScale };
-      const connectorEnd = { x: pathEnd.x, y: pathEnd.y, scale: Math.min(1.13, 1.09 + index * 0.02) };
-      const connectorDuration = Math.min(1150, Math.max(560, length * 3.1));
-      const followedLine = await animateFlight(connectorStart, connectorEnd, connectorDuration, progress => {
-        line.style.strokeDashoffset = `${length * (1 - progress)}`;
-        const miniProgress = (index + progress) / edges.length;
-        miniWindow.style.transform = `translateY(${-9 + miniProgress * 18}px)`;
-      });
-      if (!followedLine || sequence !== motionSequence) return;
-      line.style.strokeDashoffset = "0";
-      line.classList.remove("is-tracing");
-
-      parentNode.classList.remove("path-current");
-      childNode.classList.add("path-current");
-      const enteredChild = await animateFlight({ ...childEntry, scale: currentScale }, { ...childCenter, scale: Math.max(1.08, currentScale - 0.01) }, passCardDuration);
-      if (!enteredChild || sequence !== motionSequence) return;
-    }
-
-    if (sequence !== motionSequence) return;
-    const endFrame = frameFor(centerOf(localRect(destinationNode)), 1.09);
+    routeLines.forEach(routeLine => {
+      if (!routeLine) return;
+      routeLine.line.style.strokeDasharray = "";
+      routeLine.line.style.strokeDashoffset = "";
+      routeLine.line.classList.remove("is-tracing");
+    });
+    nodes.get(currentId)?.classList.remove("path-current");
+    nodes.get(selectedId)?.classList.add("path-current");
+    const endFrame = frameFor(destinationPoint, finalScale);
     camera.style.setProperty("--camera-x", `${endFrame.x}px`);
     camera.style.setProperty("--camera-y", `${endFrame.y}px`);
     camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
     camera.style.removeProperty("transform");
-    activeMotion.forEach(animation => animation.cancel());
-    activeMotion = [];
     camera.classList.remove("camera-moving");
     camera.classList.add("camera-focused");
     clearTimeout(toastTimer);
