@@ -6,3 +6,7 @@
 .graph.dense .person-node[data-person="p11"]{width:190px;height:132px}.graph.dense .person-node[data-person="p11"] strong{display:-webkit-box;max-width:100%;overflow:hidden;white-space:normal;font-size:11px;line-height:1.12;-webkit-box-orient:vertical;-webkit-line-clamp:2}
 
 .tree-stage{touch-action:none;user-select:none;cursor:grab}.tree-stage.camera-moving{cursor:grabbing}.tree-stage.camera-moving .graph{transition:none;will-change:transform}
+
+.tree-stage.path-focus .tree-line:not(.active){opacity:.12}.tree-stage.path-focus .tree-line.active{opacity:.48}.tree-stage.path-focus .tree-line.path-tracing{opacity:1;stroke:#ffe6a4;stroke-width:2.8;filter:drop-shadow(0 0 7px rgba(247,207,122,.82))}.person-node.path-origin{border-color:#e6cb8d;box-shadow:0 0 0 1px rgba(241,198,110,.32),0 0 14px rgba(241,198,110,.32),0 7px 18px #000b}.person-node.path-current{border-color:#ffe6a4;box-shadow:0 0 0 2px rgba(241,198,110,.32),0 0 24px rgba(241,198,110,.7),0 8px 22px #000c}.person-node.path-destination{outline:1px solid rgba(242,208,132,.52);outline-offset:4px}.tree-stage.path-focus .person-node.dimmed{opacity:.32}
+
+.tree-stage.path-focus .mode-label{left:16px;transform:none}.tree-stage.path-focus .person-node.selected:not(.path-current){z-index:2;border:1px solid rgba(225,197,141,.55);box-shadow:0 5px 18px #0009}.tree-stage.path-focus .person-node.path-destination:not(.path-current){outline:0}

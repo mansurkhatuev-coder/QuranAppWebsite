@@ -28,6 +28,8 @@
   let cameraScale = 1;
   let cameraX = 0;
   let cameraY = 0;
+  let pathMotionId = 0;
+  let pathAnimationFrame = 0;
   const activePointers = new Map();
   let pointerGesture = null;
   let suppressClickUntil = 0;
@@ -55,14 +57,14 @@
     const lines = visible.filter(person => person.parent && ids.has(person.parent)).map(person => {
       const [px,py] = positions[person.parent], [cx,cy] = positions[person.id], bend = Math.round((py+cy)/2);
       const active = related && related.has(person.parent) && related.has(person.id);
-      return `<path class="tree-line ${active ? "active" : ""}" d="M${px} ${py+58} V${bend} H${cx} V${cy-59}"/>`;
+      return `<path class="tree-line ${active ? "active" : ""}" data-edge="${person.parent}-${person.id}" d="M${px} ${py+58} V${bend} H${cx} V${cy-59}"/>`;
     }).join("");
     $("#treeLines").innerHTML = lines;
     $("#nodes").innerHTML = visible.map(person => {
       const [x,y] = positions[person.id]; const relatedClass = related && !related.has(person.id) ? "dimmed" : "";
       return `<button class="person-node ${person.id === selectedId ? "selected" : ""} ${relatedClass} ${state === "focus" && person.id === "p07" ? "keyboard-focus" : ""}" data-person="${person.id}" aria-label="${person.name}, ${yearText(person)}, поколение ${person.generation}" style="left:${x/10}%;top:${y/8.1}%">${icon()}<strong title="${person.name}">${person.name}</strong><small>${yearText(person)}</small></button>`;
     }).join("");
-    $$("[data-person]").forEach(button => button.addEventListener("click", () => { selectedId = button.dataset.person; drawTree(); renderProfile(); closePopovers(); setActive("tree"); }));
+    $$("[data-person]").forEach(button => button.addEventListener("click", () => { cancelPathMotion(); selectedId = button.dataset.person; drawTree(); renderProfile(); closePopovers(); setActive("tree"); if (mode === "path") runDesktopPath(); }));
     const empty = visible.length === 0;
     $("#emptyState").hidden = !empty;
     $("#treeLines").hidden = empty;
@@ -80,16 +82,143 @@
     if (tab === "media") body = `<div class="media-empty">${icon()}<strong>Пока без фотографий</strong><span>В тестовом наборе у людей нет фото. Для таких случаев используется нейтральный силуэт без лица.</span></div>`;
     $("#profilePanel").innerHTML = `<button class="panel-close" aria-label="Свернуть карточку">×</button>${head}<div class="profile-body">${body}</div>`;
     $$("[data-tab]").forEach(button=>button.addEventListener("click",()=>renderProfile(button.dataset.tab)));
-    $$("[data-relative]").forEach(button=>button.addEventListener("click",()=>{selectedId=button.dataset.relative;drawTree();renderProfile("info");}));
+    $$("[data-relative]").forEach(button=>button.addEventListener("click",()=>{cancelPathMotion();selectedId=button.dataset.relative;drawTree();renderProfile("info");if(mode==="path")runDesktopPath();}));
     $("#profilePanel").querySelector(".panel-close").addEventListener("click",()=>{ $("#profilePanel").classList.toggle("collapsed"); });
     $("#showBranch")?.addEventListener("click",()=>setMode("branch"));
   }
   function setActive(nav) { $$(".nav-link").forEach(button=>button.classList.toggle("active",button.dataset.nav===nav)); }
-  function setMode(next) { mode=next; if(next==="all") filters={min:1,max:5,photos:false,main:false}; drawTree(); announce(next==="path"?"Подсвечен путь от старшего известного предка.":next==="branch"?"Подсвечена выбранная ветвь.":"Показаны все поколения."); }
+  function cancelPathMotion() {
+    pathMotionId += 1;
+    if (pathAnimationFrame) cancelAnimationFrame(pathAnimationFrame);
+    pathAnimationFrame = 0;
+    $("#treeStage").classList.remove("camera-moving");
+    $$(".tree-line").forEach(line => {
+      line.style.strokeDasharray = "";
+      line.style.strokeDashoffset = "";
+      line.classList.remove("path-tracing");
+    });
+    $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination"));
+  }
+  function runDesktopPath() {
+    cancelPathMotion();
+    const stage = $("#treeStage"), graph = $("#graph");
+    const route = [...ancestors(selectedId)].reverse();
+    if (route.length < 2 || route.some(id => !positions[id] || !$(`[data-person="${id}"]`))) return;
+    const nodes = new Map(route.map(id => [id, $(`[data-person="${id}"]`)]));
+    const lines = route.slice(1).map((id, index) => $(`.tree-line[data-edge="${route[index]}-${id}"]`));
+    if (lines.some(line => !line)) return;
+    const rectFor = id => {
+      const node = nodes.get(id);
+      return { left: node.offsetLeft - node.offsetWidth / 2, top: node.offsetTop - node.offsetHeight / 2, width: node.offsetWidth, height: node.offsetHeight };
+    };
+    const centerFor = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    const segments = [];
+    const appendStraight = (from, to, currentId) => {
+      const length = Math.hypot(to.x - from.x, to.y - from.y);
+      if (length > 0.5) segments.push({ kind: "straight", from, to, length, currentId });
+    };
+    const scaleX = graph.clientWidth / 1000, scaleY = graph.clientHeight / 810;
+    const connectorSegments = new Map();
+    route.slice(1).forEach((id, index) => {
+      const parentId = route[index], parentRect = rectFor(parentId), childRect = rectFor(id);
+      const parentCenter = centerFor(parentRect), childCenter = centerFor(childRect), line = lines[index];
+      appendStraight(parentCenter, { x: parentCenter.x, y: parentRect.top + parentRect.height }, parentId);
+      const svgLength = line.getTotalLength();
+      const segmentIndex = segments.length;
+      segments.push({ kind: "connector", line, svgLength, length: svgLength * (scaleX + scaleY) / 2, currentId: parentId });
+      connectorSegments.set(line, segmentIndex);
+      appendStraight({ x: childCenter.x, y: childRect.top }, childCenter, id);
+    });
+    const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
+    if (!totalLength) return;
+    const anchor = { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+    const destination = centerFor(rectFor(selectedId));
+    const frameFor = (point, scale, progress) => {
+      const destinationOnScreen = { x: destination.x + (anchor.x - destination.x) * progress, y: destination.y + (anchor.y - destination.y) * progress };
+      const focus = { x: destinationOnScreen.x - (destination.x - point.x) * scale, y: destinationOnScreen.y - (destination.y - point.y) * scale };
+      return { x: focus.x - point.x - (point.x - graph.clientWidth / 2) * (scale - 1), y: focus.y - point.y - (point.y - graph.clientHeight * 0.48) * (scale - 1) };
+    };
+    const finalScale = 1.32, finalFrame = frameFor(destination, finalScale, 1);
+    nodes.get(route[0]).classList.add("path-origin");
+    nodes.get(selectedId).classList.add("path-destination");
+    stage.classList.add("path-focus");
+    const lengths = lines.map(line => {
+      const length = line.getTotalLength();
+      line.style.strokeDasharray = `${length}`;
+      line.style.strokeDashoffset = `${length}`;
+      return length;
+    });
+    const sequence = pathMotionId;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      lines.forEach(line => { line.style.strokeDasharray = ""; line.style.strokeDashoffset = ""; });
+      setCameraTransform(finalFrame.x, finalFrame.y, finalScale);
+      nodes.get(selectedId).classList.add("path-current");
+      return;
+    }
+    stage.classList.add("camera-moving");
+    setCameraTransform(0, 0, 1, true);
+    const startedAt = performance.now();
+    const duration = Math.min(3200, Math.max(1600, totalLength * 2.4));
+    const ease = value => value * value * (3 - 2 * value);
+    const sampleAt = progress => {
+      const distanceAlong = totalLength * progress;
+      let consumed = 0;
+      for (const [index, segment] of segments.entries()) {
+        const end = consumed + segment.length;
+        if (distanceAlong <= end || index === segments.length - 1) {
+          const localProgress = Math.min(1, Math.max(0, (distanceAlong - consumed) / segment.length));
+          let point;
+          if (segment.kind === "connector") {
+            const sample = segment.line.getPointAtLength(segment.svgLength * localProgress);
+            point = { x: sample.x * scaleX, y: sample.y * scaleY };
+          } else {
+            point = { x: segment.from.x + (segment.to.x - segment.from.x) * localProgress, y: segment.from.y + (segment.to.y - segment.from.y) * localProgress };
+          }
+          return { point, segmentIndex: index, localProgress, currentId: segment.currentId };
+        }
+        consumed = end;
+      }
+      return { point: destination, segmentIndex: segments.length - 1, localProgress: 1, currentId: selectedId };
+    };
+    const step = now => {
+      if (sequence !== pathMotionId) return;
+      const progress = Math.min(1, (now - startedAt) / duration);
+      const eased = ease(progress), sample = sampleAt(eased);
+      const scale = 1 + (finalScale - 1) * eased;
+      const frame = progress === 1 ? finalFrame : frameFor(sample.point, scale, eased);
+      setCameraTransform(frame.x, frame.y, scale, true);
+      lines.forEach((line, index) => {
+        const segmentIndex = connectorSegments.get(line);
+        const complete = segmentIndex < sample.segmentIndex || (segmentIndex === sample.segmentIndex && segments[sample.segmentIndex].kind === "connector" && sample.localProgress >= 1);
+        const active = segmentIndex === sample.segmentIndex && segments[sample.segmentIndex].kind === "connector";
+        line.classList.toggle("path-tracing", active);
+        line.style.strokeDashoffset = complete ? "0" : active ? `${lengths[index] * (1 - sample.localProgress)}` : `${lengths[index]}`;
+      });
+      route.forEach(id => nodes.get(id).classList.toggle("path-current", id === sample.currentId));
+      if (progress < 1) pathAnimationFrame = requestAnimationFrame(step);
+      else {
+        pathAnimationFrame = 0;
+        setCameraTransform(finalFrame.x, finalFrame.y, finalScale);
+        lines.forEach(line => { line.style.strokeDasharray = ""; line.style.strokeDashoffset = ""; line.classList.remove("path-tracing"); });
+        nodes.get(selectedId).classList.add("path-current");
+        stage.classList.remove("camera-moving");
+      }
+    };
+    pathAnimationFrame = requestAnimationFrame(step);
+  }
+  function setMode(next) {
+    cancelPathMotion();
+    mode=next;
+    if(next==="all") { filters={min:1,max:5,photos:false,main:false}; setCameraTransform(0,0,1); }
+    $("#treeStage").classList.toggle("path-focus", next==="path");
+    drawTree();
+    announce(next==="path"?"Камера следует от предка к выбранному человеку.":next==="branch"?"Подсвечена выбранная ветвь.":"Показаны все поколения.");
+    if(next==="path") runDesktopPath();
+  }
   function announce(message) { const toast=$("#toast"); toast.textContent=message; toast.classList.add("visible"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove("visible"),2300); }
   function closePopovers() { $$(".popover").forEach(popover=>popover.hidden=true); }
   function openPopover(id) { closePopovers(); const item=$(id); item.hidden=false; const input=item.querySelector("input[type=search]"); if(input) { renderSearch(input.value); input.focus(); } }
-  function renderSearch(value="") { const query=value.trim().toLocaleLowerCase("ru"); const matches=people.filter(person=>`${person.name} ${person.born??""} ${person.died??""} ${person.branch}`.toLocaleLowerCase("ru").includes(query)); $("#searchResults").innerHTML=matches.length?matches.map(person=>`<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join(""):`<p class="empty-result">По запросу «${value}» никого не найдено.</p>`; $$("[data-result]").forEach(button=>button.addEventListener("click",()=>{selectedId=button.dataset.result;drawTree();renderProfile();closePopovers();})); }
+  function renderSearch(value="") { const query=value.trim().toLocaleLowerCase("ru"); const matches=people.filter(person=>`${person.name} ${person.born??""} ${person.died??""} ${person.branch}`.toLocaleLowerCase("ru").includes(query)); $("#searchResults").innerHTML=matches.length?matches.map(person=>`<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join(""):`<p class="empty-result">По запросу «${value}» никого не найдено.</p>`; $$("[data-result]").forEach(button=>button.addEventListener("click",()=>{cancelPathMotion();selectedId=button.dataset.result;drawTree();renderProfile();closePopovers();if(mode==="path")runDesktopPath();})); }
 
   function setCameraTransform(x, y, scale, moving = false) {
     cameraX = x;
@@ -119,6 +248,7 @@
     const center = () => ({ x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 });
     stage.addEventListener("pointerdown", event => {
       if (event.button !== 0 || event.target.closest(".tree-controls, .minimap, .mode-label, .empty-state")) return;
+      if (!activePointers.size) cancelPathMotion();
       activePointers.set(event.pointerId, stagePoint(event));
       beginGestureFrame();
     });
@@ -190,9 +320,9 @@
   $("#applyFilters").addEventListener("click",()=>{filters={min:Number($("#minGeneration").value),max:Number($("#maxGeneration").value),photos:$("#photosOnly").checked,main:$("#mainOnly").checked};drawTree();closePopovers();});
   $("#resetFilters").addEventListener("click",()=>{filters={min:1,max:5,photos:false,main:false};$("#photosOnly").checked=false;$("#mainOnly").checked=false;drawTree();closePopovers();});
   $("#resetEmpty").addEventListener("click",()=>{$("#resetFilters").click();});
-  $("#zoomIn").addEventListener("click",()=>{const next=Math.min(175,zoom+10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
-  $("#zoomOut").addEventListener("click",()=>{const next=Math.max(50,zoom-10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
-  $("#whoAmI").addEventListener("click",()=>{selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");});
+  $("#zoomIn").addEventListener("click",()=>{cancelPathMotion();const next=Math.min(175,zoom+10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
+  $("#zoomOut").addEventListener("click",()=>{cancelPathMotion();const next=Math.max(50,zoom-10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
+  $("#whoAmI").addEventListener("click",()=>{cancelPathMotion();selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");if(mode==="path")runDesktopPath();});
   $$("[data-nav]").forEach(button=>button.addEventListener("click",()=>{const nav=button.dataset.nav;setActive(nav);if(nav==="tree")setMode("all");if(nav==="branches")openPopover("#filterPopover");if(nav==="people")openPopover("#searchPopover");}));
   document.addEventListener("keydown",event=>{if(event.key==="Escape")closePopovers();});
   renderProfile(state==="relatives"?"relatives":state==="media"?"media":"info"); drawTree();
