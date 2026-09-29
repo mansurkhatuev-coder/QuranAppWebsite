@@ -34,6 +34,8 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let motionSequence = 0;
   let activeMotion = [];
+  let flightFrame = 0;
+  let finishFlight = null;
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
@@ -186,9 +188,19 @@
 
   function cancelMotionSequence() {
     motionSequence += 1;
+    const wasFlying = $("#treeStage").classList.contains("is-flight");
+    if (flightFrame) cancelAnimationFrame(flightFrame);
+    flightFrame = 0;
+    finishFlight?.(false);
+    finishFlight = null;
     activeMotion.forEach(animation => animation.cancel());
     activeMotion = [];
     $("#treeCamera").classList.remove("camera-moving");
+    if (wasFlying) {
+      clearTimeout(toastTimer);
+      $("#toast").classList.remove("show");
+    }
+    $("#treeStage").classList.remove("is-flight");
     if (motionPreview && mode === "path") applyCameraFocus();
     else $("#treeCamera").classList.remove("camera-focused");
     $$(".branch-line").forEach(line => {
@@ -203,31 +215,34 @@
   async function playPathReveal() {
     const sequence = motionSequence;
     const camera = $("#treeCamera");
+    const stage = $("#treeStage");
     const route = [...ancestorPath(selectedId)].reverse();
     const edges = route.slice(1).map((childId, index) => `${route[index]}-${childId}`);
     const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
     const originNode = nodes.get(route[0]);
     const destinationNode = nodes.get(selectedId);
     if (!originNode || !destinationNode || !camera.clientWidth || !camera.clientHeight) return;
+    camera.classList.add("camera-moving");
     camera.classList.remove("camera-focused");
     camera.style.removeProperty("transform");
     camera.style.setProperty("--camera-x", "0px");
     camera.style.setProperty("--camera-y", "0px");
     camera.style.setProperty("--camera-scale", "1");
-    camera.classList.add("camera-moving");
 
     const cameraRect = camera.getBoundingClientRect();
     const scaleX = cameraRect.width / camera.clientWidth || 1;
     const scaleY = cameraRect.height / camera.clientHeight || 1;
-    const localCenter = node => {
+    const localRect = node => {
       const rect = node.getBoundingClientRect();
       return {
-        x: (rect.left + rect.width / 2 - cameraRect.left) / scaleX,
-        y: (rect.top + rect.height / 2 - cameraRect.top) / scaleY
+        left: (rect.left - cameraRect.left) / scaleX,
+        top: (rect.top - cameraRect.top) / scaleY,
+        width: rect.width / scaleX,
+        height: rect.height / scaleY
       };
     };
-    const frameFor = (node, scale) => {
-      const point = localCenter(node);
+    const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    const frameFor = (point, scale) => {
       return {
         x: camera.clientWidth * 0.5 - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
         y: camera.clientHeight * 0.56 - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
@@ -235,8 +250,10 @@
       };
     };
     const transformFor = frame => `translate(${frame.x}px, ${frame.y}px) scale(${frame.scale})`;
-    const originFrame = frameFor(originNode, 1.055);
-    let currentFrame = { x: 0, y: 0, scale: 1 };
+    const originRect = localRect(originNode);
+    const originPoint = centerOf(originRect);
+    let currentPoint = { x: camera.clientWidth / 2, y: camera.clientHeight / 2 };
+    let currentScale = 1;
     nodes.get(route[0])?.classList.add("path-origin", "path-current");
     nodes.get(selectedId)?.classList.add("path-destination");
 
@@ -246,24 +263,44 @@
       return;
     }
 
+    stage.classList.add("is-flight");
     const miniWindow = $("#miniMap .mini-window");
-    const focusIn = camera.animate(
-      [{ transform: transformFor(currentFrame) }, { transform: transformFor(originFrame) }],
-      { duration: 460, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" }
-    );
-    activeMotion.push(focusIn);
-    try {
-      await focusIn.finished;
-    } catch {
-      return;
-    }
-    if (sequence !== motionSequence) return;
-    currentFrame = originFrame;
-    camera.style.transform = transformFor(currentFrame);
-    focusIn.cancel();
-
-    const miniStep = 18 / Math.max(1, edges.length);
     miniWindow.style.transform = "translateY(-9px)";
+
+    const animateFlight = (from, to, duration, onProgress) => new Promise(resolve => {
+      const startTime = performance.now();
+      finishFlight = resolve;
+      const tick = now => {
+        if (sequence !== motionSequence) {
+          flightFrame = 0;
+          finishFlight = null;
+          resolve(false);
+          return;
+        }
+        const raw = Math.min(1, (now - startTime) / duration);
+        const eased = raw * raw * (3 - 2 * raw);
+        const point = { x: from.x + (to.x - from.x) * eased, y: from.y + (to.y - from.y) * eased };
+        const scale = from.scale + (to.scale - from.scale) * eased;
+        const frame = frameFor(point, scale);
+        camera.style.transform = transformFor(frame);
+        currentPoint = point;
+        currentScale = scale;
+        onProgress?.(raw, eased);
+        if (raw >= 1) {
+          flightFrame = 0;
+          finishFlight = null;
+          resolve(true);
+          return;
+        }
+        flightFrame = requestAnimationFrame(tick);
+      };
+      flightFrame = requestAnimationFrame(tick);
+    });
+
+    const firstFrame = { ...originPoint, scale: 1.07 };
+    const firstOk = await animateFlight({ ...currentPoint, scale: currentScale }, firstFrame, 620);
+    if (!firstOk || sequence !== motionSequence) return;
+
     for (const [index, edge] of edges.entries()) {
       if (sequence !== motionSequence) return;
       const line = $(`[data-edge="${edge}"]`);
@@ -273,40 +310,42 @@
       const parentNode = nodes.get(parentId);
       const childNode = nodes.get(childId);
       if (!parentNode || !childNode) continue;
-      parentNode.classList.remove("path-current");
-      childNode.classList.add("path-current");
+      const parentRect = localRect(parentNode);
+      const childRect = localRect(childNode);
+      const parentCenter = centerOf(parentRect);
+      const parentExit = { x: parentCenter.x, y: parentRect.top + parentRect.height };
+      const childEntry = { x: childRect.left + childRect.width / 2, y: childRect.top };
+      const childCenter = centerOf(childRect);
       const length = line.getTotalLength();
       line.style.strokeDasharray = `${length}`;
       line.style.strokeDashoffset = `${length}`;
       line.classList.add("is-tracing");
-      const nextFrame = frameFor(childNode, Math.min(1.14, 1.075 + index * 0.035));
-      const segmentDuration = 760;
-      const cameraAnimation = camera.animate(
-        [{ transform: transformFor(currentFrame) }, { transform: transformFor(nextFrame) }],
-        { duration: segmentDuration, easing: "cubic-bezier(.34,.02,.22,1)", fill: "forwards" }
-      );
-      activeMotion.push(cameraAnimation);
-      const lineAnimation = line.animate(
-        [{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
-        { duration: segmentDuration, easing: "ease-out", fill: "forwards" }
-      );
-      activeMotion.push(lineAnimation);
-      try {
-        await Promise.all([cameraAnimation.finished, lineAnimation.finished]);
-      } catch {
-        return;
-      }
-      if (sequence !== motionSequence) return;
-      currentFrame = nextFrame;
-      camera.style.transform = transformFor(currentFrame);
-      cameraAnimation.cancel();
+
+      const passCardDuration = 300;
+      const passParent = await animateFlight({ ...currentPoint, scale: currentScale }, { ...parentExit, scale: Math.min(1.12, 1.075 + index * 0.025) }, passCardDuration);
+      if (!passParent || sequence !== motionSequence) return;
+      const pathStart = line.getPointAtLength(0);
+      const pathEnd = line.getPointAtLength(length);
+      const connectorStart = { x: pathStart.x, y: pathStart.y, scale: currentScale };
+      const connectorEnd = { x: pathEnd.x, y: pathEnd.y, scale: Math.min(1.13, 1.09 + index * 0.02) };
+      const connectorDuration = Math.min(1150, Math.max(560, length * 3.1));
+      const followedLine = await animateFlight(connectorStart, connectorEnd, connectorDuration, progress => {
+        line.style.strokeDashoffset = `${length * (1 - progress)}`;
+        const miniProgress = (index + progress) / edges.length;
+        miniWindow.style.transform = `translateY(${-9 + miniProgress * 18}px)`;
+      });
+      if (!followedLine || sequence !== motionSequence) return;
       line.style.strokeDashoffset = "0";
       line.classList.remove("is-tracing");
-      miniWindow.style.transform = `translateY(${-9 + miniStep * (index + 1)}px)`;
+
+      parentNode.classList.remove("path-current");
+      childNode.classList.add("path-current");
+      const enteredChild = await animateFlight({ ...childEntry, scale: currentScale }, { ...childCenter, scale: Math.max(1.08, currentScale - 0.01) }, passCardDuration);
+      if (!enteredChild || sequence !== motionSequence) return;
     }
 
     if (sequence !== motionSequence) return;
-    const endFrame = frameFor(destinationNode, 1.09);
+    const endFrame = frameFor(centerOf(localRect(destinationNode)), 1.09);
     camera.style.setProperty("--camera-x", `${endFrame.x}px`);
     camera.style.setProperty("--camera-y", `${endFrame.y}px`);
     camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
@@ -315,6 +354,9 @@
     activeMotion = [];
     camera.classList.remove("camera-moving");
     camera.classList.add("camera-focused");
+    clearTimeout(toastTimer);
+    $("#toast").classList.remove("show");
+    stage.classList.remove("is-flight");
     miniWindow.style.transform = "translateY(9px)";
   }
 
@@ -600,7 +642,7 @@
     if (event.matches) cancelMotionSequence();
   });
   window.addEventListener("resize", () => {
-    if (activeMotion.some(animation => animation.playState === "running")) cancelMotionSequence();
+    if (flightFrame || activeMotion.some(animation => animation.playState === "running")) cancelMotionSequence();
     updateConnections();
     if (motionPreview && mode === "path") applyCameraFocus();
   });
