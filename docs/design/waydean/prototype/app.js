@@ -203,6 +203,7 @@
       $("#toast").classList.remove("show");
     }
     $("#treeStage").classList.remove("is-flight");
+    $("#treeStage").classList.remove("is-focus-settled");
     if (motionPreview && mode === "path") applyCameraFocus();
     else $("#treeCamera").classList.remove("camera-focused");
     $$(".branch-line").forEach(line => {
@@ -230,6 +231,7 @@
     camera.style.setProperty("--camera-x", "0px");
     camera.style.setProperty("--camera-y", "0px");
     camera.style.setProperty("--camera-scale", "1");
+    stage.classList.remove("is-focus-settled");
 
     const cameraRect = camera.getBoundingClientRect();
     const scaleX = cameraRect.width / camera.clientWidth || 1;
@@ -246,13 +248,23 @@
     const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
     const originPoint = centerOf(localRect(originNode));
     const destinationPoint = centerOf(localRect(destinationNode));
-    const flightAnchor = { x: camera.clientWidth / 2, y: originPoint.y };
-    camera.dataset.focusAnchorRatio = String(flightAnchor.y / camera.clientHeight);
-    const frameFor = (point, scale) => ({
-      x: flightAnchor.x - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
-      y: flightAnchor.y - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
-      scale
-    });
+    const focusPoint = { x: camera.clientWidth / 2, y: camera.clientHeight / 2 };
+    camera.dataset.focusAnchorRatio = String(focusPoint.y / camera.clientHeight);
+    const frameFor = (point, scale, progress = 0) => {
+      const destinationOnScreen = {
+        x: destinationPoint.x + (focusPoint.x - destinationPoint.x) * progress,
+        y: destinationPoint.y + (focusPoint.y - destinationPoint.y) * progress
+      };
+      const anchor = {
+        x: destinationOnScreen.x - (destinationPoint.x - point.x) * scale,
+        y: destinationOnScreen.y - (destinationPoint.y - point.y) * scale
+      };
+      return {
+        x: anchor.x - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
+        y: anchor.y - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
+        scale
+      };
+    };
     const transformFor = frame => `translate(${frame.x}px, ${frame.y}px) scale(${frame.scale})`;
     const finalScale = 1.46;
     nodes.get(route[0])?.classList.add("path-origin", "path-current");
@@ -308,7 +320,7 @@
         const raw = Math.min(1, (now - startTime) / duration);
         const eased = raw * raw * (3 - 2 * raw);
         const sample = sampleAt(eased, raw);
-        camera.style.transform = transformFor(frameFor(sample.point, sample.scale));
+        camera.style.transform = transformFor(frameFor(sample.point, sample.scale, eased));
         onProgress?.(raw, eased, sample);
         if (raw >= 1) {
           flightFrame = 0;
@@ -390,7 +402,9 @@
     });
     nodes.get(currentId)?.classList.remove("path-current");
     nodes.get(selectedId)?.classList.add("path-current");
-    const endFrame = frameFor(destinationPoint, finalScale);
+    nodes.get(route[0])?.classList.remove("path-origin");
+    stage.classList.add("is-focus-settled");
+    const endFrame = frameFor(destinationPoint, finalScale, 1);
     camera.style.setProperty("--camera-x", `${endFrame.x}px`);
     camera.style.setProperty("--camera-y", `${endFrame.y}px`);
     camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
