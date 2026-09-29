@@ -5,6 +5,7 @@
     <linearGradient id="screen" x2="0" y2="1"><stop stop-color="#14211f"/><stop offset=".42" stop-color="#091316"/><stop offset="1" stop-color="#040b10"/></linearGradient>
     <linearGradient id="hero" x2="0" y2="1"><stop stop-color="#28302b"/><stop offset=".58" stop-color="#10191a"/><stop offset="1" stop-color="#071014"/></linearGradient>
     <linearGradient id="silhouette" x2="0" y2="1"><stop stop-color="#b7aa8d"/><stop offset=".34" stop-color="#77705f"/><stop offset="1" stop-color="#202522"/></linearGradient>
+    <radialGradient id="profile-backdrop"><stop stop-color="#03090d" stop-opacity=".46"/><stop offset=".58" stop-color="#03090d" stop-opacity=".28"/><stop offset="1" stop-color="#03090d" stop-opacity="0"/></radialGradient>
     <linearGradient id="gold" x2="1" y2="1"><stop stop-color="#7e5a27"/><stop offset=".52" stop-color="#c3974d"/><stop offset="1" stop-color="#67471f"/></linearGradient>
     <radialGradient id="sun"><stop stop-color="#d7ad65" stop-opacity=".8"/><stop offset="1" stop-color="#d7ad65" stop-opacity="0"/></radialGradient>
   </defs>
@@ -23,6 +24,7 @@
     <image x="7" y="85" width="376" height="255" preserveAspectRatio="xMidYMid slice" href="../assets/references/waydean-mobile-cinematic-background.png"/>
     <rect x="7" y="85" width="376" height="255" fill="#061014" opacity=".24"/>
     <rect x="7" y="210" width="376" height="130" fill="#040b0e" opacity=".2"/>
+    <ellipse cx="195" cy="180" rx="112" ry="106" fill="url(#profile-backdrop)"/>
     <path d="M7 239c71 45 127 57 188 57s117-12 188-57v101H7Z" fill="#040b0e" opacity=".58"/>
     <!-- Font Awesome Free user icon; Icons CC BY 4.0. Source: https://github.com/FortAwesome/Font-Awesome/blob/6.x/svgs/solid/user.svg -->
     <svg x="144" y="111" width="102" height="136" viewBox="0 0 448 512" aria-label="Силуэт человека без лица">
