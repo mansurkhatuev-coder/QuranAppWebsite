@@ -35,6 +35,7 @@
   let motionSequence = 0;
   let activeMotion = [];
   let motionTimers = [];
+  let lastSearchFocusId = null;
   let flightFrame = 0;
   let finishFlight = null;
 
@@ -136,7 +137,7 @@
     const focusScale = 1.29;
     camera.style.setProperty("--camera-x", `${camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1)}px`);
     const anchorRatio = Number(camera.dataset.focusAnchorRatio);
-    const anchorY = Number.isFinite(anchorRatio) && anchorRatio > 0 ? camera.clientHeight * anchorRatio : camera.clientHeight * 0.56;
+    const anchorY = Number.isFinite(anchorRatio) && anchorRatio > 0 ? camera.clientHeight * anchorRatio : camera.clientHeight * 0.5;
     camera.style.setProperty("--camera-y", `${anchorY - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1)}px`);
     camera.style.setProperty("--camera-scale", `${focusScale}`);
     camera.style.removeProperty("transform");
@@ -198,7 +199,10 @@
     finishFlight = null;
     activeMotion.forEach(animation => animation.cancel());
     activeMotion = [];
-    motionTimers.forEach(timer => clearTimeout(timer));
+    motionTimers.forEach(timer => {
+      clearTimeout(timer.id);
+      timer.resolve(false);
+    });
     motionTimers = [];
     $("#treeCamera").classList.remove("camera-moving");
     if (wasFlying) {
@@ -215,15 +219,18 @@
       line.classList.remove("is-tracing");
     });
     $("#miniMap .mini-window").style.transform = motionPreview && mode === "path" ? "translateY(9px)" : "";
-    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination", "path-current", "branch-anchor", "branch-revealed", "branch-reveal-pending"));
+    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination", "path-current", "branch-anchor", "branch-revealed", "branch-reveal-pending", "search-arrival"));
   }
 
   function waitForMotion(milliseconds, sequence) {
     return new Promise(resolve => {
-      const timer = setTimeout(() => {
-        motionTimers = motionTimers.filter(item => item !== timer);
-        resolve(sequence === motionSequence);
-      }, milliseconds);
+      const timer = {
+        id: setTimeout(() => {
+          motionTimers = motionTimers.filter(item => item !== timer);
+          resolve(sequence === motionSequence);
+        }, milliseconds),
+        resolve
+      };
       motionTimers.push(timer);
     });
   }
@@ -536,14 +543,30 @@
     return new Set([...ancestors, ...descendants]);
   }
 
-  function selectPerson(personId) {
+  function selectPerson(personId, source = "tree") {
     if (!byId.has(personId)) return;
+    const isRepeatSearch = source === "search" && (selectedId === personId || lastSearchFocusId === personId);
     cancelMotionSequence();
     selectedId = personId;
     renderTree();
-    if (motionPreview && mode === "path") applyCameraFocus();
+    if (motionPreview && source === "search") {
+      const target = $(`.person-node[data-person-id="${personId}"]`);
+      if (!target) {
+        announce("Человек скрыт фильтрами или не входит в видимую часть этого макета.");
+      } else {
+        applyCameraFocus(personId);
+        lastSearchFocusId = personId;
+        if (!isRepeatSearch) {
+          target.classList.add("search-arrival");
+          const sequence = motionSequence;
+          void waitForMotion(680, sequence).then(active => {
+            if (active) target.classList.remove("search-arrival");
+          });
+        }
+      }
+    } else if (motionPreview && mode === "path") applyCameraFocus();
     setActiveNavigation("tree");
-    announce(`${selectedPerson().name} выбран`);
+    if (!(motionPreview && source === "search")) announce(`${selectedPerson().name} выбран`);
   }
 
   function setActiveNavigation(name) {
@@ -590,6 +613,7 @@
 
   function renderSearchSheet(initial = "") {
     searchTab = "all";
+    query = initial;
     sheetContent.innerHTML = `<label class="sr-only" for="searchInput">Поиск по людям</label><input id="searchInput" class="search-input" type="search" autocomplete="off" placeholder="Имя или часть имени" value="${escapeHtml(initial)}"><div class="search-tabs"><button class="search-tab active" type="button" data-search-tab="all">Все <span>${people.length}</span></button><button class="search-tab" type="button" data-search-tab="people">Люди <span>${people.length}</span></button><button class="search-tab" type="button" data-search-tab="branches">Ветви <span>3</span></button></div><div class="result-list" id="resultList"></div>`;
     const input = $("#searchInput");
     input.addEventListener("input", () => {
@@ -633,7 +657,7 @@
   function onResultClick(event) {
     const button = event.target.closest("[data-result-id]");
     if (!button) return;
-    selectPerson(button.dataset.resultId);
+    selectPerson(button.dataset.resultId, "search");
     closeSheet();
   }
 
@@ -765,6 +789,10 @@
     const states = {
       profile: () => openSheet("profile"),
       search: () => openSheet("search", { initialQuery: "Магомед" }),
+      searchMotion: () => {
+        setPerson("p01");
+        openSheet("search", { initialQuery: "Магомед" });
+      },
       searchEmpty: () => openSheet("search", { initialQuery: "ИмяБезСовпадений" }),
       menu: () => openSheet("menu"),
       modes: () => openSheet("modes"),
