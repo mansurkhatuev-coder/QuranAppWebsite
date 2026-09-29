@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#081116">
+  <title>Waydean — Desktop state prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="desktop-app">
+    <header class="topbar">
+      <a class="brand" href="?state=tree" aria-label="Waydean — Древо"><span class="brand-tree" aria-hidden="true">♧</span><span><strong>WAYDEAN</strong><small>Семейное древо</small></span></a>
+      <nav class="primary-nav" aria-label="Основная навигация">
+        <button class="nav-link active" data-nav="tree">♧ <span>Древо</span></button>
+        <button class="nav-link" data-nav="people">♙ <span>Люди</span></button>
+        <button class="nav-link" id="searchButton">⌕ <span>Поиск</span></button>
+        <button class="nav-link" data-nav="branches">♧ <span>Ветви</span></button>
+        <button class="nav-link" data-nav="stats">▥ <span>Статистика</span></button>
+      </nav>
+      <div class="top-actions">
+        <button class="top-action" disabled title="Будет подключено на следующем этапе">♧ Поделиться</button>
+        <button class="top-action" disabled title="Экспорт проектируется отдельно">▤ Печать</button>
+        <button class="top-action" id="moreButton">··· Ещё</button>
+        <button class="premium">♛ Премиум</button>
+        <button class="account" aria-label="Профиль пользователя">М</button>
+      </div>
+    </header>
+
+    <section class="workspace" aria-label="Семейное древо">
+      <aside class="rail" aria-label="Действия с древом">
+        <button class="rail-action" id="railSearch" aria-label="Поиск человека" title="Поиск человека">⌕</button>
+        <button class="rail-action" data-mode="path" aria-label="Мой путь" title="Мой путь">⌖</button>
+        <button class="rail-action" data-mode="branch" aria-label="Моя ветвь" title="Моя ветвь">♧</button>
+        <button class="rail-action" data-mode="all" aria-label="Все поколения" title="Все поколения">⌘</button>
+        <button class="rail-action" id="filtersButton" aria-label="Фильтры" title="Фильтры">⚑</button>
+        <button class="rail-stat" id="statsButton" aria-label="Статистика древа: 12 человек"><span>♙</span><strong>12</strong></button>
+      </aside>
+
+      <section class="tree-stage" id="treeStage">
+        <div class="stage-wash" aria-hidden="true"></div>
+        <div class="mode-label" id="modeLabel" aria-live="polite"></div>
+        <div class="graph" id="graph">
+          <svg class="tree-lines" id="treeLines" viewBox="0 0 1000 810" preserveAspectRatio="none" aria-hidden="true"></svg>
+          <div id="nodes"></div>
+        </div>
+        <div class="empty-state" id="emptyState" hidden><strong>В этой выборке никого нет</strong><span>Сними фильтр или сбрось все условия.</span><button id="resetEmpty">Сбросить фильтры</button></div>
+        <div class="minimap" aria-label="Мини-карта древа"><span>МИНИ-КАРТА</span><svg viewBox="0 0 160 76" aria-hidden="true"><path d="M80 8v12M80 20H42v14m38-14v14m0-14h38v14M42 34H27v16m15-16v16m0-16h29v16m9-16h29v16m0-16v16m0-16h24v16M27 50h122M42 50v14m0-14v14m29-14v14m9-14v14m29-14v14m16-14v14M27 64h122"/><rect x="55" y="24" width="49" height="35"/></svg></div>
+        <div class="tree-controls"><button id="zoomOut" aria-label="Уменьшить">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить">+</button><button aria-label="Полноэкранный режим">⛶</button><button id="whoAmI">◎ Кто я?</button></div>
+      </section>
+
+      <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>
+    </section>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="popover search-popover" id="searchPopover" hidden aria-label="Поиск людей">
+      <div class="popover-head"><strong>Поиск человека</strong><button class="close-popover" data-close>×</button></div>
+      <label class="sr-only" for="searchInput">Имя, годы или ветвь</label><input id="searchInput" type="search" placeholder="Имя, годы или ветвь…" autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </section>
+
+    <section class="popover filter-popover" id="filterPopover" hidden aria-label="Фильтры древа">
+      <div class="popover-head"><strong>Фильтры древа</strong><button class="close-popover" data-close>×</button></div>
+      <label>Поколение от <select id="minGeneration"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></label>
+      <label>Поколение до <select id="maxGeneration"><option>3</option><option>4</option><option selected>5</option></select></label>
+      <label class="check-row"><span>Только с фотографиями</span><input id="photosOnly" type="checkbox"></label>
+      <label class="check-row"><span>Только основная линия</span><input id="mainOnly" type="checkbox"></label>
+      <div class="popover-actions"><button id="applyFilters" class="primary-action">Применить</button><button id="resetFilters" class="secondary-action">Сбросить</button></div>
+    </section>
+
+    <section class="popover stats-popover" id="statsPopover" hidden aria-label="Статистика дерева">
+      <div class="popover-head"><strong>Статистика древа</strong><button class="close-popover" data-close>×</button></div>
+      <div class="stats-grid"><div><strong>12</strong><small>человек</small></div><div><strong>5</strong><small>поколений</small></div><div><strong>3</strong><small>ветви</small></div><div><strong>0</strong><small>фотографий в демо</small></div></div>
+      <p>Показатели рассчитаны по вымышленному набору для визуальной проверки.</p>
+    </section>
+    <section class="popover more-popover" id="morePopover" hidden aria-label="Дополнительные действия">
+      <div class="popover-head"><strong>Ещё</strong><button class="close-popover" data-close>×</button></div>
+      <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
+      <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Фокус на выбранном человеке и родных</small></button>
+      <button class="more-item" data-mode="all"><strong>Все поколения</strong><small>Вернуться к полному дереву</small></button>
+      <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения, фото и основная линия</small></button>
+      <button class="more-item disabled" disabled><strong>Создать видео</strong><small>Отдельный этап разработки</small></button>
+    </section>
+  </main>
+  <script src="app.js"></script>
+</body>
+</html>

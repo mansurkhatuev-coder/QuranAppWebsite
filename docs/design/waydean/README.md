@@ -6,6 +6,7 @@
 - [components/component-bible.md](components/component-bible.md) — состав компонентов, их состояния и обязательные кадры prototype.
 - [states/screen-state-catalog.md](states/screen-state-catalog.md) — каталог mobile/desktop кадров и критерии проверки.
 - [prototype/README.md](prototype/README.md) — инструкция локального prototype, состояния и скриншоты review.
+- [desktop-prototype/README.md](desktop-prototype/README.md) — локальный Desktop prototype 1440 × 900, состояния D01–D06 и скриншоты review.
 - [masters/desktop-master.md](masters/desktop-master.md) — утверждённая композиция Desktop Master 1440×900.
 - [masters/desktop-master-preview.html](masters/desktop-master-preview.html) — локальный визуальный эскиз утверждённой композиции.
 - [masters/mobile-master.md](masters/mobile-master.md) — принятая композиция Mobile Master v0.1 и критерии дальнейшей визуальной сверки.
