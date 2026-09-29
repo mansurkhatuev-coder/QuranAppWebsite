@@ -36,6 +36,9 @@
   let activeMotion = [];
   let motionTimers = [];
   let lastSearchFocusId = null;
+  let zoomScale = 1;
+  let zoomAnchor = "stage";
+  let lodLevel = "detail";
   let flightFrame = 0;
   let finishFlight = null;
 
@@ -84,6 +87,7 @@
     const cameraRect = camera.getBoundingClientRect();
     const scaleX = cameraRect.width / width || 1;
     const scaleY = cameraRect.height / height || 1;
+    const simplified = lodLevel !== "detail";
     const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
     const visibleIds = new Set(nodes.keys());
     const fragment = document.createDocumentFragment();
@@ -94,11 +98,11 @@
       const childRect = nodes.get(person.id).getBoundingClientRect();
       const start = {
         x: (parentRect.left + parentRect.width / 2 - cameraRect.left) / scaleX,
-        y: (parentRect.bottom - cameraRect.top) / scaleY
+        y: ((simplified ? parentRect.top + parentRect.height / 2 + (lodLevel === "medium" ? 16 : 0) : parentRect.bottom) - cameraRect.top) / scaleY
       };
       const end = {
         x: (childRect.left + childRect.width / 2 - cameraRect.left) / scaleX,
-        y: (childRect.top - cameraRect.top) / scaleY
+        y: ((simplified ? childRect.top + childRect.height / 2 - (lodLevel === "medium" ? 16 : 0) : childRect.top) - cameraRect.top) / scaleY
       };
       const deltaX = end.x - start.x;
       const deltaY = Math.max(0, end.y - start.y);
@@ -124,7 +128,7 @@
     group.replaceChildren(fragment);
   }
 
-  function applyCameraFocus(personId = selectedId) {
+  function applyCameraFocus(personId = selectedId, focusScale = 1.29) {
     const camera = $("#treeCamera");
     const target = $(`.person-node[data-person-id="${personId}"]`);
     if (!target || !camera.clientHeight) return;
@@ -134,7 +138,8 @@
     const scaleX = cameraRect.width / camera.clientWidth || 1;
     const targetX = (rect.left + rect.width / 2 - cameraRect.left) / scaleX;
     const targetY = (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
-    const focusScale = 1.29;
+    zoomScale = focusScale;
+    zoomAnchor = "person";
     camera.style.setProperty("--camera-x", `${camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1)}px`);
     const anchorRatio = Number(camera.dataset.focusAnchorRatio);
     const anchorY = Number.isFinite(anchorRatio) && anchorRatio > 0 ? camera.clientHeight * anchorRatio : camera.clientHeight * 0.5;
@@ -188,6 +193,71 @@
     $("#selectedName").textContent = selectedPerson().name;
     $("#selectedMeta").textContent = `${years(selectedPerson())} · поколение ${selectedPerson().generation}`;
     $("#selectedPerson .avatar").innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_PATH}"/></svg>`;
+    updateLod();
+  }
+
+  function updateLod() {
+    if (!motionPreview) return;
+    const stage = $("#treeStage");
+    const nodes = $$(".person-node");
+    if (!nodes.length) return;
+    const sample = nodes.find(node => node.dataset.personId === selectedId) || nodes[0];
+    const baseWidth = sample.offsetWidth || 88;
+    const screenWidth = sample.getBoundingClientRect().width;
+    const cardWidth = Math.round(screenWidth);
+    const current = lodLevel;
+    if (current === "detail") {
+      if (cardWidth < 52) lodLevel = "overview";
+      else if (cardWidth < 78) lodLevel = "medium";
+    } else if (current === "medium") {
+      if (cardWidth < 52) lodLevel = "overview";
+      else if (cardWidth > 84) lodLevel = "detail";
+    } else if (cardWidth > 84) {
+      lodLevel = "detail";
+    } else if (cardWidth > 58) {
+      lodLevel = "medium";
+    }
+
+    stage.classList.toggle("lod-detail", lodLevel === "detail");
+    stage.classList.toggle("lod-medium", lodLevel === "medium");
+    stage.classList.toggle("lod-overview", lodLevel === "overview");
+    if (current !== lodLevel) updateConnections();
+    const levelName = lodLevel === "overview" ? "ОБЗОР" : lodLevel === "medium" ? "СРЕДНИЙ МАСШТАБ" : "ДЕТАЛИ";
+    const percent = Math.round(screenWidth / baseWidth * 100);
+    const modeName = mode === "path" ? "МОЙ ПУТЬ" : mode === "branch" ? "МОЯ ВЕТВЬ" : "";
+    const zoomLabel = Math.abs(zoomScale - 1) > 0.04 || lodLevel !== "detail" ? `${levelName} · ${percent}%` : "";
+    $("#stageMode").textContent = [modeName, zoomLabel].filter(Boolean).join(" · ");
+    $("#zoomIn").setAttribute("aria-label", `Увеличить, сейчас ${percent} процентов, ${levelName.toLocaleLowerCase("ru")}`);
+    $("#zoomOut").setAttribute("aria-label", `Уменьшить, сейчас ${percent} процентов, ${levelName.toLocaleLowerCase("ru")}`);
+    $("#zoomIn").disabled = zoomScale >= 1.75;
+    $("#zoomOut").disabled = zoomScale <= 0.5;
+  }
+
+  function zoomBy(step) {
+    if (!motionPreview) {
+      announce(step > 0 ? "Масштаб увеличен в макете." : "Масштаб уменьшен в макете.");
+      return;
+    }
+    const nextScale = Math.max(0.5, Math.min(1.75, Math.round((zoomScale + step) * 100) / 100));
+    if (nextScale === zoomScale) return;
+    const keepPersonCentered = zoomAnchor === "person" && $("#treeCamera").classList.contains("camera-focused");
+    cancelMotionSequence();
+    if (keepPersonCentered) {
+      applyCameraFocus(selectedId, nextScale);
+    } else {
+      const camera = $("#treeCamera");
+      camera.style.setProperty("--camera-x", "0px");
+      camera.style.setProperty("--camera-y", "0px");
+      camera.style.setProperty("--camera-scale", `${nextScale}`);
+      camera.style.removeProperty("transform");
+      camera.classList.remove("camera-moving");
+      camera.classList.add("camera-focused");
+      zoomScale = nextScale;
+      zoomAnchor = "stage";
+    }
+    const sequence = motionSequence;
+    if (reducedMotion.matches) updateLod();
+    else void waitForMotion(390, sequence).then(active => { if (active) updateLod(); });
   }
 
   function cancelMotionSequence() {
@@ -211,8 +281,8 @@
     }
     $("#treeStage").classList.remove("is-flight");
     $("#treeStage").classList.remove("is-focus-settled");
-    if (motionPreview && mode === "path") applyCameraFocus();
-    else $("#treeCamera").classList.remove("camera-focused");
+    if (motionPreview && mode === "path") applyCameraFocus(selectedId, zoomScale || 1.29);
+    else $("#treeCamera").classList.remove("camera-moving");
     $$(".branch-line").forEach(line => {
       line.style.strokeDasharray = "";
       line.style.strokeDashoffset = "";
@@ -323,6 +393,8 @@
     camera.style.setProperty("--camera-x", "0px");
     camera.style.setProperty("--camera-y", "0px");
     camera.style.setProperty("--camera-scale", "1");
+    zoomScale = 1;
+    zoomAnchor = "person";
     stage.classList.remove("is-focus-settled");
 
     const cameraRect = camera.getBoundingClientRect();
@@ -500,6 +572,8 @@
     camera.style.setProperty("--camera-x", `${endFrame.x}px`);
     camera.style.setProperty("--camera-y", `${endFrame.y}px`);
     camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
+    zoomScale = endFrame.scale;
+    zoomAnchor = "person";
     camera.style.removeProperty("transform");
     camera.classList.remove("camera-moving");
     camera.classList.add("camera-focused");
@@ -554,7 +628,7 @@
       if (!target) {
         announce("Человек скрыт фильтрами или не входит в видимую часть этого макета.");
       } else {
-        applyCameraFocus(personId);
+        applyCameraFocus(personId, zoomScale);
         lastSearchFocusId = personId;
         if (!isRepeatSearch) {
           target.classList.add("search-arrival");
@@ -726,8 +800,10 @@
   function setMode(nextMode) {
     cancelMotionSequence();
     mode = nextMode;
-    if (nextMode === "path" && motionPreview) $("#treeCamera").classList.remove("camera-focused");
-    if (nextMode !== "path") $("#treeCamera").classList.remove("camera-focused");
+    if (nextMode === "path" && motionPreview) {
+      $("#treeCamera").classList.remove("camera-focused");
+      zoomScale = 1;
+    }
     renderTree();
     if (nextMode === "path" && motionPreview) playPathReveal();
     if (nextMode === "branch" && motionPreview) playBranchReveal();
@@ -770,14 +846,25 @@
     announce(getFilteredPeople().length ? "Показаны поколения 1–3." : "Все фильтры сброшены.");
   });
   $("#miniMap").addEventListener("click", () => announce("Мини-карта показывает весь тестовый набор."));
-  $("#zoomIn").addEventListener("click", () => announce("Масштаб увеличен в макете."));
-  $("#zoomOut").addEventListener("click", () => announce("Масштаб уменьшен в макете."));
+  $("#zoomIn").addEventListener("click", () => zoomBy(0.15));
+  $("#zoomOut").addEventListener("click", () => zoomBy(-0.15));
   $("#whoAmI").addEventListener("click", () => { selectPerson("p06"); announce("В этом наборе «я» назначен Магомедом."); });
 
   $$(".nav-item").forEach(button => button.addEventListener("click", () => {
     const nav = button.dataset.nav;
     setActiveNavigation(nav);
-    if (nav === "tree") { cancelMotionSequence(); mode = "all"; $("#treeCamera").classList.remove("camera-focused"); renderTree(); }
+    if (nav === "tree") {
+      cancelMotionSequence();
+      mode = "all";
+      const camera = $("#treeCamera");
+      camera.classList.remove("camera-focused");
+      camera.style.setProperty("--camera-x", "0px");
+      camera.style.setProperty("--camera-y", "0px");
+      camera.style.setProperty("--camera-scale", "1");
+      zoomScale = 1;
+      zoomAnchor = "stage";
+      renderTree();
+    }
     if (nav === "people") openSheet("people");
     if (nav === "branches") openSheet("modes");
     if (nav === "stats") openSheet("stats");
@@ -800,6 +887,7 @@
       filtersEmpty: () => { filters.photosOnly = true; renderTree(); },
       stats: () => openSheet("stats"),
       people: () => openSheet("people"),
+      lod: () => setPerson("p06"),
       path: () => setMode("path"),
       branch: () => {
         if (motionPreview) setPerson("p01");
@@ -812,6 +900,9 @@
   }
 
   if (motionPreview) document.body.classList.add("motion-preview");
+  $("#treeCamera").addEventListener("transitionend", event => {
+    if (event.target === event.currentTarget && event.propertyName === "transform") updateLod();
+  });
   reducedMotion.addEventListener("change", event => {
     if (event.matches) cancelMotionSequence();
   });
