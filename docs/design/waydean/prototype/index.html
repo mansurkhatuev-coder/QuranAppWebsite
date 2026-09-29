@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#081116">
+  <title>Waydean — локальный мобильный prototype</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app" aria-label="Waydean — локальный prototype">
+    <header class="topbar">
+      <div class="brand-mark" aria-hidden="true">✳</div>
+      <div class="brand-copy"><strong>WAYDEAN</strong><span>Семейное древо</span></div>
+      <button class="icon-button premium" type="button" aria-label="Premium">♛</button>
+    </header>
+
+    <button class="search-launch" id="searchLaunch" type="button" aria-label="Открыть поиск">
+      <span class="search-glass" aria-hidden="true"></span><span>Поиск человека…</span><kbd>⌕</kbd>
+    </button>
+
+    <section class="tree-stage" aria-label="Полотно семейного древа">
+      <div class="tree-tint" aria-hidden="true"></div>
+      <svg class="connections" viewBox="0 0 390 480" preserveAspectRatio="none" aria-hidden="true">
+        <g id="treeLines" fill="none" stroke-linecap="round" stroke-linejoin="round">
+          <path class="branch-line" data-edge="p01-p02" d="M195 101V139H66V185"/>
+          <path class="branch-line" data-edge="p01-p03" d="M195 101V185"/>
+          <path class="branch-line" data-edge="p01-p04" d="M195 101V139H324V185"/>
+          <path class="branch-line" data-edge="p02-p05" d="M66 280V322"/>
+          <path class="branch-line" data-edge="p03-p06" d="M195 280V322"/>
+          <path class="branch-line" data-edge="p04-p07" d="M324 280V322"/>
+        </g>
+      </svg>
+      <div class="tree-row row-root" id="rowRoot"></div>
+      <div class="tree-row row-children" id="rowChildren"></div>
+      <div class="tree-row row-grandchildren" id="rowGrandchildren"></div>
+
+      <div class="tree-tools">
+        <button class="mini-map" type="button" id="miniMap" aria-label="Мини-карта">
+          <span class="mini-label">МИНИ-КАРТА</span><span class="mini-branches" aria-hidden="true"></span><span class="mini-window" aria-hidden="true"></span>
+        </button>
+        <div class="control-stack"><button class="control-button" type="button" aria-label="Увеличить" id="zoomIn">+</button><button class="control-button" type="button" aria-label="Уменьшить" id="zoomOut">−</button></div>
+        <button class="who-button" type="button" id="whoAmI">◎ <span>Кто я?</span></button>
+      </div>
+      <div class="stage-mode" id="stageMode" aria-live="polite"></div>
+      <div class="stage-empty" id="stageEmpty" hidden>
+        <strong>В этой выборке никого нет</strong>
+        <span>Измени или сбрось фильтры, чтобы вернуть людей на древо.</span>
+        <button type="button" id="emptyReset">Сбросить фильтры</button>
+      </div>
+    </section>
+
+    <button class="selected-person" type="button" id="selectedPerson" aria-label="Открыть профиль выбранного человека">
+      <span class="avatar selected-avatar" aria-hidden="true"></span>
+      <span class="selected-copy"><strong id="selectedName"></strong><small id="selectedMeta"></small></span>
+      <span class="chevron" aria-hidden="true">›</span>
+    </button>
+
+    <nav class="bottom-nav" aria-label="Основная навигация">
+      <button class="nav-item active" type="button" data-nav="tree"><span class="nav-symbol">♧</span><small>Древо</small></button>
+      <button class="nav-item" type="button" data-nav="people"><span class="nav-symbol">♙</span><small>Люди</small></button>
+      <button class="nav-item" type="button" data-nav="branches"><span class="nav-symbol">⌘</span><small>Ветви</small></button>
+      <button class="nav-item" type="button" data-nav="stats"><span class="nav-symbol">▥</span><small>Статистика</small></button>
+      <button class="nav-item" type="button" data-nav="more"><span class="nav-symbol">•••</span><small>Ещё</small></button>
+    </nav>
+    <div class="home-indicator" aria-hidden="true"><span></span></div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden>
+    <section class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+      <div class="sheet-grabber" aria-hidden="true"></div>
+      <header class="sheet-header"><div><h1 id="sheetTitle"></h1><p id="sheetSubtitle"></p></div><button type="button" class="close-button" id="closeSheet" aria-label="Закрыть">×</button></header>
+      <div class="sheet-content" id="sheetContent"></div>
+    </section>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
