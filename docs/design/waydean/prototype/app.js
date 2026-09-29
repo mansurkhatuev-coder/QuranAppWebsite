@@ -68,6 +68,72 @@
     return [button];
   }
 
+  function updateConnections() {
+    const camera = $("#treeCamera");
+    const svg = $(".connections");
+    const group = $("#treeLines");
+    const width = camera.clientWidth;
+    const height = camera.clientHeight;
+    if (!width || !height) return;
+
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const cameraRect = camera.getBoundingClientRect();
+    const scaleX = cameraRect.width / width || 1;
+    const scaleY = cameraRect.height / height || 1;
+    const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    const visibleIds = new Set(nodes.keys());
+    const fragment = document.createDocumentFragment();
+
+    for (const person of people) {
+      if (!person.parent || !visibleIds.has(person.parent) || !visibleIds.has(person.id)) continue;
+      const parentRect = nodes.get(person.parent).getBoundingClientRect();
+      const childRect = nodes.get(person.id).getBoundingClientRect();
+      const start = {
+        x: (parentRect.left + parentRect.width / 2 - cameraRect.left) / scaleX,
+        y: (parentRect.bottom - cameraRect.top) / scaleY
+      };
+      const end = {
+        x: (childRect.left + childRect.width / 2 - cameraRect.left) / scaleX,
+        y: (childRect.top - cameraRect.top) / scaleY
+      };
+      const deltaX = end.x - start.x;
+      const deltaY = Math.max(0, end.y - start.y);
+      const direction = Math.sign(deltaX);
+      const radius = Math.min(14, Math.abs(deltaX) * 0.18, deltaY * 0.14);
+      const middleY = start.y + deltaY * 0.52;
+      const pathData = radius < 1
+        ? `M ${start.x} ${start.y} L ${end.x} ${end.y}`
+        : [
+            `M ${start.x} ${start.y}`,
+            `L ${start.x} ${middleY - radius}`,
+            `Q ${start.x} ${middleY} ${start.x + direction * radius} ${middleY}`,
+            `L ${end.x - direction * radius} ${middleY}`,
+            `Q ${end.x} ${middleY} ${end.x} ${middleY + radius}`,
+            `L ${end.x} ${end.y}`
+          ].join(" ");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("class", "branch-line");
+      path.setAttribute("data-edge", `${person.parent}-${person.id}`);
+      path.setAttribute("d", pathData);
+      fragment.append(path);
+    }
+    group.replaceChildren(fragment);
+  }
+
+  function applyCameraFocus(personId = selectedId) {
+    const camera = $("#treeCamera");
+    const target = $(`.person-node[data-person-id="${personId}"]`);
+    if (!target || !camera.clientHeight) return;
+    const cameraRect = camera.getBoundingClientRect();
+    const scaleY = cameraRect.height / camera.clientHeight || 1;
+    const rect = target.getBoundingClientRect();
+    const targetY = (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
+    camera.style.setProperty("--camera-y", `${camera.clientHeight * 0.72 - targetY}px`);
+    camera.style.setProperty("--camera-scale", "1.055");
+    camera.classList.remove("camera-moving");
+    camera.classList.add("camera-focused");
+  }
+
   function renderTree() {
     const rows = [
       ["root", "#rowRoot"],
@@ -86,6 +152,8 @@
         return renderNode(id, key);
       }));
     });
+
+    updateConnections();
 
     const related = mode === "path" ? new Set(ancestorPath(selectedId)) : mode === "branch" ? branchPeople(selectedId) : null;
     $$(".person-node").forEach(node => {
@@ -116,12 +184,14 @@
     activeMotion.forEach(animation => animation.cancel());
     activeMotion = [];
     $("#treeCamera").classList.remove("camera-moving");
-    $("#treeCamera").classList.toggle("camera-focused", mode === "path");
+    if (motionPreview && mode === "path") applyCameraFocus();
+    else $("#treeCamera").classList.remove("camera-focused");
     $$(".branch-line").forEach(line => {
       line.style.strokeDasharray = "";
       line.style.strokeDashoffset = "";
       line.classList.remove("is-tracing");
     });
+    $("#miniMap .mini-window").style.transform = motionPreview && mode === "path" ? "translateY(9px)" : "";
     $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination"));
   }
 
@@ -131,24 +201,50 @@
     const route = [...ancestorPath(selectedId)].reverse();
     const edges = route.slice(1).map((childId, index) => `${route[index]}-${childId}`);
     const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    const originNode = nodes.get(route[0]);
+    const destinationNode = nodes.get(selectedId);
+    if (!originNode || !destinationNode) return;
+    camera.classList.remove("camera-focused");
+    camera.classList.add("camera-moving");
+
+    const cameraRect = camera.getBoundingClientRect();
+    const scaleY = cameraRect.height / camera.clientHeight || 1;
+    const localCenterY = node => {
+      const rect = node.getBoundingClientRect();
+      return (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
+    };
+    const originY = localCenterY(originNode);
+    const destinationY = localCenterY(destinationNode);
+    const startOffset = camera.clientHeight * 0.46 - originY;
+    const endOffset = camera.clientHeight * 0.72 - destinationY;
+    const focusScale = 1.055;
+    camera.style.setProperty("--camera-y", `${endOffset}px`);
+    camera.style.setProperty("--camera-scale", focusScale);
     nodes.get(route[0])?.classList.add("path-origin");
     nodes.get(selectedId)?.classList.add("path-destination");
 
     if (reducedMotion.matches || edges.length === 0) {
-      camera.classList.add("camera-focused");
+      applyCameraFocus();
+      $("#miniMap .mini-window").style.transform = "translateY(9px)";
       return;
     }
 
+    const duration = Math.min(2400, Math.max(1800, edges.length * 720));
     const cameraAnimation = camera.animate(
       [
         { transform: "translateY(0) scale(1)", offset: 0 },
-        { transform: "translateY(58px) scale(1.08)", offset: 0.18 },
-        { transform: "translateY(-24px) scale(1.045)", offset: 1 }
+        { transform: `translateY(${startOffset}px) scale(${focusScale})`, offset: 0.2 },
+        { transform: `translateY(${endOffset}px) scale(${focusScale})`, offset: 1 }
       ],
-      { duration: 1500, easing: "cubic-bezier(.22,.72,.24,1)", fill: "forwards" }
+      { duration, easing: "cubic-bezier(.22,.72,.24,1)", fill: "forwards" }
     );
-    camera.classList.add("camera-moving");
     activeMotion.push(cameraAnimation);
+    const miniWindow = $("#miniMap .mini-window");
+    const miniWindowAnimation = miniWindow.animate(
+      [{ transform: "translateY(-9px)" }, { transform: "translateY(9px)" }],
+      { duration, easing: "cubic-bezier(.22,.72,.24,1)", fill: "forwards" }
+    );
+    activeMotion.push(miniWindowAnimation);
 
     for (const [index, edge] of edges.entries()) {
       if (sequence !== motionSequence) return;
@@ -160,7 +256,7 @@
       line.classList.add("is-tracing");
       const lineAnimation = line.animate(
         [{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
-        { duration: 460, delay: index === 0 ? 140 : 0, easing: "ease-out", fill: "forwards" }
+        { duration: Math.min(680, Math.max(460, duration / (edges.length + 1))), delay: index === 0 ? 160 : 0, easing: "ease-out", fill: "forwards" }
       );
       activeMotion.push(lineAnimation);
       try {
@@ -182,6 +278,8 @@
     camera.classList.remove("camera-moving");
     camera.classList.add("camera-focused");
     cameraAnimation.cancel();
+    miniWindow.style.transform = "translateY(9px)";
+    miniWindowAnimation.cancel();
     activeMotion = [];
   }
 
@@ -224,6 +322,7 @@
     cancelMotionSequence();
     selectedId = personId;
     renderTree();
+    if (motionPreview && mode === "path") applyCameraFocus();
     setActiveNavigation("tree");
     announce(`${selectedPerson().name} выбран`);
   }
@@ -464,6 +563,11 @@
   if (motionPreview) document.body.classList.add("motion-preview");
   reducedMotion.addEventListener("change", event => {
     if (event.matches) cancelMotionSequence();
+  });
+  window.addEventListener("resize", () => {
+    if (activeMotion.some(animation => animation.playState === "running")) cancelMotionSequence();
+    updateConnections();
+    if (motionPreview && mode === "path") applyCameraFocus();
   });
 
   renderTree();

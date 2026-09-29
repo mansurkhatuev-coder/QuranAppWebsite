@@ -19,18 +19,11 @@
       <span class="search-glass" aria-hidden="true"></span><span>Поиск человека…</span><kbd>⌕</kbd>
     </button>
 
-    <section class="tree-stage" aria-label="Полотно семейного древа">
+    <section class="tree-stage" id="treeStage" aria-label="Полотно семейного древа">
       <div class="tree-tint" aria-hidden="true"></div>
       <div class="tree-camera" id="treeCamera">
         <svg class="connections" viewBox="0 0 390 480" preserveAspectRatio="none" aria-hidden="true">
-          <g id="treeLines" fill="none" stroke-linecap="round" stroke-linejoin="round">
-            <path class="branch-line" data-edge="p01-p02" d="M195 101V139H66V185"/>
-            <path class="branch-line" data-edge="p01-p03" d="M195 101V185"/>
-            <path class="branch-line" data-edge="p01-p04" d="M195 101V139H324V185"/>
-            <path class="branch-line" data-edge="p02-p05" d="M66 280V322"/>
-            <path class="branch-line" data-edge="p03-p06" d="M195 280V322"/>
-            <path class="branch-line" data-edge="p04-p07" d="M324 280V322"/>
-          </g>
+          <g id="treeLines" fill="none" stroke-linecap="round" stroke-linejoin="round"></g>
         </svg>
         <div class="tree-row row-root" id="rowRoot"></div>
         <div class="tree-row row-children" id="rowChildren"></div>

@@ -34,8 +34,8 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 2px s
 .connections { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
 .tree-camera { position: absolute; inset: 0; transform-origin: 50% 50%; }
 body.motion-preview .tree-camera { transition: transform 360ms cubic-bezier(.22,.72,.24,1); }
-body.motion-preview .tree-camera.camera-focused { transform: translateY(-24px) scale(1.045); }
-body.motion-preview .tree-camera.camera-moving { will-change: transform; }
+body.motion-preview .tree-camera.camera-focused { transform: translateY(var(--camera-y, -24px)) scale(var(--camera-scale, 1.045)); }
+body.motion-preview .tree-camera.camera-moving { transition: none; will-change: transform; }
 .branch-line { stroke: rgba(227,199,139,.83); stroke-width: 1.7; filter: drop-shadow(0 0 4px rgba(226,196,138,.5)); }
 .branch-line.is-tracing { stroke: #ffe8ad; stroke-width: 2.5; filter: drop-shadow(0 0 7px rgba(247,207,122,.78)); }
 .branch-line.is-hidden { display: none; }
@@ -67,7 +67,7 @@ body.motion-preview .tree-camera.camera-moving { will-change: transform; }
 .control-stack { display: flex; flex-direction: column; gap: 6px; }
 .control-button { width: 34px; height: 34px; border: 1px solid rgba(169,139,82,.8); border-radius: 8px; background: rgba(5,13,17,.95); color: #f1d38e; font-size: 19px; line-height: 1; }
 .who-button { justify-self: center; align-self: end; min-width: 120px; height: 36px; border: 1px solid rgba(189,147,77,.9); border-radius: 8px; background: rgba(5,13,17,.95); color: #f0d18b; font-size: 11px; }
-.stage-mode { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); padding: 5px 10px; border: 1px solid rgba(226,196,138,.72); border-radius: 20px; background: rgba(4,10,13,.82); color: #f1d392; font-size: 10px; white-space: nowrap; }
+.stage-mode { position: absolute; top: 10px; left: 12px; padding: 5px 10px; border: 1px solid rgba(226,196,138,.72); border-radius: 20px; background: rgba(4,10,13,.82); color: #f1d392; font-size: 10px; white-space: nowrap; }
 .stage-mode:empty { display: none; }
 .stage-empty { position: absolute; inset: 24% 8% auto; display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 20px; border: 1px solid rgba(226,196,138,.48); border-radius: 14px; background: rgba(5,13,17,.94); text-align: center; }
 .stage-empty[hidden] { display: none; }
