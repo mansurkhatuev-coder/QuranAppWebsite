@@ -30,6 +30,10 @@
   let query = "";
   let toastTimer;
   let returnFocus = null;
+  const motionPreview = new URLSearchParams(location.search).get("motion") === "1";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let motionSequence = 0;
+  let activeMotion = [];
 
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
@@ -107,6 +111,80 @@
     $("#selectedPerson .avatar").innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_PATH}"/></svg>`;
   }
 
+  function cancelMotionSequence() {
+    motionSequence += 1;
+    activeMotion.forEach(animation => animation.cancel());
+    activeMotion = [];
+    $("#treeCamera").classList.remove("camera-moving");
+    $("#treeCamera").classList.toggle("camera-focused", mode === "path");
+    $$(".branch-line").forEach(line => {
+      line.style.strokeDasharray = "";
+      line.style.strokeDashoffset = "";
+      line.classList.remove("is-tracing");
+    });
+    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination"));
+  }
+
+  async function playPathReveal() {
+    const sequence = motionSequence;
+    const camera = $("#treeCamera");
+    const route = [...ancestorPath(selectedId)].reverse();
+    const edges = route.slice(1).map((childId, index) => `${route[index]}-${childId}`);
+    const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    nodes.get(route[0])?.classList.add("path-origin");
+    nodes.get(selectedId)?.classList.add("path-destination");
+
+    if (reducedMotion.matches || edges.length === 0) {
+      camera.classList.add("camera-focused");
+      return;
+    }
+
+    const cameraAnimation = camera.animate(
+      [
+        { transform: "translateY(0) scale(1)", offset: 0 },
+        { transform: "translateY(58px) scale(1.08)", offset: 0.18 },
+        { transform: "translateY(-24px) scale(1.045)", offset: 1 }
+      ],
+      { duration: 1500, easing: "cubic-bezier(.22,.72,.24,1)", fill: "forwards" }
+    );
+    camera.classList.add("camera-moving");
+    activeMotion.push(cameraAnimation);
+
+    for (const [index, edge] of edges.entries()) {
+      if (sequence !== motionSequence) return;
+      const line = $(`[data-edge="${edge}"]`);
+      if (!line || line.classList.contains("is-hidden")) continue;
+      const length = line.getTotalLength();
+      line.style.strokeDasharray = `${length}`;
+      line.style.strokeDashoffset = `${length}`;
+      line.classList.add("is-tracing");
+      const lineAnimation = line.animate(
+        [{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
+        { duration: 460, delay: index === 0 ? 140 : 0, easing: "ease-out", fill: "forwards" }
+      );
+      activeMotion.push(lineAnimation);
+      try {
+        await lineAnimation.finished;
+      } catch {
+        return;
+      }
+      if (sequence !== motionSequence) return;
+      line.style.strokeDashoffset = "0";
+      line.classList.remove("is-tracing");
+    }
+
+    try {
+      await cameraAnimation.finished;
+    } catch {
+      return;
+    }
+    if (sequence !== motionSequence) return;
+    camera.classList.remove("camera-moving");
+    camera.classList.add("camera-focused");
+    cameraAnimation.cancel();
+    activeMotion = [];
+  }
+
   function getFilteredPeople() {
     return people.filter(person => {
       const startYear = person.born ?? person.died ?? filters.minYear;
@@ -143,6 +221,7 @@
 
   function selectPerson(personId) {
     if (!byId.has(personId)) return;
+    cancelMotionSequence();
     selectedId = personId;
     renderTree();
     setActiveNavigation("tree");
@@ -154,6 +233,7 @@
   }
 
   function openSheet(type, options = {}) {
+    cancelMotionSequence();
     returnFocus = document.activeElement;
     sheetContent.innerHTML = "";
     sheetBackdrop.hidden = false;
@@ -302,8 +382,12 @@
   }
 
   function setMode(nextMode) {
+    cancelMotionSequence();
     mode = nextMode;
+    if (nextMode === "path" && motionPreview) $("#treeCamera").classList.remove("camera-focused");
+    if (nextMode !== "path") $("#treeCamera").classList.remove("camera-focused");
     renderTree();
+    if (nextMode === "path" && motionPreview) playPathReveal();
     if (nextMode === "all") announce("Показаны все поколения.");
     else if (nextMode === "path") announce("Подсвечен путь от старшего известного предка.");
     else announce("Выбран фокус на ветви этого человека.");
@@ -350,7 +434,7 @@
   $$(".nav-item").forEach(button => button.addEventListener("click", () => {
     const nav = button.dataset.nav;
     setActiveNavigation(nav);
-    if (nav === "tree") { mode = "all"; renderTree(); }
+    if (nav === "tree") { cancelMotionSequence(); mode = "all"; $("#treeCamera").classList.remove("camera-focused"); renderTree(); }
     if (nav === "people") openSheet("people");
     if (nav === "branches") openSheet("modes");
     if (nav === "stats") openSheet("stats");
@@ -376,6 +460,11 @@
     states[state]?.();
     return state;
   }
+
+  if (motionPreview) document.body.classList.add("motion-preview");
+  reducedMotion.addEventListener("change", event => {
+    if (event.matches) cancelMotionSequence();
+  });
 
   renderTree();
   window.waydeanPrototype = { people, setPerson, openSheet, closeSheet, setMode, renderTree, bootstrapState };
