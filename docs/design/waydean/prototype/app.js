@@ -127,9 +127,14 @@
     const cameraRect = camera.getBoundingClientRect();
     const scaleY = cameraRect.height / camera.clientHeight || 1;
     const rect = target.getBoundingClientRect();
+    const scaleX = cameraRect.width / camera.clientWidth || 1;
+    const targetX = (rect.left + rect.width / 2 - cameraRect.left) / scaleX;
     const targetY = (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
-    camera.style.setProperty("--camera-y", `${camera.clientHeight * 0.72 - targetY}px`);
-    camera.style.setProperty("--camera-scale", "1.055");
+    const focusScale = 1.09;
+    camera.style.setProperty("--camera-x", `${camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1)}px`);
+    camera.style.setProperty("--camera-y", `${camera.clientHeight * 0.56 - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1)}px`);
+    camera.style.setProperty("--camera-scale", `${focusScale}`);
+    camera.style.removeProperty("transform");
     camera.classList.remove("camera-moving");
     camera.classList.add("camera-focused");
   }
@@ -192,7 +197,7 @@
       line.classList.remove("is-tracing");
     });
     $("#miniMap .mini-window").style.transform = motionPreview && mode === "path" ? "translateY(9px)" : "";
-    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination"));
+    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination", "path-current"));
   }
 
   async function playPathReveal() {
@@ -203,24 +208,36 @@
     const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
     const originNode = nodes.get(route[0]);
     const destinationNode = nodes.get(selectedId);
-    if (!originNode || !destinationNode) return;
+    if (!originNode || !destinationNode || !camera.clientWidth || !camera.clientHeight) return;
     camera.classList.remove("camera-focused");
+    camera.style.removeProperty("transform");
+    camera.style.setProperty("--camera-x", "0px");
+    camera.style.setProperty("--camera-y", "0px");
+    camera.style.setProperty("--camera-scale", "1");
     camera.classList.add("camera-moving");
 
     const cameraRect = camera.getBoundingClientRect();
+    const scaleX = cameraRect.width / camera.clientWidth || 1;
     const scaleY = cameraRect.height / camera.clientHeight || 1;
-    const localCenterY = node => {
+    const localCenter = node => {
       const rect = node.getBoundingClientRect();
-      return (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
+      return {
+        x: (rect.left + rect.width / 2 - cameraRect.left) / scaleX,
+        y: (rect.top + rect.height / 2 - cameraRect.top) / scaleY
+      };
     };
-    const originY = localCenterY(originNode);
-    const destinationY = localCenterY(destinationNode);
-    const startOffset = camera.clientHeight * 0.46 - originY;
-    const endOffset = camera.clientHeight * 0.72 - destinationY;
-    const focusScale = 1.055;
-    camera.style.setProperty("--camera-y", `${endOffset}px`);
-    camera.style.setProperty("--camera-scale", focusScale);
-    nodes.get(route[0])?.classList.add("path-origin");
+    const frameFor = (node, scale) => {
+      const point = localCenter(node);
+      return {
+        x: camera.clientWidth * 0.5 - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
+        y: camera.clientHeight * 0.56 - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
+        scale
+      };
+    };
+    const transformFor = frame => `translate(${frame.x}px, ${frame.y}px) scale(${frame.scale})`;
+    const originFrame = frameFor(originNode, 1.055);
+    let currentFrame = { x: 0, y: 0, scale: 1 };
+    nodes.get(route[0])?.classList.add("path-origin", "path-current");
     nodes.get(selectedId)?.classList.add("path-destination");
 
     if (reducedMotion.matches || edges.length === 0) {
@@ -229,58 +246,76 @@
       return;
     }
 
-    const duration = Math.min(2400, Math.max(1800, edges.length * 720));
-    const cameraAnimation = camera.animate(
-      [
-        { transform: "translateY(0) scale(1)", offset: 0 },
-        { transform: `translateY(${startOffset}px) scale(${focusScale})`, offset: 0.2 },
-        { transform: `translateY(${endOffset}px) scale(${focusScale})`, offset: 1 }
-      ],
-      { duration, easing: "cubic-bezier(.22,.72,.24,1)", fill: "forwards" }
-    );
-    activeMotion.push(cameraAnimation);
     const miniWindow = $("#miniMap .mini-window");
-    const miniWindowAnimation = miniWindow.animate(
-      [{ transform: "translateY(-9px)" }, { transform: "translateY(9px)" }],
-      { duration, easing: "cubic-bezier(.22,.72,.24,1)", fill: "forwards" }
+    const focusIn = camera.animate(
+      [{ transform: transformFor(currentFrame) }, { transform: transformFor(originFrame) }],
+      { duration: 460, easing: "cubic-bezier(.2,.72,.25,1)", fill: "forwards" }
     );
-    activeMotion.push(miniWindowAnimation);
-
-    for (const [index, edge] of edges.entries()) {
-      if (sequence !== motionSequence) return;
-      const line = $(`[data-edge="${edge}"]`);
-      if (!line || line.classList.contains("is-hidden")) continue;
-      const length = line.getTotalLength();
-      line.style.strokeDasharray = `${length}`;
-      line.style.strokeDashoffset = `${length}`;
-      line.classList.add("is-tracing");
-      const lineAnimation = line.animate(
-        [{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
-        { duration: Math.min(680, Math.max(460, duration / (edges.length + 1))), delay: index === 0 ? 160 : 0, easing: "ease-out", fill: "forwards" }
-      );
-      activeMotion.push(lineAnimation);
-      try {
-        await lineAnimation.finished;
-      } catch {
-        return;
-      }
-      if (sequence !== motionSequence) return;
-      line.style.strokeDashoffset = "0";
-      line.classList.remove("is-tracing");
-    }
-
+    activeMotion.push(focusIn);
     try {
-      await cameraAnimation.finished;
+      await focusIn.finished;
     } catch {
       return;
     }
     if (sequence !== motionSequence) return;
+    currentFrame = originFrame;
+    camera.style.transform = transformFor(currentFrame);
+    focusIn.cancel();
+
+    const miniStep = 18 / Math.max(1, edges.length);
+    miniWindow.style.transform = "translateY(-9px)";
+    for (const [index, edge] of edges.entries()) {
+      if (sequence !== motionSequence) return;
+      const line = $(`[data-edge="${edge}"]`);
+      if (!line || line.classList.contains("is-hidden")) continue;
+      const parentId = route[index];
+      const childId = route[index + 1];
+      const parentNode = nodes.get(parentId);
+      const childNode = nodes.get(childId);
+      if (!parentNode || !childNode) continue;
+      parentNode.classList.remove("path-current");
+      childNode.classList.add("path-current");
+      const length = line.getTotalLength();
+      line.style.strokeDasharray = `${length}`;
+      line.style.strokeDashoffset = `${length}`;
+      line.classList.add("is-tracing");
+      const nextFrame = frameFor(childNode, Math.min(1.14, 1.075 + index * 0.035));
+      const segmentDuration = 760;
+      const cameraAnimation = camera.animate(
+        [{ transform: transformFor(currentFrame) }, { transform: transformFor(nextFrame) }],
+        { duration: segmentDuration, easing: "cubic-bezier(.34,.02,.22,1)", fill: "forwards" }
+      );
+      activeMotion.push(cameraAnimation);
+      const lineAnimation = line.animate(
+        [{ strokeDashoffset: length }, { strokeDashoffset: 0 }],
+        { duration: segmentDuration, easing: "ease-out", fill: "forwards" }
+      );
+      activeMotion.push(lineAnimation);
+      try {
+        await Promise.all([cameraAnimation.finished, lineAnimation.finished]);
+      } catch {
+        return;
+      }
+      if (sequence !== motionSequence) return;
+      currentFrame = nextFrame;
+      camera.style.transform = transformFor(currentFrame);
+      cameraAnimation.cancel();
+      line.style.strokeDashoffset = "0";
+      line.classList.remove("is-tracing");
+      miniWindow.style.transform = `translateY(${-9 + miniStep * (index + 1)}px)`;
+    }
+
+    if (sequence !== motionSequence) return;
+    const endFrame = frameFor(destinationNode, 1.09);
+    camera.style.setProperty("--camera-x", `${endFrame.x}px`);
+    camera.style.setProperty("--camera-y", `${endFrame.y}px`);
+    camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
+    camera.style.removeProperty("transform");
+    activeMotion.forEach(animation => animation.cancel());
+    activeMotion = [];
     camera.classList.remove("camera-moving");
     camera.classList.add("camera-focused");
-    cameraAnimation.cancel();
     miniWindow.style.transform = "translateY(9px)";
-    miniWindowAnimation.cancel();
-    activeMotion = [];
   }
 
   function getFilteredPeople() {
