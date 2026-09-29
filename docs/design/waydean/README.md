@@ -3,6 +3,7 @@
 - [`product-design-spec.md`](product-design-spec.md) — общий источник требований и плана.
 - [`design-bible-v1.md`](design-bible-v1.md) — визуальные правила v1, проект на согласование.
 - [design-tokens.md](design-tokens.md) — существующие Premium-значения и стартовые design tokens для согласования.
+- [components/component-bible.md](components/component-bible.md) — состав компонентов, их состояния и обязательные кадры prototype.
 - [masters/desktop-master.md](masters/desktop-master.md) — утверждённая композиция Desktop Master 1440×900.
 - [masters/desktop-master-preview.html](masters/desktop-master-preview.html) — локальный визуальный эскиз утверждённой композиции.
 - [masters/mobile-master.md](masters/mobile-master.md) — принятая композиция Mobile Master v0.1 и критерии дальнейшей визуальной сверки.
