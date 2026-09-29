@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="780" height="1688" viewBox="0 0 390 844" role="img" aria-labelledby="title desc">
+  <title id="title">Waydean Mobile Master — композиция 0.1</title>
+  <desc id="desc">Черновой мобильный экран семейного древа: поиск, дерево поколений, мини-карта, краткая карточка выбранного человека и нижняя навигация.</desc>
+  <defs>
+    <linearGradient id="screen" x2="0" y2="1"><stop stop-color="#172724"/><stop offset=".56" stop-color="#0b1719"/><stop offset="1" stop-color="#050d12"/></linearGradient>
+    <linearGradient id="card" x2="0" y2="1"><stop stop-color="#514d3d"/><stop offset=".58" stop-color="#19201e"/><stop offset="1" stop-color="#081114"/></linearGradient>
+    <linearGradient id="bar" x2="1" y2="1"><stop stop-color="#122126"/><stop offset="1" stop-color="#060c10"/></linearGradient>
+    <radialGradient id="mist"><stop stop-color="#bf9958" stop-opacity=".38"/><stop offset="1" stop-color="#bf9958" stop-opacity="0"/></radialGradient>
+    <radialGradient id="photo"><stop stop-color="#b9a47c" stop-opacity=".7"/><stop offset=".5" stop-color="#555044"/><stop offset="1" stop-color="#202622"/></radialGradient>
+    <filter id="glow" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <filter id="shadow" x="-40%" y="-30%" width="180%" height="180%"><feGaussianBlur in="SourceAlpha" stdDeviation="4" result="b"/><feOffset dy="3"/><feComponentTransfer><feFuncA type="linear" slope=".48"/></feComponentTransfer><feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect x="2" y="2" width="386" height="840" rx="30" fill="#020608" stroke="#a58a58" stroke-width="2"/>
+  <clipPath id="clip"><rect x="7" y="7" width="376" height="830" rx="25"/></clipPath>
+  <g clip-path="url(#clip)">
+    <rect x="7" y="7" width="376" height="830" fill="url(#screen)"/>
+    <ellipse cx="195" cy="390" rx="215" ry="290" fill="url(#mist)"/>
+    <g fill="#030a0d" opacity=".57" stroke="#9c855b" stroke-opacity=".17">
+      <path d="M7 337 42 278 66 309 107 217 151 302 190 244 229 304 271 215 315 310 351 262 383 323V603H7Z"/>
+      <path d="M7 399 55 346 88 377 137 302 178 374 222 322 260 377 300 318 348 381 383 347V615H7Z"/>
+    </g>
+    <g opacity=".35" fill="#3a392f" stroke="#a48a58" stroke-opacity=".3">
+      <path d="M330 192 343 186 356 192 359 254 328 254Z"/><path d="M335 186 343 171 351 186Z"/><path d="M339 204h7v14h-7z" fill="#071014" stroke="none"/>
+    </g>
+    <rect x="7" y="7" width="376" height="30" fill="#03090d" opacity=".82"/>
+    <text x="25" y="27" fill="#f0eadb" font-family="Arial,sans-serif" font-size="11">9:41</text>
+    <text x="322" y="27" fill="#f0eadb" font-family="Arial,sans-serif" font-size="11">●●●　▰</text>
+    <rect x="7" y="37" width="376" height="47" fill="#030a0f" fill-opacity=".92" stroke="#927c55" stroke-opacity=".28"/>
+    <text x="22" y="66" fill="#f1d392" font-family="Georgia,serif" font-size="16" font-weight="bold">✳ WAYDEAN</text>
+    <text x="123" y="65" fill="#d8d0c1" font-family="Arial,sans-serif" font-size="9">Семейное древо</text>
+    <text x="352" y="66" fill="#edc973" font-family="Arial,sans-serif" font-size="17">♛</text>
+    <rect x="20" y="98" width="350" height="42" rx="8" fill="#071015" fill-opacity=".93" stroke="#d2b779" stroke-opacity=".52"/>
+    <text x="33" y="124" fill="#c7c0b2" font-family="Arial,sans-serif" font-size="12">⌕　Поиск человека…</text>
+    <g fill="none" stroke="#e2c48a" stroke-width="1.6" stroke-linecap="round" opacity=".9" filter="url(#glow)">
+      <path d="M195 260V309M195 309H72V374M195 309V374M195 309H318V374"/>
+      <path d="M72 467V523M195 467V523M318 467V523"/>
+    </g>
+    <g filter="url(#shadow)" font-family="Arial,sans-serif" text-anchor="middle">
+      <g transform="translate(159 187)"><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#d8bc7e"/><rect x="4" y="4" width="64" height="53" rx="4" fill="url(#photo)"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Куди</text><text x="36" y="81" fill="#c8bea9" font-size="9">1750–1820</text></g>
+      <g transform="translate(36 374)"><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#d8bc7e"/><rect x="4" y="4" width="64" height="53" rx="4" fill="url(#photo)"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Саид</text><text x="36" y="81" fill="#c8bea9" font-size="9">1780–1845</text></g>
+      <g transform="translate(159 374)"><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#d8bc7e"/><rect x="4" y="4" width="64" height="53" rx="4" fill="url(#photo)"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Иса</text><text x="36" y="81" fill="#c8bea9" font-size="9">1790–1858</text></g>
+      <g transform="translate(282 374)"><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#d8bc7e"/><rect x="4" y="4" width="64" height="53" rx="4" fill="url(#photo)"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Умар</text><text x="36" y="81" fill="#c8bea9" font-size="9">1795–1863</text></g>
+      <g transform="translate(36 523)"><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#d8bc7e"/><rect x="4" y="4" width="64" height="53" rx="4" fill="url(#photo)"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Хасан</text><text x="36" y="81" fill="#c8bea9" font-size="9">1820–1883</text></g>
+      <g transform="translate(159 523)"><rect x="-5" y="-5" width="82" height="103" rx="10" fill="none" stroke="#f1c66e" stroke-width="2" filter="url(#glow)"/><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#f1c66e" stroke-width="1.6"/><rect x="4" y="4" width="64" height="53" rx="4" fill="url(#photo)"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Магомед</text><text x="36" y="81" fill="#e1d2ae" font-size="9">1825–1890</text></g>
+      <g transform="translate(282 523)"><rect width="72" height="93" rx="7" fill="url(#card)" stroke="#d8bc7e"/><rect x="4" y="4" width="64" height="53" rx="4" fill="#101918" stroke="#655c47"/><circle cx="36" cy="25" r="8" fill="#b6aa90"/><path d="M20 53c1-14 8-20 16-20s15 6 16 20" fill="#8e8877"/><text x="36" y="67" fill="#fff" font-size="11" font-weight="bold">Ахмет</text><text x="36" y="81" fill="#c8bea9" font-size="9">1830–1895</text></g>
+    </g>
+    <g transform="translate(19 641)"><rect width="88" height="57" rx="5" fill="#030a0e" fill-opacity=".94" stroke="#bd9a58"/><text x="44" y="13" text-anchor="middle" fill="#e1c37c" font-family="Arial,sans-serif" font-size="7">МИНИ-КАРТА</text><g stroke="#bd944b" stroke-width="1" fill="none"><path d="M11 22H77M24 22v11M44 22v11M64 22v11M24 33h40M24 33v12M44 33v12M64 33v12"/></g><rect x="33" y="30" width="22" height="17" fill="none" stroke="#f0c66e"/></g>
+    <g font-family="Arial,sans-serif" text-anchor="middle"><rect x="333" y="651" width="37" height="37" rx="7" fill="#071015" stroke="#a98b52"/><text x="351.5" y="676" fill="#f1d38e" font-size="19">＋</text><rect x="333" y="694" width="37" height="37" rx="7" fill="#071015" stroke="#a98b52"/><text x="351.5" y="719" fill="#f1d38e" font-size="19">−</text><rect x="247" y="700" width="123" height="36" rx="7" fill="#071015" stroke="#bd934d"/><text x="308.5" y="723" fill="#f0d18b" font-size="11">◎　Кто я?</text></g>
+    <rect x="17" y="706" width="356" height="69" rx="10" fill="url(#bar)" stroke="#d2b779" stroke-opacity=".65" filter="url(#shadow)"/>
+    <rect x="27" y="716" width="45" height="49" rx="5" fill="url(#photo)" stroke="#c7a159"/>
+    <text x="83" y="737" fill="#f1e8d7" font-family="Georgia,serif" font-size="15" font-weight="bold">Магомед</text>
+    <text x="83" y="755" fill="#c6baa2" font-family="Arial,sans-serif" font-size="10">1825–1890 · поколение 3</text>
+    <text x="351" y="751" fill="#f0ca75" font-family="Arial,sans-serif" font-size="23" text-anchor="middle">›</text>
+    <rect x="7" y="781" width="376" height="56" fill="#030a0e" stroke="#927c55" stroke-opacity=".33"/>
+    <g font-family="Arial,sans-serif" text-anchor="middle" fill="#cbc5b8" font-size="9"><text x="45" y="806" fill="#edc973" font-size="16">♧</text><text x="45" y="824">Древо</text><text x="120" y="806" fill="#edc973" font-size="16">♙</text><text x="120" y="824">Люди</text><text x="195" y="806" fill="#edc973" font-size="16">♧</text><text x="195" y="824">Ветви</text><text x="270" y="806" fill="#edc973" font-size="16">▥</text><text x="270" y="824">Статистика</text><text x="345" y="806" fill="#edc973" font-size="16">···</text><text x="345" y="824">Ещё</text></g>
+  </g>
+</svg>
