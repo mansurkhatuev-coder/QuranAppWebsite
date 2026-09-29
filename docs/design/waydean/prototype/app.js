@@ -34,6 +34,7 @@
   const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
   let motionSequence = 0;
   let activeMotion = [];
+  let motionTimers = [];
   let flightFrame = 0;
   let finishFlight = null;
 
@@ -197,6 +198,8 @@
     finishFlight = null;
     activeMotion.forEach(animation => animation.cancel());
     activeMotion = [];
+    motionTimers.forEach(timer => clearTimeout(timer));
+    motionTimers = [];
     $("#treeCamera").classList.remove("camera-moving");
     if (wasFlying) {
       clearTimeout(toastTimer);
@@ -212,7 +215,89 @@
       line.classList.remove("is-tracing");
     });
     $("#miniMap .mini-window").style.transform = motionPreview && mode === "path" ? "translateY(9px)" : "";
-    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination", "path-current"));
+    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination", "path-current", "branch-anchor", "branch-revealed", "branch-reveal-pending"));
+  }
+
+  function waitForMotion(milliseconds, sequence) {
+    return new Promise(resolve => {
+      const timer = setTimeout(() => {
+        motionTimers = motionTimers.filter(item => item !== timer);
+        resolve(sequence === motionSequence);
+      }, milliseconds);
+      motionTimers.push(timer);
+    });
+  }
+
+  async function playBranchReveal() {
+    const sequence = motionSequence;
+    const selected = selectedPerson();
+    const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    const descendants = new Set([selectedId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const person of people) {
+        if (person.parent && descendants.has(person.parent) && !descendants.has(person.id)) {
+          descendants.add(person.id);
+          changed = true;
+        }
+      }
+    }
+    const generations = [...new Set(people
+      .filter(person => descendants.has(person.id) && person.generation > selected.generation && nodes.has(person.id))
+      .map(person => person.generation))].sort((a, b) => a - b);
+    const relevant = branchPeople(selectedId);
+    const lines = $$(".branch-line").filter(line => {
+      const [parentId, childId] = line.dataset.edge.split("-");
+      return relevant.has(parentId) && relevant.has(childId) && !line.classList.contains("is-hidden");
+    });
+
+    if (reducedMotion.matches || generations.length === 0) return;
+
+    const parent = selected.parent ? $(`[data-edge="${selected.parent}-${selected.id}"]`) : null;
+    const anchor = nodes.get(selectedId);
+    for (const generation of generations) {
+      for (const person of people.filter(item => item.generation === generation && descendants.has(item.id))) {
+        nodes.get(person.id)?.classList.add("branch-reveal-pending");
+      }
+    }
+    for (const line of lines) {
+      line.style.strokeDasharray = `${line.getTotalLength()}`;
+      line.style.strokeDashoffset = `${line.getTotalLength()}`;
+    }
+    anchor?.classList.add("branch-anchor");
+    if (parent && !parent.classList.contains("is-hidden")) {
+      parent.classList.add("is-tracing");
+      parent.style.strokeDasharray = `${parent.getTotalLength()}`;
+      parent.style.strokeDashoffset = "0";
+      if (!await waitForMotion(260, sequence)) return;
+      parent.classList.remove("is-tracing");
+      parent.style.strokeDasharray = "";
+      parent.style.strokeDashoffset = "";
+    } else if (!await waitForMotion(300, sequence)) return;
+
+    for (const generation of generations) {
+      if (sequence !== motionSequence) return;
+      const wave = people.filter(person => person.generation === generation && descendants.has(person.id) && nodes.has(person.id));
+      const edgeWave = lines.filter(line => line.dataset.edge.split("-").some(id => wave.some(person => person.id === id)));
+      for (const person of wave) {
+        const node = nodes.get(person.id);
+        node?.classList.remove("branch-reveal-pending");
+        node?.classList.add("branch-revealed");
+      }
+      for (const line of edgeWave) {
+        line.classList.add("is-tracing");
+        line.style.strokeDashoffset = "0";
+      }
+      if (!await waitForMotion(360, sequence)) return;
+      for (const line of edgeWave) {
+        line.classList.remove("is-tracing");
+        line.style.strokeDasharray = "";
+        line.style.strokeDashoffset = "";
+      }
+      if (!await waitForMotion(130, sequence)) return;
+    }
+    anchor?.classList.remove("branch-anchor");
   }
 
   async function playPathReveal() {
@@ -621,9 +706,10 @@
     if (nextMode !== "path") $("#treeCamera").classList.remove("camera-focused");
     renderTree();
     if (nextMode === "path" && motionPreview) playPathReveal();
+    if (nextMode === "branch" && motionPreview) playBranchReveal();
     if (nextMode === "all") announce("Показаны все поколения.");
     else if (nextMode === "path") announce("Подсвечен путь от старшего известного предка.");
-    else announce("Выбран фокус на ветви этого человека.");
+    else if (!motionPreview) announce("Выбран фокус на ветви этого человека.");
   }
 
   function announce(message) {
@@ -687,7 +773,10 @@
       stats: () => openSheet("stats"),
       people: () => openSheet("people"),
       path: () => setMode("path"),
-      branch: () => setMode("branch"),
+      branch: () => {
+        if (motionPreview) setPerson("p01");
+        setMode("branch");
+      },
       longName: () => { setPerson("p11"); openSheet("profile"); }
     };
     states[state]?.();
