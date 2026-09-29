@@ -7,6 +7,7 @@
 - [masters/desktop-master-preview.html](masters/desktop-master-preview.html) — локальный визуальный эскиз утверждённой композиции.
 - [masters/mobile-master.md](masters/mobile-master.md) — принятая композиция Mobile Master v0.1 и критерии дальнейшей визуальной сверки.
 - [masters/mobile-master-preview.md](masters/mobile-master-preview.md) — SVG-эскиз мобильной композиции, открываемый прямо в GitHub.
+- [masters/mobile-profile-state.md](masters/mobile-profile-state.md) — отдельный черновик подробного профиля для следующего review.
 - [`assets/references/`](assets/references/) — два исходных коллажа desktop/mobile и их манифест.
 
 Работа над интерфейсом идёт после утверждения Bible и Master Reference. Изменения сначала проверяются локально, production — только после явного одобрения результата.
