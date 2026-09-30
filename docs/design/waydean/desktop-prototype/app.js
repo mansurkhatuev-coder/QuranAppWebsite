@@ -20,7 +20,19 @@
   const $ = selector => document.querySelector(selector);
   const $$ = selector => [...document.querySelectorAll(selector)];
   const state = new URLSearchParams(location.search).get("state") || "tree";
-  const dense = state === "dense";
+  const dense = state === "dense" || state === "lod";
+  const qualityQuery = new URLSearchParams(location.search).get("quality");
+  const deviceCores = Number(navigator.hardwareConcurrency) || 0;
+  const deviceMemory = Number(navigator.deviceMemory) || 0;
+  const saveData = Boolean(navigator.connection?.saveData);
+  const automaticQuality = saveData || deviceCores > 0 && deviceCores <= 4 || deviceMemory > 0 && deviceMemory <= 4 ? "low" : deviceCores >= 8 && deviceMemory >= 8 ? "high" : "medium";
+  const motionQuality = ["high", "medium", "low"].includes(qualityQuery) ? qualityQuery : automaticQuality;
+  const motionProfile = {
+    high: { pathMin:1600, pathMax:3200, searchBase:760, searchDistance:0.24, repeatBase:260, repeatDistance:0.2, branchStart:420, branchStagger:460, branchCleanup:650, branchSettle:700, parallax:true },
+    medium: { pathMin:1280, pathMax:2400, searchBase:620, searchDistance:0.2, repeatBase:220, repeatDistance:0.16, branchStart:300, branchStagger:300, branchCleanup:460, branchSettle:500, parallax:false },
+    low: { pathMin:900, pathMax:1700, searchBase:420, searchDistance:0.15, repeatBase:180, repeatDistance:0.1, branchStart:180, branchStagger:160, branchCleanup:300, branchSettle:350, parallax:false }
+  }[motionQuality];
+  $("#treeStage").classList.add(`motion-${motionQuality}`);
   const baseIds = new Set(["p01","p02","p03","p04","p05","p06","p07"]);
   let selectedId = "p06";
   let mode = "all";
@@ -28,6 +40,7 @@
   let cameraScale = 1;
   let cameraX = 0;
   let cameraY = 0;
+  let lodLevel = "detail";
   let pathMotionId = 0;
   let pathAnimationFrame = 0;
   let treeMotionTimers = [];
@@ -40,7 +53,7 @@
   const yearText = person => person.born == null && person.died == null ? "Даты неизвестны" : person.born == null ? `до ${person.died}` : person.died == null ? `с ${person.born}` : `${person.born}–${person.died}`;
   const icon = () => `<svg viewBox="0 0 448 512" aria-hidden="true"><path d="${USER_PATH}"/></svg>`;
   const filtered = () => people.filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photos || false) && (!filters.main || person.branch === "main"));
-  const visiblePeople = () => (dense || mode === "branch" ? people : people.filter(person => baseIds.has(person.id))).filter(person => filtered().some(match => match.id === person.id));
+  const visiblePeople = () => (dense || mode === "branch" || mode === "search" ? people : people.filter(person => baseIds.has(person.id))).filter(person => filtered().some(match => match.id === person.id));
 
   function ancestors(id) {
     const result = new Set(); let current = byId.get(id);
@@ -69,10 +82,44 @@
     const empty = visible.length === 0;
     $("#emptyState").hidden = !empty;
     $("#treeLines").hidden = empty;
-    $("#modeLabel").textContent = mode === "path" ? "МОЙ ПУТЬ" : mode === "branch" ? "МОЯ ВЕТВЬ" : dense ? "ВСЕ ПОКОЛЕНИЯ · ПЛОТНОЕ ДРЕВО" : "";
-    $("#modeLabel").classList.toggle("visible", Boolean($("#modeLabel").textContent));
     $("#graph").classList.toggle("filter-empty", empty);
     $("#graph").classList.toggle("dense", dense);
+    updateLod();
+  }
+  function updateLod() {
+    const stage = $("#treeStage"), nodes = $$(".person-node");
+    const sample = nodes.find(node => node.dataset.person === selectedId && node.dataset.person !== "p11") || nodes.find(node => node.dataset.person !== "p11") || nodes[0];
+    if (!sample) {
+      lodLevel = "detail";
+      stage.classList.remove("lod-medium", "lod-overview");
+      stage.classList.add("lod-detail");
+      $("#modeLabel").classList.remove("visible");
+      return;
+    }
+    const cardWidth = sample.getBoundingClientRect().width;
+    if (lodLevel === "detail") {
+      if (cardWidth < 82) lodLevel = "medium";
+    } else if (lodLevel === "medium") {
+      if (cardWidth < 56) lodLevel = "overview";
+      else if (cardWidth > 88) lodLevel = "detail";
+    } else if (cardWidth > 88) {
+      lodLevel = "detail";
+    } else if (cardWidth > 62) {
+      lodLevel = "medium";
+    }
+    stage.classList.toggle("lod-detail", lodLevel === "detail");
+    stage.classList.toggle("lod-medium", lodLevel === "medium");
+    stage.classList.toggle("lod-overview", lodLevel === "overview");
+    const levelName = lodLevel === "overview" ? "ОБЗОР" : lodLevel === "medium" ? "СРЕДНИЙ МАСШТАБ" : "";
+    const modeName = mode === "path" ? "МОЙ ПУТЬ" : mode === "branch" ? "МОЯ ВЕТВЬ" : mode === "search" ? "НАЙДЕН ЧЕЛОВЕК" : dense ? "ВСЕ ПОКОЛЕНИЯ · ПЛОТНОЕ ДРЕВО" : "";
+    const label = [modeName, levelName].filter(Boolean).join(" · ");
+    $("#modeLabel").textContent = label;
+    $("#modeLabel").classList.toggle("visible", Boolean(label));
+    const levelAccessible = lodLevel === "overview" ? "обзор" : lodLevel === "medium" ? "средний масштаб" : "детали";
+    $("#zoomIn").setAttribute("aria-label", `Увеличить, сейчас ${zoom} процентов, ${levelAccessible}`);
+    $("#zoomOut").setAttribute("aria-label", `Уменьшить, сейчас ${zoom} процентов, ${levelAccessible}`);
+    $("#zoomIn").disabled = cameraScale >= 1.75;
+    $("#zoomOut").disabled = cameraScale <= 0.5;
   }
   function renderProfile(tab = "info") {
     const person = byId.get(selectedId); const parent = person.parent ? byId.get(person.parent)?.name : "Не указан"; const children = people.filter(item => item.parent === person.id);
@@ -96,14 +143,16 @@
     pathAnimationFrame = 0;
     treeMotionTimers.forEach(timer => clearTimeout(timer));
     treeMotionTimers = [];
-    $("#treeStage").classList.remove("camera-moving");
+    $("#treeStage").classList.remove("camera-moving", "search-focus");
+    $("#treeStage").style.setProperty("--parallax-x", "0px");
+    $("#treeStage").style.setProperty("--parallax-y", "0px");
     $$(".tree-line").forEach(line => {
       line.style.strokeDasharray = "";
       line.style.strokeDashoffset = "";
       line.classList.remove("path-tracing", "branch-future", "branch-revealed", "branch-anchor");
     });
     $("#treeStage").classList.remove("branch-reveal");
-    $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination", "branch-future", "branch-revealed"));
+    $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination", "branch-future", "branch-revealed", "search-target"));
   }
   function runDesktopPath() {
     cancelTreeMotion();
@@ -164,7 +213,7 @@
     stage.classList.add("camera-moving");
     setCameraTransform(0, 0, 1, true);
     const startedAt = performance.now();
-    const duration = Math.min(3200, Math.max(1600, totalLength * 2.4));
+    const duration = Math.min(motionProfile.pathMax, Math.max(motionProfile.pathMin, totalLength * 2.4));
     const ease = value => value * value * (3 - 2 * value);
     const sampleAt = progress => {
       const distanceAlong = totalLength * progress;
@@ -235,7 +284,7 @@
       branchIds.forEach(id => $(`[data-person="${id}"]`)?.classList.remove("branch-future"));
       $$(".tree-line.branch-future").forEach(line => { line.style.strokeDashoffset = "0"; });
       stage.classList.remove("branch-reveal");
-      treeMotionTimers.push(setTimeout(() => cancelTreeMotion(), 700));
+      treeMotionTimers.push(setTimeout(() => cancelTreeMotion(), motionProfile.branchSettle));
     };
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !branchIds.length) {
       revealAll();
@@ -252,9 +301,9 @@
           const person = byId.get(id), line = $(`.tree-line[data-edge="${person.parent}-${id}"]`);
           if (line) { line.classList.remove("branch-future"); line.classList.add("branch-revealed"); line.style.strokeDashoffset = "0"; }
         });
-      }, 420 + index * 460));
+      }, motionProfile.branchStart + index * motionProfile.branchStagger));
     });
-    const finishDelay = 420 + Math.max(0, depthGroups.size - 1) * 460 + 650;
+    const finishDelay = motionProfile.branchStart + Math.max(0, depthGroups.size - 1) * motionProfile.branchStagger + motionProfile.branchCleanup;
     treeMotionTimers.push(setTimeout(() => {
       if (sequence !== pathMotionId) return;
       stage.classList.remove("branch-reveal");
@@ -262,6 +311,46 @@
       $$(".person-node").forEach(node => node.classList.remove("branch-revealed", "branch-future"));
       treeMotionTimers = [];
     }, finishDelay));
+  }
+  function runSearchFocus(replay = true) {
+    cancelTreeMotion();
+    const stage = $("#treeStage"), graph = $("#graph"), target = $(`[data-person="${selectedId}"]`);
+    if (!target) return;
+    const scale = replay ? Math.max(cameraScale, 1.24) : cameraScale;
+    const anchor = { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+    const origin = { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 };
+    const point = { x: target.offsetLeft, y: target.offsetTop };
+    const end = { x: anchor.x - origin.x - (point.x - origin.x) * scale, y: anchor.y - origin.y - (point.y - origin.y) * scale };
+    const start = { x: cameraX, y: cameraY, scale: cameraScale };
+    const distance = Math.hypot(end.x - start.x, end.y - start.y);
+    const duration = replay ? Math.max(motionProfile.searchBase, Math.min(motionProfile.searchBase + 420, motionProfile.searchBase + distance * motionProfile.searchDistance)) : Math.min(motionProfile.repeatBase + 220, Math.max(motionProfile.repeatBase, distance * motionProfile.repeatDistance));
+    const sequence = pathMotionId;
+    stage.classList.add("search-focus");
+    target.classList.add("search-target");
+    const finish = () => {
+      if (sequence !== pathMotionId) return;
+      setCameraTransform(end.x, end.y, scale);
+      stage.classList.remove("search-focus");
+      treeMotionTimers.push(setTimeout(() => target.classList.remove("search-target"), 1350));
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || distance < 2 && Math.abs(scale - start.scale) < 0.01) {
+      finish();
+      return;
+    }
+    stage.classList.add("camera-moving");
+    const startedAt = performance.now();
+    const ease = value => value * value * (3 - 2 * value);
+    const step = now => {
+      if (sequence !== pathMotionId) return;
+      const progress = Math.min(1, (now - startedAt) / duration), eased = ease(progress);
+      setCameraTransform(start.x + (end.x - start.x) * eased, start.y + (end.y - start.y) * eased, start.scale + (scale - start.scale) * eased, true);
+      if (progress < 1) pathAnimationFrame = requestAnimationFrame(step);
+      else {
+        pathAnimationFrame = 0;
+        finish();
+      }
+    };
+    pathAnimationFrame = requestAnimationFrame(step);
   }
   function setMode(next) {
     cancelTreeMotion();
@@ -277,7 +366,28 @@
   function announce(message) { const toast=$("#toast"); toast.textContent=message; toast.classList.add("visible"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove("visible"),2300); }
   function closePopovers() { $$(".popover").forEach(popover=>popover.hidden=true); }
   function openPopover(id) { closePopovers(); const item=$(id); item.hidden=false; const input=item.querySelector("input[type=search]"); if(input) { renderSearch(input.value); input.focus(); } }
-  function renderSearch(value="") { const query=value.trim().toLocaleLowerCase("ru"); const matches=people.filter(person=>`${person.name} ${person.born??""} ${person.died??""} ${person.branch}`.toLocaleLowerCase("ru").includes(query)); $("#searchResults").innerHTML=matches.length?matches.map(person=>`<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join(""):`<p class="empty-result">По запросу «${value}» никого не найдено.</p>`; $$("[data-result]").forEach(button=>button.addEventListener("click",()=>{cancelTreeMotion();selectedId=button.dataset.result;drawTree();renderProfile();closePopovers();if(mode==="path")runDesktopPath();if(mode==="branch")runBranchReveal();})); }
+  function renderSearch(value="") {
+    const query = value.trim().toLocaleLowerCase("ru");
+    const matches = people.filter(person => `${person.name} ${person.born ?? ""} ${person.died ?? ""} ${person.branch}`.toLocaleLowerCase("ru").includes(query));
+    $("#searchResults").innerHTML = matches.length ? matches.map(person => `<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join("") : `<p class="empty-result">По запросу «${value}» никого не найдено.</p>`;
+    $$("[data-result]").forEach(button => button.addEventListener("click", () => {
+      const targetId = button.dataset.result;
+      if (!filtered().some(person => person.id === targetId)) {
+        announce("Человек скрыт текущими фильтрами. Измени фильтры, чтобы показать его на древе.");
+        return;
+      }
+      const repeated = selectedId === targetId;
+      cancelTreeMotion();
+      selectedId = targetId;
+      mode = "search";
+      $("#treeStage").classList.remove("path-focus");
+      drawTree();
+      renderProfile();
+      closePopovers();
+      setActive("tree");
+      runSearchFocus(!repeated);
+    }));
+  }
 
   function setCameraTransform(x, y, scale, moving = false) {
     cameraX = x;
@@ -286,7 +396,18 @@
     zoom = Math.round(cameraScale * 100);
     $("#zoomValue").textContent = `${zoom}%`;
     $("#graph").style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${cameraScale})`;
-    $("#treeStage").classList.toggle("camera-moving", moving);
+    const stage = $("#treeStage"), reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    stage.classList.toggle("camera-moving", moving);
+    stage.style.setProperty("--parallax-x", moving && motionProfile.parallax && !reducedMotion ? `${Math.max(-8, Math.min(8, cameraX * 0.025))}px` : "0px");
+    stage.style.setProperty("--parallax-y", moving && motionProfile.parallax && !reducedMotion ? `${Math.max(-6, Math.min(6, cameraY * 0.025))}px` : "0px");
+    if (!moving) updateLod();
+  }
+  function zoomCamera(nextScale, point = null) {
+    cancelTreeMotion();
+    const stage = $("#treeStage"), graph = $("#graph"), anchor = point || { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+    const origin = { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 };
+    const scale = Math.max(0.5, Math.min(1.75, nextScale)), ratio = scale / cameraScale;
+    setCameraTransform(anchor.x - origin.x - (anchor.x - origin.x - cameraX) * ratio, anchor.y - origin.y - (anchor.y - origin.y - cameraY) * ratio, scale);
   }
   function stagePoint(event) {
     const rect = $("#treeStage").getBoundingClientRect();
@@ -304,7 +425,7 @@
   }
   function installCameraGestures() {
     const stage = $("#treeStage");
-    const center = () => ({ x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 });
+    const center = () => { const graph = $("#graph"); return { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 }; };
     stage.addEventListener("pointerdown", event => {
       if (event.button !== 0 || event.target.closest(".tree-controls, .minimap, .mode-label, .empty-state")) return;
       if (!activePointers.size) cancelTreeMotion();
@@ -346,7 +467,7 @@
       if (!activePointers.size) {
         const moved = pointerGesture?.moved;
         pointerGesture = null;
-        stage.classList.remove("camera-moving");
+        setCameraTransform(cameraX, cameraY, cameraScale);
         if (moved) suppressClickUntil = performance.now() + 250;
       } else beginGestureFrame();
     };
@@ -361,13 +482,14 @@
     }, true);
     stage.addEventListener("wheel", event => {
       if (event.target.closest(".tree-controls, .minimap, .mode-label, .empty-state")) return;
+      if (!wheelEndTimer) cancelTreeMotion();
       event.preventDefault();
-      const point = stagePoint(event), origin = center(), currentScale = cameraScale;
+      const point = stagePoint(event), currentScale = cameraScale;
       const scale = Math.max(0.5, Math.min(1.75, currentScale * Math.exp(-event.deltaY * 0.00012)));
-      const ratio = scale / currentScale;
+      const ratio = scale / currentScale, origin = center();
       setCameraTransform(point.x - origin.x - (point.x - origin.x - cameraX) * ratio, point.y - origin.y - (point.y - origin.y - cameraY) * ratio, scale, true);
       clearTimeout(wheelEndTimer);
-      wheelEndTimer = window.setTimeout(() => { wheelEndTimer = 0; stage.classList.remove("camera-moving"); }, 180);
+      wheelEndTimer = window.setTimeout(() => { wheelEndTimer = 0; setCameraTransform(cameraX, cameraY, cameraScale); }, 180);
     }, { passive: false });
   }
   $("#searchButton").addEventListener("click",()=>openPopover("#searchPopover")); $("#railSearch").addEventListener("click",()=>openPopover("#searchPopover"));
@@ -379,13 +501,13 @@
   $("#applyFilters").addEventListener("click",()=>{filters={min:Number($("#minGeneration").value),max:Number($("#maxGeneration").value),photos:$("#photosOnly").checked,main:$("#mainOnly").checked};drawTree();closePopovers();});
   $("#resetFilters").addEventListener("click",()=>{filters={min:1,max:5,photos:false,main:false};$("#photosOnly").checked=false;$("#mainOnly").checked=false;drawTree();closePopovers();});
   $("#resetEmpty").addEventListener("click",()=>{$("#resetFilters").click();});
-  $("#zoomIn").addEventListener("click",()=>{cancelTreeMotion();const next=Math.min(175,zoom+10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
-  $("#zoomOut").addEventListener("click",()=>{cancelTreeMotion();const next=Math.max(50,zoom-10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
+  $("#zoomIn").addEventListener("click",()=>zoomCamera(Math.min(1.75,cameraScale+0.1)));
+  $("#zoomOut").addEventListener("click",()=>zoomCamera(Math.max(0.5,cameraScale-0.1)));
   $("#whoAmI").addEventListener("click",()=>{cancelTreeMotion();selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");if(mode==="path")runDesktopPath();if(mode==="branch")runBranchReveal();});
   $$("[data-nav]").forEach(button=>button.addEventListener("click",()=>{const nav=button.dataset.nav;setActive(nav);if(nav==="tree")setMode("all");if(nav==="branches")openPopover("#filterPopover");if(nav==="people")openPopover("#searchPopover");}));
   document.addEventListener("keydown",event=>{if(event.key==="Escape")closePopovers();});
   renderProfile(state==="relatives"?"relatives":state==="media"?"media":"info"); drawTree();
-  if(state==="search") {openPopover("#searchPopover");$("#searchInput").value="Магомед";renderSearch("Магомед");}
+  if(state==="search" || state==="searchMotion") {openPopover("#searchPopover");$("#searchInput").value="Магомед";renderSearch("Магомед");}
   if(state==="searchEmpty") {openPopover("#searchPopover");$("#searchInput").value="ИмяБезСовпадений";renderSearch($("#searchInput").value);}
   if(state==="filters") {openPopover("#filterPopover");}
   if(state==="filtersEmpty") {filters.photos=true;$("#photosOnly").checked=true;drawTree();openPopover("#filterPopover");}
@@ -394,6 +516,8 @@
   if(state==="path") setMode("path"); if(state==="branch") setMode("branch");
   if(state==="focus") {document.querySelector('[data-person="p07"]')?.focus();}
   installCameraGestures();
+  window.addEventListener("resize", updateLod);
   if(state==="dense") setCameraTransform(0,0,.8);
+  if(state==="lod") zoomCamera(0.5);
   window.waydeanDesktopPrototype={people,drawTree,renderProfile,setMode};
 })();
