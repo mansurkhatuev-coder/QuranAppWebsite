@@ -1338,6 +1338,87 @@ body.academy-modal-open {
   gap: 0.65rem;
 }
 
+.academy-hub-reports-list {
+  list-style: none;
+  margin: 0.35rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 1rem;
+}
+
+.academy-hub-report-group {
+  border: 1px solid var(--ac-line);
+  border-radius: 16px;
+  background: rgba(11, 15, 19, 0.45);
+  overflow: hidden;
+}
+
+.academy-hub-report-group__head {
+  padding: 0.9rem 1rem 0.7rem;
+  border-bottom: 1px solid var(--ac-line);
+}
+
+.academy-hub-report-group__head strong {
+  display: block;
+  font-size: 1.05rem;
+  line-height: 1.3;
+  margin: 0.15rem 0 0.25rem;
+}
+
+.academy-hub-roster {
+  list-style: none;
+  margin: 0;
+  padding: 0.35rem 0;
+}
+
+.academy-hub-roster__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto;
+  gap: 0.65rem 0.85rem;
+  align-items: center;
+  padding: 0.7rem 1rem;
+  border-top: 1px solid rgba(244, 246, 248, 0.06);
+}
+
+.academy-hub-roster__row:first-child {
+  border-top: 0;
+}
+
+.academy-hub-roster__who {
+  min-width: 0;
+  display: grid;
+  gap: 0.1rem;
+}
+
+.academy-hub-roster__score {
+  display: grid;
+  justify-items: end;
+  gap: 0.1rem;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 640px) {
+  .academy-hub-roster__row {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'who score'
+      'actions actions';
+  }
+
+  .academy-hub-roster__who {
+    grid-area: who;
+  }
+
+  .academy-hub-roster__score {
+    grid-area: score;
+  }
+
+  .academy-hub-roster__row .academy-actions {
+    grid-area: actions;
+    justify-content: flex-start;
+  }
+}
+
 .academy-history-list li {
   display: flex;
   align-items: flex-start;

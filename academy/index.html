@@ -14,7 +14,7 @@
       rel="stylesheet"
       href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Scheherazade+New:wght@400;700&family=Cormorant:wght@500;600&family=Manrope:wght@400;600;700&display=swap"
     />
-    <link rel="stylesheet" href="./academy.css?v=20" />
+    <link rel="stylesheet" href="./academy.css?v=22" />
   </head>
   <body class="academy-body">
     <div class="academy-shell academy-shell--wide">
@@ -228,8 +228,11 @@
           </div>
           <div class="academy-card" id="hub-reports-card" hidden>
             <p class="academy-kicker">Прохождения по ссылке</p>
+            <p class="academy-muted" style="margin:0 0 0.75rem">
+              Каждый ученик идёт сам — ниже ведомость по дню: имена и баллы. Зачёт, запущенный как домашка, тоже здесь.
+            </p>
             <p class="academy-muted" id="hub-reports-empty" hidden>Пока никто не проходил.</p>
-            <ul id="hub-reports-list" class="academy-history-list"></ul>
+            <ul id="hub-reports-list" class="academy-hub-reports-list"></ul>
           </div>
         </section>
 
@@ -286,6 +289,6 @@
     <script src="./question-types.js?v=4"></script>
     <script src="./academy-zahet-task1.js?v=5"></script>
     <script src="./academy-zahet-task2.js?v=5"></script>
-    <script src="./academy.js?v=29"></script>
+    <script src="./academy.js?v=30"></script>
   </body>
 </html>
