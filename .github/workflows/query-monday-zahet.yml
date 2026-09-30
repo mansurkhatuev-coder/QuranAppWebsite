@@ -1,0 +1,38 @@
+name: Query Monday Academy zahet
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  query:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sessions summary (Mon window)
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          set -euo pipefail
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-query-monday-zahet.sql
+
+      - name: Per-student scores
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          set -euo pipefail
+          scripts/apply-academy-live-migration.sh admin/supabase-query-monday-zahet-people.sql
+
+      - name: All sessions in Monday window
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          set -euo pipefail
+          scripts/apply-academy-live-migration.sh admin/supabase-query-monday-all-sessions.sql
