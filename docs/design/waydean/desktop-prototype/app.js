@@ -107,6 +107,7 @@
   function updateLod() {
     updateMinimap();
     const stage = $("#treeStage"), nodes = $$(".person-node");
+    stage.dataset.mode = mode;
     const sample = nodes.find(node => node.dataset.person === selectedId && node.dataset.person !== "p11") || nodes.find(node => node.dataset.person !== "p11") || nodes[0];
     if (!sample) {
       lodLevel = "detail";
@@ -131,7 +132,8 @@
     stage.classList.toggle("lod-overview", lodLevel === "overview");
     const levelName = lodLevel === "overview" ? "ОБЗОР" : lodLevel === "medium" ? "СРЕДНИЙ МАСШТАБ" : "";
     const modeName = mode === "path" ? "МОЙ ПУТЬ" : mode === "branch" ? "МОЯ ВЕТВЬ" : mode === "search" ? "НАЙДЕН ЧЕЛОВЕК" : dense ? "ВСЕ ПОКОЛЕНИЯ · ПЛОТНОЕ ДРЕВО" : "";
-    const label = [modeName, levelName].filter(Boolean).join(" · ");
+    const compactFocus = needsCompactFit() && (mode === "path" || mode === "search");
+    const label = compactFocus ? modeName : [modeName, levelName].filter(Boolean).join(" · ");
     $("#modeLabel").textContent = label;
     $("#modeLabel").classList.toggle("visible", Boolean(label));
     const levelAccessible = lodLevel === "overview" ? "обзор" : lodLevel === "medium" ? "средний масштаб" : "детали";
