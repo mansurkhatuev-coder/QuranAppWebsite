@@ -13,6 +13,7 @@
 - [masters/mobile-master.md](masters/mobile-master.md) — принятая композиция Mobile Master v0.1 и критерии дальнейшей визуальной сверки.
 - [masters/mobile-master-preview.md](masters/mobile-master-preview.md) — мобильная композиция с PNG-предпросмотром и ссылкой на SVG-исходник.
 - [masters/mobile-profile-state.md](masters/mobile-profile-state.md) — отдельный черновик подробного профиля для следующего review.
+- [qa/production-feature-parity.md](qa/production-feature-parity.md) — что уже умеет текущий `drewo/`, где это отражено в новом дизайне и что проверить до замены интерфейса.
 - [`assets/references/`](assets/references/) — исходные коллажи desktop/mobile и отдельные кинематографичные фоны для экрана древа и профиля.
 
 Работа над интерфейсом идёт после утверждения Bible и Master Reference. Изменения сначала проверяются локально, production — только после явного одобрения результата.
