@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#081116">
   <title>Waydean — Desktop state prototype</title>
-  <link rel="stylesheet" href="styles.css?v=motion-quality-1">
+  <link rel="stylesheet" href="styles.css?v=desktop-controls-8">
 </head>
 <body>
   <main class="desktop-app">
@@ -46,8 +46,8 @@
           <div id="nodes"></div>
         </div>
         <div class="empty-state" id="emptyState" hidden><strong>В этой выборке никого нет</strong><span>Сними фильтр или сбрось все условия.</span><button id="resetEmpty">Сбросить фильтры</button></div>
-        <div class="minimap" aria-label="Мини-карта древа"><span>МИНИ-КАРТА</span><svg viewBox="0 0 160 76" aria-hidden="true"><path d="M80 8v12M80 20H42v14m38-14v14m0-14h38v14M42 34H27v16m15-16v16m0-16h29v16m9-16h29v16m0-16v16m0-16h24v16M27 50h122M42 50v14m0-14v14m29-14v14m9-14v14m29-14v14m16-14v14M27 64h122"/><rect x="55" y="24" width="49" height="35"/></svg></div>
-        <div class="tree-controls"><button id="zoomOut" aria-label="Уменьшить">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить">+</button><button aria-label="Полноэкранный режим">⛶</button><button id="whoAmI">◎ Кто я?</button></div>
+        <div class="minimap" aria-label="Мини-карта древа"><span>МИНИ-КАРТА</span><svg id="miniMap" viewBox="0 0 160 76" preserveAspectRatio="none" role="group" tabindex="0" aria-label="Мини-карта. Нажатие перемещает древо, перетаскивание рамки двигает обзор, стрелки двигают по карте."><path aria-hidden="true" d="M80 8v12M80 20H42v14m38-14v14m0-14h38v14M42 34H27v16m15-16v16m0-16h29v16m9-16h29v16m0-16v16m0-16h24v16M27 50h122M42 50v14m0-14v14m29-14v14m9-14v14m29-14v14m16-14v14M27 64h122"/><rect id="miniMapViewport" x="55" y="24" width="49" height="35" aria-hidden="true"/></svg></div>
+        <div class="tree-controls"><button id="zoomOut" aria-label="Уменьшить">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить">+</button><button id="fitTree" aria-label="Подогнать дерево" title="Подогнать дерево">⊞</button><button id="fullscreenButton" aria-label="Полноэкранный режим">⛶</button><button id="whoAmI" aria-label="Кто я?">◎ Кто я?</button></div>
       </section>
 
       <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>
@@ -83,6 +83,6 @@
       <button class="more-item disabled" disabled><strong>Создать видео</strong><small>Отдельный этап разработки</small></button>
     </section>
   </main>
-  <script src="app.js?v=motion-quality-1"></script>
+  <script src="app.js?v=desktop-controls-8"></script>
 </body>
 </html>

@@ -21,6 +21,12 @@
 .stage-background{position:absolute;z-index:-2;inset:-10px;background:#101a1d url("../assets/references/waydean-mobile-cinematic-background.png") center 46%/cover no-repeat;transform:translate3d(var(--parallax-x,0px),var(--parallax-y,0px),0) scale(1.025);transition:transform .48s cubic-bezier(.2,.7,.3,1)}.tree-stage.camera-moving .stage-background{will-change:transform;transition:none}.tree-stage.lod-overview .stage-background{filter:saturate(.88) brightness(.82);transition:filter .4s ease,transform .48s cubic-bezier(.2,.7,.3,1)}
 @media(prefers-reduced-motion:reduce){.person-node.search-target{animation:none}.tree-stage.search-focus .person-node{transition:none}.tree-stage.branch-reveal .person-node.branch-revealed{animation:none}.stage-background,.tree-stage.lod-overview .stage-background{transform:none;transition:none;filter:none}}
 
+#miniMap{cursor:crosshair;touch-action:none}#miniMap:focus-visible{outline:2px solid #f1d089;outline-offset:3px;border-radius:3px}#miniMapViewport{cursor:grab}#miniMapViewport:active{cursor:grabbing}
+.tree-stage:fullscreen{position:fixed;inset:0;z-index:1000;display:block;width:100vw;height:100vh;max-height:none;margin:0;background:#101a1d}
+.tree-stage{overflow:clip}
+@supports not (overflow:clip){.tree-stage{overflow:hidden}}
+.tree-stage .mode-label{left:16px;transform:none}
+
 @media(max-width:980px){
   .topbar{height:104px;align-items:flex-start;gap:0;padding:8px 12px}
   .brand{width:auto;min-width:142px;height:40px;flex:0 0 auto}
@@ -41,7 +47,7 @@
   .tree-stage .person-node strong{font-size:10px}.tree-stage .person-node small{font-size:8px}
   .profile-person{gap:8px;min-width:0}.profile-person>div:last-child{min-width:0;flex:1}.profile-person h1{margin-right:0;font-size:19px;overflow-wrap:anywhere}
   .profile-tabs{justify-content:space-between;gap:4px;overflow:hidden}.profile-tabs button{min-width:0;font-size:10px}.profile-tabs b{min-width:15px;height:15px;font-size:8px}
-  .tree-stage .mode-label{top:94px;left:12px;transform:none}
+  .tree-stage .mode-label{top:12px;right:12px;left:auto;max-width:calc(100% - 168px);transform:none;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .minimap{top:12px;bottom:auto;left:12px;width:132px;height:78px;padding:6px 8px;font-size:8px}
   .minimap svg{height:48px;margin-top:0}
   .tree-controls{right:12px;bottom:12px;left:auto;transform:none}
@@ -59,6 +65,9 @@
   .toast{right:12px;bottom:122px;left:calc(54px + (100vw - 54px)/2);max-width:calc(100vw - 92px);transform:translateX(-50%)}
 }
 @media(max-width:620px){
+  .profile-panel{top:auto;right:8px;bottom:84px;width:min(292px,calc(100vw - 66px));height:min(32vh,280px);max-height:calc(100% - 140px);overflow:auto}
+  .tree-stage .mode-label{top:12px;right:12px;left:auto;max-width:calc(100% - 168px);transform:none;text-align:right}
+  .toast.visible{top:auto;right:auto;bottom:auto;left:-9999px;width:1px;height:1px;max-width:1px;padding:0;overflow:hidden;border:0}
   .mode-label{max-width:calc(100% - 24px);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .brand{min-width:120px;gap:7px}.brand-tree{font-size:28px}.brand strong{font-size:16px;letter-spacing:.06em}.brand small{display:none}
   .premium{width:36px;padding:0;font-size:0}.premium::after{content:"♛";font-size:15px}
@@ -66,6 +75,7 @@
   .rail{width:50px;flex-basis:50px;padding-right:4px;padding-left:4px}.rail-action,.rail-stat{width:38px}
 }
 @media(max-width:460px){
+  .tree-stage .mode-label{max-width:calc(100% - 136px)}
   .brand{flex:0 0 120px;min-width:120px}
   .nav-link{min-width:40px;padding:0 9px}.nav-link span{display:none}
   .profile-panel{top:auto;right:8px;bottom:84px;width:min(272px,calc(100vw - 66px));height:min(32vh,280px);max-height:calc(100% - 140px);overflow:auto}
@@ -74,7 +84,13 @@
   .tree-stage .person-node svg{width:34px;height:43px;flex-basis:43px;padding:9px 8px}
   .tree-stage .person-node strong{font-size:9px}.tree-stage .person-node small{font-size:7px}
   .minimap{left:8px;width:104px;height:64px}.minimap svg{height:38px}
-  .toast.visible{top:auto;right:auto;bottom:auto;left:-9999px;width:1px;height:1px;max-width:1px;padding:0;overflow:hidden;border:0}
+  .tree-controls #whoAmI{width:36px;min-width:36px;margin-left:0;padding:0;font-size:0}.tree-controls #whoAmI::after{content:"◎";font-size:16px}
   .popover{left:62px;right:8px;width:auto;max-width:none;max-height:calc(100vh - 140px);overflow-y:auto}
   .stats-popover{top:116px}
+}
+@media(max-width:360px){
+  .tree-controls{gap:4px;padding:5px}
+  .tree-controls #zoomValue{display:none}
+  .tree-controls button{min-width:32px;height:36px;padding:0 6px}
+  .tree-controls #whoAmI{width:32px;min-width:32px;height:36px}
 }

@@ -86,7 +86,26 @@
     $("#graph").classList.toggle("dense", dense);
     updateLod();
   }
+  function updateMinimap() {
+    const svg = $("#miniMap"), frame = $("#miniMapViewport"), graph = $("#graph"), stage = $("#treeStage");
+    if (!svg || !frame || !graph.clientWidth || !graph.clientHeight || !stage.clientWidth || !stage.clientHeight) return;
+    const { width: mapWidth, height: mapHeight } = svg.viewBox.baseVal;
+    const originX = graph.clientWidth / 2, originY = graph.clientHeight * 0.48;
+    const visibleWidth = Math.min(graph.clientWidth, stage.clientWidth / cameraScale);
+    const visibleHeight = Math.min(graph.clientHeight, stage.clientHeight / cameraScale);
+    const leftWorld = (0 - originX - cameraX) / cameraScale + originX;
+    const topWorld = (0 - originY - cameraY) / cameraScale + originY;
+    const width = visibleWidth / graph.clientWidth * mapWidth;
+    const height = visibleHeight / graph.clientHeight * mapHeight;
+    const x = Math.max(0, Math.min(mapWidth - width, leftWorld / graph.clientWidth * mapWidth));
+    const y = Math.max(0, Math.min(mapHeight - height, topWorld / graph.clientHeight * mapHeight));
+    frame.setAttribute("x", x.toFixed(2));
+    frame.setAttribute("y", y.toFixed(2));
+    frame.setAttribute("width", width.toFixed(2));
+    frame.setAttribute("height", height.toFixed(2));
+  }
   function updateLod() {
+    updateMinimap();
     const stage = $("#treeStage"), nodes = $$(".person-node");
     const sample = nodes.find(node => node.dataset.person === selectedId && node.dataset.person !== "p11") || nodes.find(node => node.dataset.person !== "p11") || nodes[0];
     if (!sample) {
@@ -154,6 +173,20 @@
     $("#treeStage").classList.remove("branch-reveal");
     $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination", "branch-future", "branch-revealed", "search-target"));
   }
+  function cameraFocusAnchor(stage = $("#treeStage")) {
+    const panel = $("#profilePanel"), stageRect = stage.getBoundingClientRect(), panelRect = panel.getBoundingClientRect();
+    const overlaps = !stage.matches(":fullscreen") && !$(".workspace").classList.contains("profile-is-collapsed") && panelRect.left < stageRect.right && panelRect.right > stageRect.left && panelRect.top < stageRect.bottom && panelRect.bottom > stageRect.top;
+    if (overlaps && panelRect.top > stageRect.top + stageRect.height * 0.35) {
+      const visibleBottom = panelRect.top - stageRect.top - 12;
+      return { x: stage.clientWidth / 2, y: (48 + visibleBottom) / 2 };
+    }
+    if (overlaps && panelRect.left > stageRect.left + stageRect.width * 0.2) {
+      const visibleRight = panelRect.left - stageRect.left - 12;
+      return { x: (8 + visibleRight) / 2, y: stage.clientHeight * 0.48 };
+    }
+    return { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+  }
+  const needsCompactFit = () => window.innerWidth <= 760 && !$("#treeStage").matches(":fullscreen");
   function runDesktopPath() {
     cancelTreeMotion();
     const stage = $("#treeStage"), graph = $("#graph");
@@ -186,14 +219,11 @@
     });
     const totalLength = segments.reduce((sum, segment) => sum + segment.length, 0);
     if (!totalLength) return;
-    const anchor = { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+    const anchor = cameraFocusAnchor(stage);
     const destination = centerFor(rectFor(selectedId));
-    const frameFor = (point, scale, progress) => {
-      const destinationOnScreen = { x: destination.x + (anchor.x - destination.x) * progress, y: destination.y + (anchor.y - destination.y) * progress };
-      const focus = { x: destinationOnScreen.x - (destination.x - point.x) * scale, y: destinationOnScreen.y - (destination.y - point.y) * scale };
-      return { x: focus.x - point.x - (point.x - graph.clientWidth / 2) * (scale - 1), y: focus.y - point.y - (point.y - graph.clientHeight * 0.48) * (scale - 1) };
-    };
-    const finalScale = 1.32, finalFrame = frameFor(destination, finalScale, 1);
+    const origin = { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 };
+    const finalScale = 1.32, finalFrame = { x: anchor.x - origin.x - (destination.x - origin.x) * finalScale, y: anchor.y - origin.y - (destination.y - origin.y) * finalScale };
+    const startFrame = { x: cameraX, y: cameraY, scale: cameraScale };
     nodes.get(route[0]).classList.add("path-origin");
     nodes.get(selectedId).classList.add("path-destination");
     stage.classList.add("path-focus");
@@ -211,7 +241,6 @@
       return;
     }
     stage.classList.add("camera-moving");
-    setCameraTransform(0, 0, 1, true);
     const startedAt = performance.now();
     const duration = Math.min(motionProfile.pathMax, Math.max(motionProfile.pathMin, totalLength * 2.4));
     const ease = value => value * value * (3 - 2 * value);
@@ -222,25 +251,18 @@
         const end = consumed + segment.length;
         if (distanceAlong <= end || index === segments.length - 1) {
           const localProgress = Math.min(1, Math.max(0, (distanceAlong - consumed) / segment.length));
-          let point;
-          if (segment.kind === "connector") {
-            const sample = segment.line.getPointAtLength(segment.svgLength * localProgress);
-            point = { x: sample.x * scaleX, y: sample.y * scaleY };
-          } else {
-            point = { x: segment.from.x + (segment.to.x - segment.from.x) * localProgress, y: segment.from.y + (segment.to.y - segment.from.y) * localProgress };
-          }
-          return { point, segmentIndex: index, localProgress, currentId: segment.currentId };
+          return { segmentIndex: index, localProgress, currentId: segment.currentId };
         }
         consumed = end;
       }
-      return { point: destination, segmentIndex: segments.length - 1, localProgress: 1, currentId: selectedId };
+      return { segmentIndex: segments.length - 1, localProgress: 1, currentId: selectedId };
     };
     const step = now => {
       if (sequence !== pathMotionId) return;
       const progress = Math.min(1, (now - startedAt) / duration);
       const eased = ease(progress), sample = sampleAt(eased);
-      const scale = 1 + (finalScale - 1) * eased;
-      const frame = progress === 1 ? finalFrame : frameFor(sample.point, scale, eased);
+      const frame = progress === 1 ? finalFrame : { x: startFrame.x + (finalFrame.x - startFrame.x) * eased, y: startFrame.y + (finalFrame.y - startFrame.y) * eased };
+      const scale = progress === 1 ? finalScale : startFrame.scale + (finalScale - startFrame.scale) * eased;
       setCameraTransform(frame.x, frame.y, scale, true);
       lines.forEach((line, index) => {
         const segmentIndex = connectorSegments.get(line);
@@ -317,7 +339,7 @@
     const stage = $("#treeStage"), graph = $("#graph"), target = $(`[data-person="${selectedId}"]`);
     if (!target) return;
     const scale = replay ? Math.max(cameraScale, 1.24) : cameraScale;
-    const anchor = { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+    const anchor = cameraFocusAnchor(stage);
     const origin = { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 };
     const point = { x: target.offsetLeft, y: target.offsetTop };
     const end = { x: anchor.x - origin.x - (point.x - origin.x) * scale, y: anchor.y - origin.y - (point.y - origin.y) * scale };
@@ -355,10 +377,10 @@
   function setMode(next) {
     cancelTreeMotion();
     mode=next;
-    if(next==="all") { filters={min:1,max:5,photos:false,main:false}; setCameraTransform(0,0,1); }
-    if(next==="branch") setCameraTransform(0,0,1);
+    if(next==="all") filters={min:1,max:5,photos:false,main:false};
     $("#treeStage").classList.toggle("path-focus", next==="path");
     drawTree();
+    if (needsCompactFit() || next==="all" || next==="branch") fitTree();
     announce(next==="path"?"Камера следует от предка к выбранному человеку.":next==="branch"?"Подсвечена выбранная ветвь.":"Показаны все поколения.");
     if(next==="path") runDesktopPath();
     if(next==="branch") runBranchReveal();
@@ -400,14 +422,33 @@
     stage.classList.toggle("camera-moving", moving);
     stage.style.setProperty("--parallax-x", moving && motionProfile.parallax && !reducedMotion ? `${Math.max(-8, Math.min(8, cameraX * 0.025))}px` : "0px");
     stage.style.setProperty("--parallax-y", moving && motionProfile.parallax && !reducedMotion ? `${Math.max(-6, Math.min(6, cameraY * 0.025))}px` : "0px");
-    if (!moving) updateLod();
+    if (moving) updateMinimap();
+    else updateLod();
   }
   function zoomCamera(nextScale, point = null) {
     cancelTreeMotion();
-    const stage = $("#treeStage"), graph = $("#graph"), anchor = point || { x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 };
+    const stage = $("#treeStage"), graph = $("#graph"), anchor = point || cameraFocusAnchor(stage);
     const origin = { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 };
     const scale = Math.max(0.5, Math.min(1.75, nextScale)), ratio = scale / cameraScale;
     setCameraTransform(anchor.x - origin.x - (anchor.x - origin.x - cameraX) * ratio, anchor.y - origin.y - (anchor.y - origin.y - cameraY) * ratio, scale);
+  }
+  function fitTree() {
+    cancelTreeMotion();
+    const stage = $("#treeStage"), graph = $("#graph"), nodes = $$(".person-node");
+    if (!nodes.length) { setCameraTransform(0, 0, 1); return; }
+    const bounds = nodes.map(node => ({ left: node.offsetLeft - node.offsetWidth / 2, right: node.offsetLeft + node.offsetWidth / 2, top: node.offsetTop - node.offsetHeight / 2, bottom: node.offsetTop + node.offsetHeight / 2 }));
+    const minX = Math.min(...bounds.map(item => item.left)), maxX = Math.max(...bounds.map(item => item.right));
+    const minY = Math.min(...bounds.map(item => item.top)), maxY = Math.max(...bounds.map(item => item.bottom));
+    let leftInset = 8, rightInset = 8, topInset = 48, bottomInset = 88;
+    const stageRect = stage.getBoundingClientRect(), profileRect = $("#profilePanel").getBoundingClientRect();
+    const profileOverlapsStage = !stage.matches(":fullscreen") && profileRect.left < stageRect.right && profileRect.right > stageRect.left && profileRect.top < stageRect.bottom && profileRect.bottom > stageRect.top;
+    if (profileOverlapsStage && profileRect.top > stageRect.top + stageRect.height * 0.35) bottomInset = Math.max(bottomInset, stageRect.bottom - profileRect.top + 12);
+    else if (profileOverlapsStage && profileRect.left > stageRect.left + stageRect.width * 0.3) rightInset = Math.max(rightInset, stageRect.right - profileRect.left + 12);
+    const availableWidth = Math.max(1, stage.clientWidth - leftInset - rightInset), availableHeight = Math.max(1, stage.clientHeight - topInset - bottomInset);
+    const scale = Math.max(0.5, Math.min(1.75, availableWidth / (maxX - minX), availableHeight / (maxY - minY)));
+    const centerX = (minX + maxX) / 2, centerY = (minY + maxY) / 2;
+    const originX = graph.clientWidth / 2, originY = graph.clientHeight * 0.48;
+    setCameraTransform(leftInset + availableWidth / 2 - originX - (centerX - originX) * scale, topInset + availableHeight / 2 - originY - (centerY - originY) * scale, scale);
   }
   function stagePoint(event) {
     const rect = $("#treeStage").getBoundingClientRect();
@@ -492,6 +533,73 @@
       wheelEndTimer = window.setTimeout(() => { wheelEndTimer = 0; setCameraTransform(cameraX, cameraY, cameraScale); }, 180);
     }, { passive: false });
   }
+  function installMinimap() {
+    const svg = $("#miniMap"), frame = $("#miniMapViewport"), stage = $("#treeStage"), graph = $("#graph");
+    let gesture = null;
+    const pointFor = event => {
+      const point = svg.createSVGPoint();
+      point.x = event.clientX;
+      point.y = event.clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    };
+    const worldPoint = point => ({ x: point.x / svg.viewBox.baseVal.width * graph.clientWidth, y: point.y / svg.viewBox.baseVal.height * graph.clientHeight });
+    const centerOn = point => {
+      const world = worldPoint(point), origin = { x: graph.clientWidth / 2, y: graph.clientHeight * 0.48 }, anchor = cameraFocusAnchor(stage);
+      setCameraTransform(anchor.x - origin.x - (world.x - origin.x) * cameraScale, anchor.y - origin.y - (world.y - origin.y) * cameraScale, cameraScale);
+    };
+    svg.addEventListener("pointerdown", event => {
+      if (event.button !== 0) return;
+      event.preventDefault();
+      cancelTreeMotion();
+      gesture = { pointerId: event.pointerId, start: pointFor(event), startX: cameraX, startY: cameraY, moved: false, onFrame: event.target === frame };
+      svg.setPointerCapture(event.pointerId);
+    });
+    svg.addEventListener("pointermove", event => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      const point = pointFor(event), dx = point.x - gesture.start.x, dy = point.y - gesture.start.y;
+      if (!gesture.moved && Math.hypot(dx, dy) < 1.5) return;
+      gesture.moved = true;
+      const worldDx = dx / svg.viewBox.baseVal.width * graph.clientWidth;
+      const worldDy = dy / svg.viewBox.baseVal.height * graph.clientHeight;
+      setCameraTransform(gesture.startX - worldDx * cameraScale, gesture.startY - worldDy * cameraScale, cameraScale, true);
+    });
+    const endGesture = event => {
+      if (!gesture || gesture.pointerId !== event.pointerId) return;
+      const completed = gesture;
+      gesture = null;
+      if (svg.hasPointerCapture(event.pointerId)) svg.releasePointerCapture(event.pointerId);
+      if (completed.moved) setCameraTransform(cameraX, cameraY, cameraScale);
+      else if (!completed.onFrame) centerOn(completed.start);
+    };
+    svg.addEventListener("pointerup", endGesture);
+    svg.addEventListener("pointercancel", endGesture);
+    svg.addEventListener("keydown", event => {
+      const stepX = stage.clientWidth * 0.08, stepY = stage.clientHeight * 0.08;
+      const delta = { ArrowLeft: [stepX, 0], ArrowRight: [-stepX, 0], ArrowUp: [0, stepY], ArrowDown: [0, -stepY] }[event.key];
+      if (!delta) return;
+      event.preventDefault();
+      cancelTreeMotion();
+      setCameraTransform(cameraX + delta[0], cameraY + delta[1], cameraScale);
+    });
+  }
+  function installFullscreen() {
+    const stage = $("#treeStage"), button = $("#fullscreenButton");
+    button.addEventListener("click", async () => {
+      try {
+        if (document.fullscreenElement === stage) await document.exitFullscreen();
+        else if (!document.fullscreenElement && stage.requestFullscreen) await stage.requestFullscreen();
+        else announce("Полноэкранный режим недоступен в этом браузере.");
+      } catch {
+        announce("Не удалось открыть полноэкранный режим.");
+      }
+    });
+    document.addEventListener("fullscreenchange", () => {
+      const active = document.fullscreenElement === stage;
+      button.setAttribute("aria-label", active ? "Выйти из полноэкранного режима" : "Полноэкранный режим");
+      button.title = active ? "Выйти из полноэкранного режима" : "Полноэкранный режим";
+      updateLod();
+    });
+  }
   $("#searchButton").addEventListener("click",()=>openPopover("#searchPopover")); $("#railSearch").addEventListener("click",()=>openPopover("#searchPopover"));
   $("#searchInput").addEventListener("input",event=>renderSearch(event.target.value));
   $("#filtersButton").addEventListener("click",()=>openPopover("#filterPopover")); $("#statsButton").addEventListener("click",()=>openPopover("#statsPopover")); $("#statsButton").addEventListener("dblclick",()=>openPopover("#statsPopover")); $("[data-nav=stats]").addEventListener("click",()=>openPopover("#statsPopover"));
@@ -503,9 +611,18 @@
   $("#resetEmpty").addEventListener("click",()=>{$("#resetFilters").click();});
   $("#zoomIn").addEventListener("click",()=>zoomCamera(Math.min(1.75,cameraScale+0.1)));
   $("#zoomOut").addEventListener("click",()=>zoomCamera(Math.max(0.5,cameraScale-0.1)));
+  $("#fitTree").addEventListener("click",fitTree);
   $("#whoAmI").addEventListener("click",()=>{cancelTreeMotion();selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");if(mode==="path")runDesktopPath();if(mode==="branch")runBranchReveal();});
   $$("[data-nav]").forEach(button=>button.addEventListener("click",()=>{const nav=button.dataset.nav;setActive(nav);if(nav==="tree")setMode("all");if(nav==="branches")openPopover("#filterPopover");if(nav==="people")openPopover("#searchPopover");}));
-  document.addEventListener("keydown",event=>{if(event.key==="Escape")closePopovers();});
+  document.addEventListener("keydown", event => {
+    if (event.key !== "Escape") return;
+    if (document.fullscreenElement === $("#treeStage")) {
+      event.preventDefault();
+      document.exitFullscreen().catch(() => announce("Не удалось выйти из полноэкранного режима."));
+      return;
+    }
+    closePopovers();
+  });
   renderProfile(state==="relatives"?"relatives":state==="media"?"media":"info"); drawTree();
   if(state==="search" || state==="searchMotion") {openPopover("#searchPopover");$("#searchInput").value="Магомед";renderSearch("Магомед");}
   if(state==="searchEmpty") {openPopover("#searchPopover");$("#searchInput").value="ИмяБезСовпадений";renderSearch($("#searchInput").value);}
@@ -516,8 +633,16 @@
   if(state==="path") setMode("path"); if(state==="branch") setMode("branch");
   if(state==="focus") {document.querySelector('[data-person="p07"]')?.focus();}
   installCameraGestures();
-  window.addEventListener("resize", updateLod);
-  if(state==="dense") setCameraTransform(0,0,.8);
-  if(state==="lod") zoomCamera(0.5);
+  installMinimap();
+  installFullscreen();
+  let responsiveFitTimer = 0;
+  window.addEventListener("resize", () => {
+    updateLod();
+    clearTimeout(responsiveFitTimer);
+    if (needsCompactFit()) responsiveFitTimer = window.setTimeout(() => { if (!$("#treeStage").classList.contains("camera-moving")) fitTree(); }, 180);
+  });
+  if(state==="dense") { if (needsCompactFit()) fitTree(); else setCameraTransform(0,0,.8); }
+  if(state==="lod") { if (needsCompactFit()) fitTree(); else zoomCamera(0.5); }
+  if(needsCompactFit() && !["path","branch","dense","lod"].includes(state)) fitTree();
   window.waydeanDesktopPrototype={people,drawTree,renderProfile,setMode};
 })();
