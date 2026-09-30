@@ -1,3 +1,5 @@
+import { analyzeFrameWindow, nextLowerQuality } from "./motion-quality.mjs?v=adaptive-quality-2";
+
 (() => {
   "use strict";
   const USER_PATH = "M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z";
@@ -26,13 +28,21 @@
   const deviceMemory = Number(navigator.deviceMemory) || 0;
   const saveData = Boolean(navigator.connection?.saveData);
   const automaticQuality = saveData || deviceCores > 0 && deviceCores <= 4 || deviceMemory > 0 && deviceMemory <= 4 ? "low" : deviceCores >= 8 && deviceMemory >= 8 ? "high" : "medium";
-  const motionQuality = ["high", "medium", "low"].includes(qualityQuery) ? qualityQuery : automaticQuality;
-  const motionProfile = {
+  const qualityOverride = ["high", "medium", "low"].includes(qualityQuery) ? qualityQuery : null;
+  let motionQuality = qualityOverride || automaticQuality;
+  const motionProfiles = {
     high: { pathMin:1600, pathMax:3200, searchBase:760, searchDistance:0.24, repeatBase:260, repeatDistance:0.2, branchStart:420, branchStagger:460, branchCleanup:650, branchSettle:700, parallax:true },
     medium: { pathMin:1280, pathMax:2400, searchBase:620, searchDistance:0.2, repeatBase:220, repeatDistance:0.16, branchStart:300, branchStagger:300, branchCleanup:460, branchSettle:500, parallax:false },
     low: { pathMin:900, pathMax:1700, searchBase:420, searchDistance:0.15, repeatBase:180, repeatDistance:0.1, branchStart:180, branchStagger:160, branchCleanup:300, branchSettle:350, parallax:false }
-  }[motionQuality];
+  };
+  let motionProfile = motionProfiles[motionQuality];
+  const reducedMotionPreference = window.matchMedia("(prefers-reduced-motion: reduce)");
+  const qualityLabels = { high:"Высокое", medium:"Среднее", low:"Низкое" };
   $("#treeStage").classList.add(`motion-${motionQuality}`);
+  $("#treeStage").dataset.motionQuality = motionQuality;
+  $("#treeStage").dataset.motionQualitySource = qualityOverride ? "manual" : "automatic";
+  $("#treeStage").dataset.motionQualityDowngrades = "0";
+  $("#treeStage").dataset.motionQualityMonitoring = "false";
   const baseIds = new Set(["p01","p02","p03","p04","p05","p06","p07"]);
   let selectedId = "p06";
   let mode = "all";
@@ -43,6 +53,11 @@
   let lodLevel = "detail";
   let pathMotionId = 0;
   let pathAnimationFrame = 0;
+  let motionQualityFrame = 0;
+  let motionFrameWindowStartedAt = 0;
+  let motionFramePreviousAt = 0;
+  let motionFrameIntervals = [];
+  let automaticQualityDowngrades = 0;
   let treeMotionTimers = [];
   const activePointers = new Map();
   let pointerGesture = null;
@@ -158,13 +173,76 @@
     $("#showBranch")?.addEventListener("click",()=>setMode("branch"));
   }
   function setActive(nav) { $$(".nav-link").forEach(button=>button.classList.toggle("active",button.dataset.nav===nav)); }
+  function hasTreeMotion() {
+    const stage = $("#treeStage");
+    return stage.classList.contains("camera-moving") || stage.classList.contains("branch-reveal");
+  }
+  function stopMotionQualitySampling() {
+    if (motionQualityFrame) cancelAnimationFrame(motionQualityFrame);
+    motionQualityFrame = 0;
+    motionFrameWindowStartedAt = 0;
+    motionFramePreviousAt = 0;
+    motionFrameIntervals = [];
+    $("#treeStage").dataset.motionQualityMonitoring = "false";
+  }
+  function lowerAutomaticQuality() {
+    if (qualityOverride || reducedMotionPreference.matches) return false;
+    const nextQuality = nextLowerQuality(motionQuality);
+    if (nextQuality === motionQuality) return false;
+    const stage = $("#treeStage");
+    stage.classList.remove(`motion-${motionQuality}`);
+    motionQuality = nextQuality;
+    motionProfile = motionProfiles[motionQuality];
+    stage.classList.add(`motion-${motionQuality}`);
+    stage.dataset.motionQuality = motionQuality;
+    stage.style.setProperty("--parallax-x", "0px");
+    stage.style.setProperty("--parallax-y", "0px");
+    automaticQualityDowngrades += 1;
+    stage.dataset.motionQualityDowngrades = String(automaticQualityDowngrades);
+    announce(`Автонастройка движения: качество ${qualityLabels[motionQuality].toLowerCase()} для более плавной работы.`);
+    return true;
+  }
+  function startMotionQualitySampling() {
+    if (motionQualityFrame || qualityOverride || motionQuality === "low" || reducedMotionPreference.matches || document.hidden || !hasTreeMotion()) return;
+    const sample = now => {
+      motionQualityFrame = 0;
+      if (qualityOverride || motionQuality === "low" || reducedMotionPreference.matches || document.hidden || !hasTreeMotion()) {
+        stopMotionQualitySampling();
+        return;
+      }
+      if (!motionFramePreviousAt) {
+        motionFrameWindowStartedAt = now;
+        motionFramePreviousAt = now;
+      } else {
+        const interval = now - motionFramePreviousAt;
+        if (interval > 0) motionFrameIntervals.push(interval);
+        motionFramePreviousAt = now;
+        if (now - motionFrameWindowStartedAt >= 1000) {
+          const result = analyzeFrameWindow(motionFrameIntervals, { elapsedMs: now - motionFrameWindowStartedAt });
+          motionFrameWindowStartedAt = now;
+          motionFrameIntervals = [];
+          if (result.shouldDowngrade && lowerAutomaticQuality() && motionQuality === "low") return;
+        }
+      }
+      motionQualityFrame = requestAnimationFrame(sample);
+    };
+    motionQualityFrame = requestAnimationFrame(sample);
+    $("#treeStage").dataset.motionQualityMonitoring = "true";
+  }
+  function syncMotionQualitySampling() {
+    if (hasTreeMotion() && !qualityOverride && motionQuality !== "low" && !reducedMotionPreference.matches && !document.hidden) startMotionQualitySampling();
+    else stopMotionQualitySampling();
+  }
+  document.addEventListener("visibilitychange", syncMotionQualitySampling);
+  reducedMotionPreference.addEventListener?.("change", syncMotionQualitySampling);
   function cancelTreeMotion() {
     pathMotionId += 1;
     if (pathAnimationFrame) cancelAnimationFrame(pathAnimationFrame);
     pathAnimationFrame = 0;
     treeMotionTimers.forEach(timer => clearTimeout(timer));
     treeMotionTimers = [];
-    $("#treeStage").classList.remove("camera-moving", "search-focus");
+    $("#treeStage").classList.remove("camera-moving", "search-focus", "branch-reveal");
+    syncMotionQualitySampling();
     $("#treeStage").style.setProperty("--parallax-x", "0px");
     $("#treeStage").style.setProperty("--parallax-y", "0px");
     $$(".tree-line").forEach(line => {
@@ -172,7 +250,6 @@
       line.style.strokeDashoffset = "";
       line.classList.remove("path-tracing", "branch-future", "branch-revealed", "branch-anchor");
     });
-    $("#treeStage").classList.remove("branch-reveal");
     $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination", "branch-future", "branch-revealed", "search-target"));
   }
   function cameraFocusAnchor(stage = $("#treeStage")) {
@@ -308,6 +385,7 @@
       branchIds.forEach(id => $(`[data-person="${id}"]`)?.classList.remove("branch-future"));
       $$(".tree-line.branch-future").forEach(line => { line.style.strokeDashoffset = "0"; });
       stage.classList.remove("branch-reveal");
+      syncMotionQualitySampling();
       treeMotionTimers.push(setTimeout(() => cancelTreeMotion(), motionProfile.branchSettle));
     };
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !branchIds.length) {
@@ -315,6 +393,7 @@
       return;
     }
     stage.classList.add("branch-reveal");
+    syncMotionQualitySampling();
     const sequence = pathMotionId;
     [...depthGroups.entries()].sort(([a],[b]) => a-b).forEach(([, ids], index) => {
       treeMotionTimers.push(setTimeout(() => {
@@ -331,6 +410,7 @@
     treeMotionTimers.push(setTimeout(() => {
       if (sequence !== pathMotionId) return;
       stage.classList.remove("branch-reveal");
+      syncMotionQualitySampling();
       $$(".tree-line").forEach(line => { line.style.strokeDasharray = ""; line.style.strokeDashoffset = ""; line.classList.remove("branch-revealed", "branch-anchor"); });
       $$(".person-node").forEach(node => node.classList.remove("branch-revealed", "branch-future"));
       treeMotionTimers = [];
@@ -422,6 +502,7 @@
     $("#graph").style.transform = `translate(${cameraX}px, ${cameraY}px) scale(${cameraScale})`;
     const stage = $("#treeStage"), reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     stage.classList.toggle("camera-moving", moving);
+    syncMotionQualitySampling();
     stage.style.setProperty("--parallax-x", moving && motionProfile.parallax && !reducedMotion ? `${Math.max(-8, Math.min(8, cameraX * 0.025))}px` : "0px");
     stage.style.setProperty("--parallax-y", moving && motionProfile.parallax && !reducedMotion ? `${Math.max(-6, Math.min(6, cameraY * 0.025))}px` : "0px");
     if (moving) updateMinimap();
@@ -646,5 +727,5 @@
   if(state==="dense") { if (needsCompactFit()) fitTree(); else setCameraTransform(0,0,.8); }
   if(state==="lod") { if (needsCompactFit()) fitTree(); else zoomCamera(0.5); }
   if(needsCompactFit() && !["path","branch","dense","lod"].includes(state)) fitTree();
-  window.waydeanDesktopPrototype={people,drawTree,renderProfile,setMode};
+  window.waydeanDesktopPrototype={people,drawTree,renderProfile,setMode,getMotionQuality:()=>({quality:motionQuality,source:qualityOverride?"manual":"automatic",automaticDowngrades:automaticQualityDowngrades})};
 })();
