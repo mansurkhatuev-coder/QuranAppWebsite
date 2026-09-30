@@ -7,6 +7,7 @@
   <meta name="theme-color" content="#081116">
   <title>Waydean — локальный preview на данных древа</title>
   <link rel="stylesheet" href="waydean-preview.css">
+  <link rel="stylesheet" href="waydean-preview-camera.css">
 </head>
 <body>
   <main class="app-shell">
@@ -45,14 +46,16 @@
         <div class="stage-wash" aria-hidden="true"></div>
         <div class="mode-label" id="modeLabel" aria-live="polite"></div>
         <div class="graph-viewport" id="graphViewport" tabindex="0" aria-label="Полотно дерева; используйте прокрутку для перемещения">
-          <div class="graph" id="graph">
-            <svg class="tree-lines" id="treeLines" aria-hidden="true"></svg>
-            <div id="treeNodes"></div>
+          <div class="graph-extent" id="graphExtent">
+            <div class="graph" id="graph">
+              <svg class="tree-lines" id="treeLines" aria-hidden="true"></svg>
+              <div id="treeNodes"></div>
+            </div>
           </div>
         </div>
         <div class="empty-state" id="emptyState" hidden><strong>В этой выборке никого нет</strong><span>Измени или сбрось фильтры, чтобы вернуть людей на древо.</span><button id="emptyReset">Сбросить фильтры</button></div>
-        <div class="mini-map" aria-label="Мини-карта древа"><strong>МИНИ-КАРТА</strong><svg id="miniMapSvg" viewBox="0 0 180 80" aria-hidden="true"></svg><span id="miniMapSummary"></span></div>
-        <div class="tree-controls"><button id="zoomOut" aria-label="Уменьшить масштаб">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить масштаб">+</button><button id="fitTree" aria-label="Подогнать дерево к экрану">⛶</button><button id="whoAmI">◎ Кто я?</button></div>
+        <div class="mini-map" aria-label="Мини-карта древа"><strong>МИНИ-КАРТА</strong><svg id="miniMapSvg" viewBox="0 0 180 80" tabindex="0" role="group" aria-label="Мини-карта: нажмите для перехода, перетащите обзор или используйте стрелки"></svg><span id="miniMapSummary"></span></div>
+        <div class="tree-controls"><button id="zoomOut" aria-label="Уменьшить масштаб">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить масштаб">+</button><button id="fitTree" aria-label="Подогнать текущую область">⛶</button><button id="whoAmI">◎ Кто я?</button></div>
       </section>
 
       <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>

@@ -1,10 +1,14 @@
 import { flattenTree } from './waydean-preview-model.mjs';
+import {
+  cameraLayout, readableFitZoom, zoomAroundAnchor,
+  miniMapViewport, miniMapScrollTarget, wheelZoomFactor
+} from './waydean-preview-camera.mjs';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const ui = {
-  stage: $('#treeStage'), viewport: $('#graphViewport'), graph: $('#graph'), nodes: $('#treeNodes'), lines: $('#treeLines'),
+  stage: $('#treeStage'), viewport: $('#graphViewport'), extent: $('#graphExtent'), graph: $('#graph'), nodes: $('#treeNodes'), lines: $('#treeLines'), miniSvg: $('#miniMapSvg'),
   profile: $('#profilePanel'), summary: $('#datasetSummary'), railCount: $('#railCount'), mode: $('#modeLabel'),
   empty: $('#emptyState'), search: $('#searchPopover'), filters: $('#filtersPopover'), stats: $('#statsPopover'),
   more: $('#morePopover'), backdrop: $('#popoverBackdrop'), toast: $('#toast'), error: $('#loadError')
@@ -20,6 +24,18 @@ let filters = { min: 1, max: Infinity, photosOnly: false };
 let lastFocus = null;
 let toastTimer = 0;
 let fullDataDepth = 1;
+let currentCameraLayout = null;
+
+function syncCameraLayout() {
+  currentCameraLayout = cameraLayout(
+    ui.viewport.clientWidth, ui.viewport.clientHeight,
+    ui.graph.offsetWidth, ui.graph.offsetHeight, zoom
+  );
+  ui.extent.style.width = `${currentCameraLayout.extentWidth}px`;
+  ui.extent.style.height = `${currentCameraLayout.extentHeight}px`;
+  ui.graph.style.transform = `translate(${currentCameraLayout.offsetX}px, ${currentCameraLayout.offsetY}px) scale(${zoom})`;
+  ui.graph.dataset.lod = zoom < 0.45 ? 'overview' : zoom < 0.7 ? 'compact' : 'full';
+}
 
 function formatYears(person) {
   if (person.born == null && person.died == null) return 'Даты неизвестны';
@@ -125,6 +141,8 @@ function drawTree() {
   if (!visible.length || !selected) {
     ui.graph.style.width = '1000px';
     ui.graph.style.height = '760px';
+    syncCameraLayout();
+    ui.miniSvg.replaceChildren();
     ui.mode.textContent = '';
     ui.mode.classList.remove('visible');
     $('#miniMapSummary').textContent = `${records.length} людей · фильтр: 0`;
@@ -230,27 +248,34 @@ function drawTree() {
   ui.mode.classList.toggle('visible', Boolean(ui.mode.textContent));
   const sourceRoot = ancestorContextRoot(selectedId);
   $('#miniMapSummary').textContent = `${records.length} людей · показано ${visible.length}`;
+  syncCameraLayout();
   drawMiniMap(positions, sourceRoot, graphWidth, graphHeight);
+  updateMiniViewport();
   updateStats();
 }
 
 function drawMiniMap(positions, root, graphWidth, graphHeight) {
-  const svg = $('#miniMapSvg');
+  const svg = ui.miniSvg;
   svg.replaceChildren();
-  const scale = Math.min(166 / graphWidth, 58 / graphHeight);
+  const { scale, originX, originY } = miniMapViewport({
+    graphWidth, graphHeight, zoom,
+    scrollLeft: ui.viewport.scrollLeft, scrollTop: ui.viewport.scrollTop,
+    viewWidth: ui.viewport.clientWidth, viewHeight: ui.viewport.clientHeight,
+    offsetX: currentCameraLayout.offsetX, offsetY: currentCameraLayout.offsetY
+  });
   for (const person of currentRecords()) {
     const point = positions.get(person.id);
     if (!point) continue;
     if (person.parentId && positions.has(person.parentId)) {
       const parent = positions.get(person.parentId);
       const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-      path.setAttribute('d', `M${8 + parent.centerX * scale} ${8 + parent.centerY * scale} L${8 + point.centerX * scale} ${8 + point.centerY * scale}`);
+      path.setAttribute('d', `M${originX + parent.centerX * scale} ${originY + parent.centerY * scale} L${originX + point.centerX * scale} ${originY + point.centerY * scale}`);
       path.setAttribute('class', 'mini-line');
       svg.append(path);
     }
     const dot = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    dot.setAttribute('cx', String(8 + point.centerX * scale));
-    dot.setAttribute('cy', String(8 + point.centerY * scale));
+    dot.setAttribute('cx', String(originX + point.centerX * scale));
+    dot.setAttribute('cy', String(originY + point.centerY * scale));
     dot.setAttribute('r', person.id === selectedId ? '2.5' : '1.6');
     dot.setAttribute('class', person.id === selectedId ? 'mini-dot selected' : 'mini-dot');
     svg.append(dot);
@@ -351,10 +376,16 @@ function centerPerson(id) {
   const card = ui.nodes.querySelector('[data-person-id="' + CSS.escape(id) + '"]');
   if (!card) return;
   ui.viewport.scrollTo({
-    left: Math.max(0, parseFloat(card.style.left) * zoom - ui.viewport.clientWidth / 2),
-    top: Math.max(0, parseFloat(card.style.top) * zoom - ui.viewport.clientHeight / 2),
+    left: Math.max(0, currentCameraLayout.offsetX + parseFloat(card.style.left) * zoom - ui.viewport.clientWidth / 2),
+    top: Math.max(0, currentCameraLayout.offsetY + parseFloat(card.style.top) * zoom - ui.viewport.clientHeight / 2),
     behavior: 'instant'
   });
+}
+
+function centerVisiblePerson() {
+  const selected = ui.nodes.querySelector('[data-person-id="' + CSS.escape(selectedId) + '"]');
+  const target = selected || ui.nodes.querySelector('.person-node');
+  if (target) centerPerson(target.dataset.personId);
 }
 
 function selectPerson(id) {
@@ -364,6 +395,7 @@ function selectPerson(id) {
   closePopovers();
   drawTree();
   renderProfile();
+  if (zoom < 0.9) setZoom(0.9);
   centerPerson(id);
 }
 
@@ -392,7 +424,8 @@ function setMode(next) {
   mode = next;
   closePopovers();
   drawTree();
-  const labels = { path: 'Подсвечен путь от старшего известного предка.', branch: 'Показана выбранная ветвь.', all: 'Показаны ближайшие три поколения.', 'all-tree': 'Показано всё дерево.' };
+  fitTree();
+  const labels = { path: 'Подсвечен путь от старшего известного предка.', branch: 'Показана выбранная ветвь.', all: 'Показаны ближайшие три поколения.', 'all-tree': 'Всё дерево доступно. Мини-карта поможет перейти к другим ветвям.' };
   announce(labels[next] || labels.all);
 }
 
@@ -436,12 +469,40 @@ function updateStats() {
 }
 
 function updateMiniViewport() {
-  const graphRect = ui.graph.getBoundingClientRect();
-  const viewRect = ui.viewport.getBoundingClientRect();
-  document.querySelector('#miniMapSvg').querySelector('.mini-window')?.remove();
-  const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  rect.setAttribute('x','8'); rect.setAttribute('y','8'); rect.setAttribute('width',String(Math.min(164, viewRect.width / Math.max(graphRect.width,1) * 164)));
-  rect.setAttribute('height',String(Math.min(56, viewRect.height / Math.max(graphRect.height,1) * 56))); rect.setAttribute('class','mini-window'); $('#miniMapSvg').append(rect);
+  if (!currentCameraLayout || !ui.miniSvg.querySelector('.mini-dot')) return;
+  const frame = miniMapViewport({
+    graphWidth: ui.graph.offsetWidth, graphHeight: ui.graph.offsetHeight, zoom,
+    scrollLeft: ui.viewport.scrollLeft, scrollTop: ui.viewport.scrollTop,
+    viewWidth: ui.viewport.clientWidth, viewHeight: ui.viewport.clientHeight,
+    offsetX: currentCameraLayout.offsetX, offsetY: currentCameraLayout.offsetY
+  });
+  let rect = ui.miniSvg.querySelector('.mini-window');
+  if (!rect) {
+    rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    rect.setAttribute('class', 'mini-window');
+    ui.miniSvg.append(rect);
+  }
+  for (const key of ['x', 'y', 'width', 'height']) rect.setAttribute(key, String(frame[key]));
+}
+
+function miniPoint(clientX, clientY) {
+  const point = ui.miniSvg.createSVGPoint();
+  point.x = clientX;
+  point.y = clientY;
+  return point.matrixTransform(ui.miniSvg.getScreenCTM().inverse());
+}
+
+function moveFromMiniMap(clientX, clientY) {
+  if (!currentCameraLayout || !ui.miniSvg.querySelector('.mini-dot')) return;
+  const point = miniPoint(clientX, clientY);
+  const target = miniMapScrollTarget({
+    miniX: point.x, miniY: point.y,
+    graphWidth: ui.graph.offsetWidth, graphHeight: ui.graph.offsetHeight, zoom,
+    viewWidth: ui.viewport.clientWidth, viewHeight: ui.viewport.clientHeight,
+    offsetX: currentCameraLayout.offsetX, offsetY: currentCameraLayout.offsetY
+  });
+  ui.viewport.scrollTo({ left: target.left, top: target.top, behavior: 'instant' });
+  updateMiniViewport();
 }
 
 function populateGenerationFilters() {
@@ -477,12 +538,15 @@ function bindControls() {
   }));
   $('#applyFilters').addEventListener('click', () => {
     filters = { min: Number($('#minGeneration').value), max: Number($('#maxGeneration').value), photosOnly: $('#photosOnly').checked };
-    closePopovers(); drawTree();
+    closePopovers(); drawTree(); fitTree();
+    if (ui.nodes.children.length && !ui.nodes.querySelector('[data-person-id="' + CSS.escape(selectedId) + '"]')) {
+      announce('Выбранный человек скрыт фильтром. Камера перешла к первому результату.');
+    }
   });
   $('#resetFilters').addEventListener('click', () => {
     filters = { min: 1, max: fullDataDepth, photosOnly: false };
     $('#minGeneration').value = '1'; $('#maxGeneration').value = String(fullDataDepth); $('#photosOnly').checked = false;
-    closePopovers(); drawTree();
+    closePopovers(); drawTree(); fitTree();
   });
   $('#emptyReset').addEventListener('click', () => $('#resetFilters').click());
   $('#zoomIn').addEventListener('click', () => setZoom(zoom + 0.1));
@@ -491,22 +555,111 @@ function bindControls() {
   $('#whoAmI').addEventListener('click', () => announce('Локальный просмотр не использует вход в семейный аккаунт.'));
   document.addEventListener('keydown', event => { if (event.key === 'Escape') closePopovers(); });
   ui.viewport.addEventListener('scroll', updateMiniViewport, { passive: true });
-  window.addEventListener('resize', updateMiniViewport);
+  window.addEventListener('resize', () => {
+    syncCameraLayout();
+    centerVisiblePerson();
+    updateMiniViewport();
+  });
+  bindCameraGestures();
 }
 
-function setZoom(next) {
-  zoom = Math.max(0.01, Math.min(1.4, next));
-  ui.graph.style.transform = `scale(${zoom})`;
+function bindCameraGestures() {
+  let miniDrag = null;
+  ui.miniSvg.addEventListener('pointerdown', event => {
+    if (event.button !== 0) return;
+    miniDrag = event.pointerId;
+    ui.miniSvg.setPointerCapture(event.pointerId);
+    moveFromMiniMap(event.clientX, event.clientY);
+    event.preventDefault();
+  });
+  ui.miniSvg.addEventListener('pointermove', event => {
+    if (miniDrag === event.pointerId) moveFromMiniMap(event.clientX, event.clientY);
+  });
+  const endMiniDrag = event => {
+    if (miniDrag !== event.pointerId) return;
+    miniDrag = null;
+    if (ui.miniSvg.hasPointerCapture(event.pointerId)) ui.miniSvg.releasePointerCapture(event.pointerId);
+  };
+  ui.miniSvg.addEventListener('pointerup', endMiniDrag);
+  ui.miniSvg.addEventListener('pointercancel', endMiniDrag);
+  ui.miniSvg.addEventListener('keydown', event => {
+    const delta = {
+      ArrowLeft: [-1, 0], ArrowRight: [1, 0],
+      ArrowUp: [0, -1], ArrowDown: [0, 1]
+    }[event.key];
+    if (!delta) return;
+    event.preventDefault();
+    ui.viewport.scrollBy({
+      left: delta[0] * Math.max(48, ui.viewport.clientWidth * 0.18),
+      top: delta[1] * Math.max(48, ui.viewport.clientHeight * 0.18),
+      behavior: 'instant'
+    });
+  });
+
+  const pointers = new Map();
+  const pair = () => {
+    const [a, b] = [...pointers.values()];
+    return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+  };
+  ui.viewport.addEventListener('pointerdown', event => {
+    if (event.button !== 0 || event.target.closest('.person-node')) return;
+    pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    ui.viewport.setPointerCapture(event.pointerId);
+  });
+  ui.viewport.addEventListener('pointermove', event => {
+    const previous = pointers.get(event.pointerId);
+    if (!previous) return;
+    if (pointers.size === 1) {
+      ui.viewport.scrollBy({ left: previous.x - event.clientX, top: previous.y - event.clientY, behavior: 'instant' });
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    } else {
+      const before = pair();
+      pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      const after = pair();
+      ui.viewport.scrollBy({ left: before.x - after.x, top: before.y - after.y, behavior: 'instant' });
+      if (before.distance > 0 && after.distance > 0) {
+        const bounds = ui.viewport.getBoundingClientRect();
+        setZoom(zoom * after.distance / before.distance, after.x - bounds.left, after.y - bounds.top);
+      }
+    }
+    event.preventDefault();
+  });
+  const endPan = event => {
+    pointers.delete(event.pointerId);
+    if (ui.viewport.hasPointerCapture(event.pointerId)) ui.viewport.releasePointerCapture(event.pointerId);
+  };
+  ui.viewport.addEventListener('pointerup', endPan);
+  ui.viewport.addEventListener('pointercancel', endPan);
+  ui.viewport.addEventListener('wheel', event => {
+    event.preventDefault();
+    const bounds = ui.viewport.getBoundingClientRect();
+    setZoom(zoom * wheelZoomFactor(event.deltaY), event.clientX - bounds.left, event.clientY - bounds.top);
+  }, { passive: false });
+}
+
+function setZoom(next, anchorX = ui.viewport.clientWidth / 2, anchorY = ui.viewport.clientHeight / 2) {
+  const previousZoom = zoom;
+  const previousLayout = currentCameraLayout;
+  const scrollLeft = ui.viewport.scrollLeft;
+  const scrollTop = ui.viewport.scrollTop;
+  zoom = Math.round(Math.max(0.25, Math.min(1.6, next)) * 1000) / 1000;
+  syncCameraLayout();
+  const target = zoomAroundAnchor({
+    previousZoom, nextZoom: zoom, scrollLeft, scrollTop, anchorX, anchorY,
+    previousOffsetX: previousLayout.offsetX, previousOffsetY: previousLayout.offsetY,
+    nextOffsetX: currentCameraLayout.offsetX, nextOffsetY: currentCameraLayout.offsetY,
+    maxScrollLeft: currentCameraLayout.extentWidth - ui.viewport.clientWidth,
+    maxScrollTop: currentCameraLayout.extentHeight - ui.viewport.clientHeight
+  });
+  ui.viewport.scrollTo({ left: target.left, top: target.top, behavior: 'instant' });
   $('#zoomValue').textContent = `${Math.round(zoom * 100)}%`;
   updateMiniViewport();
 }
 
 function fitTree() {
-  const factor = Math.min((ui.viewport.clientWidth - 32) / ui.graph.offsetWidth, (ui.viewport.clientHeight - 32) / ui.graph.offsetHeight, 1);
-  ui.graph.style.transition = 'none';
-  setZoom(Math.max(0.01, factor));
-  ui.viewport.scrollTo({ left: 0, top: 0, behavior: 'instant' });
-  requestAnimationFrame(() => ui.graph.style.removeProperty('transition'));
+  if (!ui.nodes.querySelector('.person-node')) return;
+  setZoom(readableFitZoom(ui.viewport.clientWidth, ui.viewport.clientHeight, ui.graph.offsetWidth, ui.graph.offsetHeight));
+  centerVisiblePerson();
 }
 
 function showError(error) {

@@ -1,0 +1,52 @@
+.graph-viewport {
+  touch-action: none;
+  cursor: grab;
+}
+
+.graph-viewport:active { cursor: grabbing; }
+.graph-extent { position: relative; min-width: 100%; min-height: 100%; }
+.graph {
+  position: absolute;
+  top: 0;
+  left: 0;
+  margin: 0;
+  min-width: 0;
+  min-height: 0;
+  transition: none;
+}
+
+.person-node { cursor: pointer; }
+.mini-map svg { touch-action: none; cursor: crosshair; }
+.mini-map svg:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
+.mini-window { pointer-events: none; }
+
+.graph[data-lod="compact"] .person-node { height: 106px; }
+.graph[data-lod="compact"] .node-avatar { height: 88px; }
+.graph[data-lod="compact"] .node-copy small { display: none; }
+
+.graph[data-lod="overview"] .person-node {
+  width: 80px !important;
+  height: 94px;
+  padding: 5px;
+  justify-content: center;
+}
+.graph[data-lod="overview"] .node-avatar {
+  flex: 0 0 68px;
+  width: 68px;
+  height: 82px;
+}
+.graph[data-lod="overview"] .node-copy { display: none; }
+.graph[data-lod="overview"] .tree-line { opacity: .28; }
+.graph[data-lod="overview"] .tree-line.active { opacity: .72; }
+
+@media (max-width: 700px) {
+  .mini-map { bottom: 72px; }
+  .graph[data-lod="compact"] .person-node { height: 98px; }
+  .graph[data-lod="compact"] .node-avatar { height: 84px; }
+}
+
+@media (max-width: 360px) {
+  .tree-controls #zoomValue { display: none; }
+  .tree-controls { max-width: calc(100% - 18px); }
+  .mini-map { width: 124px; }
+}
