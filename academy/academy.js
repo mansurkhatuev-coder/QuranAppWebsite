@@ -101,6 +101,18 @@
     return A.humanizeError(err?.message || err, fallback || 'Не получилось. Попробуйте ещё раз.');
   }
 
+  function withTimeout(promise, ms, code) {
+    let timer;
+    const timeout = new Promise((_, reject) => {
+      timer = setTimeout(() => {
+        const err = new Error(code || 'abort');
+        err.code = code || 'abort';
+        reject(err);
+      }, ms);
+    });
+    return Promise.race([Promise.resolve(promise), timeout]).finally(() => clearTimeout(timer));
+  }
+
   function setLoggedIn(on) {
     loginView.hidden = on;
     appView.hidden = !on;
@@ -135,6 +147,17 @@
     document.body.classList.toggle('academy-is-booting', busy);
   }
 
+  function showLessonsCatalog() {
+    if (lessonsCatalogCard) lessonsCatalogCard.hidden = false;
+  }
+
+  function closeStartSettings() {
+    startCard.hidden = true;
+    pendingStartLesson = null;
+    showLessonsCatalog();
+    showError(startError, '');
+  }
+
   function setTab(tab) {
     currentTab = tab || 'lessons';
     document.querySelectorAll('[data-panel]').forEach((panel) => {
@@ -145,7 +168,9 @@
     });
     if (currentTab !== 'lessons') {
       editorCard.hidden = true;
-      startCard.hidden = true;
+      closeStartSettings();
+    } else if (startCard.hidden && editorCard.hidden) {
+      showLessonsCatalog();
     }
   }
 
@@ -264,18 +289,16 @@
     if (!rows.length) return [];
 
     const ids = rows.map((r) => r.id);
-    const { data: people, error: pErr } = await client
+    const { data: people } = await client
       .from('academy_participants')
       .select('session_id, display_name, status')
       .in('session_id', ids)
       .order('joined_at', { ascending: true });
-    if (pErr) throw new Error(friendly(pErr, 'Не удалось загрузить учеников.'));
 
-    const { data: answers, error: aErr } = await client
+    const { data: answers } = await client
       .from('academy_answers')
       .select('session_id, is_correct')
       .in('session_id', ids);
-    if (aErr) throw new Error(friendly(aErr, 'Не удалось загрузить ответы.'));
 
     const namesBySession = {};
     (people || []).forEach((p) => {
@@ -1290,29 +1313,42 @@
     startCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  async function bootApp(client, session) {
+  async function bootApp(client, session, opts) {
+    const options = opts || {};
     showError(appError, '');
     showError(appStatus, '');
     accessToken = session.access_token;
-    const teacher = await requireTeacher(client, session.user);
+    const teacher = await withTimeout(requireTeacher(client, session.user), 20000, 'abort');
     teacherHello.textContent = `Вы вошли как ${teacher.display_name || session.user.email || 'Учитель'}`;
-    const [lessons, sessions, history] = await Promise.all([
-      loadLessons(client),
-      loadActiveSessions(client),
-      loadFinishedSessions(client),
-    ]);
+
+    // Critical path: show the lesson catalogue as soon as lessons arrive.
+    // History / hub must not keep the boot overlay forever.
+    if (bootText) bootText.textContent = 'Загрузка уроков…';
+    const lessons = await withTimeout(loadLessons(client), 15000, 'abort');
     lessonsCache = lessons;
+    closeStartSettings();
+    editorCard.hidden = true;
+    renderLessons(lessons);
+    renderSummary({ lessons, active: [], history: [] });
+    renderSessions([]);
+    renderHistory([]);
+    setTab(currentTab || 'lessons');
+    setLoggedIn(true);
+    if (typeof options.onReady === 'function') options.onReady();
+
+    const [sessions, history] = await Promise.all([
+      withTimeout(loadActiveSessions(client), 15000, 'abort').catch(() => []),
+      withTimeout(loadFinishedSessions(client), 20000, 'abort').catch(() => []),
+    ]);
     renderSummary({ lessons, active: sessions, history });
     renderSessions(sessions);
     renderHistory(history);
-    renderLessons(lessons);
-    try {
-      await loadHub();
-    } catch (_) {
-      renderHubPicker(lessons);
-    }
-    setTab(currentTab || 'lessons');
-    setLoggedIn(true);
+
+    loadHub()
+      .catch(() => {
+        renderHubPicker(lessons);
+      })
+      .catch(() => {});
   }
 
   async function init() {
@@ -1322,11 +1358,16 @@
     }
     const client = A.getClient();
     setLoginBusy(true, 'Проверка сессии…');
-    const { data: authData } = await client.auth.getSession();
+    let authData = { session: null };
+    try {
+      authData = await withTimeout(client.auth.getSession(), 12000, 'abort');
+    } catch (_) {
+      authData = { session: null };
+    }
     if (authData?.session) {
       try {
         setLoginBusy(true, 'Загрузка кабинета…');
-        await bootApp(client, authData.session);
+        await bootApp(client, authData.session, { onReady: () => setLoginBusy(false) });
         setLoginBusy(false);
       } catch (err) {
         setLoginBusy(false);
@@ -1344,10 +1385,14 @@
       const password = loginPassword.value;
       setLoginBusy(true, 'Вход…');
       try {
-        const { data, error } = await client.auth.signInWithPassword({ email, password });
+        const { data, error } = await withTimeout(
+          client.auth.signInWithPassword({ email, password }),
+          20000,
+          'abort'
+        );
         if (error) throw error;
         setLoginBusy(true, 'Загрузка кабинета…');
-        await bootApp(client, data.session);
+        await bootApp(client, data.session, { onReady: () => setLoginBusy(false) });
         setLoginBusy(false);
       } catch (err) {
         setLoginBusy(false);
@@ -1358,16 +1403,20 @@
 
     document.getElementById('btn-logout').addEventListener('click', async () => {
       await client.auth.signOut();
+      closeStartSettings();
       setLoggedIn(false);
     });
 
     document.getElementById('btn-refresh').addEventListener('click', async () => {
       const { data } = await client.auth.getSession();
       if (!data?.session) return setLoggedIn(false);
+      setLoginBusy(true, 'Обновление…');
       try {
-        await bootApp(client, data.session);
+        await bootApp(client, data.session, { onReady: () => setLoginBusy(false) });
+        setLoginBusy(false);
         showError(appStatus, 'Список обновлён');
       } catch (err) {
+        setLoginBusy(false);
         showError(appError, friendly(err));
       }
     });
@@ -1521,10 +1570,7 @@
       showError(editorError, '');
     });
     document.getElementById('btn-cancel-start').addEventListener('click', () => {
-      startCard.hidden = true;
-      lessonsCatalogCard.hidden = false;
-      pendingStartLesson = null;
-      showError(startError, '');
+      closeStartSettings();
     });
     document.getElementById('start-preset')?.addEventListener('change', (event) => {
       const value = event.target.value;
