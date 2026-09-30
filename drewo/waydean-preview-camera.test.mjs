@@ -26,6 +26,7 @@ test('a scaled graph smaller than the viewport stays centered', () => {
 
 test('fit keeps cards readable when the full tree is much wider than the viewport', () => {
   assert.equal(readableFitZoom(900, 600, 18000, 2800), 0.7);
+  assert.equal(readableFitZoom(390, 583, 18000, 2800), 0.9);
   assert.equal(readableFitZoom(900, 600, 1000, 700), 0.81);
 });
 

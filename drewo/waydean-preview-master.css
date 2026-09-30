@@ -1,0 +1,174 @@
+.graph {
+  --tree-card-width: 132px;
+  --tree-card-height: 140px;
+}
+
+.person-node {
+  width: var(--tree-card-width) !important;
+  height: var(--tree-card-height) !important;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 3px;
+  padding: 5px;
+}
+
+.node-avatar {
+  flex: 0 0 86px;
+  width: 100%;
+  height: 86px;
+  border-radius: 5px;
+}
+
+.node-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  width: 100%;
+  min-width: 0;
+  text-align: center;
+}
+
+.node-copy strong,
+.node-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.node-copy strong { font-size: 12px; line-height: 16px; }
+.node-copy small { font-size: 9px; line-height: 12px; }
+
+.tree-line { opacity: .58; stroke-width: 1.35; filter: none; }
+.tree-line.active { opacity: .92; stroke-width: 2; filter: drop-shadow(0 0 2px #ffc54d); }
+.tree-line.dimmed { opacity: .12; filter: none; }
+.mode-label { left: 16px; transform: none; }
+
+.graph[data-lod="compact"] .person-node,
+.graph[data-lod="overview"] .person-node {
+  width: var(--tree-card-width) !important;
+  height: var(--tree-card-height) !important;
+}
+
+.graph[data-lod="overview"] .person-node {
+  align-items: center;
+  justify-content: center;
+}
+
+.graph[data-lod="overview"] .node-avatar {
+  flex: 0 0 80px;
+  width: 70px;
+  height: 80px;
+}
+
+.mobile-search-trigger,
+.mobile-selected { display: none; }
+
+@media (max-width: 700px) {
+  .app-shell { grid-template-rows: 58px 27px 46px minmax(0, 1fr) 58px; }
+
+  .mobile-search-trigger {
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 36px;
+    margin: 5px 10px;
+    padding: 0 12px;
+    border: 1px solid #cba45d60;
+    border-radius: 8px;
+    background: #081318ed;
+    color: #d4ccb9;
+    text-align: left;
+    box-shadow: 0 5px 16px #0005;
+  }
+
+  .mobile-search-trigger span:first-child { color: var(--gold); font-size: 23px; line-height: 1; }
+  .workspace { grid-row: 4; }
+  .mobile-nav { grid-row: 5; }
+  .tree-stage { bottom: 72px; }
+
+  .mobile-selected {
+    position: absolute;
+    z-index: 4;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    height: 72px;
+    padding: 7px 13px;
+    border: 0;
+    border-top: 1px solid #d1aa5b78;
+    background: linear-gradient(105deg, #0a171bf7, #071115f7);
+    box-shadow: 0 -8px 25px #0008;
+    color: var(--text);
+    text-align: left;
+  }
+
+  .mobile-selected-avatar {
+    flex: 0 0 46px;
+    width: 46px;
+    height: 54px;
+    display: grid;
+    place-items: center;
+    overflow: hidden;
+    border: 1px solid #d8ad5970;
+    border-radius: 5px;
+    background: #1a2426;
+  }
+
+  .mobile-selected-avatar img { width: 100%; height: 100%; object-fit: cover; }
+  .mobile-selected-avatar svg { width: 70%; height: 70%; fill: #a9ada6; }
+  .mobile-selected-copy { display: flex; flex: 1; flex-direction: column; min-width: 0; gap: 1px; }
+  .mobile-selected-copy strong,
+  .mobile-selected-copy small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mobile-selected-copy strong { font: 16px Georgia, serif; }
+  .mobile-selected-copy small { color: #b7b1a6; font-size: 10px; }
+  .mobile-selected-arrow { color: var(--gold); font-size: 28px; line-height: 1; }
+
+  .profile-panel { display: none; }
+  .app-shell.profile-open .profile-panel {
+    position: fixed;
+    z-index: 12;
+    inset: 58px 0 58px;
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: none;
+    padding: 18px 16px 28px;
+    border-radius: 0;
+    overflow: auto;
+  }
+
+  .graph {
+    --tree-card-width: 180px;
+    --tree-card-height: 105px;
+  }
+
+  .person-node {
+    flex-direction: row;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .node-avatar {
+    flex: 0 0 56px;
+    width: 56px;
+    height: 91px;
+  }
+
+  .node-copy {
+    width: auto;
+    text-align: left;
+  }
+}
+
+@media (max-width: 390px) {
+  .graph { --tree-card-width: 176px; }
+  .node-avatar { flex-basis: 49px; width: 49px; }
+}

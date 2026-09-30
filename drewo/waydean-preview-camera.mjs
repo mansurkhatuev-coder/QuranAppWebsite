@@ -21,7 +21,7 @@ export function readableFitZoom(viewWidth, viewHeight, graphWidth, graphHeight) 
     (viewHeight - 32) / Math.max(graphHeight, 1),
     1
   );
-  return Math.round(clamp(factor, 0.7, 1) * 100) / 100;
+  return Math.round(clamp(factor, viewWidth <= 700 ? 0.9 : 0.7, 1) * 100) / 100;
 }
 
 export function zoomAroundAnchor({

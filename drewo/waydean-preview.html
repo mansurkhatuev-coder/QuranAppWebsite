@@ -8,6 +8,7 @@
   <title>Waydean — локальный preview на данных древа</title>
   <link rel="stylesheet" href="waydean-preview.css">
   <link rel="stylesheet" href="waydean-preview-camera.css">
+  <link rel="stylesheet" href="waydean-preview-master.css">
 </head>
 <body>
   <main class="app-shell">
@@ -31,6 +32,8 @@
     </header>
 
     <div class="preview-notice"><span class="notice-dot"></span><span>Локальный просмотр · данные только для чтения · ничего не сохраняется</span><strong id="datasetSummary">Загрузка древа…</strong></div>
+
+    <button class="mobile-search-trigger" id="mobileSearchTrigger" type="button" aria-label="Поиск человека"><span aria-hidden="true">⌕</span><span>Поиск человека…</span></button>
 
     <section class="workspace">
       <aside class="rail" aria-label="Действия с древом">
@@ -58,6 +61,7 @@
         <div class="tree-controls"><button id="zoomOut" aria-label="Уменьшить масштаб">−</button><span id="zoomValue">100%</span><button id="zoomIn" aria-label="Увеличить масштаб">+</button><button id="fitTree" aria-label="Подогнать текущую область">⛶</button><button id="whoAmI">◎ Кто я?</button></div>
       </section>
 
+      <button class="mobile-selected" id="mobileSelected" type="button" aria-label="Открыть профиль выбранного человека"></button>
       <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>
     </section>
 
