@@ -30,6 +30,7 @@
   let cameraY = 0;
   let pathMotionId = 0;
   let pathAnimationFrame = 0;
+  let treeMotionTimers = [];
   const activePointers = new Map();
   let pointerGesture = null;
   let suppressClickUntil = 0;
@@ -39,7 +40,7 @@
   const yearText = person => person.born == null && person.died == null ? "Даты неизвестны" : person.born == null ? `до ${person.died}` : person.died == null ? `с ${person.born}` : `${person.born}–${person.died}`;
   const icon = () => `<svg viewBox="0 0 448 512" aria-hidden="true"><path d="${USER_PATH}"/></svg>`;
   const filtered = () => people.filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photos || false) && (!filters.main || person.branch === "main"));
-  const visiblePeople = () => (dense ? people : people.filter(person => baseIds.has(person.id))).filter(person => filtered().some(match => match.id === person.id));
+  const visiblePeople = () => (dense || mode === "branch" ? people : people.filter(person => baseIds.has(person.id))).filter(person => filtered().some(match => match.id === person.id));
 
   function ancestors(id) {
     const result = new Set(); let current = byId.get(id);
@@ -64,7 +65,7 @@
       const [x,y] = positions[person.id]; const relatedClass = related && !related.has(person.id) ? "dimmed" : "";
       return `<button class="person-node ${person.id === selectedId ? "selected" : ""} ${relatedClass} ${state === "focus" && person.id === "p07" ? "keyboard-focus" : ""}" data-person="${person.id}" aria-label="${person.name}, ${yearText(person)}, поколение ${person.generation}" style="left:${x/10}%;top:${y/8.1}%">${icon()}<strong title="${person.name}">${person.name}</strong><small>${yearText(person)}</small></button>`;
     }).join("");
-    $$("[data-person]").forEach(button => button.addEventListener("click", () => { cancelPathMotion(); selectedId = button.dataset.person; drawTree(); renderProfile(); closePopovers(); setActive("tree"); if (mode === "path") runDesktopPath(); }));
+    $$("[data-person]").forEach(button => button.addEventListener("click", () => { cancelTreeMotion(); selectedId = button.dataset.person; drawTree(); renderProfile(); closePopovers(); setActive("tree"); if (mode === "path") runDesktopPath(); if (mode === "branch") runBranchReveal(); }));
     const empty = visible.length === 0;
     $("#emptyState").hidden = !empty;
     $("#treeLines").hidden = empty;
@@ -75,6 +76,8 @@
   }
   function renderProfile(tab = "info") {
     const person = byId.get(selectedId); const parent = person.parent ? byId.get(person.parent)?.name : "Не указан"; const children = people.filter(item => item.parent === person.id);
+    $("#profilePanel").classList.remove("collapsed");
+    $(".workspace").classList.remove("profile-is-collapsed");
     const head = `<div class="profile-person"><div class="profile-avatar">${icon()}</div><div><h1>${person.name}</h1><p>${yearText(person)} <span>· поколение ${person.generation}</span></p></div></div><div class="profile-tabs"><button data-tab="info" class="${tab === "info" ? "active" : ""}">Информация</button><button data-tab="relatives" class="${tab === "relatives" ? "active" : ""}">Родственники <b>${children.length+Number(Boolean(person.parent))}</b></button><button data-tab="media" class="${tab === "media" ? "active" : ""}">Медиа <b>0</b></button></div>`;
     let body = "";
     if (tab === "info") body = `<dl class="facts"><div><dt>Поколение</dt><dd>${person.generation}</dd></div><div><dt>Отец</dt><dd>${parent}</dd></div><div><dt>Дети</dt><dd>${children.length} человек</dd></div><div><dt>Ветвь</dt><dd>${person.branch === "main" ? "Основная линия" : "Родственная ветвь"}</dd></div><div><dt>Место</dt><dd>${person.place}</dd></div></dl><p class="profile-note">${person.note || "Вымышленная запись для проверки расположения и читаемости полей."}</p><button class="branch-button" id="showBranch">Показать ветвь <span>›</span></button>`;
@@ -82,25 +85,28 @@
     if (tab === "media") body = `<div class="media-empty">${icon()}<strong>Пока без фотографий</strong><span>В тестовом наборе у людей нет фото. Для таких случаев используется нейтральный силуэт без лица.</span></div>`;
     $("#profilePanel").innerHTML = `<button class="panel-close" aria-label="Свернуть карточку">×</button>${head}<div class="profile-body">${body}</div>`;
     $$("[data-tab]").forEach(button=>button.addEventListener("click",()=>renderProfile(button.dataset.tab)));
-    $$("[data-relative]").forEach(button=>button.addEventListener("click",()=>{cancelPathMotion();selectedId=button.dataset.relative;drawTree();renderProfile("info");if(mode==="path")runDesktopPath();}));
-    $("#profilePanel").querySelector(".panel-close").addEventListener("click",()=>{ $("#profilePanel").classList.toggle("collapsed"); });
+    $$("[data-relative]").forEach(button=>button.addEventListener("click",()=>{cancelTreeMotion();selectedId=button.dataset.relative;drawTree();renderProfile("info");if(mode==="path")runDesktopPath();if(mode==="branch")runBranchReveal();}));
+    $("#profilePanel").querySelector(".panel-close").addEventListener("click",()=>{ const collapsed=$("#profilePanel").classList.toggle("collapsed"); $(".workspace").classList.toggle("profile-is-collapsed",collapsed); });
     $("#showBranch")?.addEventListener("click",()=>setMode("branch"));
   }
   function setActive(nav) { $$(".nav-link").forEach(button=>button.classList.toggle("active",button.dataset.nav===nav)); }
-  function cancelPathMotion() {
+  function cancelTreeMotion() {
     pathMotionId += 1;
     if (pathAnimationFrame) cancelAnimationFrame(pathAnimationFrame);
     pathAnimationFrame = 0;
+    treeMotionTimers.forEach(timer => clearTimeout(timer));
+    treeMotionTimers = [];
     $("#treeStage").classList.remove("camera-moving");
     $$(".tree-line").forEach(line => {
       line.style.strokeDasharray = "";
       line.style.strokeDashoffset = "";
-      line.classList.remove("path-tracing");
+      line.classList.remove("path-tracing", "branch-future", "branch-revealed", "branch-anchor");
     });
-    $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination"));
+    $("#treeStage").classList.remove("branch-reveal");
+    $$(".person-node").forEach(node => node.classList.remove("path-current", "path-origin", "path-destination", "branch-future", "branch-revealed"));
   }
   function runDesktopPath() {
-    cancelPathMotion();
+    cancelTreeMotion();
     const stage = $("#treeStage"), graph = $("#graph");
     const route = [...ancestors(selectedId)].reverse();
     if (route.length < 2 || route.some(id => !positions[id] || !$(`[data-person="${id}"]`))) return;
@@ -206,19 +212,72 @@
     };
     pathAnimationFrame = requestAnimationFrame(step);
   }
+  function runBranchReveal() {
+    cancelTreeMotion();
+    const stage = $("#treeStage"), depthGroups = new Map();
+    const branchIds = [...descendants(selectedId)].filter(id => id !== selectedId);
+    branchIds.forEach(id => {
+      const person = byId.get(id);
+      if (!depthGroups.has(person.generation)) depthGroups.set(person.generation, []);
+      depthGroups.get(person.generation).push(id);
+      $(`[data-person="${id}"]`)?.classList.add("branch-future");
+      const line = $(`.tree-line[data-edge="${person.parent}-${id}"]`);
+      if (line) {
+        line.classList.add("branch-future");
+        const length = line.getTotalLength();
+        line.style.strokeDasharray = `${length}`;
+        line.style.strokeDashoffset = `${length}`;
+      }
+    });
+    const route = [...ancestors(selectedId)].reverse();
+    if (route.length > 1) $(`.tree-line[data-edge="${route.at(-2)}-${selectedId}"]`)?.classList.add("branch-anchor");
+    const revealAll = () => {
+      branchIds.forEach(id => $(`[data-person="${id}"]`)?.classList.remove("branch-future"));
+      $$(".tree-line.branch-future").forEach(line => { line.style.strokeDashoffset = "0"; });
+      stage.classList.remove("branch-reveal");
+      treeMotionTimers.push(setTimeout(() => cancelTreeMotion(), 700));
+    };
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || !branchIds.length) {
+      revealAll();
+      return;
+    }
+    stage.classList.add("branch-reveal");
+    const sequence = pathMotionId;
+    [...depthGroups.entries()].sort(([a],[b]) => a-b).forEach(([, ids], index) => {
+      treeMotionTimers.push(setTimeout(() => {
+        if (sequence !== pathMotionId) return;
+        ids.forEach(id => {
+          $(`[data-person="${id}"]`)?.classList.remove("branch-future");
+          $(`[data-person="${id}"]`)?.classList.add("branch-revealed");
+          const person = byId.get(id), line = $(`.tree-line[data-edge="${person.parent}-${id}"]`);
+          if (line) { line.classList.remove("branch-future"); line.classList.add("branch-revealed"); line.style.strokeDashoffset = "0"; }
+        });
+      }, 420 + index * 460));
+    });
+    const finishDelay = 420 + Math.max(0, depthGroups.size - 1) * 460 + 650;
+    treeMotionTimers.push(setTimeout(() => {
+      if (sequence !== pathMotionId) return;
+      stage.classList.remove("branch-reveal");
+      $$(".tree-line").forEach(line => { line.style.strokeDasharray = ""; line.style.strokeDashoffset = ""; line.classList.remove("branch-revealed", "branch-anchor"); });
+      $$(".person-node").forEach(node => node.classList.remove("branch-revealed", "branch-future"));
+      treeMotionTimers = [];
+    }, finishDelay));
+  }
   function setMode(next) {
-    cancelPathMotion();
+    cancelTreeMotion();
     mode=next;
     if(next==="all") { filters={min:1,max:5,photos:false,main:false}; setCameraTransform(0,0,1); }
+    if(next==="branch") setCameraTransform(0,0,1);
     $("#treeStage").classList.toggle("path-focus", next==="path");
     drawTree();
     announce(next==="path"?"Камера следует от предка к выбранному человеку.":next==="branch"?"Подсвечена выбранная ветвь.":"Показаны все поколения.");
     if(next==="path") runDesktopPath();
+    if(next==="branch") runBranchReveal();
   }
   function announce(message) { const toast=$("#toast"); toast.textContent=message; toast.classList.add("visible"); clearTimeout(toastTimer); toastTimer=setTimeout(()=>toast.classList.remove("visible"),2300); }
   function closePopovers() { $$(".popover").forEach(popover=>popover.hidden=true); }
   function openPopover(id) { closePopovers(); const item=$(id); item.hidden=false; const input=item.querySelector("input[type=search]"); if(input) { renderSearch(input.value); input.focus(); } }
-  function renderSearch(value="") { const query=value.trim().toLocaleLowerCase("ru"); const matches=people.filter(person=>`${person.name} ${person.born??""} ${person.died??""} ${person.branch}`.toLocaleLowerCase("ru").includes(query)); $("#searchResults").innerHTML=matches.length?matches.map(person=>`<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join(""):`<p class="empty-result">По запросу «${value}» никого не найдено.</p>`; $$("[data-result]").forEach(button=>button.addEventListener("click",()=>{cancelPathMotion();selectedId=button.dataset.result;drawTree();renderProfile();closePopovers();if(mode==="path")runDesktopPath();})); }
+  function renderSearch(value="") { const query=value.trim().toLocaleLowerCase("ru"); const matches=people.filter(person=>`${person.name} ${person.born??""} ${person.died??""} ${person.branch}`.toLocaleLowerCase("ru").includes(query)); $("#searchResults").innerHTML=matches.length?matches.map(person=>`<button class="result-item" data-result="${person.id}">${icon()}<span><strong>${person.name}</strong><small>${yearText(person)} · поколение ${person.generation}</small></span><b>›</b></button>`).join(""):`<p class="empty-result">По запросу «${value}» никого не найдено.</p>`; $$("[data-result]").forEach(button=>button.addEventListener("click",()=>{cancelTreeMotion();selectedId=button.dataset.result;drawTree();renderProfile();closePopovers();if(mode==="path")runDesktopPath();if(mode==="branch")runBranchReveal();})); }
 
   function setCameraTransform(x, y, scale, moving = false) {
     cameraX = x;
@@ -248,7 +307,7 @@
     const center = () => ({ x: stage.clientWidth / 2, y: stage.clientHeight * 0.48 });
     stage.addEventListener("pointerdown", event => {
       if (event.button !== 0 || event.target.closest(".tree-controls, .minimap, .mode-label, .empty-state")) return;
-      if (!activePointers.size) cancelPathMotion();
+      if (!activePointers.size) cancelTreeMotion();
       activePointers.set(event.pointerId, stagePoint(event));
       beginGestureFrame();
     });
@@ -320,9 +379,9 @@
   $("#applyFilters").addEventListener("click",()=>{filters={min:Number($("#minGeneration").value),max:Number($("#maxGeneration").value),photos:$("#photosOnly").checked,main:$("#mainOnly").checked};drawTree();closePopovers();});
   $("#resetFilters").addEventListener("click",()=>{filters={min:1,max:5,photos:false,main:false};$("#photosOnly").checked=false;$("#mainOnly").checked=false;drawTree();closePopovers();});
   $("#resetEmpty").addEventListener("click",()=>{$("#resetFilters").click();});
-  $("#zoomIn").addEventListener("click",()=>{cancelPathMotion();const next=Math.min(175,zoom+10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
-  $("#zoomOut").addEventListener("click",()=>{cancelPathMotion();const next=Math.max(50,zoom-10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
-  $("#whoAmI").addEventListener("click",()=>{cancelPathMotion();selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");if(mode==="path")runDesktopPath();});
+  $("#zoomIn").addEventListener("click",()=>{cancelTreeMotion();const next=Math.min(175,zoom+10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
+  $("#zoomOut").addEventListener("click",()=>{cancelTreeMotion();const next=Math.max(50,zoom-10),scale=next/100,ratio=scale/cameraScale;setCameraTransform(cameraX*ratio,cameraY*ratio,scale);});
+  $("#whoAmI").addEventListener("click",()=>{cancelTreeMotion();selectedId="p06";drawTree();renderProfile();announce("В демонстрационном наборе «я» — Магомед.");if(mode==="path")runDesktopPath();if(mode==="branch")runBranchReveal();});
   $$("[data-nav]").forEach(button=>button.addEventListener("click",()=>{const nav=button.dataset.nav;setActive(nav);if(nav==="tree")setMode("all");if(nav==="branches")openPopover("#filterPopover");if(nav==="people")openPopover("#searchPopover");}));
   document.addEventListener("keydown",event=>{if(event.key==="Escape")closePopovers();});
   renderProfile(state==="relatives"?"relatives":state==="media"?"media":"info"); drawTree();
