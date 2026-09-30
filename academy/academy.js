@@ -62,6 +62,7 @@
   let reportCache = null;
   let reportSessionId = '';
   let historyCache = [];
+  let hubReportsCache = [];
   let lessonsCache = [];
   let selectedCourse = null;
   let lessonsQuery = '';
@@ -452,14 +453,25 @@
   }
 
   async function openReport(sessionId) {
-    const item = historyCache.find((h) => h.id === sessionId);
+    const item =
+      historyCache.find((h) => h.id === sessionId) ||
+      hubReportsCache.find((h) => h.id === sessionId);
     showError(reportError, '');
     reportCard.hidden = false;
     document.body.classList.add('academy-modal-open');
     reportSessionId = sessionId;
+    const studentHint = Array.isArray(item?.students) && item.students.length
+      ? ` · ${item.students.join(', ')}`
+      : item?.student_rows?.[0]?.name
+        ? ` · ${item.student_rows[0].name}`
+        : '';
     reportTitle.textContent = item?.lesson_title || 'Отчёт';
     reportMeta.textContent = item
-      ? `${formatDate(item.finished_at || item.started_at)} · код ${item.code}`
+      ? `${formatDate(item.finished_at || item.started_at)}${
+          item.pacing === 'async' || hubReportsCache.some((h) => h.id === sessionId)
+            ? ' · домашка'
+            : ''
+        }${item.code ? ` · код ${item.code}` : ''}${studentHint}`
       : 'Загрузка…';
     reportStats.hidden = true;
     reportList.innerHTML = '<li class="academy-muted">Загрузка…</li>';
@@ -1214,32 +1226,145 @@
     return data;
   }
 
+  function mskDayKey(iso) {
+    if (!iso) return 'unknown';
+    try {
+      return new Intl.DateTimeFormat('en-CA', {
+        timeZone: 'Europe/Moscow',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit',
+      }).format(new Date(iso));
+    } catch (_) {
+      return String(iso).slice(0, 10);
+    }
+  }
+
+  function formatMskDayLabel(dayKey) {
+    if (!dayKey || dayKey === 'unknown') return 'Без даты';
+    const parts = String(dayKey).split('-').map(Number);
+    if (parts.length !== 3 || parts.some((n) => !Number.isFinite(n))) return dayKey;
+    const dt = new Date(Date.UTC(parts[0], parts[1] - 1, parts[2], 12));
+    return dt.toLocaleDateString('ru-RU', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'UTC',
+    });
+  }
+
+  function groupHubRuns(runs) {
+    const groups = new Map();
+    (runs || []).forEach((row) => {
+      const day = mskDayKey(row.finished_at || row.started_at);
+      const key = `${row.lesson_id || row.lesson_title || 'lesson'}|${day}`;
+      if (!groups.has(key)) {
+        groups.set(key, {
+          key,
+          day,
+          lesson_id: row.lesson_id,
+          lesson_title: row.lesson_title || 'Урок',
+          runs: [],
+        });
+      }
+      groups.get(key).runs.push(row);
+    });
+    return [...groups.values()]
+      .map((g) => {
+        const roster = g.runs
+          .map((run) => {
+            const st = Array.isArray(run.student_rows) && run.student_rows[0]
+              ? run.student_rows[0]
+              : {
+                  name: (run.students && run.students[0]) || 'Ученик',
+                  correct: run.score?.correct || 0,
+                  total: run.score?.total || 0,
+                  points: run.score?.points || 0,
+                };
+            const qTotal = Number(run.question_count) || Number(st.total) || 0;
+            return {
+              id: run.id,
+              name: st.name || 'Ученик',
+              correct: Number(st.correct) || 0,
+              total: Number(st.total) || 0,
+              points: Number(st.points) || 0,
+              question_count: qTotal,
+              status: run.status,
+              finished_at: run.finished_at,
+              started_at: run.started_at,
+            };
+          })
+          .sort(
+            (a, b) =>
+              b.correct - a.correct ||
+              b.points - a.points ||
+              String(a.name).localeCompare(String(b.name), 'ru'),
+          );
+        const sumCorrect = roster.reduce((s, r) => s + r.correct, 0);
+        const sumTotal = roster.reduce((s, r) => s + (r.question_count || r.total || 0), 0);
+        return {
+          ...g,
+          roster,
+          avgLabel: sumTotal ? percentLabel(sumCorrect, sumTotal) : '—',
+        };
+      })
+      .sort((a, b) => String(b.day).localeCompare(String(a.day)) || String(a.lesson_title).localeCompare(String(b.lesson_title), 'ru'));
+  }
+
   function renderHubReports(runs) {
+    hubReportsCache = Array.isArray(runs) ? runs.slice() : [];
     hubReportsCard.hidden = false;
-    if (!runs?.length) {
+    if (!hubReportsCache.length) {
       hubReportsEmpty.hidden = false;
+      hubReportsEmpty.textContent =
+        'Пока никто не проходил по ссылке. Если зачёт запускали как домашку — отчёты появятся здесь, по одному на ученика.';
       hubReportsList.innerHTML = '';
       return;
     }
     hubReportsEmpty.hidden = true;
-    hubReportsList.innerHTML = runs
-      .map((row) => {
-        const pct = percentLabel(row.score?.correct || 0, row.score?.total || 0);
-        const names = (row.students || []).slice(0, 4).join(', ') || '—';
-        return `<li class="academy-history-item">
-          <div>
-            <strong>${A.escapeHtml(row.lesson_title)}</strong>
-            <div class="academy-muted">${A.escapeHtml(formatDate(row.finished_at || row.started_at))} · ${A.escapeHtml(
-              names
-            )}</div>
+    const groups = groupHubRuns(hubReportsCache);
+    hubReportsList.innerHTML = groups
+      .map((group) => {
+        const isExam = /зач[её]т|экзамен|контрол/i.test(group.lesson_title);
+        const rows = group.roster
+          .map((row) => {
+            const done = row.status === 'finished' || Number(row.total) > 0;
+            const scoreText = row.question_count
+              ? `${row.correct}/${row.question_count}`
+              : `${row.correct}/${row.total || '—'}`;
+            return `<li class="academy-hub-roster__row">
+              <div class="academy-hub-roster__who">
+                <strong>${A.escapeHtml(row.name)}</strong>
+                <span class="academy-muted">${done ? 'прошёл' : 'не закончил'}</span>
+              </div>
+              <div class="academy-hub-roster__score">
+                <strong>${A.escapeHtml(scoreText)}</strong>
+                <span class="academy-muted">${A.escapeHtml(percentLabel(row.correct, row.question_count || row.total))}</span>
+              </div>
+              <div class="academy-actions academy-actions--compact">
+                <button type="button" class="academy-btn academy-btn--ghost" data-report="${A.escapeHtml(
+                  row.id
+                )}">Отчёт</button>
+                <button type="button" class="academy-btn academy-btn--ghost" data-delete-report="${A.escapeHtml(
+                  row.id
+                )}">Удалить</button>
+              </div>
+            </li>`;
+          })
+          .join('');
+        return `<li class="academy-hub-report-group">
+          <div class="academy-hub-report-group__head">
+            <div>
+              <p class="academy-kicker">${isExam ? 'Зачёт · домашка' : 'Домашка'}</p>
+              <strong>${A.escapeHtml(group.lesson_title)}</strong>
+              <p class="academy-muted">${A.escapeHtml(formatMskDayLabel(group.day))} · ${
+                group.roster.length
+              } ${
+                group.roster.length === 1 ? 'ученик' : group.roster.length < 5 ? 'ученика' : 'учеников'
+              } · средний ${A.escapeHtml(group.avgLabel)}</p>
+            </div>
           </div>
-          <div class="academy-actions academy-actions--compact">
-            <span class="academy-muted">${A.escapeHtml(pct)}</span>
-            <button type="button" class="academy-btn academy-btn--ghost" data-report="${A.escapeHtml(row.id)}">Отчёт</button>
-            <button type="button" class="academy-btn academy-btn--ghost" data-delete-report="${A.escapeHtml(
-              row.id
-            )}">Удалить</button>
-          </div>
+          <ul class="academy-hub-roster">${rows}</ul>
         </li>`;
       })
       .join('');
@@ -1430,7 +1555,9 @@
         const tab = btn.getAttribute('data-tab');
         setTab(tab);
         if (tab === 'homework') {
-          loadHub().catch((err) => showError(hubError, friendly(err)));
+          loadHub()
+            .then(() => (hubCache?.id ? loadHubReports() : null))
+            .catch((err) => showError(hubError, friendly(err)));
         }
       });
     }

@@ -831,44 +831,83 @@ export async function handleHubReports(
   }
 
   const ids = sessionRows.map((s) => s.id);
-  const peopleBySession: Record<string, string[]> = {};
-  const scoreBySession: Record<string, { correct: number; total: number }> = {};
+  const peopleBySession: Record<string, Array<{ name: string; participant_id: string }>> = {};
+  const scoreBySession: Record<
+    string,
+    { correct: number; total: number; points: number; by_participant: Record<string, { correct: number; total: number; points: number }> }
+  > = {};
+  const questionCountBySession: Record<string, number> = {};
+
   if (ids.length) {
+    const { data: sessionsFull } = await db
+      .from('academy_sessions')
+      .select('id, question_snapshot')
+      .in('id', ids);
+    (sessionsFull || []).forEach((s) => {
+      const snap = Array.isArray(s.question_snapshot) ? s.question_snapshot : [];
+      questionCountBySession[s.id] = snap.length;
+    });
+
     const { data: people } = await db
       .from('academy_participants')
-      .select('session_id, display_name, status, user_id')
+      .select('id, session_id, display_name, status')
       .in('session_id', ids);
     (people || []).forEach((p) => {
       if (p.status === 'kicked' || p.status === 'left') return;
       if (!peopleBySession[p.session_id]) peopleBySession[p.session_id] = [];
-      const name = String(p.display_name || '').trim();
-      if (name && !peopleBySession[p.session_id].includes(name)) {
-        peopleBySession[p.session_id].push(name);
-      }
+      const name = String(p.display_name || '').trim() || 'Ученик';
+      peopleBySession[p.session_id].push({ name, participant_id: String(p.id) });
     });
+
     const { data: answers } = await db
       .from('academy_answers')
-      .select('session_id, is_correct')
+      .select('session_id, participant_id, is_correct, score')
       .in('session_id', ids);
     (answers || []).forEach((a) => {
-      if (!scoreBySession[a.session_id]) scoreBySession[a.session_id] = { correct: 0, total: 0 };
-      scoreBySession[a.session_id].total += 1;
-      if (a.is_correct === true) scoreBySession[a.session_id].correct += 1;
+      if (!scoreBySession[a.session_id]) {
+        scoreBySession[a.session_id] = { correct: 0, total: 0, points: 0, by_participant: {} };
+      }
+      const bucket = scoreBySession[a.session_id];
+      bucket.total += 1;
+      bucket.points += Number(a.score) || 0;
+      if (a.is_correct === true) bucket.correct += 1;
+      const pid = String(a.participant_id || '');
+      if (!pid) return;
+      if (!bucket.by_participant[pid]) bucket.by_participant[pid] = { correct: 0, total: 0, points: 0 };
+      bucket.by_participant[pid].total += 1;
+      bucket.by_participant[pid].points += Number(a.score) || 0;
+      if (a.is_correct === true) bucket.by_participant[pid].correct += 1;
     });
   }
 
-  const runs = sessionRows.map((s) => ({
-    id: s.id,
-    code: s.code,
-    status: s.status,
-    started_at: s.started_at,
-    finished_at: s.finished_at,
-    lesson_id: s.lesson_id,
-    lesson_title: lessonMap[s.lesson_id]?.title || 'Урок',
-    lesson_subject: lessonMap[s.lesson_id]?.subject || '',
-    students: peopleBySession[s.id] || [],
-    score: scoreBySession[s.id] || { correct: 0, total: 0 },
-  }));
+  const runs = sessionRows.map((s) => {
+    const score = scoreBySession[s.id] || { correct: 0, total: 0, points: 0, by_participant: {} };
+    const people = peopleBySession[s.id] || [];
+    const students = people.map((p) => {
+      const st = score.by_participant[p.participant_id] || { correct: 0, total: 0, points: 0 };
+      return {
+        name: p.name,
+        participant_id: p.participant_id,
+        correct: st.correct,
+        total: st.total,
+        points: st.points,
+      };
+    });
+    return {
+      id: s.id,
+      code: s.code,
+      status: s.status,
+      started_at: s.started_at,
+      finished_at: s.finished_at,
+      lesson_id: s.lesson_id,
+      lesson_title: lessonMap[s.lesson_id]?.title || 'Урок',
+      lesson_subject: lessonMap[s.lesson_id]?.subject || '',
+      question_count: questionCountBySession[s.id] || score.total || 0,
+      students: students.map((st) => st.name),
+      student_rows: students,
+      score: { correct: score.correct, total: score.total, points: score.points },
+    };
+  });
 
   return deps.json({ hub, runs });
 }
