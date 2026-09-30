@@ -66,6 +66,44 @@
 .mobile-search-trigger,
 .mobile-selected { display: none; }
 
+.profile-person {
+  flex-direction: row;
+  align-items: center;
+  gap: 12px;
+  min-height: 139px;
+  padding: 24px 0 15px;
+}
+
+.profile-person > div:last-child { min-width: 0; }
+.profile-person h1 { font-size: 22px; overflow-wrap: anywhere; }
+.profile-avatar { flex: 0 0 92px; width: 92px; height: 108px; }
+.profile-tabs { margin-top: 0; }
+
+@media (min-width: 701px) {
+  .workspace.profile-collapsed { grid-template-columns: 52px minmax(0, 1fr) 56px; }
+  .profile-panel.collapsed { padding: 0; overflow: hidden; }
+  .profile-panel.collapsed > :not(.profile-close) { display: none; }
+  .profile-panel.collapsed .profile-close { left: 12px; right: auto; }
+}
+
+@media (min-width: 1001px) {
+  .workspace { grid-template-columns: 62px minmax(0, 1fr) 354px; }
+  .workspace.profile-collapsed { grid-template-columns: 62px minmax(0, 1fr) 56px; }
+  .rail-action,
+  .rail-stat { width: 42px; }
+  .profile-panel {
+    margin: 12px 12px 12px 0;
+    border: 1px solid #c9a45b4d;
+    border-radius: 10px;
+  }
+  .profile-panel.collapsed .profile-close { left: 7px; }
+}
+
+@media (min-width: 701px) and (max-width: 1000px) {
+  .profile-avatar { flex-basis: 74px; width: 74px; height: 90px; }
+  .profile-person h1 { font-size: 19px; }
+}
+
 @media (max-width: 700px) {
   .app-shell { grid-template-rows: 58px 27px 46px minmax(0, 1fr) 58px; }
 
@@ -144,6 +182,9 @@
     border-radius: 0;
     overflow: auto;
   }
+  .profile-person { min-height: 0; padding: 0 30px 12px 0; }
+  .profile-avatar { flex: 0 0 72px; width: 72px; height: 84px; }
+  .profile-person h1 { font-size: 19px; }
 
   .graph {
     --tree-card-width: 180px;

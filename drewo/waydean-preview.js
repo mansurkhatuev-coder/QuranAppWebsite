@@ -394,7 +394,12 @@ function renderProfile(tab = 'info') {
       ui.app.classList.remove('profile-open');
       ui.mobileSelected.focus();
     } else {
-      ui.profile.classList.toggle('collapsed');
+      const collapsed = ui.profile.classList.toggle('collapsed');
+      ui.profile.parentElement.classList.toggle('profile-collapsed', collapsed);
+      close.setAttribute('aria-label', collapsed ? 'Развернуть профиль' : 'Свернуть профиль');
+      close.textContent = collapsed ? '›' : '×';
+      syncCameraLayout();
+      centerVisiblePerson();
     }
   });
   ui.profile.replaceChildren(close, summary, tabs, body);
@@ -421,6 +426,8 @@ function selectPerson(id) {
   selectedId = id;
   mode = 'all';
   ui.app.classList.remove('profile-open');
+  ui.profile.classList.remove('collapsed');
+  ui.profile.parentElement.classList.remove('profile-collapsed');
   closePopovers();
   drawTree();
   renderProfile();
@@ -553,6 +560,7 @@ function populateGenerationFilters() {
 function bindControls() {
   ui.mobileSelected.addEventListener('click', () => {
     ui.profile.classList.remove('collapsed');
+    ui.profile.parentElement.classList.remove('profile-collapsed');
     ui.app.classList.add('profile-open');
     closePopovers();
     ui.profile.querySelector('.profile-close')?.focus();
