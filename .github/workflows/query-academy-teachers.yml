@@ -18,51 +18,28 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Re-run teacher bootstrap
+
+      - name: Monday zahet sessions
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
         run: |
+          set -euo pipefail
           chmod +x scripts/apply-academy-live-migration.sh
-          scripts/apply-academy-live-migration.sh admin/supabase-migration-academy-teachers-bootstrap.sql
-      - name: Count and list teachers
+          scripts/apply-academy-live-migration.sh admin/supabase-query-monday-zahet.sql
+
+      - name: Monday zahet per-student scores
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
           SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
         run: |
-          BODY=$(mktemp); RESP=$(mktemp)
-          python3 - <<'PY' > "$BODY"
-          import json
-          print(json.dumps({"query": """
-          select
-            (select count(*)::int from auth.users) as auth_users,
-            (select count(*)::int from public.academy_teachers) as teachers,
-            (select count(*)::int from public.academy_teachers where is_active) as teachers_active;
-          """}))
-          PY
-          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
-            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
-            --data-binary @"$BODY")
-          echo "counts HTTP $CODE"; cat "$RESP"; echo
-          python3 - <<'PY' > "$BODY"
-          import json
-          print(json.dumps({"query": """
-          select t.user_id::text, t.display_name, t.is_active, u.email
-          from public.academy_teachers t
-          left join auth.users u on u.id = t.user_id
-          order by t.created_at
-          limit 20;
-          """}))
-          PY
-          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
-            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
-            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
-            --data-binary @"$BODY")
-          echo "list HTTP $CODE"; cat "$RESP"; echo
+          set -euo pipefail
+          scripts/apply-academy-live-migration.sh admin/supabase-query-monday-zahet-people.sql
+
+      - name: All sessions Monday window
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          set -euo pipefail
+          scripts/apply-academy-live-migration.sh admin/supabase-query-monday-all-sessions.sql
