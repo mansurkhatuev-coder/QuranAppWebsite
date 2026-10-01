@@ -1,0 +1,87 @@
+/* LOD visual overrides load after the camera and Master styles. Node geometry stays fixed. */
+.graph .person-node::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #d3bd86;
+  box-shadow: 0 0 10px #d9ad5877;
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -50%) scale(.72);
+  transition: opacity .16s ease, transform .16s ease;
+}
+
+.graph[data-lod="compact"] .person-node {
+  border-color: #d7bd8055;
+  background: #091316ed;
+  box-shadow: none;
+}
+
+.graph[data-lod="compact"] .person-node .node-avatar,
+.graph[data-lod="compact"] .person-node .node-copy small {
+  display: none;
+}
+
+.graph[data-lod="compact"] .person-node .node-copy strong {
+  font-size: 11px;
+}
+
+.graph[data-lod="compact"] .person-node.dimmed { filter: none; opacity: .45; }
+
+.graph[data-lod="compact"] .person-node.selected {
+  border-color: #ffe18c;
+  box-shadow: 0 0 0 2px #dfa93a, 0 0 20px #ffc34c77, 0 12px 35px #000d;
+}
+
+.graph[data-lod="compact"] .person-node:not(.route) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  opacity: .58;
+}
+
+.graph[data-lod="compact"] .person-node:not(.route) .node-copy { display: none; }
+.graph[data-lod="compact"] .person-node:not(.route)::after { width: 14px; height: 14px; opacity: .78; transform: translate(-50%, -50%) scale(1); }
+
+.graph[data-lod="overview"] .person-node {
+  width: var(--tree-card-width) !important;
+  height: var(--tree-card-height) !important;
+  padding: 0;
+  align-items: center;
+  justify-content: center;
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+  opacity: .8;
+}
+
+.graph[data-lod="overview"] .person-node > * { display: none; }
+.graph[data-lod="overview"] .person-node::after { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+
+.graph[data-lod="overview"] .person-node.selected::after {
+  width: 32px;
+  height: 32px;
+  background: #f3d184;
+  box-shadow: 0 0 0 5px #f1c66e29, 0 0 18px #f3d184aa;
+}
+
+.graph[data-lod="overview"] .person-node.dimmed { opacity: .48; }
+.graph[data-lod="overview"] .tree-line { stroke-width: 2.5; filter: none; opacity: .42; }
+.graph[data-lod="overview"] .tree-line.active { stroke: #ffe28f; stroke-width: 4; filter: drop-shadow(0 0 5px #ffc54d); opacity: 1; }
+.graph .tree-line.lod-route {
+  stroke: #efce7c;
+  stroke-width: 2.4;
+  filter: drop-shadow(0 0 2px #ffc54d);
+  opacity: .96;
+}
+.graph[data-lod="overview"] .tree-line.lod-route { stroke: #ffe28f; stroke-width: 4; filter: drop-shadow(0 0 5px #ffc54d); opacity: 1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .graph .person-node::after { transition: none; }
+}

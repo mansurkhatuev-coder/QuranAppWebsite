@@ -6,6 +6,7 @@ import {
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
+import { compactRouteClass, nextLodLevel } from './waydean-preview-lod.mjs?v=lod-5';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
 const $ = selector => document.querySelector(selector);
@@ -32,6 +33,7 @@ let syntheticFixture = false;
 let masterMobileOverview = false;
 let currentCameraLayout = null;
 let lastNodeMetrics = null;
+let lodLevel = 'detail';
 
 function nodeMetrics() {
   const style = getComputedStyle(ui.graph);
@@ -50,7 +52,9 @@ function syncCameraLayout() {
   ui.extent.style.width = `${currentCameraLayout.extentWidth}px`;
   ui.extent.style.height = `${currentCameraLayout.extentHeight}px`;
   ui.graph.style.transform = `translate(${currentCameraLayout.offsetX}px, ${currentCameraLayout.offsetY}px) scale(${zoom})`;
-  ui.graph.dataset.lod = zoom < 0.45 ? 'overview' : zoom < 0.7 ? 'compact' : 'full';
+  const renderedCardWidth = (lastNodeMetrics?.width || nodeMetrics().width) * zoom;
+  lodLevel = nextLodLevel(lodLevel, renderedCardWidth);
+  ui.graph.dataset.lod = lodLevel;
 }
 
 function formatYears(person) {
@@ -243,7 +247,15 @@ function drawTree() {
     : mode === 'branch'
       ? new Set([...ancestors(selectedId), ...descendants(selectedId)])
       : null;
-  const lineParts = connectorPaths(positions, visibleChildren, related, metrics.height).map(line => {
+  const selectedRoute = new Set(ancestors(selectedId));
+  const labelRoute = related || selectedRoute;
+  const treeLines = connectorPaths(positions, visibleChildren, related, metrics.height);
+  if (mode !== 'path' && mode !== 'branch') {
+    treeLines.push(...connectorPaths(positions, visibleChildren, selectedRoute, metrics.height)
+      .filter(line => line.className.includes('active'))
+      .map(line => ({ ...line, className: `${line.className} lod-route` })));
+  }
+  const lineParts = treeLines.map(line => {
     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
     path.setAttribute('d', line.d);
     path.setAttribute('class', line.className);
@@ -256,7 +268,7 @@ function drawTree() {
     if (!point) continue;
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = `person-node${person.id === selectedId ? ' selected' : ''}${related && !related.has(person.id) ? ' dimmed' : ''}`;
+    card.className = `person-node${person.id === selectedId ? ' selected' : ''}${compactRouteClass(person.id, labelRoute)}${related && !related.has(person.id) ? ' dimmed' : ''}`;
     card.dataset.personId = person.id;
     card.setAttribute('aria-label', `${person.name}, ${formatYears(person)}, поколение ${person.generation}`);
     card.title = `${person.name} · ${formatYears(person)}`;
