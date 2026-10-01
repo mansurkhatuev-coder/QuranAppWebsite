@@ -25,10 +25,6 @@ export function readableFitZoom(viewWidth, viewHeight, graphWidth, graphHeight, 
   return Math.round(clamp(factor, minZoom, 1) * 100) / 100;
 }
 
-export function masterFixtureFocus(viewWidth) {
-  return viewWidth <= 700 ? 'demo-magomed' : 'demo-isa';
-}
-
 export function zoomAroundAnchor({
   previousZoom, nextZoom, scrollLeft, scrollTop, anchorX, anchorY,
   previousOffsetX, previousOffsetY, nextOffsetX, nextOffsetY,

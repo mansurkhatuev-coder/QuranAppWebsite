@@ -1,9 +1,10 @@
 import { flattenTree } from './waydean-preview-model.mjs';
 import {
-  cameraLayout, readableFitZoom, masterFixtureFocus, zoomAroundAnchor,
+  cameraLayout, readableFitZoom, zoomAroundAnchor,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=2';
 import { connectorPaths } from './waydean-preview-lines.mjs';
+import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
 const $ = selector => document.querySelector(selector);
@@ -27,6 +28,7 @@ let lastFocus = null;
 let toastTimer = 0;
 let fullDataDepth = 1;
 let syntheticFixture = false;
+let masterMobileOverview = false;
 let currentCameraLayout = null;
 let lastNodeMetrics = null;
 
@@ -120,6 +122,9 @@ function currentRecords() {
   } else {
     const branchIds = new Set([...ancestors(selectedId), ...descendants(selectedId)]);
     candidates = records.filter(person => branchIds.has(person.id));
+  }
+  if (mode === 'all' && masterMobileOverview) {
+    candidates = masterFixtureVisibleRecords(candidates, { viewportWidth: window.innerWidth });
   }
   return candidates.filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photosOnly || person.hasPhoto));
 }
@@ -445,6 +450,7 @@ function centerVisiblePerson() {
 
 function selectPerson(id) {
   if (!byId.has(id)) return;
+  if (id === 'demo-ali') masterMobileOverview = false;
   selectedId = id;
   mode = 'all';
   ui.app.classList.remove('profile-open');
@@ -482,6 +488,7 @@ function announce(message) {
 }
 
 function setMode(next, announceMode = true) {
+  masterMobileOverview = false;
   mode = next;
   ui.app.classList.remove('profile-open');
   closePopovers();
@@ -616,6 +623,7 @@ function bindControls() {
     if (button.dataset.nav === 'people') openPopover(ui.search);
   }));
   $('#applyFilters').addEventListener('click', () => {
+    masterMobileOverview = false;
     filters = { min: Number($('#minGeneration').value), max: Number($('#maxGeneration').value), photosOnly: $('#photosOnly').checked };
     closePopovers(); drawTree(); fitTree();
     if (ui.nodes.children.length && !ui.nodes.querySelector('[data-person-id="' + CSS.escape(selectedId) + '"]')) {
@@ -623,6 +631,7 @@ function bindControls() {
     }
   });
   $('#resetFilters').addEventListener('click', () => {
+    masterMobileOverview = false;
     filters = { min: 1, max: fullDataDepth, photosOnly: false };
     $('#minGeneration').value = '1'; $('#maxGeneration').value = String(fullDataDepth); $('#photosOnly').checked = false;
     closePopovers(); drawTree(); fitTree();
@@ -771,6 +780,10 @@ async function initialize() {
   try {
     const params = new URLSearchParams(location.search);
     syntheticFixture = params.get('fixture') === 'master';
+    masterMobileOverview = syntheticFixture
+      && window.matchMedia('(max-width: 700px)').matches
+      && !params.has('state')
+      && !params.has('person');
     document.body.classList.toggle('synthetic-fixture', syntheticFixture);
     if (syntheticFixture) document.title = 'Waydean — Master кадр на вымышленном наборе';
     const dataUrl = syntheticFixture
