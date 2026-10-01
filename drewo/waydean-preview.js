@@ -5,6 +5,7 @@ import {
 } from './waydean-preview-camera.mjs?v=2';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
+import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
 const $ = selector => document.querySelector(selector);
@@ -317,6 +318,7 @@ function renderProfile(tab = 'info') {
   const person = byId.get(selectedId);
   if (!person) return;
   ui.mobileSelected.replaceChildren();
+  ui.mobileSelected.dataset.personId = person.id;
   ui.mobileSelected.append(createAvatar(person, 'mobile-selected-avatar'));
   const selectedCopy = document.createElement('span');
   selectedCopy.className = 'mobile-selected-copy';
@@ -339,6 +341,7 @@ function renderProfile(tab = 'info') {
   const branchAnchor = lineage.find(item => item.generation === Math.min(2, fullDataDepth));
   const summary = document.createElement('div');
   summary.className = 'profile-person';
+  summary.dataset.personId = person.id;
   summary.append(createAvatar(person, 'profile-avatar'));
   const heading = document.createElement('div');
   const title = document.createElement('h1');
@@ -451,6 +454,11 @@ function centerVisiblePerson() {
 function selectPerson(id) {
   if (!byId.has(id)) return;
   if (id === 'demo-ali') masterMobileOverview = false;
+  const filterResult = includePersonInFilters(filters, byId.get(id));
+  filters = filterResult.filters;
+  $('#minGeneration').value = String(filters.min);
+  $('#maxGeneration').value = String(Number.isFinite(filters.max) ? filters.max : fullDataDepth);
+  $('#photosOnly').checked = filters.photosOnly;
   selectedId = id;
   mode = 'all';
   ui.app.classList.remove('profile-open');
@@ -461,6 +469,7 @@ function selectPerson(id) {
   renderProfile();
   if (zoom < 0.9) setZoom(0.9);
   centerPerson(id);
+  if (filterResult.changed) announce('Фильтр расширен, чтобы показать выбранного человека.');
 }
 
 function openPopover(popover) {
@@ -624,11 +633,13 @@ function bindControls() {
   }));
   $('#applyFilters').addEventListener('click', () => {
     masterMobileOverview = false;
+    const previousSelectedId = selectedId;
     filters = { min: Number($('#minGeneration').value), max: Number($('#maxGeneration').value), photosOnly: $('#photosOnly').checked };
-    closePopovers(); drawTree(); fitTree();
-    if (ui.nodes.children.length && !ui.nodes.querySelector('[data-person-id="' + CSS.escape(selectedId) + '"]')) {
-      announce('Выбранный человек скрыт фильтром. Камера перешла к первому результату.');
-    }
+    selectedId = fallbackSelectedPersonId(selectedId, currentRecords());
+    closePopovers();
+    if (selectedId !== previousSelectedId) renderProfile();
+    drawTree(); fitTree();
+    if (selectedId !== previousSelectedId) announce('Выбранный человек скрыт фильтром. Выбрана первая карточка в результатах.');
   });
   $('#resetFilters').addEventListener('click', () => {
     masterMobileOverview = false;
