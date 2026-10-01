@@ -15,13 +15,18 @@ export function cameraLayout(viewWidth, viewHeight, graphWidth, graphHeight, zoo
   };
 }
 
-export function readableFitZoom(viewWidth, viewHeight, graphWidth, graphHeight) {
+export function readableFitZoom(viewWidth, viewHeight, graphWidth, graphHeight, { minimumZoom } = {}) {
+  const minZoom = minimumZoom ?? (viewWidth <= 700 ? 0.9 : 0.7);
   const factor = Math.min(
     (viewWidth - 32) / Math.max(graphWidth, 1),
     (viewHeight - 32) / Math.max(graphHeight, 1),
     1
   );
-  return Math.round(clamp(factor, viewWidth <= 700 ? 0.9 : 0.7, 1) * 100) / 100;
+  return Math.round(clamp(factor, minZoom, 1) * 100) / 100;
+}
+
+export function masterFixtureFocus(viewWidth) {
+  return viewWidth <= 700 ? 'demo-magomed' : 'demo-isa';
 }
 
 export function zoomAroundAnchor({

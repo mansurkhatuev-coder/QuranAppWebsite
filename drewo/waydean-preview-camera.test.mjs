@@ -30,6 +30,10 @@ test('fit keeps cards readable when the full tree is much wider than the viewpor
   assert.equal(readableFitZoom(900, 600, 1000, 700), 0.81);
 });
 
+test('compact Master framing may zoom below the normal mobile floor to show the approved composition', () => {
+  assert.equal(readableFitZoom(320, 420, 368, 400, { minimumZoom: 0.65 }), 0.78);
+});
+
 test('zoom keeps the same world point under the pointer', () => {
   const next = zoomAroundAnchor({
     previousZoom: 1,

@@ -213,3 +213,69 @@
   .graph { --tree-card-width: 176px; }
   .node-avatar { flex-basis: 49px; width: 49px; }
 }
+
+@media (min-width: 701px) {
+  body.synthetic-fixture .app-shell { grid-template-rows: 64px 0 minmax(0, 1fr); }
+  body.synthetic-fixture .preview-notice { display: none; }
+  body.synthetic-fixture .workspace { grid-row: 3; }
+  body.synthetic-fixture .graph {
+    --tree-card-width: 106px;
+    --tree-card-height: 126px;
+  }
+  body.synthetic-fixture .mini-map { width: 226px; }
+}
+
+@media (max-width: 700px) {
+  body.synthetic-fixture .graph {
+    --tree-card-width: 72px;
+    --tree-card-height: 104px;
+  }
+  body.synthetic-fixture .person-node {
+    flex-direction: column;
+    align-items: stretch;
+    justify-content: flex-start;
+    gap: 2px;
+    padding: 4px;
+  }
+  body.synthetic-fixture .node-avatar {
+    flex: 0 0 58px;
+    width: 100%;
+    height: 58px;
+  }
+  body.synthetic-fixture .node-copy {
+    width: 100%;
+    gap: 0;
+    text-align: center;
+  }
+  body.synthetic-fixture .node-copy strong {
+    font-size: 10px;
+    line-height: 12px;
+  }
+  body.synthetic-fixture .node-copy small {
+    font-size: 7px;
+    line-height: 10px;
+  }
+}
+
+@media (max-width: 390px) {
+  body.synthetic-fixture .graph { --tree-card-width: 72px; }
+}
+
+@media (max-width: 340px) {
+  body.synthetic-fixture .graph {
+    --tree-card-width: 64px;
+    --tree-card-height: 98px;
+  }
+  body.synthetic-fixture .node-avatar { flex-basis: 52px; height: 52px; }
+  body.synthetic-fixture .node-copy strong { font-size: 9px; }
+  body.synthetic-fixture .node-copy small { font-size: 6px; }
+}
+
+@media (max-width: 700px) and (max-height: 760px) {
+  body.synthetic-fixture .graph { --tree-card-height: 86px; }
+  body.synthetic-fixture .node-avatar { flex-basis: 44px; height: 44px; }
+  body.synthetic-fixture .mini-map { width: 96px; padding: 4px; }
+  body.synthetic-fixture .mini-map svg { height: 30px; }
+  body.synthetic-fixture .mini-map strong,
+  body.synthetic-fixture .mini-map span { font-size: 6px; }
+}

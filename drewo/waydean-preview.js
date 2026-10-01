@@ -1,6 +1,6 @@
 import { flattenTree } from './waydean-preview-model.mjs';
 import {
-  cameraLayout, readableFitZoom, zoomAroundAnchor,
+  cameraLayout, readableFitZoom, masterFixtureFocus, zoomAroundAnchor,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=2';
 import { connectorPaths } from './waydean-preview-lines.mjs';
@@ -26,6 +26,7 @@ let filters = { min: 1, max: Infinity, photosOnly: false };
 let lastFocus = null;
 let toastTimer = 0;
 let fullDataDepth = 1;
+let syntheticFixture = false;
 let currentCameraLayout = null;
 let lastNodeMetrics = null;
 
@@ -38,10 +39,11 @@ function nodeMetrics() {
 }
 
 function syncCameraLayout() {
-  currentCameraLayout = cameraLayout(
+  const layout = cameraLayout(
     ui.viewport.clientWidth, ui.viewport.clientHeight,
     ui.graph.offsetWidth, ui.graph.offsetHeight, zoom
   );
+  currentCameraLayout = syntheticFixture ? { ...layout, offsetY: 0 } : layout;
   ui.extent.style.width = `${currentCameraLayout.extentWidth}px`;
   ui.extent.style.height = `${currentCameraLayout.extentHeight}px`;
   ui.graph.style.transform = `translate(${currentCameraLayout.offsetX}px, ${currentCameraLayout.offsetY}px) scale(${zoom})`;
@@ -53,6 +55,19 @@ function formatYears(person) {
   if (person.born == null) return `до ${person.died}`;
   if (person.died == null) return `с ${person.born}`;
   return `${person.born}–${person.died}`;
+}
+
+function russianPlural(value, one, few, many) {
+  const mod100 = Math.abs(value) % 100;
+  const mod10 = Math.abs(value) % 10;
+  if (mod100 >= 11 && mod100 <= 14) return many;
+  if (mod10 === 1) return one;
+  if (mod10 >= 2 && mod10 <= 4) return few;
+  return many;
+}
+
+function russianCount(value, one, few, many) {
+  return `${value} ${russianPlural(value, one, few, many)}`;
 }
 
 function ancestors(id) {
@@ -140,6 +155,8 @@ function filteredRootNodes(visible) {
 function drawTree() {
   const visible = currentRecords();
   const metrics = nodeMetrics();
+  const compactMobileMaster = syntheticFixture && window.matchMedia('(max-width: 700px)').matches;
+  const compactMobileShort = compactMobileMaster && window.innerHeight <= 760;
   lastNodeMetrics = metrics;
   ui.nodes.replaceChildren();
   ui.lines.replaceChildren();
@@ -147,7 +164,7 @@ function drawTree() {
   const selected = byId.get(selectedId);
   ui.empty.hidden = visible.length > 0;
   ui.lines.hidden = visible.length === 0;
-  ui.summary.textContent = `${records.length} человек · ${fullDataDepth} поколений · локальные данные`;
+  ui.summary.textContent = `${russianCount(records.length, 'человек', 'человека', 'человек')} · ${russianCount(fullDataDepth, 'поколение', 'поколения', 'поколений')} · ${syntheticFixture ? 'вымышленный набор' : 'локальные данные'}`;
   ui.railCount.textContent = String(records.length);
   $('#emptyReset').textContent = filters.photosOnly ? 'Сбросить фильтры' : 'Показать все поколения';
 
@@ -158,7 +175,7 @@ function drawTree() {
     ui.miniSvg.replaceChildren();
     ui.mode.textContent = '';
     ui.mode.classList.remove('visible');
-    $('#miniMapSummary').textContent = `${records.length} людей · фильтр: 0`;
+    $('#miniMapSummary').textContent = `${russianCount(records.length, 'человек', 'человека', 'человек')} · фильтр: 0`;
     updateStats();
     return;
   }
@@ -166,12 +183,13 @@ function drawTree() {
   const widthById = new Map();
   const visibleChildren = new Map();
   for (const person of visible) visibleChildren.set(person.id, (childrenById.get(person.id) || []).filter(child => matches.has(child.id)));
-  const siblingGap = 24;
+  const siblingGap = compactMobileMaster ? 16 : 24;
   function measure(person) {
     const kids = visibleChildren.get(person.id) || [];
     const childWidth = kids.reduce((sum, child, index) => sum + measure(child) + (index ? siblingGap : 0), 0);
     const width = metrics.width;
-    const total = kids.length ? Math.max(width, childWidth) : width;
+    const demoBranchWidth = syntheticFixture && !compactMobileMaster ? width * 2 + siblingGap : width;
+    const total = kids.length ? Math.max(width, childWidth, demoBranchWidth) : width;
     widthById.set(person.id, total);
     return total;
   }
@@ -179,8 +197,12 @@ function drawTree() {
   const gap = 36;
   const rootWidth = roots.reduce((sum, root, index) => sum + measure(root) + (index ? gap : 0), 0);
   const maxGeneration = Math.max(...visible.map(person => person.generation));
-  const graphWidth = Math.max(1000, rootWidth + 100);
-  const graphHeight = Math.max(700, (maxGeneration - Math.min(...visible.map(person => person.generation)) + 1) * 190 + 140);
+  const generationDepth = maxGeneration - Math.min(...visible.map(person => person.generation));
+  const graphWidth = compactMobileMaster ? rootWidth + 32 : Math.max(1000, rootWidth + 100);
+  const generationStep = compactMobileShort ? 100 : compactMobileMaster ? 128 : syntheticFixture ? 176 : 190;
+  const graphHeight = compactMobileMaster
+    ? Math.max(compactMobileShort ? 326 : 400, generationDepth * generationStep + metrics.height + 40)
+    : Math.max(700, (generationDepth + 1) * generationStep + 140);
   ui.graph.style.width = `${graphWidth}px`;
   ui.graph.style.height = `${graphHeight}px`;
   ui.lines.setAttribute('viewBox', `0 0 ${graphWidth} ${graphHeight}`);
@@ -194,7 +216,7 @@ function drawTree() {
     const cardWidth = metrics.width;
     const centerX = left + subtreeWidth / 2;
     const depth = generation - minGeneration;
-    const centerY = 90 + depth * 190;
+    const centerY = (compactMobileShort ? 46 : compactMobileMaster ? 60 : syntheticFixture ? 75 : 90) + depth * generationStep;
     positions.set(person.id, { centerX, centerY, cardWidth });
     const kids = visibleChildren.get(person.id) || [];
     const childrenTotal = kids.reduce((sum, child, index) => sum + widthById.get(child.id) + (index ? siblingGap : 0), 0);
@@ -204,7 +226,7 @@ function drawTree() {
       childLeft += widthById.get(child.id) + siblingGap;
     }
   }
-  let rootLeft = Math.max(50, (graphWidth - rootWidth) / 2);
+  let rootLeft = Math.max(compactMobileMaster ? 16 : 50, (graphWidth - rootWidth) / 2);
   for (const root of roots) {
     place(root, rootLeft, root.generation);
     rootLeft += widthById.get(root.id) + gap;
@@ -251,7 +273,7 @@ function drawTree() {
   ui.mode.textContent = mode === 'path' ? 'МОЙ ПУТЬ' : mode === 'branch' ? 'МОЯ ВЕТВЬ' : mode === 'all-tree' ? 'ВСЕ ПОКОЛЕНИЯ' : '';
   ui.mode.classList.toggle('visible', Boolean(ui.mode.textContent));
   const sourceRoot = ancestorContextRoot(selectedId);
-  $('#miniMapSummary').textContent = `${records.length} людей · показано ${visible.length}`;
+  $('#miniMapSummary').textContent = `${russianCount(records.length, 'человек', 'человека', 'человек')} · показано ${visible.length}`;
   syncCameraLayout();
   drawMiniMap(positions, sourceRoot, graphWidth, graphHeight);
   updateMiniViewport();
@@ -499,13 +521,19 @@ function updateStats() {
   const branches = childrenById.get(records[0]?.id)?.length || 0;
   const photos = records.filter(person => person.hasPhoto).length;
   $('#statsGrid').replaceChildren();
-  for (const [value, label] of [[records.length,'человек'],[generations,'поколений'],[branches,'линии первого уровня'],[photos,'фото в локальном наборе']]) {
+  for (const [value, label] of [
+    [records.length, 'человек'],
+    [generations, russianPlural(generations, 'поколение', 'поколения', 'поколений')],
+    [branches, 'линии первого уровня'],
+    [photos, 'фото в локальном наборе']
+  ]) {
     const card = document.createElement('div'); card.className = 'stat-card';
     const number = document.createElement('strong'); number.textContent = String(value);
     const caption = document.createElement('small'); caption.textContent = label;
     card.append(number, caption); $('#statsGrid').append(card);
   }
-  $('#statsNote').textContent = `В кадре сейчас ${ui.nodes.querySelectorAll('.person-node').length} человек. Все показатели получены из локального JSON.`;
+  const visibleCount = ui.nodes.querySelectorAll('.person-node').length;
+  $('#statsNote').textContent = `В кадре сейчас ${russianCount(visibleCount, 'человек', 'человека', 'человек')}. Все показатели получены из локального JSON.`;
 }
 
 function updateMiniViewport() {
@@ -722,7 +750,12 @@ function setZoom(next, anchorX = ui.viewport.clientWidth / 2, anchorY = ui.viewp
 
 function fitTree() {
   if (!ui.nodes.querySelector('.person-node')) return;
-  setZoom(readableFitZoom(ui.viewport.clientWidth, ui.viewport.clientHeight, ui.graph.offsetWidth, ui.graph.offsetHeight));
+  const compactMobileMaster = syntheticFixture && window.matchMedia('(max-width: 700px)').matches;
+  setZoom(readableFitZoom(
+    ui.viewport.clientWidth, ui.viewport.clientHeight,
+    ui.graph.offsetWidth, ui.graph.offsetHeight,
+    compactMobileMaster ? { minimumZoom: 0.65 } : undefined
+  ));
   centerVisiblePerson();
 }
 
@@ -736,7 +769,14 @@ function showError(error) {
 
 async function initialize() {
   try {
-    const response = await fetch('./family-tree.json', { cache: 'no-store' });
+    const params = new URLSearchParams(location.search);
+    syntheticFixture = params.get('fixture') === 'master';
+    document.body.classList.toggle('synthetic-fixture', syntheticFixture);
+    if (syntheticFixture) document.title = 'Waydean — Master кадр на вымышленном наборе';
+    const dataUrl = syntheticFixture
+      ? '../docs/design/waydean/fixtures/master-tree.json'
+      : './family-tree.json';
+    const response = await fetch(dataUrl, { cache: 'no-store' });
     if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
     const root = await response.json();
     records = flattenTree(root);
@@ -745,19 +785,22 @@ async function initialize() {
     childrenById = new Map(records.map(person => [person.id, []]));
     for (const person of records) if (person.parentId) childrenById.get(person.parentId)?.push(person);
     const initial = records.find(person => person.generation === 3) || records[0];
-    selectedId = new URLSearchParams(location.search).get('person') && byId.has(new URLSearchParams(location.search).get('person'))
-      ? new URLSearchParams(location.search).get('person')
-      : initial.id;
+    const requestedPerson = params.get('person');
+    const fixturePerson = syntheticFixture ? masterFixtureFocus(window.innerWidth) : null;
+    selectedId = requestedPerson && byId.has(requestedPerson)
+      ? requestedPerson
+      : fixturePerson && byId.has(fixturePerson) ? fixturePerson : initial.id;
     populateGenerationFilters();
     bindControls();
     renderProfile();
     const started = performance.now();
     drawTree();
-    centerPerson(selectedId);
+    if (syntheticFixture && window.matchMedia('(max-width: 700px)').matches) fitTree();
+    else centerPerson(selectedId);
     const renderDuration = performance.now() - started;
     $('#statsNote').dataset.initialRenderMs = renderDuration.toFixed(1);
-    $('#miniMapSummary').textContent = `${records.length} людей · показано ${ui.nodes.querySelectorAll('.person-node').length}`;
-    const requestedState = new URLSearchParams(location.search).get('state');
+    $('#miniMapSummary').textContent = `${russianCount(records.length, 'человек', 'человека', 'человек')} · показано ${ui.nodes.querySelectorAll('.person-node').length}`;
+    const requestedState = params.get('state');
     if (requestedState === 'path') setMode('path', false);
     if (requestedState === 'branch') setMode('branch', false);
     if (requestedState === 'all-tree') setMode('all-tree', false);

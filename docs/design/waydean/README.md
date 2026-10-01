@@ -17,6 +17,7 @@
 - [qa/production-feature-parity.md](qa/production-feature-parity.md) — что уже умеет текущий `drewo/`, где это отражено в новом дизайне и что проверить до замены интерфейса.
 - [qa/real-tree-validation.md](qa/real-tree-validation.md) — агрегатная проверка локального древа и крайние случаи для просмотра на 157 записях.
 - [qa/real-tree-master-review.md](qa/real-tree-master-review.md) — проверенные улучшения полного дерева, responsive-кадры и открытые расхождения с Masters.
+- [fixtures/master-tree.json](fixtures/master-tree.json) — 8 вымышленных людей для одинакового содержимого в Desktop/Mobile Master review; локальный preview открывается с `?fixture=master`.
 - [`assets/references/`](assets/references/) — исходные коллажи desktop/mobile и отдельные кинематографичные фоны для экрана древа и профиля.
 
 Работа над интерфейсом идёт после утверждения Bible и Master Reference. Изменения сначала проверяются локально, production — только после явного одобрения результата.

@@ -1,0 +1,60 @@
+{
+  "id": "demo-kudi",
+  "name": "Куди",
+  "born": 1750,
+  "died": 1820,
+  "sons": [
+    {
+      "id": "demo-said",
+      "name": "Саид",
+      "born": 1780,
+      "died": 1845,
+      "sons": [
+        {
+          "id": "demo-hasan",
+          "name": "Хасан",
+          "born": 1820,
+          "died": 1883,
+          "sons": []
+        }
+      ]
+    },
+    {
+      "id": "demo-isa",
+      "name": "Иса",
+      "born": 1790,
+      "died": 1858,
+      "sons": [
+        {
+          "id": "demo-magomed",
+          "name": "Магомед",
+          "born": 1825,
+          "died": 1890,
+          "sons": []
+        }
+      ]
+    },
+    {
+      "id": "demo-umar",
+      "name": "Умар",
+      "born": 1795,
+      "died": 1863,
+      "sons": [
+        {
+          "id": "demo-ahmet",
+          "name": "Ахмет",
+          "born": 1830,
+          "died": 1895,
+          "sons": []
+        },
+        {
+          "id": "demo-ali",
+          "name": "Али",
+          "born": 1835,
+          "died": 1898,
+          "sons": []
+        }
+      ]
+    }
+  ]
+}
