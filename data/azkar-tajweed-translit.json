@@ -2102,7 +2102,7 @@
           "rules": [
             "madd246"
           ],
-          "accent": false,
+          "accent": true,
           "hidden": false,
           "note": ""
         },
@@ -4650,5 +4650,5 @@
       "marks": []
     }
   ],
-  "publishedAt": "2026-10-02T10:35:44.719Z"
+  "publishedAt": "2026-10-02T10:37:43.559Z"
 }
