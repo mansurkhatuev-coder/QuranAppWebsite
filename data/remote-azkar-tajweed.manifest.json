@@ -1,7 +1,7 @@
 {
-  "version": 9,
-  "publishedAt": "2026-10-02T10:37:43.559Z",
+  "version": 10,
+  "publishedAt": "2026-10-02T10:40:11.478Z",
   "url": "/data/azkar-tajweed-translit.json",
   "docCount": 77,
-  "enabled": false
+  "enabled": true
 }
