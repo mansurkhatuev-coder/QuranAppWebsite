@@ -6,6 +6,16 @@
  */
 export type ContractRenderMode = "plain" | "sample";
 
+const SAMPLE_TEXT_ESCAPE = "\uE000";
+const SAMPLE_TEXT_END = "\uE001";
+
+export function protectSampleContractText(value: string) {
+  return value.replace(/[|\uE000\uE001]/g, (character) => {
+    const code = character === "|" ? "p" : character === SAMPLE_TEXT_ESCAPE ? "0" : "1";
+    return `${SAMPLE_TEXT_ESCAPE}${code}${SAMPLE_TEXT_END}`;
+  });
+}
+
 export function generateContractPdf(
   title: string,
   body: string,
@@ -177,13 +187,13 @@ function renderSampleBody(body: string) {
     flushTable();
     if (!trimmed) continue;
     if (trimmed.startsWith("! ")) {
-      output.push(`<p class="badge">${escapeHtml(trimmed.slice(2))}</p>`);
+      output.push(`<p class="badge">${escapeSampleText(trimmed.slice(2))}</p>`);
     } else if (trimmed.startsWith("## ")) {
-      output.push(`<h2>${escapeHtml(trimmed.slice(3))}</h2>`);
+      output.push(`<h2>${escapeSampleText(trimmed.slice(3))}</h2>`);
     } else if (trimmed.startsWith("# ")) {
-      output.push(`<h1>${escapeHtml(trimmed.slice(2))}</h1>`);
+      output.push(`<h1>${escapeSampleText(trimmed.slice(2))}</h1>`);
     } else {
-      output.push(`<p>${escapeHtml(trimmed)}</p>`);
+      output.push(`<p>${escapeSampleText(trimmed)}</p>`);
     }
   }
   flushTable();
@@ -191,7 +201,15 @@ function renderSampleBody(body: string) {
 }
 
 function renderCell(cell: string) {
-  return cell.split("<br>").map(escapeHtml).join("<br>");
+  return cell.split("<br>").map(escapeSampleText).join("<br>");
+}
+
+function escapeSampleText(value: string) {
+  return escapeHtml(value).replace(
+    /\uE000([p01])\uE001/g,
+    (_match, code: string) =>
+      code === "p" ? "|" : code === "0" ? SAMPLE_TEXT_ESCAPE : SAMPLE_TEXT_END
+  );
 }
 
 function escapeHtml(s: string) {
