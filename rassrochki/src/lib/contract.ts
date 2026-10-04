@@ -149,6 +149,7 @@ export function buildContractHtml(
     .sample th { background: #263e38; color: #fff; font-weight: bold; }
     .sample .payment-schedule tr { break-inside: avoid; page-break-inside: avoid; }
     .sample .signature-block { break-inside: avoid; page-break-inside: avoid; }
+    .sample .signature-heading { break-after: avoid; page-break-after: avoid; }
     ` : ""}
     @page { size: A4; margin: 15mm 20mm; }
     @media print {
@@ -207,7 +208,11 @@ function renderSampleBody(body: string) {
     if (trimmed.startsWith("! ")) {
       output.push(`<p class="badge">${escapeSampleText(trimmed.slice(2))}</p>`);
     } else if (trimmed.startsWith("## ")) {
-      output.push(`<h2>${escapeSampleText(trimmed.slice(3))}</h2>`);
+      const heading = trimmed.slice(3);
+      const signatureClass = /ПОДПИСИ СТОРОН/i.test(heading)
+        ? ' class="signature-heading"'
+        : "";
+      output.push(`<h2${signatureClass}>${escapeSampleText(heading)}</h2>`);
     } else if (trimmed.startsWith("# ")) {
       output.push(`<h1>${escapeSampleText(trimmed.slice(2))}</h1>`);
     } else {
