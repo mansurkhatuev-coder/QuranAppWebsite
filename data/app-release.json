@@ -11,11 +11,11 @@
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {
-      "latestVersion": "1.0.17",
-      "versionCode": 20,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.17/koran-i-azkary-1.0.17.apk"
+      "latestVersion": "1.0.18",
+      "versionCode": 21,
+      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.18/koran-i-azkary-1.0.18.apk"
     }
   },
-  "messageRu": "Версия 1.0.17: обновление под актуальные требования iOS, удобнее азкары (аккуратнее переносы транскрипции, предупреждение у аятов Корана), стабильнее намаз без сети и уведомления, крупнее шрифт при чтении, правки тасбиха, рукьи и Киблы. Часть улучшений — по вашим просьбам: читаю отзывы и стараюсь учесть замечания. Спасибо за обратную связь — она очень помогает. Впереди ещё много улучшений: виджеты, цветные транскрипции и другие удобства — уже готовим. Если что-то нужно поправить — напишите. Лерамца, Мансур!",
-  "messageEn": "Version 1.0.17: updated for current iOS requirements, smoother azkar (cleaner transcription line breaks, a notice for Qur'an verses), more reliable offline prayer times and notifications, larger reading font, tasbih, ruqya and Qibla fixes. Some of these changes come from your requests — I read the reviews and try to act on them. Thank you for the feedback; it truly helps. More is on the way: widgets, colored transcriptions, and other improvements — we're preparing them now. If something needs fixing, write to us. With respect, Mansur!"
+  "messageRu": "Добавили виджеты намаза и чтения Корана, цель чтения, цветные транскрипции и историю завершённых хатмов. Улучшили отображение азкаров и исправили ошибки.",
+  "messageEn": "Added prayer and Quran reading widgets, a reading goal, colored transliterations, and a history of completed khatms. Improved azkar display and fixed bugs."
 }
