@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  getContractPrintablePageHeightPx,
+  getContractPrintableWidthMm,
+  prepareContractPagination,
+} from "@/lib/contract-layout";
+
 /**
  * Печать договора. В PWA (standalone) window.open часто «запирает» экран —
  * поэтому печатаем через скрытый iframe и даём явный fallback с кнопкой «Закрыть».
@@ -28,7 +34,7 @@ export function generateContractPdf(
     const iframe = document.createElement("iframe");
     iframe.setAttribute("aria-hidden", "true");
     iframe.style.cssText =
-      "position:fixed;right:0;bottom:0;width:0;height:0;border:0;visibility:hidden;";
+      `position:fixed;right:0;bottom:0;width:${getContractPrintableWidthMm()}mm;height:267mm;border:0;visibility:hidden;`;
     document.body.appendChild(iframe);
 
     const doc = iframe.contentDocument || iframe.contentWindow?.document;
@@ -49,22 +55,40 @@ export function generateContractPdf(
 
       const win = iframe.contentWindow;
       if (win) {
-        win.focus();
-        const onAfter = () => {
-          win.removeEventListener("afterprint", onAfter);
-          cleanup();
-        };
-        win.addEventListener("afterprint", onAfter);
-        window.setTimeout(() => {
+        const printPreparedDocument = () => {
           try {
-            win.print();
+            prepareContractPagination(doc, getContractPrintablePageHeightPx());
+            win.focus();
+            const onAfter = () => {
+              win.removeEventListener("afterprint", onAfter);
+              cleanup();
+            };
+            win.addEventListener("afterprint", onAfter);
+            window.setTimeout(() => {
+              try {
+                win.print();
+              } catch {
+                cleanup();
+                openContractOverlay(html);
+              }
+            }, 50);
+            // iOS sometimes never fires afterprint
+            window.setTimeout(cleanup, 60_000);
           } catch {
             cleanup();
             openContractOverlay(html);
           }
-        }, 50);
-        // iOS sometimes never fires afterprint
-        window.setTimeout(cleanup, 60_000);
+        };
+
+        const readyToPrint = doc.fonts?.ready;
+        if (readyToPrint) {
+          void readyToPrint.then(printPreparedDocument, () => {
+            cleanup();
+            openContractOverlay(html);
+          });
+        } else {
+          window.setTimeout(printPreparedDocument, 50);
+        }
         return;
       }
     }
@@ -98,9 +122,48 @@ function openContractOverlay(html: string) {
 
   const printBtn = document.createElement("button");
   printBtn.type = "button";
-  printBtn.textContent = "Печать";
+  printBtn.textContent = "Подготовка печати…";
+  printBtn.disabled = true;
   printBtn.style.cssText =
-    "border:0;border-radius:12px;padding:10px 16px;background:#0f766e;color:#fff;font-weight:600;";
+    "border:0;border-radius:12px;padding:10px 16px;background:#94a3b8;color:#fff;font-weight:600;";
+
+  const printStatus = document.createElement("p");
+  printStatus.textContent = "Подготовка страниц для печати…";
+  printStatus.setAttribute("role", "status");
+  printStatus.style.cssText = "margin:0 0 8px;color:#475569;font-size:14px;";
+
+  const failPrintPreparation = () => {
+    printBtn.textContent = "Печать недоступна";
+    printStatus.textContent =
+      "Не удалось подготовить страницы. Закройте окно и скачайте PDF.";
+    printStatus.setAttribute("role", "alert");
+  };
+
+  preview.addEventListener(
+    "load",
+    () => {
+      const previewDocument = preview.contentDocument;
+      if (!previewDocument) {
+        failPrintPreparation();
+        return;
+      }
+      void previewDocument.fonts.ready.then(() => {
+        try {
+          prepareContractPagination(
+            previewDocument,
+            getContractPrintablePageHeightPx()
+          );
+          printBtn.disabled = false;
+          printBtn.textContent = "Печать";
+          printStatus.remove();
+        } catch {
+          failPrintPreparation();
+        }
+      }, failPrintPreparation);
+    },
+    { once: true }
+  );
+
   printBtn.onclick = () => preview.contentWindow?.print();
 
   const closeBtn = document.createElement("button");
@@ -112,7 +175,7 @@ function openContractOverlay(html: string) {
 
   toolbar.append(printBtn, closeBtn);
 
-  overlay.append(toolbar, preview);
+  overlay.append(toolbar, printStatus, preview);
   document.body.appendChild(overlay);
   closeBtn.focus();
 }
@@ -166,7 +229,7 @@ export function buildContractHtml(
   ${isSample
     ? `<main class="sample">${content}</main>`
     : `<h1>${escapeHtml(title)}</h1>
-  <div>${escapeHtml(body)}</div>`}
+  <div class="contract-plain-body">${escapeHtml(body)}</div>`}
   </div>
 </body>
 </html>`;

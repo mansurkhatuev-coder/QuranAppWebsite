@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { buildContractHtml, generateContractPdf } from "@/lib/contract";
+import { downloadContractPdf } from "@/lib/contract-pdf";
 
 export function ContractEditorModal({
   title,
@@ -19,11 +20,32 @@ export function ContractEditorModal({
     formattedSample ? "preview" : "text"
   );
   const [previewScale, setPreviewScale] = useState(1);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const exportInProgressRef = useRef(false);
   const previewTabRef = useRef<HTMLButtonElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
+
+  async function handleDownloadPdf() {
+    if (!body.trim() || exportInProgressRef.current) return;
+
+    exportInProgressRef.current = true;
+    setIsExportingPdf(true);
+    setExportError(null);
+    try {
+      await downloadContractPdf(title, body, formattedSample ? "sample" : "plain");
+    } catch {
+      setExportError(
+        "Не удалось скачать PDF. Попробуйте ещё раз или используйте печать."
+      );
+    } finally {
+      exportInProgressRef.current = false;
+      setIsExportingPdf(false);
+    }
+  }
 
   useEffect(() => {
     if (activeTab === "text") textareaRef.current?.focus();
@@ -98,7 +120,7 @@ export function ContractEditorModal({
               Договор
             </h2>
             <p className="text-xs text-[var(--muted)]">
-              Отредактируйте текст под эту рассрочку, затем напечатайте
+              Отредактируйте текст под эту рассрочку, затем скачайте PDF или напечатайте
             </p>
           </div>
           <button type="button" className="btn-secondary text-xs" onClick={onClose}>
@@ -125,7 +147,7 @@ export function ContractEditorModal({
                 className={activeTab === "text" ? "btn-primary" : "btn-secondary"}
                 onClick={() => setActiveTab("text")}
               >
-                Текст
+                Редактировать
               </button>
             </div>
           )}
@@ -165,14 +187,30 @@ export function ContractEditorModal({
                 ref={textareaRef}
                 className="input min-h-[50vh] font-serif text-sm leading-relaxed"
                 value={body}
-                onChange={(e) => setBody(e.target.value)}
+                onChange={(e) => {
+                  setBody(e.target.value);
+                  setExportError(null);
+                }}
               />
             </>
           )}
         </div>
         <div className="flex flex-wrap justify-end gap-2 border-t border-[var(--border)] px-4 py-3">
+          {exportError && (
+            <p className="mr-auto w-full text-left text-sm text-red-700" role="alert">
+              {exportError}
+            </p>
+          )}
           <button type="button" className="btn-secondary" onClick={onClose}>
             Отмена
+          </button>
+          <button
+            type="button"
+            className="btn-secondary"
+            disabled={!body.trim() || isExportingPdf}
+            onClick={handleDownloadPdf}
+          >
+            {isExportingPdf ? "Подготовка PDF…" : "Скачать PDF"}
           </button>
           <button
             type="button"
