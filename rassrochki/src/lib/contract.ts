@@ -4,8 +4,14 @@
  * Печать договора. В PWA (standalone) window.open часто «запирает» экран —
  * поэтому печатаем через скрытый iframe и даём явный fallback с кнопкой «Закрыть».
  */
-export function generateContractPdf(title: string, body: string) {
-  const html = buildContractHtml(title, body);
+export type ContractRenderMode = "plain" | "sample";
+
+export function generateContractPdf(
+  title: string,
+  body: string,
+  mode: ContractRenderMode = "plain"
+) {
+  const html = buildContractHtml(title, body, mode);
 
   // 1) iframe — остаёмся в том же окне PWA
   try {
@@ -44,7 +50,7 @@ export function generateContractPdf(title: string, body: string) {
             win.print();
           } catch {
             cleanup();
-            openContractOverlay(title, body);
+            openContractOverlay(html);
           }
         }, 50);
         // iOS sometimes never fires afterprint
@@ -57,10 +63,10 @@ export function generateContractPdf(title: string, body: string) {
     /* fall through */
   }
 
-  openContractOverlay(title, body);
+  openContractOverlay(html);
 }
 
-function openContractOverlay(title: string, body: string) {
+function openContractOverlay(html: string) {
   const existing = document.getElementById("contract-print-overlay");
   if (existing) existing.remove();
 
@@ -75,12 +81,17 @@ function openContractOverlay(title: string, body: string) {
   toolbar.style.cssText =
     "position:sticky;top:0;display:flex;gap:8px;justify-content:flex-end;padding:8px 0 12px;background:#fff;border-bottom:1px solid #e2e8f0;margin-bottom:12px;";
 
+  const preview = document.createElement("iframe");
+  preview.title = "Предпросмотр договора";
+  preview.srcdoc = html;
+  preview.style.cssText = "display:block;width:100%;height:calc(100vh - 90px);border:0;";
+
   const printBtn = document.createElement("button");
   printBtn.type = "button";
   printBtn.textContent = "Печать";
   printBtn.style.cssText =
     "border:0;border-radius:12px;padding:10px 16px;background:#0f766e;color:#fff;font-weight:600;";
-  printBtn.onclick = () => window.print();
+  printBtn.onclick = () => preview.contentWindow?.print();
 
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
@@ -91,22 +102,18 @@ function openContractOverlay(title: string, body: string) {
 
   toolbar.append(printBtn, closeBtn);
 
-  const article = document.createElement("article");
-  article.style.cssText =
-    "white-space:pre-wrap;font-family:'Times New Roman',Times,serif;font-size:14px;line-height:1.45;color:#111;";
-  const h1 = document.createElement("h1");
-  h1.textContent = title;
-  h1.style.cssText = "font-size:18px;margin:0 0 16px;";
-  const pre = document.createElement("div");
-  pre.textContent = body;
-  article.append(h1, pre);
-
-  overlay.append(toolbar, article);
+  overlay.append(toolbar, preview);
   document.body.appendChild(overlay);
   closeBtn.focus();
 }
 
-function buildContractHtml(title: string, body: string) {
+export function buildContractHtml(
+  title: string,
+  body: string,
+  mode: ContractRenderMode = "plain"
+) {
+  const isSample = mode === "sample";
+  const content = isSample ? renderSampleBody(body) : `<div>${escapeHtml(body)}</div>`;
   return `<!DOCTYPE html>
 <html lang="ru">
 <head>
@@ -114,16 +121,77 @@ function buildContractHtml(title: string, body: string) {
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <style>
+    * { box-sizing: border-box; }
     body { font-family: "Times New Roman", Times, serif; font-size: 14px; line-height: 1.45; padding: 24px; color: #111; white-space: pre-wrap; }
     h1 { font-size: 18px; margin: 0 0 16px; }
-    @media print { body { padding: 0; } }
+    ${isSample ? `
+    html { background: #eef1ef; }
+    body { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 22mm 20mm; background: #fff; box-shadow: 0 2px 18px #14201c24; white-space: normal; }
+    h1 { text-align: center; }
+    .sample p { margin: 0 0 10px; }
+    .sample h1, .sample h2 { text-align: center; }
+    .sample h1 { font-size: 18px; margin: 18px 0 12px; }
+    .sample h2 { font-size: 16px; margin: 16px 0 10px; }
+    .sample .badge { width: fit-content; max-width: 100%; margin: 0 auto 18px; padding: 5px 16px; border-radius: 999px; background: #203b35; color: #fff; font-weight: bold; letter-spacing: .08em; text-align: center; }
+    .sample table { width: 100%; margin: 12px 0 16px; border-collapse: collapse; }
+    .sample th, .sample td { border: 1px solid #65756f; padding: 6px 8px; text-align: left; vertical-align: top; }
+    .sample th { background: #263e38; color: #fff; font-weight: bold; }
+    @page { size: A4; margin: 0; }
+    @media print { html { background: #fff; } body { width: 210mm; min-height: 297mm; margin: 0; box-shadow: none; } .sample .badge, .sample th { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    ` : `@media print { body { padding: 0; } }`}
   </style>
 </head>
 <body>
-  <h1>${escapeHtml(title)}</h1>
-  <div>${escapeHtml(body)}</div>
+  <main class="${isSample ? "sample" : "plain"}">
+    ${isSample ? "" : `<h1>${escapeHtml(title)}</h1>`}
+    ${content}
+  </main>
 </body>
 </html>`;
+}
+
+function renderSampleBody(body: string) {
+  const lines = body.split(/\r?\n/);
+  const output: string[] = [];
+  let tableRows: string[][] = [];
+
+  const flushTable = () => {
+    if (tableRows.length === 0) return;
+    const [header, ...rows] = tableRows;
+    output.push(
+      `<table><thead><tr>${header.map((cell) => `<th>${renderCell(cell)}</th>`).join("")}</tr></thead><tbody>${rows
+        .map((row) => `<tr>${row.map((cell) => `<td>${renderCell(cell)}</td>`).join("")}</tr>`)
+        .join("")}</tbody></table>`
+    );
+    tableRows = [];
+  };
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith("|") && trimmed.endsWith("|")) {
+      const cells = trimmed.slice(1, -1).split("|").map((cell) => cell.trim());
+      if (cells.every((cell) => /^:?-{3,}:?$/.test(cell))) continue;
+      tableRows.push(cells);
+      continue;
+    }
+    flushTable();
+    if (!trimmed) continue;
+    if (trimmed.startsWith("! ")) {
+      output.push(`<p class="badge">${escapeHtml(trimmed.slice(2))}</p>`);
+    } else if (trimmed.startsWith("## ")) {
+      output.push(`<h2>${escapeHtml(trimmed.slice(3))}</h2>`);
+    } else if (trimmed.startsWith("# ")) {
+      output.push(`<h1>${escapeHtml(trimmed.slice(2))}</h1>`);
+    } else {
+      output.push(`<p>${escapeHtml(trimmed)}</p>`);
+    }
+  }
+  flushTable();
+  return output.join("\n");
+}
+
+function renderCell(cell: string) {
+  return cell.split("<br>").map(escapeHtml).join("<br>");
 }
 
 function escapeHtml(s: string) {
