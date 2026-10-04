@@ -121,12 +121,12 @@ export function buildContractHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <style>
-    * { box-sizing: border-box; }
     body { font-family: "Times New Roman", Times, serif; font-size: 14px; line-height: 1.45; padding: 24px; color: #111; white-space: pre-wrap; }
     h1 { font-size: 18px; margin: 0 0 16px; }
     ${isSample ? `
+    * { box-sizing: border-box; }
     html { background: #eef1ef; }
-    body { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 22mm 20mm; background: #fff; box-shadow: 0 2px 18px #14201c24; white-space: normal; }
+    body { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 20mm; background: #fff; box-shadow: 0 2px 18px #14201c24; white-space: normal; }
     h1 { text-align: center; }
     .sample p { margin: 0 0 10px; }
     .sample h1, .sample h2 { text-align: center; }
@@ -136,16 +136,16 @@ export function buildContractHtml(
     .sample table { width: 100%; margin: 12px 0 16px; border-collapse: collapse; }
     .sample th, .sample td { border: 1px solid #65756f; padding: 6px 8px; text-align: left; vertical-align: top; }
     .sample th { background: #263e38; color: #fff; font-weight: bold; }
-    @page { size: A4; margin: 0; }
-    @media print { html { background: #fff; } body { width: 210mm; min-height: 297mm; margin: 0; box-shadow: none; } .sample .badge, .sample th { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
+    @page { size: A4; margin: 15mm 20mm; }
+    @media print { html { background: #fff; } body { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; } .sample .badge, .sample th { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
     ` : `@media print { body { padding: 0; } }`}
   </style>
 </head>
 <body>
-  <main class="${isSample ? "sample" : "plain"}">
-    ${isSample ? "" : `<h1>${escapeHtml(title)}</h1>`}
-    ${content}
-  </main>
+  ${isSample
+    ? `<main class="sample">${content}</main>`
+    : `<h1>${escapeHtml(title)}</h1>
+  <div>${escapeHtml(body)}</div>`}
 </body>
 </html>`;
 }

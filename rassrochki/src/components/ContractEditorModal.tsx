@@ -20,12 +20,14 @@ export function ContractEditorModal({
   );
   const [previewScale, setPreviewScale] = useState(1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const previewTabRef = useRef<HTMLButtonElement>(null);
   const previewRef = useRef<HTMLIFrameElement>(null);
   const previewContainerRef = useRef<HTMLDivElement>(null);
   const titleId = useId();
 
   useEffect(() => {
     if (activeTab === "text") textareaRef.current?.focus();
+    else previewTabRef.current?.focus();
   }, [activeTab]);
 
   useEffect(() => {
@@ -108,6 +110,7 @@ export function ContractEditorModal({
             <div className="mb-3 flex gap-2" role="tablist" aria-label="Режим договора">
               <button
                 type="button"
+                ref={previewTabRef}
                 role="tab"
                 aria-selected={activeTab === "preview"}
                 className={activeTab === "preview" ? "btn-primary" : "btn-secondary"}
