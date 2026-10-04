@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import * as defaultContract from "@/lib/default-contract";
 
@@ -45,5 +46,15 @@ describe("shouldUseDefaultContractSample", () => {
       false
     );
     expect(defaultContract.shouldUseDefaultContractSample?.("Мой шаблон договора")).toBe(false);
+  });
+
+  it("migrates only the exact legacy database default", () => {
+    const migration = readFileSync(
+      new URL("../../supabase/migrations/015_default_contract_template.sql", import.meta.url),
+      "utf8"
+    );
+    const migrationTemplate = migration.match(/\) = \$legacy\$([\s\S]*?)\$legacy\$/)?.[1];
+
+    expect(migrationTemplate?.replace(/\r\n?/g, "\n")).toBe(legacyDatabaseDefault);
   });
 });

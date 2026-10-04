@@ -5,8 +5,7 @@ where replace(
   replace(contract_template, E'\r\n', E'\n'),
   E'\r',
   E'\n'
-) = $legacy$
-ДОГОВОР РАССРОЧКИ
+) = $legacy$ДОГОВОР РАССРОЧКИ
 
 Организация: {organization}
 Клиент: {client}
