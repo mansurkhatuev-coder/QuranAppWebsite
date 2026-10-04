@@ -10,6 +10,7 @@ import { createClient } from "@/lib/supabase/client";
 import type { Investor, Organization, OrganizationSettings } from "@/types/database";
 import { downloadCsv } from "@/lib/utils";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
+import { shouldUseDefaultContractSample } from "@/lib/default-contract";
 import {
   buildFullOrgBackup,
   daysSinceBackup,
@@ -93,7 +94,9 @@ export default function SettingsPage() {
             income_share_manager: String(settings.income_share_manager),
             income_share_investor: String(settings.income_share_investor),
             overdue_days: String(settings.overdue_days),
-            contract_template: settings.contract_template,
+            contract_template: shouldUseDefaultContractSample(settings.contract_template)
+              ? ""
+              : settings.contract_template,
           });
         }
         setInvestors(investorRows ?? []);
@@ -384,11 +387,12 @@ export default function SettingsPage() {
         <div className="card space-y-3">
           <h2 className="font-semibold">Шаблон договора</h2>
           <p className="text-xs text-[var(--muted)]">
-            Базовый текст для всех рассрочек. При открытии договора по сделке данные
-            подставятся автоматически — там текст можно ещё разправить перед печатью.
+            Оставьте поле пустым, чтобы использовать утверждённый табличный образец.
+            Заполненный здесь текст будет использоваться вместо образца.
           </p>
           <textarea
             className="input min-h-64 font-serif text-sm leading-relaxed"
+            placeholder="Утверждённый образец подставляется автоматически"
             value={value.contract_template}
             onChange={(e) => setValue({ ...value, contract_template: e.target.value })}
           />
