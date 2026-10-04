@@ -148,6 +148,7 @@ export function buildContractHtml(
     .sample th, .sample td { border: 1px solid #65756f; padding: 6px 8px; text-align: left; vertical-align: top; }
     .sample th { background: #263e38; color: #fff; font-weight: bold; }
     .sample .payment-schedule tr { break-inside: avoid; page-break-inside: avoid; }
+    .sample .payment-schedule-heading { break-after: avoid; page-break-after: avoid; }
     .sample .signature-block { break-inside: avoid; page-break-inside: avoid; }
     .sample .signature-heading { break-after: avoid; page-break-after: avoid; }
     ` : ""}
@@ -209,10 +210,14 @@ function renderSampleBody(body: string) {
       output.push(`<p class="badge">${escapeSampleText(trimmed.slice(2))}</p>`);
     } else if (trimmed.startsWith("## ")) {
       const heading = trimmed.slice(3);
-      const signatureClass = /ПОДПИСИ СТОРОН/i.test(heading)
-        ? ' class="signature-heading"'
+      const headingClasses = [
+        /ГРАФИК ПЛАТЕЖЕЙ/i.test(heading) ? "payment-schedule-heading" : "",
+        /ПОДПИСИ СТОРОН/i.test(heading) ? "signature-heading" : "",
+      ].filter(Boolean);
+      const classAttribute = headingClasses.length
+        ? ` class="${headingClasses.join(" ")}"`
         : "";
-      output.push(`<h2${signatureClass}>${escapeSampleText(heading)}</h2>`);
+      output.push(`<h2${classAttribute}>${escapeSampleText(heading)}</h2>`);
     } else if (trimmed.startsWith("# ")) {
       output.push(`<h1>${escapeSampleText(trimmed.slice(2))}</h1>`);
     } else {

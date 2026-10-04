@@ -73,11 +73,10 @@ function insertTableRowSpacerBefore(
 
 function preparePdfPagination(documentClone: HTMLDocument, pageHeight: number) {
   // html2canvas does not apply CSS page-break rules, so insert real flow gaps in its clone.
-  const contract = documentClone.querySelector<HTMLElement>(
-    ".html2pdf__container .contract-document"
-  );
+  const contract = documentClone.querySelector<HTMLElement>(".contract-document");
   if (!contract) throw new Error("Unable to prepare contract layout for PDF.");
 
+  contract.style.display = "flow-root";
   contract.style.minHeight = "0";
   contract.style.paddingTop = "0";
   contract.style.paddingBottom = "0";
@@ -85,18 +84,22 @@ function preparePdfPagination(documentClone: HTMLDocument, pageHeight: number) {
   const contractTop = contract.getBoundingClientRect().top;
   const paymentTable = contract.querySelector<HTMLTableElement>(".payment-schedule");
   if (paymentTable) {
+    const heading = paymentTable.previousElementSibling;
+    const firstBlock = heading?.classList.contains("payment-schedule-heading")
+      ? (heading as HTMLElement)
+      : paymentTable;
     const headerRows = Array.from(paymentTable.tHead?.rows ?? []);
     const bodyRows = Array.from(paymentTable.tBodies).flatMap((body) =>
       Array.from(body.rows)
     );
     const firstRow = bodyRows[0] ?? headerRows[headerRows.length - 1];
-    const firstGroupTop = headerRows[0] ?? firstRow;
+    const firstGroupTop = firstBlock ?? headerRows[0] ?? firstRow;
 
     if (firstRow && firstGroupTop) {
       const top = firstGroupTop.getBoundingClientRect().top - contractTop;
       const bottom = firstRow.getBoundingClientRect().bottom - contractTop;
       const gap = getPageGap(top, bottom - top, pageHeight);
-      if (gap > 0) insertBlockSpacerBefore(documentClone, paymentTable, gap);
+      if (gap > 0) insertBlockSpacerBefore(documentClone, firstBlock, gap);
     }
 
     for (const row of bodyRows) {
@@ -120,6 +123,86 @@ function preparePdfPagination(documentClone: HTMLDocument, pageHeight: number) {
   }
 }
 
+function addCanvasPages(
+  pdf: import("jspdf").jsPDF,
+  canvas: HTMLCanvasElement,
+  pageHeightMm: number
+) {
+  const pixelsPerMm = canvas.width / PDF_PAGE_WIDTH_MM;
+  const pageHeightPixels = Math.round(pageHeightMm * pixelsPerMm);
+  const pageCount = Math.max(1, Math.ceil(canvas.height / pageHeightPixels));
+  const pageCanvas = document.createElement("canvas");
+  pageCanvas.width = canvas.width;
+  pageCanvas.height = pageHeightPixels;
+
+  const context = pageCanvas.getContext("2d");
+  if (!context) throw new Error("Unable to paginate contract PDF image.");
+
+  for (let page = 0; page < pageCount; page += 1) {
+    if (page > 0) pdf.addPage();
+
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
+    const sourceY = page * pageHeightPixels;
+    const sourceHeight = Math.min(pageHeightPixels, canvas.height - sourceY);
+    if (sourceHeight > 0) {
+      context.drawImage(
+        canvas,
+        0,
+        sourceY,
+        canvas.width,
+        sourceHeight,
+        0,
+        0,
+        canvas.width,
+        sourceHeight
+      );
+    }
+
+    pdf.addImage(
+      pageCanvas,
+      "PNG",
+      0,
+      PDF_VERTICAL_MARGIN_MM,
+      PDF_PAGE_WIDTH_MM,
+      pageCanvas.height / pixelsPerMm
+    );
+  }
+}
+
+async function loadContractFrame(html: string) {
+  const frame = document.createElement("iframe");
+  frame.setAttribute("aria-hidden", "true");
+  frame.tabIndex = -1;
+  frame.style.cssText =
+    `position:fixed;left:-10000px;top:0;width:${PDF_WINDOW_WIDTH_PX}px;height:1123px;border:0;`;
+
+  const loaded = new Promise<void>((resolve, reject) => {
+    frame.addEventListener("load", () => resolve(), { once: true });
+    frame.addEventListener(
+      "error",
+      () => reject(new Error("Unable to load contract HTML.")),
+      { once: true }
+    );
+  });
+
+  frame.srcdoc = html;
+  document.body.appendChild(frame);
+  try {
+    await loaded;
+    const frameDocument = frame.contentDocument;
+    if (!frameDocument) {
+      throw new Error("Unable to read contract HTML for PDF.");
+    }
+
+    await frameDocument.fonts.ready;
+    return { frame, frameDocument };
+  } catch (error) {
+    frame.remove();
+    throw error;
+  }
+}
+
 function makeContractPdfFilename(title: string) {
   const sanitized = title
     .replace(RESERVED_FILENAME_CHARACTERS, "_")
@@ -136,28 +219,36 @@ export async function downloadContractPdf(
   body: string,
   mode: ContractRenderMode
 ): Promise<void> {
-  const { jsPDF } = await import("jspdf");
+  const [{ jsPDF }, { default: html2canvas }] = await Promise.all([
+    import("jspdf"),
+    import("html2canvas"),
+  ]);
   const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-  const printablePageHeight = getPdfPageHeightInCssPixels(
+  const printablePageHeightMm =
+    pdf.internal.pageSize.getHeight() - PDF_VERTICAL_MARGIN_MM * 2;
+  const printablePageHeightPx = getPdfPageHeightInCssPixels(
     pdf.internal.pageSize.getHeight()
   );
+  const { frame, frameDocument } = await loadContractFrame(
+    buildContractHtml(title, body, mode)
+  );
 
-  await pdf.html(buildContractHtml(title, body, mode), {
-    x: 0,
-    y: 0,
-    width: PDF_PAGE_WIDTH_MM,
-    windowWidth: PDF_WINDOW_WIDTH_PX,
-    margin: [15, 0, 15, 0],
-    autoPaging: "text",
-    html2canvas: {
-      scale: 2,
+  try {
+    const contract = frameDocument.querySelector<HTMLElement>(".contract-document");
+    if (!contract) throw new Error("Unable to find contract content for PDF.");
+
+    preparePdfPagination(frameDocument, printablePageHeightPx);
+    const canvas = await html2canvas(contract, {
       backgroundColor: "#ffffff",
-      useCORS: true,
-      onclone: (documentClone) => {
-        preparePdfPagination(documentClone, printablePageHeight);
-      },
-    },
-  });
+      scale: 2,
+      useCORS: false,
+      windowHeight: 1123,
+      windowWidth: PDF_WINDOW_WIDTH_PX,
+    });
 
-  pdf.save(makeContractPdfFilename(title));
+    addCanvasPages(pdf, canvas, printablePageHeightMm);
+    pdf.save(makeContractPdfFilename(title));
+  } finally {
+    frame.remove();
+  }
 }
