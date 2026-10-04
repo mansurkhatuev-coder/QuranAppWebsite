@@ -10,6 +10,11 @@ import type {
   PaymentSchedule,
 } from "@/types/database";
 import { fillContractTemplate, formatScheduleForContract } from "@/lib/contract";
+import { protectSampleContractText } from "../lib/contract";
+import {
+  DEFAULT_CONTRACT_TEMPLATE,
+  formatPaymentScheduleForContract,
+} from "@/lib/default-contract";
 import { BackLink } from "@/components/BackLink";
 import { ContractEditorModal } from "@/components/ContractEditorModal";
 import {
@@ -59,6 +64,7 @@ export function LoanDetail({
   const [contractDraft, setContractDraft] = useState<{
     title: string;
     body: string;
+    formattedSample: boolean;
   } | null>(null);
 
   const downPayment = Number(loan.down_payment ?? 0);
@@ -175,7 +181,16 @@ export function LoanDetail({
   }
 
   function openContractEditor() {
+    const formattedSample = !settings.contract_template?.trim();
+    const template = formattedSample
+      ? DEFAULT_CONTRACT_TEMPLATE
+      : settings.contract_template;
     const scheduleText = formatScheduleForContract(
+      schedules,
+      formatDateShort,
+      formatMoney
+    );
+    const paymentScheduleText = formatPaymentScheduleForContract(
       schedules,
       formatDateShort,
       formatMoney
@@ -194,10 +209,12 @@ export function LoanDetail({
             .join("\n");
 
     const paidCount = schedules.filter((s) => s.status === "paid").length;
-    const body = fillContractTemplate(settings.contract_template, {
-      organization: orgName,
-      client: loan.clients?.full_name ?? "",
-      phone: loan.clients?.phone ?? "",
+    const sampleText = (value: string) =>
+      formattedSample ? protectSampleContractText(value) : value;
+    const body = fillContractTemplate(template, {
+      organization: sampleText(orgName),
+      client: sampleText(loan.clients?.full_name ?? ""),
+      phone: sampleText(loan.clients?.phone ?? ""),
       amount: formatMoney(Number(loan.principal)),
       down_payment: formatMoney(Number(loan.down_payment ?? 0)),
       financed: formatMoney(financed),
@@ -205,16 +222,21 @@ export function LoanDetail({
       monthly_payment: formatMoney(Number(loan.monthly_payment)),
       start_date: formatDateShort(loan.start_date),
       schedule: scheduleText,
+      product: sampleText(loan.title?.trim() || "________________"),
+      payment_schedule: paymentScheduleText,
       paid_months: String(paidCount),
       manager_share: String(shares.manager),
       investor_share: String(shares.investor),
       investor: loan.investors?.name ?? "—",
-      guarantors: guarantorsText,
+      guarantors: formattedSample
+        ? sampleText(guarantorsText.replace(/\r?\n/g, "<br>"))
+        : guarantorsText,
     });
 
     setContractDraft({
       title: `Договор_${loan.clients?.full_name ?? "client"}`,
       body,
+      formattedSample,
     });
   }
 
@@ -478,6 +500,7 @@ export function LoanDetail({
         <ContractEditorModal
           title={contractDraft.title}
           initialBody={contractDraft.body}
+          formattedSample={contractDraft.formattedSample}
           onClose={() => setContractDraft(null)}
         />
       )}
