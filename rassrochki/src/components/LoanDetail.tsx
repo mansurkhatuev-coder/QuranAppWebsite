@@ -14,6 +14,7 @@ import { protectSampleContractText } from "../lib/contract";
 import {
   DEFAULT_CONTRACT_TEMPLATE,
   formatPaymentScheduleForContract,
+  shouldUseDefaultContractSample,
 } from "@/lib/default-contract";
 import { BackLink } from "@/components/BackLink";
 import { ContractEditorModal } from "@/components/ContractEditorModal";
@@ -181,7 +182,7 @@ export function LoanDetail({
   }
 
   function openContractEditor() {
-    const formattedSample = !settings.contract_template?.trim();
+    const formattedSample = shouldUseDefaultContractSample(settings.contract_template);
     const template = formattedSample
       ? DEFAULT_CONTRACT_TEMPLATE
       : settings.contract_template;

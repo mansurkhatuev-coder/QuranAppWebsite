@@ -18,6 +18,35 @@ export const DEFAULT_CONTRACT_TEMPLATE = `! РАССРОЧКА
 | ПРОДАВЕЦ | ПОКУПАТЕЛЬ | ПОРУЧИТЕЛЬ |
 | __________<br>Подпись / ФИО | __________<br>Подпись / ФИО | __________<br>Подпись / ФИО |`;
 
+const LEGACY_DATABASE_DEFAULT_CONTRACT_TEMPLATE = `ДОГОВОР РАССРОЧКИ
+
+Организация: {organization}
+Клиент: {client}
+Телефон: {phone}
+Сумма: {amount} ₽
+Срок: {term_months} мес.
+Ежемесячный платёж: {monthly_payment} ₽
+Дата начала: {start_date}
+
+График платежей:
+{schedule}
+
+Доли дохода: {manager_share}% / {investor_share}%
+Инвестор: {investor}
+
+Подпись клиента: _______________
+Подпись организации: _______________`;
+
+export function shouldUseDefaultContractSample(
+  template: string | null | undefined
+) {
+  const normalizedTemplate = template?.replace(/\r\n?/g, "\n") ?? "";
+  return (
+    normalizedTemplate.trim().length === 0 ||
+    normalizedTemplate === LEGACY_DATABASE_DEFAULT_CONTRACT_TEMPLATE
+  );
+}
+
 export function formatPaymentScheduleForContract(
   schedules: { sequence_number: number; due_date: string; amount: number }[],
   formatDate: (date: string) => string,
