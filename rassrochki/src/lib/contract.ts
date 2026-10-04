@@ -131,12 +131,13 @@ export function buildContractHtml(
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>${escapeHtml(title)}</title>
   <style>
-    body { font-family: "Times New Roman", Times, serif; font-size: 14px; line-height: 1.45; padding: 24px; color: #111; white-space: pre-wrap; }
-    h1 { font-size: 18px; margin: 0 0 16px; }
-    ${isSample ? `
     * { box-sizing: border-box; }
     html { background: #eef1ef; }
-    body { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 20mm; background: #fff; box-shadow: 0 2px 18px #14201c24; white-space: normal; }
+    body { margin: 0; }
+    .contract-document { width: 210mm; min-height: 297mm; margin: 0 auto; padding: 15mm 20mm; background: #fff; box-shadow: 0 2px 18px #14201c24; font-family: "Times New Roman", Times, serif; font-size: 14px; line-height: 1.45; color: #111; white-space: pre-wrap; }
+    h1 { font-size: 18px; margin: 0 0 16px; }
+    ${isSample ? `
+    .contract-document { white-space: normal; }
     h1 { text-align: center; }
     .sample p { margin: 0 0 10px; }
     .sample h1, .sample h2 { text-align: center; }
@@ -146,16 +147,25 @@ export function buildContractHtml(
     .sample table { width: 100%; margin: 12px 0 16px; border-collapse: collapse; }
     .sample th, .sample td { border: 1px solid #65756f; padding: 6px 8px; text-align: left; vertical-align: top; }
     .sample th { background: #263e38; color: #fff; font-weight: bold; }
+    .sample .payment-schedule tr { break-inside: avoid; page-break-inside: avoid; }
+    .sample .signature-block { break-inside: avoid; page-break-inside: avoid; }
+    ` : ""}
     @page { size: A4; margin: 15mm 20mm; }
-    @media print { html { background: #fff; } body { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; } .sample .badge, .sample th { print-color-adjust: exact; -webkit-print-color-adjust: exact; } }
-    ` : `@media print { body { padding: 0; } }`}
+    @media print {
+      html { background: #fff; }
+      body { margin: 0; }
+      .contract-document { width: auto; min-height: 0; margin: 0; padding: 0; box-shadow: none; }
+      .sample .badge, .sample th { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    }
   </style>
 </head>
 <body>
+  <div class="contract-document">
   ${isSample
     ? `<main class="sample">${content}</main>`
     : `<h1>${escapeHtml(title)}</h1>
   <div>${escapeHtml(body)}</div>`}
+  </div>
 </body>
 </html>`;
 }
@@ -168,8 +178,16 @@ function renderSampleBody(body: string) {
   const flushTable = () => {
     if (tableRows.length === 0) return;
     const [header, ...rows] = tableRows;
+    const previousBlock = output[output.length - 1] ?? "";
+    const tableClasses = [
+      /ГРАФИК ПЛАТЕЖЕЙ/i.test(previousBlock) ? "payment-schedule" : "",
+      /ПОДПИСИ СТОРОН/i.test(previousBlock) ? "signature-block" : "",
+    ].filter(Boolean);
+    const classAttribute = tableClasses.length
+      ? ` class="${tableClasses.join(" ")}"`
+      : "";
     output.push(
-      `<table><thead><tr>${header.map((cell) => `<th>${renderCell(cell)}</th>`).join("")}</tr></thead><tbody>${rows
+      `<table${classAttribute}><thead><tr>${header.map((cell) => `<th>${renderCell(cell)}</th>`).join("")}</tr></thead><tbody>${rows
         .map((row) => `<tr>${row.map((cell) => `<td>${renderCell(cell)}</td>`).join("")}</tr>`)
         .join("")}</tbody></table>`
     );
