@@ -1,9 +1,4 @@
 {
-  "ios": {
-    "latestVersion": "1.0.18",
-    "buildNumber": 19,
-    "appStoreUrl": "https://apps.apple.com/app/id6782619598"
-  },
   "android": {
     "rustore": {
       "latestVersion": "1.0.18",
@@ -11,11 +6,16 @@
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {
-      "latestVersion": "1.0.18",
-      "versionCode": 21,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.18/koran-i-azkary-1.0.18.apk"
+      "latestVersion": "1.0.5",
+      "versionCode": 6,
+      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.5/koran-i-azkary-1.0.5.apk"
     }
   },
-  "messageRu": "Добавили виджеты намаза и чтения Корана, цель чтения, цветные транскрипции и историю завершённых хатмов. Улучшили отображение азкаров и исправили ошибки.",
-  "messageEn": "Added prayer and Quran reading widgets, a reading goal, colored transliterations, and a history of completed khatms. Improved azkar display and fixed bugs."
+  "ios": {
+    "latestVersion": "1.0.18",
+    "buildNumber": 2,
+    "appStoreUrl": "https://apps.apple.com/app/id6782619598"
+  },
+  "messageRu": "Исправления и улучшения",
+  "messageEn": "Bug fixes and improvements"
 }
