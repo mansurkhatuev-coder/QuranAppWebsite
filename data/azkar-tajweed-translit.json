@@ -4055,8 +4055,319 @@
       "azkarIds": [
         "evening-12"
       ],
-      "transliteration": "Амсайнаа Iаля фитIрoти-ль-ислами ва Iаля калимати-ль-ихляси ва Iаля дини набийй-на Мухьаммадин, солля ЛлохIу Iаляй-хIи ва салляма, ва Iаля мил-ляти аби-на ИброхIима хьанифан муслиман ва ма кяна мин аль-мушрикина.",
-      "marks": []
+      "transliteration": "Амсайна Iаля фитIрoти-ль-ислами ва Iаля калимати-ль-ихлясы ва Iаля дини набиййина Мухьаммадин, солля ЛлохIу Iаляй-хIи ва салляма, ва Iаля мил-ляти аби-на ИброхIима хьанифан муслиман ва ма кяна миналь-мушрикин.",
+      "marks": [
+        {
+          "start": 6,
+          "end": 7,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 11,
+          "end": 12,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 15,
+          "end": 16,
+          "rules": [
+            "qalqala"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 16,
+          "end": 17,
+          "rules": [
+            "qalqala"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 17,
+          "end": 18,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 18,
+          "end": 19,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 28,
+          "end": 29,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 38,
+          "end": 39,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 55,
+          "end": 56,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 65,
+          "end": 66,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 57,
+          "end": 58,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 56,
+          "end": 57,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 68,
+          "end": 69,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 80,
+          "end": 81,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 87,
+          "end": 88,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 88,
+          "end": 89,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 95,
+          "end": 96,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 96,
+          "end": 97,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 101,
+          "end": 102,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 102,
+          "end": 103,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 103,
+          "end": 104,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 136,
+          "end": 137,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 149,
+          "end": 150,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 152,
+          "end": 153,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 155,
+          "end": 156,
+          "rules": [
+            "qalqala"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 157,
+          "end": 158,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 160,
+          "end": 161,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 168,
+          "end": 169,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 186,
+          "end": 187,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 189,
+          "end": 190,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 206,
+          "end": 207,
+          "rules": [
+            "madd246"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        }
+      ]
     },
     {
       "id": "azkar-evening-13",
@@ -4065,8 +4376,399 @@
       "azkarIds": [
         "evening-13"
       ],
-      "transliteration": "АллохIумма, Iaлима-ль-гIойби ва-ш-шахадати, ФатIыро-с-самавати ва-ль-арды, Робба кулли шайин ва Малика-хIу, ашхIаду алля иляхIа илля Анта, аIузу би-ка мин шарри нафси, ва мин шарри-ш-шайтIони ва ширки-хIи ва ан акътaрифа Iаля нафси су'ан ав аджурра-хIу иля мусли-мин",
-      "marks": []
+      "transliteration": "АллохIумма, Iaлима-ль-гIойби ва-ш-шахIадати, ФатIыро-с-самавати ва-ль-арды, Робба кулли шайин ва Малика-хI, ашхIаду алля иляхIа илля Анта, аIузу би-ка мин шарри нафси, ва мин шарри-ш-шайтIони ва ширки-хIи ва ан акътaрифа Iаля нафси суан ав аджурро-хIу иля муслим.",
+      "marks": [
+        {
+          "start": 7,
+          "end": 8,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 2,
+          "end": 3,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 1,
+          "end": 2,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 13,
+          "end": 14,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 22,
+          "end": 23,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 23,
+          "end": 24,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 24,
+          "end": 25,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 38,
+          "end": 39,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 46,
+          "end": 47,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 47,
+          "end": 48,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 48,
+          "end": 49,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 49,
+          "end": 50,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 50,
+          "end": 51,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 51,
+          "end": 52,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 58,
+          "end": 59,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 60,
+          "end": 61,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 72,
+          "end": 73,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 73,
+          "end": 74,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 76,
+          "end": 77,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 77,
+          "end": 78,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 100,
+          "end": 101,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 119,
+          "end": 120,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 123,
+          "end": 124,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 131,
+          "end": 132,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 142,
+          "end": 143,
+          "rules": [
+            "interdental"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 141,
+          "end": 142,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 153,
+          "end": 154,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 165,
+          "end": 166,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 173,
+          "end": 174,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 186,
+          "end": 187,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 187,
+          "end": 188,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 188,
+          "end": 189,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 212,
+          "end": 213,
+          "rules": [
+            "qalqala"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 213,
+          "end": 214,
+          "rules": [
+            "qalqala"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 224,
+          "end": 225,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 233,
+          "end": 234,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 254,
+          "end": 255,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        }
+      ]
     },
     {
       "id": "azkar-evening-14",
@@ -4961,5 +5663,5 @@
       "marks": []
     }
   ],
-  "publishedAt": "2026-10-02T16:01:59.541Z"
+  "publishedAt": "2026-10-07T17:31:27.465Z"
 }
