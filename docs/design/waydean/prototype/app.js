@@ -1,0 +1,1069 @@
+(() => {
+  "use strict";
+
+  const USER_PATH = "M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z";
+  const people = [
+    { id: "p01", name: "Исхак", born: 1740, died: 1810, gender: "male", generation: 1, parent: null, branch: "main", hasPhoto: false, place: "Чечня", note: "Старший известный предок в этой демонстрационной линии." },
+    { id: "p02", name: "Якуб", born: 1770, died: 1841, gender: "male", generation: 2, parent: "p01", branch: "west", hasPhoto: false, place: "Чечня" },
+    { id: "p03", name: "Муса", born: 1776, died: 1848, gender: "male", generation: 2, parent: "p01", branch: "main", hasPhoto: false, place: "Чечня" },
+    { id: "p04", name: "Иса", born: 1780, died: 1858, gender: "male", generation: 2, parent: "p01", branch: "east", hasPhoto: false, place: "Чечня" },
+    { id: "p05", name: "Ахмад", born: 1802, died: 1874, gender: "male", generation: 3, parent: "p02", branch: "west", hasPhoto: false, place: "Чечня" },
+    { id: "p06", name: "Магомед", born: 1825, died: 1890, gender: "male", generation: 3, parent: "p03", branch: "main", hasPhoto: false, place: "Чечня", note: "Демонстрационная запись. Биографические сведения не относятся к реальному человеку." },
+    { id: "p07", name: "Умар", born: 1830, died: 1895, gender: "male", generation: 3, parent: "p04", branch: "east", hasPhoto: false, place: "Чечня" },
+    { id: "p08", name: "Зайнап", born: null, died: 1901, gender: "female", generation: 3, parent: "p03", branch: "main", hasPhoto: false, place: "Чечня" },
+    { id: "p09", name: "Магомед", born: 1851, died: 1924, gender: "male", generation: 4, parent: "p06", branch: "main", hasPhoto: false, place: "Чечня" },
+    { id: "p10", name: "Амина", born: 1855, died: 1932, gender: "female", generation: 4, parent: "p06", branch: "main", hasPhoto: false, place: "Чечня" },
+    { id: "p11", name: "Абдул-Хамид Арбиевич Хатуев", born: 1884, died: null, gender: "male", generation: 5, parent: "p09", branch: "main", hasPhoto: false, place: "Чечня" },
+    { id: "p12", name: "Салман", born: 1810, died: 1882, gender: "male", generation: 3, parent: "p02", branch: "west", hasPhoto: false, place: "Чечня" }
+  ];
+
+  const byId = new Map(people.map(person => [person.id, person]));
+  const visibleRows = {
+    root: ["p01"],
+    children: ["p02", "p03", "p04"],
+    grandchildren: ["p05", "p06", "p07"]
+  };
+  let selectedId = "p06";
+  let mode = "all";
+  let searchTab = "all";
+  let filters = { minGeneration: 1, maxGeneration: 5, minYear: 1600, maxYear: 2026, gender: "all", photosOnly: false, mainOnly: false };
+  let query = "";
+  let toastTimer;
+  let returnFocus = null;
+  const motionPreview = new URLSearchParams(location.search).get("motion") === "1";
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+  let motionSequence = 0;
+  let activeMotion = [];
+  let motionTimers = [];
+  let lastSearchFocusId = null;
+  let zoomScale = 1;
+  let zoomAnchor = "stage";
+  let cameraX = 0;
+  let cameraY = 0;
+  let lodLevel = "detail";
+  const activePointers = new Map();
+  let pointerGesture = null;
+  let suppressClickUntil = 0;
+  let wheelEndTimer = 0;
+  let flightFrame = 0;
+  let finishFlight = null;
+
+  const $ = selector => document.querySelector(selector);
+  const $$ = selector => [...document.querySelectorAll(selector)];
+  const sheetBackdrop = $("#sheetBackdrop");
+  const sheetTitle = $("#sheetTitle");
+  const sheetSubtitle = $("#sheetSubtitle");
+  const sheetContent = $("#sheetContent");
+  const selectedPerson = () => byId.get(selectedId);
+
+  function avatarMarkup(extraClass = "") {
+    return `<span class="avatar ${extraClass}" aria-hidden="true"><svg viewBox="0 0 448 512" focusable="false"><path d="${USER_PATH}"/></svg></span>`;
+  }
+
+  function years(person) {
+    if (person.born == null && person.died == null) return "Даты неизвестны";
+    if (person.born == null) return `до ${person.died}`;
+    if (person.died == null) return `с ${person.born}`;
+    return `${person.born}–${person.died}`;
+  }
+
+  function renderNode(personId, rowName) {
+    const person = byId.get(personId);
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "person-node";
+    button.dataset.personId = person.id;
+    button.setAttribute("aria-label", `${person.name}, ${years(person)}, поколение ${person.generation}`);
+    button.innerHTML = `${avatarMarkup()}<span class="person-name" title="${person.name}">${person.name}</span><span class="person-years">${years(person)}</span>`;
+    button.addEventListener("click", () => selectPerson(person.id));
+    if (person.id === selectedId) button.classList.add("selected");
+    if (rowName === "root") return [document.createElement("span"), button, document.createElement("span")];
+    return [button];
+  }
+
+  function updateConnections() {
+    const camera = $("#treeCamera");
+    const svg = $(".connections");
+    const group = $("#treeLines");
+    const width = camera.clientWidth;
+    const height = camera.clientHeight;
+    if (!width || !height) return;
+
+    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+    const cameraRect = camera.getBoundingClientRect();
+    const scaleX = cameraRect.width / width || 1;
+    const scaleY = cameraRect.height / height || 1;
+    const simplified = lodLevel !== "detail";
+    const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    const visibleIds = new Set(nodes.keys());
+    const fragment = document.createDocumentFragment();
+
+    for (const person of people) {
+      if (!person.parent || !visibleIds.has(person.parent) || !visibleIds.has(person.id)) continue;
+      const parentRect = nodes.get(person.parent).getBoundingClientRect();
+      const childRect = nodes.get(person.id).getBoundingClientRect();
+      const start = {
+        x: (parentRect.left + parentRect.width / 2 - cameraRect.left) / scaleX,
+        y: ((simplified ? parentRect.top + parentRect.height / 2 + (lodLevel === "medium" ? 16 : 0) : parentRect.bottom) - cameraRect.top) / scaleY
+      };
+      const end = {
+        x: (childRect.left + childRect.width / 2 - cameraRect.left) / scaleX,
+        y: ((simplified ? childRect.top + childRect.height / 2 - (lodLevel === "medium" ? 16 : 0) : childRect.top) - cameraRect.top) / scaleY
+      };
+      const deltaX = end.x - start.x;
+      const deltaY = Math.max(0, end.y - start.y);
+      const direction = Math.sign(deltaX);
+      const radius = Math.min(14, Math.abs(deltaX) * 0.18, deltaY * 0.14);
+      const middleY = start.y + deltaY * 0.52;
+      const pathData = radius < 1
+        ? `M ${start.x} ${start.y} L ${end.x} ${end.y}`
+        : [
+            `M ${start.x} ${start.y}`,
+            `L ${start.x} ${middleY - radius}`,
+            `Q ${start.x} ${middleY} ${start.x + direction * radius} ${middleY}`,
+            `L ${end.x - direction * radius} ${middleY}`,
+            `Q ${end.x} ${middleY} ${end.x} ${middleY + radius}`,
+            `L ${end.x} ${end.y}`
+          ].join(" ");
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("class", "branch-line");
+      path.setAttribute("data-edge", `${person.parent}-${person.id}`);
+      path.setAttribute("d", pathData);
+      fragment.append(path);
+    }
+    group.replaceChildren(fragment);
+  }
+
+  function applyCameraFocus(personId = selectedId, focusScale = 1.29) {
+    const camera = $("#treeCamera");
+    const target = $(`.person-node[data-person-id="${personId}"]`);
+    if (!target || !camera.clientHeight) return;
+    const cameraRect = camera.getBoundingClientRect();
+    const scaleY = cameraRect.height / camera.clientHeight || 1;
+    const rect = target.getBoundingClientRect();
+    const scaleX = cameraRect.width / camera.clientWidth || 1;
+    const targetX = (rect.left + rect.width / 2 - cameraRect.left) / scaleX;
+    const targetY = (rect.top + rect.height / 2 - cameraRect.top) / scaleY;
+    zoomScale = focusScale;
+    zoomAnchor = "person";
+    cameraX = camera.clientWidth * 0.5 - targetX - (targetX - camera.clientWidth * 0.5) * (focusScale - 1);
+    camera.style.setProperty("--camera-x", `${cameraX}px`);
+    const anchorRatio = Number(camera.dataset.focusAnchorRatio);
+    const anchorY = Number.isFinite(anchorRatio) && anchorRatio > 0 ? camera.clientHeight * anchorRatio : camera.clientHeight * 0.5;
+    cameraY = anchorY - targetY - (targetY - camera.clientHeight * 0.5) * (focusScale - 1);
+    camera.style.setProperty("--camera-y", `${cameraY}px`);
+    camera.style.setProperty("--camera-scale", `${focusScale}`);
+    camera.style.removeProperty("transform");
+    camera.classList.remove("camera-moving");
+    camera.classList.add("camera-focused");
+  }
+
+  function renderTree() {
+    const rows = [
+      ["root", "#rowRoot"],
+      ["children", "#rowChildren"],
+      ["grandchildren", "#rowGrandchildren"]
+    ];
+    const filtered = getFilteredPeople();
+    const filteredIds = new Set(filtered.map(person => person.id));
+    const visibleIds = new Set(Object.values(visibleRows).flat());
+    const visibleMatches = [...visibleIds].some(id => filteredIds.has(id));
+
+    rows.forEach(([key, selector]) => {
+      const row = $(selector);
+      row.replaceChildren(...visibleRows[key].flatMap(id => {
+        if (!filteredIds.has(id)) return [document.createElement("span")];
+        return renderNode(id, key);
+      }));
+    });
+
+    updateConnections();
+
+    const related = mode === "path" ? new Set(ancestorPath(selectedId)) : mode === "branch" ? branchPeople(selectedId) : null;
+    $$(".person-node").forEach(node => {
+      const id = node.dataset.personId;
+      node.classList.toggle("selected", id === selectedId);
+      node.classList.toggle("is-dimmed", Boolean(related && !related.has(id)));
+    });
+    $("#treeLines").classList.toggle("lines-dimmed", Boolean(related));
+    $$(".branch-line").forEach(line => {
+      const [parentId, childId] = line.dataset.edge.split("-");
+      line.classList.toggle("is-hidden", !(filteredIds.has(parentId) && filteredIds.has(childId)));
+      line.classList.toggle("is-active", Boolean(related && related.has(parentId) && related.has(childId)));
+    });
+    const stageEmpty = $("#stageEmpty");
+    stageEmpty.hidden = filtered.length > 0 && visibleMatches;
+    stageEmpty.querySelector("strong").textContent = filtered.length === 0 ? "В этой выборке никого нет" : "Люди есть вне текущего кадра";
+    stageEmpty.querySelector("span").textContent = filtered.length === 0 ? "Измени или сбрось фильтры, чтобы вернуть людей на древо." : "Сбрось ограничение поколений, чтобы увидеть людей в текущем кадре.";
+    stageEmpty.querySelector("button").textContent = filtered.length === 0 ? "Сбросить фильтры" : "Показать поколения 1–3";
+    $$(".tree-row").forEach(row => row.classList.toggle("is-hidden", filtered.length === 0));
+    $("#stageMode").textContent = mode === "path" ? "МОЙ ПУТЬ" : mode === "branch" ? "МОЯ ВЕТВЬ" : "";
+    $("#selectedName").textContent = selectedPerson().name;
+    $("#selectedMeta").textContent = `${years(selectedPerson())} · поколение ${selectedPerson().generation}`;
+    $("#selectedPerson .avatar").innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_PATH}"/></svg>`;
+    updateLod();
+  }
+
+  function updateLod() {
+    if (!motionPreview) return;
+    const stage = $("#treeStage");
+    const nodes = $$(".person-node");
+    if (!nodes.length) return;
+    const sample = nodes.find(node => node.dataset.personId === selectedId) || nodes[0];
+    const baseWidth = sample.offsetWidth || 88;
+    const screenWidth = sample.getBoundingClientRect().width;
+    const cardWidth = Math.round(screenWidth);
+    const current = lodLevel;
+    if (current === "detail") {
+      if (cardWidth < 52) lodLevel = "overview";
+      else if (cardWidth < 78) lodLevel = "medium";
+    } else if (current === "medium") {
+      if (cardWidth < 52) lodLevel = "overview";
+      else if (cardWidth > 84) lodLevel = "detail";
+    } else if (cardWidth > 84) {
+      lodLevel = "detail";
+    } else if (cardWidth > 58) {
+      lodLevel = "medium";
+    }
+
+    stage.classList.toggle("lod-detail", lodLevel === "detail");
+    stage.classList.toggle("lod-medium", lodLevel === "medium");
+    stage.classList.toggle("lod-overview", lodLevel === "overview");
+    if (current !== lodLevel) updateConnections();
+    const levelName = lodLevel === "overview" ? "ОБЗОР" : lodLevel === "medium" ? "СРЕДНИЙ МАСШТАБ" : "ДЕТАЛИ";
+    const percent = Math.round(screenWidth / baseWidth * 100);
+    const modeName = mode === "path" ? "МОЙ ПУТЬ" : mode === "branch" ? "МОЯ ВЕТВЬ" : "";
+    const zoomLabel = Math.abs(zoomScale - 1) > 0.04 || lodLevel !== "detail" ? `${levelName} · ${percent}%` : "";
+    $("#stageMode").textContent = [modeName, zoomLabel].filter(Boolean).join(" · ");
+    $("#zoomIn").setAttribute("aria-label", `Увеличить, сейчас ${percent} процентов, ${levelName.toLocaleLowerCase("ru")}`);
+    $("#zoomOut").setAttribute("aria-label", `Уменьшить, сейчас ${percent} процентов, ${levelName.toLocaleLowerCase("ru")}`);
+    $("#zoomIn").disabled = zoomScale >= 1.75;
+    $("#zoomOut").disabled = zoomScale <= 0.5;
+  }
+
+  function setCameraTransform({ x = cameraX, y = cameraY, scale = zoomScale, moving = false } = {}) {
+    const camera = $("#treeCamera");
+    cameraX = x;
+    cameraY = y;
+    zoomScale = scale;
+    zoomAnchor = "stage";
+    camera.style.setProperty("--camera-x", `${cameraX}px`);
+    camera.style.setProperty("--camera-y", `${cameraY}px`);
+    camera.style.setProperty("--camera-scale", `${zoomScale}`);
+    camera.style.removeProperty("transform");
+    camera.classList.add("camera-focused");
+    camera.classList.toggle("camera-moving", moving);
+  }
+
+  function stagePoint(event) {
+    const rect = $("#treeStage").getBoundingClientRect();
+    return { x: event.clientX - rect.left, y: event.clientY - rect.top };
+  }
+
+  function pointerDistance(first, second) {
+    return Math.hypot(second.x - first.x, second.y - first.y);
+  }
+
+  function pointerMidpoint(first, second) {
+    return { x: (first.x + second.x) / 2, y: (first.y + second.y) / 2 };
+  }
+
+  function beginGestureFrame() {
+    const pointers = [...activePointers.values()];
+    if (pointers.length > 1) {
+      const midpoint = pointerMidpoint(pointers[0], pointers[1]);
+      pointerGesture = {
+        type: "pinch",
+        startDistance: Math.max(1, pointerDistance(pointers[0], pointers[1])),
+        startMidpoint: midpoint,
+        startScale: zoomScale,
+        startX: cameraX,
+        startY: cameraY,
+        moved: pointerGesture?.moved || false
+      };
+    } else if (pointers.length === 1) {
+      pointerGesture = {
+        type: "pan",
+        startPoint: pointers[0],
+        startX: cameraX,
+        startY: cameraY,
+        moved: pointerGesture?.moved || false
+      };
+    } else pointerGesture = null;
+  }
+
+  function installCameraGestures() {
+    if (!motionPreview) return;
+    const stage = $("#treeStage");
+    const camera = $("#treeCamera");
+    const center = () => ({ x: stage.clientWidth / 2, y: stage.clientHeight / 2 });
+
+    stage.addEventListener("pointerdown", event => {
+      if (event.button !== 0 || event.target.closest(".tree-tools, .stage-mode, .stage-empty")) return;
+      if (!activePointers.size) cancelMotionSequence();
+      activePointers.set(event.pointerId, stagePoint(event));
+      beginGestureFrame();
+    });
+
+    stage.addEventListener("pointermove", event => {
+      if (!activePointers.has(event.pointerId) || !pointerGesture) return;
+      const point = stagePoint(event);
+      activePointers.set(event.pointerId, point);
+      let x = cameraX;
+      let y = cameraY;
+      let scale = zoomScale;
+      if (pointerGesture.type === "pan") {
+        const dx = point.x - pointerGesture.startPoint.x;
+        const dy = point.y - pointerGesture.startPoint.y;
+        if (!pointerGesture.moved && Math.hypot(dx, dy) < 4) return;
+        pointerGesture.moved = true;
+        x = pointerGesture.startX + dx;
+        y = pointerGesture.startY + dy;
+      } else {
+        const pointers = [...activePointers.values()];
+        if (pointers.length < 2) return;
+        const midpoint = pointerMidpoint(pointers[0], pointers[1]);
+        const distance = pointerDistance(pointers[0], pointers[1]);
+        if (!pointerGesture.moved && Math.abs(distance - pointerGesture.startDistance) < 3 && pointerDistance(midpoint, pointerGesture.startMidpoint) < 3) return;
+        pointerGesture.moved = true;
+        scale = Math.max(0.5, Math.min(1.75, pointerGesture.startScale * distance / pointerGesture.startDistance));
+        const ratio = scale / pointerGesture.startScale;
+        const origin = center();
+        x = midpoint.x - origin.x - (pointerGesture.startMidpoint.x - origin.x - pointerGesture.startX) * ratio;
+        y = midpoint.y - origin.y - (pointerGesture.startMidpoint.y - origin.y - pointerGesture.startY) * ratio;
+      }
+      if (!pointerGesture.moved) return;
+      event.preventDefault();
+      suppressClickUntil = performance.now() + 350;
+      if (!stage.hasPointerCapture(event.pointerId)) stage.setPointerCapture(event.pointerId);
+      setCameraTransform({ x, y, scale, moving: true });
+    });
+
+    const endPointer = event => {
+      if (!activePointers.has(event.pointerId)) return;
+      activePointers.delete(event.pointerId);
+      if (stage.hasPointerCapture(event.pointerId)) stage.releasePointerCapture(event.pointerId);
+      if (!activePointers.size) {
+        const didMove = pointerGesture?.moved;
+        pointerGesture = null;
+        camera.classList.remove("camera-moving");
+        if (didMove) {
+          suppressClickUntil = performance.now() + 350;
+          updateLod();
+        }
+      } else beginGestureFrame();
+    };
+    stage.addEventListener("pointerup", endPointer);
+    stage.addEventListener("pointercancel", endPointer);
+    stage.addEventListener("lostpointercapture", endPointer);
+    stage.addEventListener("click", event => {
+      if (performance.now() > suppressClickUntil) return;
+      suppressClickUntil = 0;
+      event.preventDefault();
+      event.stopImmediatePropagation();
+    }, true);
+
+    stage.addEventListener("wheel", event => {
+      if (event.target.closest(".tree-tools, .stage-mode, .stage-empty")) return;
+      event.preventDefault();
+      if (!wheelEndTimer) cancelMotionSequence();
+      const point = stagePoint(event);
+      const origin = center();
+      const scale = Math.max(0.5, Math.min(1.75, zoomScale * Math.exp(-event.deltaY * 0.00012)));
+      const ratio = scale / zoomScale;
+      setCameraTransform({
+        x: point.x - origin.x - (point.x - origin.x - cameraX) * ratio,
+        y: point.y - origin.y - (point.y - origin.y - cameraY) * ratio,
+        scale,
+        moving: true
+      });
+      clearTimeout(wheelEndTimer);
+      wheelEndTimer = window.setTimeout(() => {
+        wheelEndTimer = 0;
+        camera.classList.remove("camera-moving");
+        updateLod();
+      }, 180);
+    }, { passive: false });
+  }
+
+  function zoomBy(step) {
+    if (!motionPreview) {
+      announce(step > 0 ? "Масштаб увеличен в макете." : "Масштаб уменьшен в макете.");
+      return;
+    }
+    const nextScale = Math.max(0.5, Math.min(1.75, Math.round((zoomScale + step) * 100) / 100));
+    if (nextScale === zoomScale) return;
+    const keepPersonCentered = zoomAnchor === "person" && $("#treeCamera").classList.contains("camera-focused");
+    cancelMotionSequence();
+    if (keepPersonCentered) {
+      applyCameraFocus(selectedId, nextScale);
+    } else {
+      const ratio = nextScale / zoomScale;
+      setCameraTransform({ x: cameraX * ratio, y: cameraY * ratio, scale: nextScale });
+    }
+    const sequence = motionSequence;
+    if (reducedMotion.matches) updateLod();
+    else void waitForMotion(390, sequence).then(active => { if (active) updateLod(); });
+  }
+
+  function cancelMotionSequence() {
+    motionSequence += 1;
+    const wasFlying = $("#treeStage").classList.contains("is-flight");
+    if (flightFrame) cancelAnimationFrame(flightFrame);
+    flightFrame = 0;
+    finishFlight?.(false);
+    finishFlight = null;
+    activeMotion.forEach(animation => animation.cancel());
+    activeMotion = [];
+    motionTimers.forEach(timer => {
+      clearTimeout(timer.id);
+      timer.resolve(false);
+    });
+    motionTimers = [];
+    $("#treeCamera").classList.remove("camera-moving");
+    if (wasFlying) {
+      clearTimeout(toastTimer);
+      $("#toast").classList.remove("show");
+    }
+    $("#treeStage").classList.remove("is-flight");
+    $("#treeStage").classList.remove("is-focus-settled");
+    if (motionPreview && mode === "path") applyCameraFocus(selectedId, zoomScale || 1.29);
+    else $("#treeCamera").classList.remove("camera-moving");
+    $$(".branch-line").forEach(line => {
+      line.style.strokeDasharray = "";
+      line.style.strokeDashoffset = "";
+      line.classList.remove("is-tracing");
+    });
+    $("#miniMap .mini-window").style.transform = motionPreview && mode === "path" ? "translateY(9px)" : "";
+    $$(".person-node").forEach(node => node.classList.remove("path-origin", "path-destination", "path-current", "branch-anchor", "branch-revealed", "branch-reveal-pending", "search-arrival"));
+  }
+
+  function waitForMotion(milliseconds, sequence) {
+    return new Promise(resolve => {
+      const timer = {
+        id: setTimeout(() => {
+          motionTimers = motionTimers.filter(item => item !== timer);
+          resolve(sequence === motionSequence);
+        }, milliseconds),
+        resolve
+      };
+      motionTimers.push(timer);
+    });
+  }
+
+  async function playBranchReveal() {
+    const sequence = motionSequence;
+    const selected = selectedPerson();
+    const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    const descendants = new Set([selectedId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const person of people) {
+        if (person.parent && descendants.has(person.parent) && !descendants.has(person.id)) {
+          descendants.add(person.id);
+          changed = true;
+        }
+      }
+    }
+    const generations = [...new Set(people
+      .filter(person => descendants.has(person.id) && person.generation > selected.generation && nodes.has(person.id))
+      .map(person => person.generation))].sort((a, b) => a - b);
+    const relevant = branchPeople(selectedId);
+    const lines = $$(".branch-line").filter(line => {
+      const [parentId, childId] = line.dataset.edge.split("-");
+      return relevant.has(parentId) && relevant.has(childId) && !line.classList.contains("is-hidden");
+    });
+
+    if (reducedMotion.matches || generations.length === 0) return;
+
+    const parent = selected.parent ? $(`[data-edge="${selected.parent}-${selected.id}"]`) : null;
+    const anchor = nodes.get(selectedId);
+    for (const generation of generations) {
+      for (const person of people.filter(item => item.generation === generation && descendants.has(item.id))) {
+        nodes.get(person.id)?.classList.add("branch-reveal-pending");
+      }
+    }
+    for (const line of lines) {
+      line.style.strokeDasharray = `${line.getTotalLength()}`;
+      line.style.strokeDashoffset = `${line.getTotalLength()}`;
+    }
+    anchor?.classList.add("branch-anchor");
+    if (parent && !parent.classList.contains("is-hidden")) {
+      parent.classList.add("is-tracing");
+      parent.style.strokeDasharray = `${parent.getTotalLength()}`;
+      parent.style.strokeDashoffset = "0";
+      if (!await waitForMotion(260, sequence)) return;
+      parent.classList.remove("is-tracing");
+      parent.style.strokeDasharray = "";
+      parent.style.strokeDashoffset = "";
+    } else if (!await waitForMotion(300, sequence)) return;
+
+    for (const generation of generations) {
+      if (sequence !== motionSequence) return;
+      const wave = people.filter(person => person.generation === generation && descendants.has(person.id) && nodes.has(person.id));
+      const edgeWave = lines.filter(line => line.dataset.edge.split("-").some(id => wave.some(person => person.id === id)));
+      for (const person of wave) {
+        const node = nodes.get(person.id);
+        node?.classList.remove("branch-reveal-pending");
+        node?.classList.add("branch-revealed");
+      }
+      for (const line of edgeWave) {
+        line.classList.add("is-tracing");
+        line.style.strokeDashoffset = "0";
+      }
+      if (!await waitForMotion(360, sequence)) return;
+      for (const line of edgeWave) {
+        line.classList.remove("is-tracing");
+        line.style.strokeDasharray = "";
+        line.style.strokeDashoffset = "";
+      }
+      if (!await waitForMotion(130, sequence)) return;
+    }
+    anchor?.classList.remove("branch-anchor");
+  }
+
+  async function playPathReveal() {
+    const sequence = motionSequence;
+    const camera = $("#treeCamera");
+    const stage = $("#treeStage");
+    const route = [...ancestorPath(selectedId)].reverse();
+    const edges = route.slice(1).map((childId, index) => `${route[index]}-${childId}`);
+    const nodes = new Map($$(".person-node").map(node => [node.dataset.personId, node]));
+    const originNode = nodes.get(route[0]);
+    const destinationNode = nodes.get(selectedId);
+    if (!originNode || !destinationNode || !camera.clientWidth || !camera.clientHeight) return;
+    camera.classList.add("camera-moving");
+    camera.classList.remove("camera-focused");
+    camera.style.removeProperty("transform");
+    camera.style.setProperty("--camera-x", "0px");
+    camera.style.setProperty("--camera-y", "0px");
+    camera.style.setProperty("--camera-scale", "1");
+    zoomScale = 1;
+    zoomAnchor = "person";
+    stage.classList.remove("is-focus-settled");
+
+    const cameraRect = camera.getBoundingClientRect();
+    const scaleX = cameraRect.width / camera.clientWidth || 1;
+    const scaleY = cameraRect.height / camera.clientHeight || 1;
+    const localRect = node => {
+      const rect = node.getBoundingClientRect();
+      return {
+        left: (rect.left - cameraRect.left) / scaleX,
+        top: (rect.top - cameraRect.top) / scaleY,
+        width: rect.width / scaleX,
+        height: rect.height / scaleY
+      };
+    };
+    const centerOf = rect => ({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+    const originPoint = centerOf(localRect(originNode));
+    const destinationPoint = centerOf(localRect(destinationNode));
+    const focusPoint = { x: camera.clientWidth / 2, y: camera.clientHeight / 2 };
+    camera.dataset.focusAnchorRatio = String(focusPoint.y / camera.clientHeight);
+    const frameFor = (point, scale, progress = 0) => {
+      const destinationOnScreen = {
+        x: destinationPoint.x + (focusPoint.x - destinationPoint.x) * progress,
+        y: destinationPoint.y + (focusPoint.y - destinationPoint.y) * progress
+      };
+      const anchor = {
+        x: destinationOnScreen.x - (destinationPoint.x - point.x) * scale,
+        y: destinationOnScreen.y - (destinationPoint.y - point.y) * scale
+      };
+      return {
+        x: anchor.x - point.x - (point.x - camera.clientWidth * 0.5) * (scale - 1),
+        y: anchor.y - point.y - (point.y - camera.clientHeight * 0.5) * (scale - 1),
+        scale
+      };
+    };
+    const transformFor = frame => `translate(${frame.x}px, ${frame.y}px) scale(${frame.scale})`;
+    const finalScale = 1.46;
+    nodes.get(route[0])?.classList.add("path-origin", "path-current");
+    nodes.get(selectedId)?.classList.add("path-destination");
+
+    if (reducedMotion.matches || edges.length === 0) {
+      applyCameraFocus();
+      $("#miniMap .mini-window").style.transform = "translateY(9px)";
+      return;
+    }
+
+    const miniWindow = $("#miniMap .mini-window");
+    const routeSegments = [];
+    const appendStraight = (from, to, currentId) => {
+      const length = Math.hypot(to.x - from.x, to.y - from.y);
+      if (length > 0.5) routeSegments.push({ kind: "straight", from, to, length, currentId });
+    };
+    const routeLines = edges.map((edge, index) => {
+      const line = $(`[data-edge="${edge}"]`);
+      const parentNode = nodes.get(route[index]);
+      const childNode = nodes.get(route[index + 1]);
+      if (!line || !parentNode || !childNode || line.classList.contains("is-hidden")) return null;
+      const parentRect = localRect(parentNode);
+      const childRect = localRect(childNode);
+      const parentCenter = centerOf(parentRect);
+      const childCenter = centerOf(childRect);
+      appendStraight(parentCenter, { x: parentCenter.x, y: parentRect.top + parentRect.height }, route[index]);
+      const length = line.getTotalLength();
+      routeSegments.push({ kind: "connector", line, length, currentId: route[index] });
+      appendStraight({ x: childCenter.x, y: childRect.top }, childCenter, route[index + 1]);
+      line.style.strokeDasharray = `${length}`;
+      line.style.strokeDashoffset = `${length}`;
+      return { line, length };
+    });
+    const totalLength = routeSegments.reduce((sum, segment) => sum + segment.length, 0);
+    if (!totalLength) {
+      applyCameraFocus();
+      return;
+    }
+
+    stage.classList.add("is-flight");
+    miniWindow.style.transform = "translateY(-9px)";
+    const animateFlight = (duration, sampleAt, onProgress) => new Promise(resolve => {
+      const startTime = performance.now();
+      finishFlight = resolve;
+      const tick = now => {
+        if (sequence !== motionSequence) {
+          flightFrame = 0;
+          finishFlight = null;
+          resolve(false);
+          return;
+        }
+        const raw = Math.min(1, (now - startTime) / duration);
+        const eased = raw * raw * (3 - 2 * raw);
+        const sample = sampleAt(eased, raw);
+        camera.style.transform = transformFor(frameFor(sample.point, sample.scale, eased));
+        onProgress?.(raw, eased, sample);
+        if (raw >= 1) {
+          flightFrame = 0;
+          finishFlight = null;
+          resolve(true);
+          return;
+        }
+        flightFrame = requestAnimationFrame(tick);
+      };
+      flightFrame = requestAnimationFrame(tick);
+    });
+
+    const duration = Math.min(4200, Math.max(2600, totalLength * 5.4));
+    const routeProgress = progress => {
+      const distance = totalLength * progress;
+      let consumed = 0;
+      for (const [index, segment] of routeSegments.entries()) {
+        const end = consumed + segment.length;
+        if (distance <= end || index === routeSegments.length - 1) {
+          const localProgress = Math.min(1, Math.max(0, (distance - consumed) / segment.length));
+          let point;
+          if (segment.kind === "connector") {
+            const sample = segment.line.getPointAtLength(segment.length * localProgress);
+            point = { x: sample.x, y: sample.y };
+          } else {
+            point = {
+              x: segment.from.x + (segment.to.x - segment.from.x) * localProgress,
+              y: segment.from.y + (segment.to.y - segment.from.y) * localProgress
+            };
+          }
+          return { point, segmentIndex: index, localProgress, distance };
+        }
+        consumed = end;
+      }
+      return { point: centerOf(localRect(destinationNode)), segmentIndex: routeSegments.length - 1, localProgress: 1, distance };
+    };
+
+    let currentId = route[0];
+    const traveled = await animateFlight(duration, progress => {
+      const sample = routeProgress(progress);
+      sample.scale = 1 + (finalScale - 1) * progress;
+      return sample;
+    }, (raw, progress, sample) => {
+      const activeSegment = routeSegments[sample.segmentIndex];
+      if (activeSegment?.currentId !== currentId) {
+        nodes.get(currentId)?.classList.remove("path-current");
+        currentId = activeSegment?.currentId || currentId;
+        nodes.get(currentId)?.classList.add("path-current");
+      }
+      if (activeSegment?.kind === "connector") {
+        activeSegment.line.classList.add("is-tracing");
+        activeSegment.line.style.strokeDashoffset = `${activeSegment.length * (1 - sample.localProgress)}`;
+      }
+      for (let i = 0; i < routeLines.length; i += 1) {
+        const routeLine = routeLines[i];
+        if (!routeLine) continue;
+        const connectorIndex = routeSegments.findIndex(segment => segment.kind === "connector" && segment.line === routeLine.line);
+        if (connectorIndex < sample.segmentIndex) {
+          routeLine.line.style.strokeDasharray = "";
+          routeLine.line.style.strokeDashoffset = "";
+          routeLine.line.classList.remove("is-tracing");
+        } else if (connectorIndex === sample.segmentIndex && activeSegment?.kind === "connector") {
+          routeLine.line.classList.add("is-tracing");
+          routeLine.line.style.strokeDashoffset = `${routeLine.length * (1 - sample.localProgress)}`;
+        } else if (connectorIndex > sample.segmentIndex) {
+          routeLine.line.style.strokeDasharray = `${routeLine.length}`;
+          routeLine.line.style.strokeDashoffset = `${routeLine.length}`;
+        }
+      }
+      miniWindow.style.transform = `translateY(${-9 + progress * 18}px)`;
+    });
+    if (!traveled || sequence !== motionSequence) return;
+
+    routeLines.forEach(routeLine => {
+      if (!routeLine) return;
+      routeLine.line.style.strokeDasharray = "";
+      routeLine.line.style.strokeDashoffset = "";
+      routeLine.line.classList.remove("is-tracing");
+    });
+    nodes.get(currentId)?.classList.remove("path-current");
+    nodes.get(selectedId)?.classList.add("path-current");
+    nodes.get(route[0])?.classList.remove("path-origin");
+    stage.classList.add("is-focus-settled");
+    const endFrame = frameFor(destinationPoint, finalScale, 1);
+    cameraX = endFrame.x;
+    cameraY = endFrame.y;
+    camera.style.setProperty("--camera-x", `${endFrame.x}px`);
+    camera.style.setProperty("--camera-y", `${endFrame.y}px`);
+    camera.style.setProperty("--camera-scale", `${endFrame.scale}`);
+    zoomScale = endFrame.scale;
+    zoomAnchor = "person";
+    camera.style.removeProperty("transform");
+    camera.classList.remove("camera-moving");
+    camera.classList.add("camera-focused");
+    clearTimeout(toastTimer);
+    $("#toast").classList.remove("show");
+    stage.classList.remove("is-flight");
+    miniWindow.style.transform = "translateY(9px)";
+  }
+
+  function getFilteredPeople() {
+    return people.filter(person => {
+      const startYear = person.born ?? person.died ?? filters.minYear;
+      const endYear = person.died ?? person.born ?? filters.maxYear;
+      return person.generation >= filters.minGeneration && person.generation <= filters.maxGeneration && startYear <= filters.maxYear && endYear >= filters.minYear && (filters.gender === "all" || person.gender === filters.gender) && (!filters.photosOnly || person.hasPhoto) && (!filters.mainOnly || person.branch === "main");
+    });
+  }
+
+  function ancestorPath(personId) {
+    const result = new Set();
+    let current = byId.get(personId);
+    while (current) {
+      result.add(current.id);
+      current = current.parent ? byId.get(current.parent) : null;
+    }
+    return result;
+  }
+
+  function branchPeople(personId) {
+    const ancestors = ancestorPath(personId);
+    const descendants = new Set([personId]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      for (const person of people) {
+        if (person.parent && descendants.has(person.parent) && !descendants.has(person.id)) {
+          descendants.add(person.id);
+          changed = true;
+        }
+      }
+    }
+    return new Set([...ancestors, ...descendants]);
+  }
+
+  function selectPerson(personId, source = "tree") {
+    if (!byId.has(personId)) return;
+    const isRepeatSearch = source === "search" && (selectedId === personId || lastSearchFocusId === personId);
+    cancelMotionSequence();
+    selectedId = personId;
+    renderTree();
+    if (motionPreview && source === "search") {
+      const target = $(`.person-node[data-person-id="${personId}"]`);
+      if (!target) {
+        announce("Человек скрыт фильтрами или не входит в видимую часть этого макета.");
+      } else {
+        applyCameraFocus(personId, zoomScale);
+        lastSearchFocusId = personId;
+        if (!isRepeatSearch) {
+          target.classList.add("search-arrival");
+          const sequence = motionSequence;
+          void waitForMotion(680, sequence).then(active => {
+            if (active) target.classList.remove("search-arrival");
+          });
+        }
+      }
+    } else if (motionPreview && mode === "path") applyCameraFocus();
+    setActiveNavigation("tree");
+    if (!(motionPreview && source === "search")) announce(`${selectedPerson().name} выбран`);
+  }
+
+  function setActiveNavigation(name) {
+    $$(".nav-item").forEach(item => item.classList.toggle("active", item.dataset.nav === name));
+  }
+
+  function openSheet(type, options = {}) {
+    cancelMotionSequence();
+    returnFocus = document.activeElement;
+    sheetContent.innerHTML = "";
+    sheetBackdrop.hidden = false;
+    document.body.classList.add("sheet-open");
+    const titles = {
+      search: ["Поиск человека", "По имени, годам жизни или ветви"],
+      profile: [selectedPerson().name, `Поколение ${selectedPerson().generation} · ${years(selectedPerson())}`],
+      menu: ["Ещё", "Навигация по древу и действия"],
+      modes: ["Режим древа", "Выбери, какую часть рода показать"],
+      filters: ["Фильтры", "Ограничь людей, видимых на древе"],
+      stats: ["Статистика древа", "Рассчитана по 12 вымышленным записям"],
+      people: ["Люди", "Демонстрационный список"],
+      relatives: ["Родственники", "Связанные записи в тестовом наборе"]
+    };
+    [sheetTitle.textContent, sheetSubtitle.textContent] = titles[type] || titles.menu;
+    if (type === "search") renderSearchSheet(options.initialQuery ?? query);
+    if (type === "profile") renderProfileSheet();
+    if (type === "menu") renderMenuSheet();
+    if (type === "modes") renderModesSheet();
+    if (type === "filters") renderFilterSheet();
+    if (type === "stats") renderStatsSheet();
+    if (type === "people" || type === "relatives") renderPeopleSheet(type);
+    const focusable = sheetContent.querySelector("input,button,select");
+    if (focusable) requestAnimationFrame(() => focusable.focus());
+  }
+
+  function closeSheet() {
+    sheetBackdrop.hidden = true;
+    document.body.classList.remove("sheet-open");
+    if (returnFocus && returnFocus.isConnected) returnFocus.focus();
+  }
+
+  function resultMarkup(person) {
+    return `<button type="button" class="person-result" data-result-id="${person.id}">${avatarMarkup()}<span class="person-result-copy"><strong>${person.name}</strong><small>${years(person)} · Поколение ${person.generation} · ${person.branch === "main" ? "Основная линия" : "Ветвь"}</small></span><span class="chevron" aria-hidden="true">›</span></button>`;
+  }
+
+  function renderSearchSheet(initial = "") {
+    searchTab = "all";
+    query = initial;
+    sheetContent.innerHTML = `<label class="sr-only" for="searchInput">Поиск по людям</label><input id="searchInput" class="search-input" type="search" autocomplete="off" placeholder="Имя или часть имени" value="${escapeHtml(initial)}"><div class="search-tabs"><button class="search-tab active" type="button" data-search-tab="all">Все <span>${people.length}</span></button><button class="search-tab" type="button" data-search-tab="people">Люди <span>${people.length}</span></button><button class="search-tab" type="button" data-search-tab="branches">Ветви <span>3</span></button></div><div class="result-list" id="resultList"></div>`;
+    const input = $("#searchInput");
+    input.addEventListener("input", () => {
+      query = input.value;
+      renderSearchResults(query);
+    });
+    sheetContent.onclick = event => {
+      const tab = event.target.closest("[data-search-tab]");
+      if (tab) {
+        searchTab = tab.dataset.searchTab;
+        sheetContent.querySelectorAll("[data-search-tab]").forEach(item => item.classList.toggle("active", item === tab));
+        renderSearchResults(input.value);
+        return;
+      }
+      const branch = event.target.closest("[data-branch-id]");
+      if (branch) {
+        closeSheet();
+        setMode("branch");
+        return;
+      }
+      onResultClick(event);
+    };
+    renderSearchResults(initial);
+  }
+
+  function renderSearchResults(value) {
+    const normalized = value.trim().toLocaleLowerCase("ru");
+    const branchNames = { main: "Основная линия", west: "Западная ветвь", east: "Восточная ветвь" };
+    const matches = searchTab === "branches"
+      ? Object.entries(branchNames).filter(([id,name]) => !normalized || `${name} ${id}`.toLocaleLowerCase("ru").includes(normalized))
+      : normalized ? people.filter(person => `${person.name} ${person.born ?? ""} ${person.died ?? ""} ${person.branch}`.toLocaleLowerCase("ru").includes(normalized)) : people.slice(0, 5);
+    const list = $("#resultList");
+    if (!list) return;
+    list.innerHTML = matches.length
+      ? searchTab === "branches"
+        ? matches.map(([id,name]) => `<button type="button" class="person-result" data-branch-id="${id}"><span class="branch-search-icon">♧</span><span class="person-result-copy"><strong>${name}</strong><small>${people.filter(person => person.branch === id).length} человека в тестовом наборе</small></span><span class="chevron" aria-hidden="true">›</span></button>`).join("")
+        : matches.map(resultMarkup).join("")
+      : `<p class="empty-copy">По запросу «${escapeHtml(value)}» ничего не найдено.<br>Проверь написание или очисти поиск.</p>`;
+  }
+
+  function onResultClick(event) {
+    const button = event.target.closest("[data-result-id]");
+    if (!button) return;
+    selectPerson(button.dataset.resultId, "search");
+    closeSheet();
+  }
+
+  function renderProfileSheet() {
+    const person = selectedPerson();
+    const parent = person.parent ? byId.get(person.parent)?.name : "Не указан";
+    const children = people.filter(item => item.parent === person.id).length;
+    sheetContent.innerHTML = `<div class="profile-hero"><div class="profile-summary">${avatarMarkup()}<div><strong>${person.name}</strong><small>${years(person)}</small></div></div></div><div class="profile-tabs"><span class="tab-active">Информация</span><button type="button" data-profile-tab="relatives">Родственники</button><button type="button" data-profile-tab="media">Медиа</button></div><dl class="fact-list"><div class="fact-row"><dt>Поколение</dt><dd>${person.generation}</dd></div><div class="fact-row"><dt>Отец</dt><dd>${parent}</dd></div><div class="fact-row"><dt>Дети</dt><dd>${children} ${children === 1 ? "человек" : "человек"}</dd></div><div class="fact-row"><dt>Ветвь</dt><dd>${person.branch === "main" ? "Основная линия" : "Родственная ветвь"}</dd></div><div class="fact-row"><dt>Место</dt><dd>${person.place}</dd></div></dl><p class="profile-note">${person.note || "В prototype показаны только поля, необходимые для проверки композиции."}</p><button type="button" class="primary-action full-action" id="showBranch">Показать ветвь <span>›</span></button>`;
+    $("#showBranch").addEventListener("click", () => {
+      closeSheet();
+      setMode("branch");
+    });
+    sheetContent.querySelectorAll("[data-profile-tab]").forEach(tab => tab.addEventListener("click", () => {
+      if (tab.dataset.profileTab === "relatives") openSheet("relatives");
+      else announce("В вымышленном наборе нет фотографий и медиа.");
+    }));
+  }
+
+  function renderPeopleSheet(type) {
+    const list = type === "relatives" ? people.filter(person => person.id !== selectedId && (person.parent === selectedId || person.id === selectedPerson().parent)) : people;
+    sheetContent.innerHTML = `<div class="people-list">${list.length ? list.map(resultMarkup).join("") : `<p class="empty-copy">Для этой демонстрационной записи родственники не заданы.</p>`}</div>`;
+    sheetContent.onclick = onResultClick;
+  }
+
+  function renderMenuSheet() {
+    sheetContent.innerHTML = `<div class="mode-list"><button class="mode-action" type="button" data-mode="path"><span class="mode-icon">⌖</span><span><strong>Мой путь</strong><small>Линия от старшего известного предка</small></span></button><button class="mode-action" type="button" data-mode="branch"><span class="mode-icon">♧</span><span><strong>Моя ветвь</strong><small>Фокус на выбранном человеке и родных</small></span></button><button class="mode-action" type="button" data-mode="all"><span class="mode-icon">⌘</span><span><strong>Все поколения</strong><small>Вернуться к полному дереву</small></span></button><button class="mode-action" type="button" data-open="filters"><span class="mode-icon">⚑</span><span><strong>Фильтры</strong><small>Поколения, фото и основная линия</small></span></button></div><div class="menu-divider"></div><div class="action-list"><button class="menu-action" type="button" data-open="stats"><span class="menu-icon">◉</span><span class="menu-copy"><strong>Статистика древа</strong><small>Сводка по демонстрационным данным</small></span></button><button class="menu-action" type="button" disabled><span class="menu-icon">↗</span><span class="menu-copy"><strong>Поделиться</strong><small>Не подключено в локальном макете</small></span></button><button class="menu-action" type="button" disabled><span class="menu-icon">▤</span><span class="menu-copy"><strong>Печать</strong><small>Отдельный этап разработки</small></span></button><button class="menu-action" type="button" disabled><span class="menu-icon">▷</span><span class="menu-copy"><strong>Создать видео</strong><small>Отдельный этап разработки</small></span></button></div>`;
+    sheetContent.querySelectorAll("[data-mode]").forEach(button => button.addEventListener("click", () => {
+      closeSheet();
+      setMode(button.dataset.mode);
+    }));
+    sheetContent.querySelectorAll("[data-open]").forEach(button => button.addEventListener("click", () => openSheet(button.dataset.open)));
+  }
+
+  function renderModesSheet() {
+    renderMenuSheet();
+    sheetTitle.textContent = "Режим древа";
+    sheetSubtitle.textContent = "Выбери, какую часть рода показать";
+    sheetContent.querySelectorAll("[data-mode]").forEach(button => button.classList.toggle("active", button.dataset.mode === mode));
+    sheetContent.querySelector(".action-list")?.remove();
+  }
+
+  function renderFilterSheet() {
+    sheetContent.innerHTML = `<div class="filter-grid"><label class="filter-field">Поколение от<select id="minGeneration">${[1,2,3,4,5].map(value => `<option ${filters.minGeneration === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label class="filter-field">Поколение до<select id="maxGeneration">${[1,2,3,4,5].map(value => `<option ${filters.maxGeneration === value ? "selected" : ""}>${value}</option>`).join("")}</select></label><label class="filter-field">Год от<input id="minYear" type="number" value="${filters.minYear}"></label><label class="filter-field">Год до<input id="maxYear" type="number" value="${filters.maxYear}"></label><label class="filter-field">Пол<select id="gender"><option value="all" ${filters.gender === "all" ? "selected" : ""}>Любой</option><option value="male" ${filters.gender === "male" ? "selected" : ""}>Мужчины</option><option value="female" ${filters.gender === "female" ? "selected" : ""}>Женщины</option></select></label></div><label class="toggle-row"><span>Показывать только с фото</span><input id="photosOnly" type="checkbox" ${filters.photosOnly ? "checked" : ""}></label><label class="toggle-row"><span>Только основная линия</span><input id="mainOnly" type="checkbox" ${filters.mainOnly ? "checked" : ""}></label><div class="sheet-actions"><button type="button" class="primary-action" id="applyFilters">Применить фильтры</button><button type="button" class="secondary-action" id="resetFilters">Сбросить</button></div>`;
+    $("#applyFilters").addEventListener("click", () => {
+      filters = { minGeneration: Number($("#minGeneration").value), maxGeneration: Number($("#maxGeneration").value), minYear: Number($("#minYear").value) || 0, maxYear: Number($("#maxYear").value) || 9999, gender: $("#gender").value, photosOnly: $("#photosOnly").checked, mainOnly: $("#mainOnly").checked };
+      closeSheet();
+      renderTree();
+      announce(`Фильтры применены. Найдено людей: ${getFilteredPeople().length}.`);
+    });
+    $("#resetFilters").addEventListener("click", () => {
+      filters = { minGeneration: 1, maxGeneration: 5, minYear: 1600, maxYear: 2026, gender: "all", photosOnly: false, mainOnly: false };
+      closeSheet();
+      renderTree();
+      announce("Фильтры сброшены.");
+    });
+  }
+
+  function renderStatsSheet() {
+    const generations = Math.max(...people.map(person => person.generation));
+    const branches = new Set(people.map(person => person.branch)).size;
+    const perGeneration = Array.from({ length: generations }, (_, index) => people.filter(person => person.generation === index + 1).length);
+    const maxCount = Math.max(...perGeneration, 1);
+    sheetContent.innerHTML = `<div class="stats-grid"><div class="stat-card"><span class="stat-icon">♙</span><span><strong>${people.length}</strong><small>человек</small></span></div><div class="stat-card"><span class="stat-icon">♧</span><span><strong>${generations}</strong><small>поколений</small></span></div><div class="stat-card"><span class="stat-icon">⌘</span><span><strong>${branches}</strong><small>ветви</small></span></div><div class="stat-card"><span class="stat-icon">▧</span><span><strong>${people.filter(person => person.hasPhoto).length}</strong><small>фотографий</small></span></div></div><p class="chart-title">Распределение по поколениям</p><div class="chart">${perGeneration.map((count,index) => `<div class="bar-wrap"><span class="bar" style="height:${Math.max(3, count / maxCount * 68)}px"></span><small>${index + 1}</small></div>`).join("")}</div><p class="prototype-note">Показатели рассчитаны из 12 фиктивных записей. В настоящем интерфейсе при активных фильтрах нужно обозначать область подсчёта.</p>`;
+  }
+
+  function setMode(nextMode) {
+    cancelMotionSequence();
+    mode = nextMode;
+    if (nextMode === "path" && motionPreview) {
+      $("#treeCamera").classList.remove("camera-focused");
+      zoomScale = 1;
+    }
+    renderTree();
+    if (nextMode === "path" && motionPreview) playPathReveal();
+    if (nextMode === "branch" && motionPreview) playBranchReveal();
+    if (nextMode === "all") announce("Показаны все поколения.");
+    else if (nextMode === "path") announce("Подсвечен путь от старшего известного предка.");
+    else if (!motionPreview) announce("Выбран фокус на ветви этого человека.");
+  }
+
+  function announce(message) {
+    const toast = $("#toast");
+    toast.textContent = message;
+    toast.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toast.classList.remove("show"), 2600);
+  }
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, char => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", "\"": "&quot;", "'": "&#39;" })[char]);
+  }
+
+  function setPerson(personId) {
+    if (!byId.has(personId)) return;
+    selectedId = personId;
+    renderTree();
+  }
+
+  $("#searchLaunch").addEventListener("click", event => openSheet("search", { initialQuery: query }));
+  $("#selectedPerson").addEventListener("click", () => openSheet("profile"));
+  $("#closeSheet").addEventListener("click", closeSheet);
+  sheetBackdrop.addEventListener("click", event => { if (event.target === sheetBackdrop) closeSheet(); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape" && !sheetBackdrop.hidden) closeSheet(); });
+  $("#emptyReset").addEventListener("click", () => {
+    if (getFilteredPeople().length) {
+      filters.minGeneration = 1;
+      filters.maxGeneration = 3;
+    } else {
+      filters = { minGeneration: 1, maxGeneration: 5, minYear: 1600, maxYear: 2026, gender: "all", photosOnly: false, mainOnly: false };
+    }
+    renderTree();
+    announce(getFilteredPeople().length ? "Показаны поколения 1–3." : "Все фильтры сброшены.");
+  });
+  $("#miniMap").addEventListener("click", () => announce("Мини-карта показывает весь тестовый набор."));
+  $("#zoomIn").addEventListener("click", () => zoomBy(0.15));
+  $("#zoomOut").addEventListener("click", () => zoomBy(-0.15));
+  $("#whoAmI").addEventListener("click", () => { selectPerson("p06"); announce("В этом наборе «я» назначен Магомедом."); });
+
+  $$(".nav-item").forEach(button => button.addEventListener("click", () => {
+    const nav = button.dataset.nav;
+    setActiveNavigation(nav);
+    if (nav === "tree") {
+      cancelMotionSequence();
+      mode = "all";
+      const camera = $("#treeCamera");
+      camera.classList.remove("camera-focused");
+      cameraX = 0;
+      cameraY = 0;
+      camera.style.setProperty("--camera-x", "0px");
+      camera.style.setProperty("--camera-y", "0px");
+      camera.style.setProperty("--camera-scale", "1");
+      zoomScale = 1;
+      zoomAnchor = "stage";
+      renderTree();
+    }
+    if (nav === "people") openSheet("people");
+    if (nav === "branches") openSheet("modes");
+    if (nav === "stats") openSheet("stats");
+    if (nav === "more") openSheet("menu");
+  }));
+
+  function bootstrapState() {
+    const state = new URLSearchParams(location.search).get("state") || "tree";
+    const states = {
+      profile: () => openSheet("profile"),
+      search: () => openSheet("search", { initialQuery: "Магомед" }),
+      searchMotion: () => {
+        setPerson("p01");
+        openSheet("search", { initialQuery: "Магомед" });
+      },
+      searchEmpty: () => openSheet("search", { initialQuery: "ИмяБезСовпадений" }),
+      menu: () => openSheet("menu"),
+      modes: () => openSheet("modes"),
+      filters: () => openSheet("filters"),
+      filtersEmpty: () => { filters.photosOnly = true; renderTree(); },
+      stats: () => openSheet("stats"),
+      people: () => openSheet("people"),
+      lod: () => setPerson("p06"),
+      path: () => setMode("path"),
+      branch: () => {
+        if (motionPreview) setPerson("p01");
+        setMode("branch");
+      },
+      longName: () => { setPerson("p11"); openSheet("profile"); }
+    };
+    states[state]?.();
+    return state;
+  }
+
+  if (motionPreview) document.body.classList.add("motion-preview");
+  installCameraGestures();
+  $("#treeCamera").addEventListener("transitionend", event => {
+    if (event.target === event.currentTarget && event.propertyName === "transform") updateLod();
+  });
+  reducedMotion.addEventListener("change", event => {
+    if (event.matches) cancelMotionSequence();
+  });
+  window.addEventListener("resize", () => {
+    if (flightFrame || activeMotion.some(animation => animation.playState === "running")) cancelMotionSequence();
+    updateConnections();
+    if (motionPreview && mode === "path") applyCameraFocus();
+  });
+
+  renderTree();
+  window.waydeanPrototype = { people, setPerson, openSheet, closeSheet, setMode, renderTree, bootstrapState };
+  window.prototypeState = bootstrapState();
+})();

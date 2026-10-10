@@ -2375,6 +2375,10 @@
         <button type="button" id="whoami-clear-btn" hidden>Сбросить «это я»</button>
         <button type="button" id="logout-btn">Выйти</button>
       </div>
+      <p class="nav-label" hidden>Тест новой версии</p>
+      <div class="action-cluster" role="group" aria-label="Тест новой версии древа" hidden>
+        <button type="button" id="waydean-premium-open">Waydean · тест</button>
+      </div>
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
         <button type="button" id="edit-links" aria-pressed="false">Редактировать</button>
@@ -4474,6 +4478,9 @@
       var GUIDE_HIDE_KEY = 'drewo-hide-guide';
       var navMenuBtn = document.getElementById('nav-menu-btn');
       var navPanel = document.getElementById('nav-panel');
+      var waydeanPremiumOpenBtn = document.getElementById('waydean-premium-open');
+      var waydeanPremiumGroup = waydeanPremiumOpenBtn && waydeanPremiumOpenBtn.closest('.action-cluster');
+      var waydeanPremiumLabel = waydeanPremiumGroup && waydeanPremiumGroup.previousElementSibling;
       var navBackdrop = document.getElementById('nav-backdrop');
       var historyBtn = document.getElementById('history-btn');
       var backupBtn = document.getElementById('backup-btn');
@@ -4825,7 +4832,14 @@
         sessionPassword = password || '';
         sessionRole = (data && data.role) || '';
         editUnlocked = sessionRole === 'editor' || sessionRole === 'super';
+        updateWaydeanPremiumEntry();
         applyLockState(!!(data && data.locked), data && data.lockedReason);
+      }
+
+      function updateWaydeanPremiumEntry() {
+        var visible = sessionRole === 'super';
+        if (waydeanPremiumGroup) waydeanPremiumGroup.hidden = !visible;
+        if (waydeanPremiumLabel) waydeanPremiumLabel.hidden = !visible;
       }
 
       function isSuperSession() {
@@ -4974,6 +4988,7 @@
           treeDir: TREE_DIR,
         }).then(function (data) {
           if (data) data.fromServer = true;
+          if (data && data.sessionToken) storeNekToken(data.sessionToken);
           return data;
         });
       }
@@ -6582,7 +6597,10 @@
         }
         return callPublishApi({ action: 'list-backups', password: password, treeDir: TREE_DIR })
           .then(function (data) {
-            if (data && data.role) sessionRole = data.role;
+            if (data && data.role) {
+              sessionRole = data.role;
+              updateWaydeanPremiumEntry();
+            }
             if (backupStatus) {
               backupStatus.hidden = true;
               backupStatus.removeAttribute('data-busy');
@@ -8001,6 +8019,14 @@
           toggleNavMenu();
         });
       }
+      if (waydeanPremiumOpenBtn) {
+        updateWaydeanPremiumEntry();
+        waydeanPremiumOpenBtn.addEventListener('click', function () {
+          if (sessionRole !== 'super') return;
+          setNavMenuOpen(false);
+          window.location.assign('waydean-preview.html?source=account&state=all-tree');
+        });
+      }
       if (navBackdrop) {
         navBackdrop.addEventListener('click', function () {
           setNavMenuOpen(false);
@@ -8981,6 +9007,7 @@
         sessionPassword = '';
         sessionRole = '';
         editUnlocked = false;
+        updateWaydeanPremiumEntry();
         clearNekToken();
         nekSessionActive = false;
         setEditMode(false);

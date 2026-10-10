@@ -1,0 +1,183 @@
+/* Desktop-only interaction and viewport polish for the local Waydean preview. */
+@media (min-width: 701px) {
+  .tree-stage {
+    isolation: isolate;
+    background-color: #0a1315;
+  }
+
+  .graph-viewport {
+    scrollbar-color: rgba(205, 166, 87, .58) rgba(7, 15, 18, .38);
+    scrollbar-width: auto;
+    scroll-behavior: smooth;
+    cursor: grab;
+  }
+
+  .graph-viewport:active { cursor: grabbing; }
+  .graph-viewport::-webkit-scrollbar { width: 11px; height: 11px; }
+  .graph-viewport::-webkit-scrollbar-track {
+    border: 3px solid transparent;
+    border-radius: 99px;
+    background: rgba(7, 15, 18, .42);
+    background-clip: padding-box;
+  }
+  .graph-viewport::-webkit-scrollbar-thumb {
+    min-width: 34px;
+    border: 3px solid transparent;
+    border-radius: 99px;
+    background: linear-gradient(135deg, rgba(218, 183, 111, .8), rgba(137, 101, 48, .8));
+    background-clip: padding-box;
+  }
+  .graph-viewport::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #f1d38f, #b58b49);
+    background-clip: padding-box;
+  }
+
+  .person-node {
+    border: 1px solid rgba(218, 183, 111, .42);
+    border-radius: 8px;
+    background: linear-gradient(155deg, rgba(22, 32, 32, .97), rgba(7, 15, 18, .98));
+    box-shadow: 0 8px 22px rgba(0, 0, 0, .36), inset 0 1px rgba(255, 244, 211, .08);
+    transition: border-color .16s ease, box-shadow .16s ease, filter .16s ease;
+  }
+
+  .person-node:hover {
+    z-index: 2;
+    border-color: rgba(255, 215, 125, .9);
+    box-shadow: 0 0 0 2px rgba(217, 173, 88, .18), 0 12px 30px rgba(0, 0, 0, .5);
+    filter: brightness(1.08);
+  }
+
+  .person-node.selected,
+  .person-node.selected:hover {
+    z-index: 3;
+    border-color: #ffe18c;
+    box-shadow: 0 0 0 2px #dfa93a, 0 0 30px #ffc34cbb, 0 12px 35px #000d;
+    filter: none;
+  }
+
+  .person-node:focus-visible {
+    outline: 2px solid var(--gold-bright, #ffd77d);
+    outline-offset: 3px;
+  }
+
+  .tree-controls {
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px;
+    border: 1px solid rgba(211, 170, 91, .48);
+    border-radius: 11px;
+    background: linear-gradient(155deg, rgba(13, 24, 27, .96), rgba(5, 12, 15, .97));
+    box-shadow: 0 12px 30px rgba(0, 0, 0, .46), inset 0 1px rgba(255, 244, 211, .08);
+    backdrop-filter: blur(14px);
+  }
+
+  .tree-controls button {
+    display: inline-grid;
+    min-width: 38px;
+    height: 38px;
+    place-items: center;
+    padding: 0 10px;
+    border: 1px solid rgba(220, 185, 113, .28);
+    border-radius: 8px;
+    background: rgba(255, 255, 255, .035);
+    color: #e7d8b8;
+    font: 600 14px/1 var(--ui, "Segoe UI", sans-serif);
+    transition: color .15s ease, border-color .15s ease, background .15s ease, transform .12s ease, box-shadow .15s ease;
+  }
+
+  .tree-controls button:hover:not(:disabled) {
+    border-color: rgba(255, 215, 125, .78);
+    background: linear-gradient(180deg, rgba(217, 173, 88, .2), rgba(217, 173, 88, .08));
+    color: #fff0c7;
+    box-shadow: 0 3px 12px rgba(217, 173, 88, .14);
+  }
+
+  .tree-controls button:active:not(:disabled) {
+    transform: translateY(1px) scale(.97);
+    background: rgba(217, 173, 88, .24);
+  }
+
+  .tree-controls button:focus-visible {
+    outline: 2px solid var(--gold-bright, #ffd77d);
+    outline-offset: 2px;
+  }
+
+  .tree-controls button:disabled {
+    cursor: not-allowed;
+    opacity: .42;
+    filter: saturate(.55);
+  }
+
+  .tree-controls #zoomValue {
+    min-width: 58px;
+    padding: 0 5px;
+    color: #e8cb86;
+    font: 600 12px/1 var(--ui, "Segoe UI", sans-serif);
+    font-variant-numeric: tabular-nums;
+    text-align: center;
+  }
+
+  .tree-controls #whoAmI {
+    min-width: 92px;
+    border-color: rgba(218, 183, 111, .46);
+    background: linear-gradient(135deg, rgba(133, 96, 40, .42), rgba(65, 49, 27, .32));
+    color: #f2d796;
+    letter-spacing: .015em;
+  }
+
+  .mini-map {
+    z-index: 4;
+    width: 218px;
+    padding: 10px;
+    border: 1px solid rgba(211, 170, 91, .45);
+    border-radius: 10px;
+    background: linear-gradient(155deg, rgba(11, 22, 25, .94), rgba(5, 12, 15, .96));
+    box-shadow: 0 10px 28px rgba(0, 0, 0, .42), inset 0 1px rgba(255, 244, 211, .07);
+    backdrop-filter: blur(12px);
+  }
+
+  .mini-map strong {
+    color: #e9cf91;
+    font: 600 10px/1.35 var(--ui, "Segoe UI", sans-serif);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+  }
+
+  .mini-map span { color: #c0b69f; font: 10px/1.4 var(--ui, "Segoe UI", sans-serif); }
+  .mini-map svg { display: block; width: 100%; }
+  .mini-map svg:focus-visible { outline-offset: 3px; }
+  .mini-window {
+    border: 1.5px solid #f0ce7f;
+    fill: rgba(217, 173, 88, .12);
+    filter: drop-shadow(0 0 3px rgba(255, 215, 125, .45));
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .person-node, .tree-controls button { transition: none; }
+    .graph-viewport { scroll-behavior: auto; }
+  }
+}
+
+@media (min-width: 701px) and (max-width: 1000px) {
+  .mode-label {
+    top: 14px;
+    right: 14px;
+    left: auto;
+    max-width: calc(100% - 220px);
+    padding: 7px 9px;
+    transform: none;
+    font-size: 9px;
+    letter-spacing: .08em;
+    white-space: nowrap;
+  }
+
+  .mini-map {
+    top: 14px;
+    right: auto;
+    bottom: auto;
+    left: 14px;
+    width: 190px;
+  }
+}
