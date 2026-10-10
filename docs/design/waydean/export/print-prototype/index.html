@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Waydean — Print Studio</title>
+  <link rel="stylesheet" href="./styles.css?v=workspace-2">
+</head>
+<body>
+  <div class="studio-shell">
+    <header class="studio-header">
+      <a class="brand" href="../../../../../drewo/waydean-preview.html?state=all-tree" aria-label="Вернуться к семейному древу Waydean">
+        <svg class="brand-tree" viewBox="0 0 40 40" aria-hidden="true">
+          <path d="M20 34V13m0 9-8-6m8 11 8-7m-8-5 7-5m-7 3-5-6M9 16c-3-3 0-8 5-7 1-5 8-6 10-2 5-3 11 1 9 6 4 4 1 9-4 9M7 27c-4-2-3-8 2-9m17 15c6 2 11-2 10-7" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <span><strong>WAYDEAN</strong><small>СЕМЕЙНОЕ ДРЕВО</small></span>
+      </a>
+      <div class="header-title">
+        <span class="eyebrow">МАСТЕРСКАЯ ЭКСПОРТА</span>
+        <h1>Печатный макет</h1>
+      </div>
+    </header>
+
+    <main class="studio-grid">
+      <aside class="control-column" aria-label="Параметры печатного экспорта">
+        <section class="panel-card scope-card">
+          <div class="section-heading">
+            <span class="section-index">01</span>
+            <div><h2>Область дерева</h2><p>Выбери, что войдёт в макет</p></div>
+          </div>
+          <label class="field-label" for="treeSource">Древо</label>
+          <select id="treeSource" class="field-control">
+            <option value="demo">Демонстрационное дерево · 12 человек</option>
+            <option value="hoti">HOTI</option>
+          </select>
+          <p class="field-hint" id="treeSourceHint">Выбери человека, ветвь или всё древо для печатного макета.</p>
+          <div class="segmented" role="group" aria-label="Тип дерева">
+            <button type="button" class="segment-button is-active" data-scope="person" aria-pressed="true">Человек</button>
+            <button type="button" class="segment-button" data-scope="branch" aria-pressed="false">Ветвь</button>
+            <button type="button" class="segment-button" data-scope="all" aria-pressed="false">Целиком</button>
+          </div>
+
+          <label class="field-label" for="personSelect" id="personLabel">Начальный человек</label>
+          <select id="personSelect" class="field-control"></select>
+          <label class="field-label is-hidden" for="branchSelect" id="branchLabel">Линия ветви</label>
+          <select id="branchSelect" class="field-control is-hidden"></select>
+          <label class="field-label" for="directionSelect" id="directionLabel">Показывать линию</label>
+          <select id="directionSelect" class="field-control">
+            <option value="descendants">От предка к потомкам</option>
+            <option value="ancestors">К старшим поколениям</option>
+            <option value="both">Предки и потомки</option>
+          </select>
+
+          <div class="range-heading">
+            <label class="field-label" for="depthRange">Глубина поколений</label>
+            <output id="depthValue" for="depthRange">3</output>
+          </div>
+          <input id="depthRange" class="depth-range" type="range" min="1" max="7" value="3">
+          <div class="range-scale"><span>1 поколение</span><span id="depthMaxLabel">7 поколений</span></div>
+          <p class="field-hint">Глубина считается от выбранного человека или первого поколения ветви. Состав меняется сразу.</p>
+        </section>
+
+        <section class="panel-card composition-card">
+          <div class="section-heading">
+            <span class="section-index">02</span>
+            <div><h2>Состав листа</h2><p>Только выбранные сведения</p></div>
+          </div>
+          <label class="toggle-row"><span><strong>Фотографии</strong><small>Если доступны в данных</small></span><input id="includePhotos" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <label class="toggle-row"><span><strong>Годы жизни</strong><small>Неизвестные даты не добавляются</small></span><input id="includeDates" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <label class="toggle-row"><span><strong>Заголовок макета</strong><small>Название можно изменить</small></span><input id="includeTitle" type="checkbox" checked><i aria-hidden="true"></i></label>
+          <label class="field-label title-label" for="treeTitle">Заголовок</label>
+          <input id="treeTitle" class="field-control" type="text" value="История рода" maxlength="60">
+          <div class="qr-lock" aria-disabled="true">
+            <span class="qr-icon" aria-hidden="true">▦</span>
+            <span><strong>QR-код</strong><small>Будет доступен после утверждения правил доступа к семейным данным.</small></span>
+            <span class="lock-mark" aria-label="Недоступно">⌑</span>
+          </div>
+        </section>
+
+        <section class="panel-card paper-card">
+          <div class="section-heading">
+            <span class="section-index">03</span>
+            <div><h2>Бумага и раскладка</h2><p>Читаемость важнее одного листа</p></div>
+          </div>
+          <div class="format-row">
+            <label class="field-label" for="paperSize">Формат</label>
+            <label class="field-label" for="orientation">Ориентация</label>
+          </div>
+          <div class="format-row">
+            <select id="paperSize" class="field-control"><option>A4</option><option>A3</option><option>A2</option><option>A1</option><option>A0</option></select>
+            <select id="orientation" class="field-control"><option value="portrait">Книжная</option><option value="landscape">Альбомная</option></select>
+          </div>
+          <label class="auto-format"><input id="autoFormat" type="checkbox" checked><span class="checkmark" aria-hidden="true">✓</span><span><strong>Подбирать формат автоматически</strong><small>Можно выбрать другой вручную</small></span></label>
+          <div class="recommendation" id="recommendationCard" aria-live="polite">
+            <span class="recommendation-icon" aria-hidden="true">✧</span>
+            <div><span class="eyebrow">РЕКОМЕНДАЦИЯ WAYDEAN</span><strong id="recommendedFormat">Подбор…</strong><small id="recommendationReason">Формат рассчитывается после загрузки охвата.</small></div>
+            <button type="button" id="applyRecommendation">Применить</button>
+          </div>
+        </section>
+
+        <section class="panel-card output-card">
+          <div class="section-heading">
+            <span class="section-index">04</span>
+            <div><h2>Сохранить результат</h2><p>Файлы создаются только в этом браузере</p></div>
+          </div>
+          <div class="output-actions">
+            <button type="button" class="output-button" id="downloadSvg"><span aria-hidden="true">◇</span><span><strong>Скачать SVG</strong><small>Вектор текущего листа</small></span><b aria-hidden="true">↓</b></button>
+            <button type="button" class="output-button output-button-primary" id="printPdf"><span aria-hidden="true">▤</span><span><strong>Печать / PDF</strong><small>Все листы макета</small></span><b aria-hidden="true">↗</b></button>
+          </div>
+          <p class="privacy-note"><span aria-hidden="true">◈</span><span id="privacyCopy">Правки макета действуют в этой вкладке и не меняют исходные данные.</span></p>
+          <p class="export-status" id="exportStatus" role="status" aria-live="polite">Макет готов к редактированию.</p>
+        </section>
+      </aside>
+
+      <section class="preview-column" aria-label="Предпросмотр печатного макета">
+        <div class="preview-toolbar">
+          <div><span class="eyebrow">РАБОЧЕЕ ПОЛЕ</span><h2>Все листы печати</h2><p class="edit-hint">При открытии активный лист показан крупно. Кнопка «Все листы» включает общий обзор. Карточки перетаскиваются между листами; клик открывает правку.</p></div>
+          <div class="page-controls">
+            <button type="button" id="previousPage" aria-label="Предыдущий лист">‹</button>
+            <span id="pageCounter" aria-live="polite">Лист 1 из 1</span>
+            <button type="button" id="nextPage" aria-label="Следующий лист">›</button>
+            <button type="button" id="zoomOut" aria-label="Уменьшить масштаб">−</button>
+            <span id="zoomValue" class="zoom-value" aria-live="polite">100%</span>
+            <button type="button" id="zoomIn" aria-label="Увеличить масштаб">+</button>
+            <button type="button" class="fit-button" id="fitPreview" title="Показать все листы целиком">Все листы</button>
+          </div>
+        </div>
+
+        <div class="preview-workbench">
+          <div class="paper-stage" id="paperStage">
+            <div class="paper-sheet" id="paperPreview" role="group" aria-label="Редактируемый печатный лист"></div>
+          </div>
+          <aside class="tile-overview" aria-label="Карта листов">
+            <div class="tile-heading"><span class="eyebrow">РАСКЛАДКА</span><strong id="tileCount">1 лист</strong></div>
+            <div class="tile-grid" id="pageGrid"></div>
+            <p class="tile-hint" id="tileHint">Разделительные линии не режут людей.</p>
+          </aside>
+        </div>
+
+        <div class="summary-strip" aria-live="polite">
+          <div><span class="summary-mark">♙</span><span><strong id="personCount">0</strong><small>людей</small></span></div>
+          <div><span class="summary-mark">⌘</span><span><strong id="generationCount">0</strong><small>поколений</small></span></div>
+          <div><span class="summary-mark">▤</span><span><strong id="sheetCount">1</strong><small>лист</small></span></div>
+          <div class="scope-summary"><span class="eyebrow">В ОХВАТЕ</span><strong id="scopeSummary">—</strong></div>
+        </div>
+      </section>
+    </main>
+    <footer class="studio-footer"><span>WAYDEAN · ПЕЧАТНЫЙ МАКЕТ</span><span id="footerDataMode">Источник: HOTI</span></footer>
+  </div>
+
+  <div id="printPages" aria-hidden="true"></div>
+  <script type="module" src="./app.mjs?v=workspace-2"></script>
+</body>
+</html>

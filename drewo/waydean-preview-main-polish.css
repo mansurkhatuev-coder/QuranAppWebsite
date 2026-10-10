@@ -1,0 +1,157 @@
+.brand-tree {
+  flex: 0 0 38px;
+  width: 38px;
+  height: 42px;
+  fill: none;
+  stroke: #e1ba6a;
+  stroke-width: 1.55;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 0 8px #c9953840);
+}
+
+.node-copy small { color: #c9b982; letter-spacing: .015em; }
+
+/* Clean system lettering keeps names crisp when the browser rasterizes the tree. */
+.node-copy strong {
+  font: 600 15px/1.15 var(--ui, "Segoe UI", Tahoma, sans-serif);
+  letter-spacing: 0;
+  text-rendering: optimizeLegibility;
+  font-kerning: normal;
+}
+
+.node-years { display: grid; min-width: 0; max-width: 100%; }
+.node-years-layer {
+  grid-area: 1 / 1;
+  display: block;
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+  color: #c9b982;
+  font: 500 10px/1.2 var(--ui, "Segoe UI", Tahoma, sans-serif);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: .01em;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  transition: opacity .85s ease;
+}
+.node-years-layer.is-hijri { opacity: 0; }
+body.years-hijri .node-years-layer.is-gregorian { opacity: 0; }
+body.years-hijri .node-years-layer.is-hijri { opacity: 1; }
+
+@media (max-width: 700px) {
+  .node-years-layer { font-size: 8px; }
+}
+@media (max-width: 340px) {
+  .node-years-layer { font-size: 7px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node-years-layer { transition: none; }
+}
+
+.node-avatar.is-empty {
+  background: radial-gradient(ellipse at 50% 34%, rgba(201, 177, 122, .2), rgba(23, 30, 29, .98) 72%);
+  border-color: rgba(218, 187, 119, .62);
+}
+
+.node-avatar.is-empty svg {
+  width: 58%;
+  height: 58%;
+  fill: #c6b07a;
+  opacity: .76;
+  filter: drop-shadow(0 0 10px #d2ae5b35);
+}
+
+.profile-avatar.is-empty {
+  background: radial-gradient(ellipse at 50% 32%, rgba(201, 177, 122, .24), #131c1d 74%);
+}
+
+.profile-avatar.is-empty svg {
+  fill: #c6b07a;
+  opacity: .74;
+  filter: drop-shadow(0 0 14px #d2ae5b30);
+}
+
+.mobile-selected-avatar.is-empty svg,
+.media-avatar.is-empty svg {
+  fill: #c6b07a;
+  opacity: .76;
+}
+
+@media (max-width: 700px) {
+  .brand-tree { flex-basis: 30px; width: 30px; height: 34px; }
+  .node-copy small { font-size: 10px; }
+
+  body:not(.synthetic-fixture) .graph {
+    --tree-card-width: 104px;
+    --tree-card-height: 118px;
+  }
+
+  body:not(.synthetic-fixture) .person-node {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 2px;
+    padding: 4px;
+  }
+
+  body:not(.synthetic-fixture) .node-avatar {
+    flex: 0 0 66px;
+    width: 100%;
+    height: 66px;
+  }
+
+  body:not(.synthetic-fixture) .node-copy {
+    width: 100%;
+    gap: 0;
+    text-align: center;
+  }
+
+  body:not(.synthetic-fixture) .node-copy strong { font-size: 10px; line-height: 12px; }
+  body:not(.synthetic-fixture) .node-copy small { font-size: 8px; line-height: 10px; }
+}
+
+@media (max-width: 390px) {
+  body:not(.synthetic-fixture) .graph { --tree-card-width: 100px; }
+}
+
+@media (max-width: 340px) {
+  body:not(.synthetic-fixture) .graph {
+    --tree-card-width: 88px;
+    --tree-card-height: 106px;
+  }
+
+  body:not(.synthetic-fixture) .node-avatar { flex-basis: 56px; height: 56px; }
+  body:not(.synthetic-fixture) .node-copy strong { font-size: 9px; line-height: 11px; }
+  body:not(.synthetic-fixture) .node-copy small { font-size: 7px; line-height: 9px; }
+}
+
+@media (max-width: 700px) {
+  .mini-map {
+    top: 38px;
+    right: auto;
+    bottom: auto;
+    left: 9px;
+    width: 108px;
+    padding: 5px 6px 4px;
+  }
+
+  .mini-map svg { height: 34px; }
+  .mini-map strong,
+  .mini-map span { font-size: 6px; }
+  .tree-controls {
+    top: auto;
+    right: 8px;
+    bottom: 8px;
+    left: auto;
+    flex-direction: column;
+    gap: 4px;
+    padding: 4px;
+    transform: none;
+  }
+
+  .tree-controls #zoomValue { display: none; }
+  .tree-controls button { width: 32px; min-width: 32px; height: 32px; padding: 0; }
+  .tree-controls #whoAmI { font-size: 0; }
+  .tree-controls #whoAmI::before { content: "◎"; font-size: 17px; }
+}

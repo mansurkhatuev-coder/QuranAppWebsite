@@ -1,0 +1,123 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="waydean-local-build" content="release-candidate-2026-10-10">
+  <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
+  <meta name="theme-color" content="#081116">
+  <title>Waydean — семейное древо</title>
+  <link rel="stylesheet" href="waydean-preview.css">
+  <link rel="stylesheet" href="waydean-preview-camera.css">
+  <link rel="stylesheet" href="waydean-preview-master.css">
+  <link rel="stylesheet" href="waydean-preview-lod.css?v=lod-7">
+  <link rel="stylesheet" href="waydean-preview-edit.css">
+  <link rel="stylesheet" href="waydean-preview-readiness.css">
+  <link rel="stylesheet" href="waydean-preview-main-polish.css?v=6">
+  <link rel="stylesheet" href="waydean-preview-desktop-controls.css">
+  <link rel="stylesheet" href="waydean-preview-mobile-controls.css?v=stage-bounds-1">
+  <link rel="stylesheet" href="waydean-preview-layout.css?v=8">
+</head>
+<body>
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-cluster">
+        <button class="rail-toggle" id="railToggle" type="button" aria-controls="treeActions" aria-expanded="true" aria-label="Скрыть панель действий" title="Скрыть панель действий"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg></button>
+        <a class="brand" href="waydean-preview.html?state=all-tree" aria-label="Waydean — показать всё дерево">
+          <svg class="brand-tree" viewBox="0 0 44 48" aria-hidden="true" focusable="false"><path d="M22 44V19m0 14c-6 0-10-4-10-10 6 0 9 3 10 8m0-8c6 0 10-4 10-10-6 0-9 3-10 8m0 16c-4-1-7-4-10-8m10 8c4-1 7-4 10-8M22 23c-5 0-8-3-8-8 5 0 7 2 8 6m0-4c5 0 8-3 8-8-5 0-7 2-8 6"/><circle cx="22" cy="5" r="2.1"/></svg><span><strong>WAYDEAN</strong><small>Семейное древо</small></span>
+        </a>
+      </div>
+      <nav class="main-nav" aria-label="Основная навигация">
+        <button class="nav-item active" data-nav="tree">♧ <span>Древо</span></button>
+        <button class="nav-item" data-nav="people">♙ <span>Люди</span></button>
+        <button class="nav-item" id="searchOpen">⌕ <span>Поиск</span></button>
+        <button class="nav-item" data-mode="branch">♧ <span>Ветви</span></button>
+        <button class="nav-item" id="statsOpen">▥ <span>Статистика</span></button>
+      </nav>
+      <div class="top-actions">
+        <button class="top-action" id="shareOpen" type="button" title="Скопировать ссылку на локальный просмотр">Поделиться</button>
+        <button class="top-action" id="printOpen" type="button" title="Экспортировать дерево в SVG или PDF">Экспорт</button>
+        <button class="top-action" id="moreOpen">··· Ещё</button>
+        <span class="premium" aria-label="Текущее оформление: Премиум">♛ Стиль: Премиум</span>
+      </div>
+    </header>
+
+    <span class="sr-only" id="datasetSummary" aria-live="polite"></span>
+
+    <button class="mobile-search-trigger" id="mobileSearchTrigger" type="button" aria-label="Поиск человека"><span aria-hidden="true">⌕</span><span>Поиск человека…</span></button>
+
+    <section class="workspace">
+      <aside class="rail" id="treeActions" aria-label="Действия с древом">
+        <button class="rail-action" id="railSearch" aria-label="Поиск человека" title="Поиск человека"><span class="rail-icon" aria-hidden="true">⌕</span><span class="rail-label">Поиск человека</span></button>
+        <span class="rail-section-label">Вид древа</span>
+        <button class="rail-action" data-mode="path" aria-label="Мой путь" title="Мой путь"><span class="rail-icon" aria-hidden="true">⌖</span><span class="rail-label">Мой путь</span></button>
+        <button class="rail-action" data-mode="branch" aria-label="Моя ветвь" title="Моя ветвь"><span class="rail-icon" aria-hidden="true">♧</span><span class="rail-label">Моя ветвь</span></button>
+        <button class="rail-action" data-mode="all-tree" aria-label="Все поколения" title="Все поколения"><span class="rail-icon" aria-hidden="true">⌘</span><span class="rail-label">Все поколения</span></button>
+        <span class="rail-section-label">Инструменты</span>
+        <button class="rail-action" id="filtersOpen" aria-label="Фильтры" title="Фильтры"><span class="rail-icon" aria-hidden="true">⚑</span><span class="rail-label">Фильтры</span></button>
+        <button class="rail-stat" id="railStats" aria-label="Статистика древа"><span class="rail-icon" aria-hidden="true">♙</span><span class="rail-stat-copy"><strong id="railCount">…</strong><small>человек</small></span></button>
+      </aside>
+
+      <section class="tree-stage" id="treeStage" aria-label="Полотно древа">
+        <div class="stage-wash" aria-hidden="true"></div>
+        <div class="mode-label" id="modeLabel" aria-live="polite"></div>
+        <button class="show-full-tree" id="showFullTree" type="button" title="Показать все поколения и сбросить фильтры">Показать всё дерево</button>
+        <div class="graph-viewport" id="graphViewport" tabindex="0" title="Колесо мыши — масштаб; перетаскивание — перемещение" aria-label="Полотно древа. Колесо мыши меняет масштаб, перетаскивание перемещает древо; на телефоне масштаб меняется щипком.">
+          <div class="graph-extent" id="graphExtent">
+            <div class="graph" id="graph">
+              <svg class="tree-lines" id="treeLines" aria-hidden="true"></svg>
+              <div id="treeNodes"></div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState" hidden><strong>В этой выборке никого нет</strong><span>Измени или сбрось фильтры, чтобы вернуть людей на древо.</span><button id="emptyReset">Сбросить фильтры</button></div>
+        <div class="mini-map" aria-label="Мини-карта древа"><strong>МИНИ-КАРТА</strong><svg id="miniMapSvg" viewBox="0 0 180 80" tabindex="0" role="group" aria-label="Мини-карта: нажмите для перехода, перетащите обзор или используйте стрелки"></svg><span id="miniMapSummary"></span></div>
+        <div class="tree-controls" role="group" aria-label="Управление видом древа"><button id="zoomOut" type="button" aria-label="Уменьшить масштаб" title="Уменьшить масштаб (−)">−</button><span id="zoomValue">100%</span><button id="zoomIn" type="button" aria-label="Увеличить масштаб" title="Увеличить масштаб (+)">+</button><button id="fitTree" type="button" aria-label="Показать всю текущую схему" title="Показать текущую схему целиком (0)">⛶</button><button id="whoAmI" type="button" aria-label="Показать мой путь" title="Мой путь">◎ Кто я?</button></div>
+      </section>
+
+      <button class="mobile-selected" id="mobileSelected" type="button" aria-label="Открыть профиль выбранного человека"></button>
+      <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>
+      <button class="profile-reopen" id="profileReopen" type="button" hidden aria-controls="profilePanel" aria-expanded="false" aria-label="Показать профиль выбранного человека" title="Показать профиль выбранного человека"><span aria-hidden="true">‹</span> Профиль</button>
+    </section>
+
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+      <button class="active" data-nav="tree"><span>♧</span><small>Древо</small></button>
+      <button data-nav="people"><span>♙</span><small>Люди</small></button>
+      <button data-mode="branch"><span>♧</span><small>Ветви</small></button>
+      <button id="mobileStats"><span>▥</span><small>Статистика</small></button>
+      <button id="mobileMore"><span>···</span><small>Ещё</small></button>
+    </nav>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="popover search-popover" id="searchPopover" hidden aria-label="Поиск людей">
+      <div class="popover-head"><strong>Поиск человека</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <label class="sr-only" for="searchInput">Поиск по имени или году</label><input id="searchInput" type="search" placeholder="Имя, год или ветвь…" autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </section>
+    <section class="popover filters-popover" id="filtersPopover" hidden aria-label="Фильтры древа">
+      <div class="popover-head"><strong>Фильтры древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <label>Поколения от <select id="minGeneration"></select></label><label>до <select id="maxGeneration"></select></label>
+      <label class="check-row"><span>Только с фото</span><input id="photosOnly" type="checkbox"></label>
+      <div class="popover-actions"><button class="primary-action" id="applyFilters">Применить</button><button class="secondary-action" id="resetFilters">Сбросить</button></div>
+    </section>
+    <section class="popover stats-popover" id="statsPopover" hidden aria-label="Статистика древа">
+      <div class="popover-head"><strong>Статистика древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <div class="stats-grid" id="statsGrid"></div><p id="statsNote"></p>
+    </section>
+    <section class="popover more-popover" id="morePopover" hidden aria-label="Дополнительные действия">
+      <div class="popover-head"><strong>Ещё</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
+      <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Выбранный человек и его родные</small></button>
+      <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
+      <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
+      <button class="more-item" id="moreExport"><strong>Экспорт дерева</strong><small>Скачать SVG или подготовить PDF и печать</small></button>
+      <button class="more-item" id="moreVideo" type="button" disabled><strong>Видео · «История рода»</strong><small>Экспорт видео вернётся после основного релиза</small></button>
+      <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Текущее древо</strong><small>Открыть привычную версию</small></button>
+    </section>
+    <div class="backdrop" id="popoverBackdrop" hidden></div>
+    <div class="load-error" id="loadError" hidden><strong>Не удалось загрузить дерево</strong><span id="loadErrorText"></span><div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div></div>
+  </main>
+  <script type="module" src="waydean-preview.js?v=main-29"></script>
+</body>
+</html>
