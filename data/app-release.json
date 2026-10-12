@@ -6,9 +6,9 @@
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {
-      "latestVersion": "1.0.5",
-      "versionCode": 6,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.5/koran-i-azkary-1.0.5.apk"
+      "latestVersion": "1.0.19",
+      "versionCode": 23,
+      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.19/koran-i-azkary-1.0.19.apk"
     }
   },
   "ios": {
@@ -16,6 +16,6 @@
     "buildNumber": 2,
     "appStoreUrl": "https://apps.apple.com/app/id6782619598"
   },
-  "messageRu": "Исправления и улучшения",
-  "messageEn": "Bug fixes and improvements"
+  "messageRu": "Версия 1.0.19 (APK): новый курс заучивания сур, переход к нужным правилам таджвида, обновлённый дизайн окна аята и аудио азкаров Мишари Аль-Афаси.",
+  "messageEn": "Version 1.0.19 (APK): a new surah memorization course, direct links to Tajweed lessons, a refreshed ayah screen, and Mishari Alafasy azkar audio."
 }
