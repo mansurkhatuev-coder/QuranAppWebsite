@@ -2375,9 +2375,9 @@
         <button type="button" id="whoami-clear-btn" hidden>Сбросить «это я»</button>
         <button type="button" id="logout-btn">Выйти</button>
       </div>
-      <p class="nav-label" hidden>Тест новой версии</p>
-      <div class="action-cluster" role="group" aria-label="Тест новой версии древа" hidden>
-        <button type="button" id="waydean-premium-open">Waydean · тест</button>
+      <p class="nav-label">Новая версия</p>
+      <div class="action-cluster" role="group" aria-label="Предпросмотр Waydean">
+        <button type="button" id="waydean-premium-open">Waydean · предпросмотр</button>
       </div>
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
@@ -4837,9 +4837,8 @@
       }
 
       function updateWaydeanPremiumEntry() {
-        var visible = sessionRole === 'super';
-        if (waydeanPremiumGroup) waydeanPremiumGroup.hidden = !visible;
-        if (waydeanPremiumLabel) waydeanPremiumLabel.hidden = !visible;
+        if (waydeanPremiumGroup) waydeanPremiumGroup.hidden = false;
+        if (waydeanPremiumLabel) waydeanPremiumLabel.hidden = false;
       }
 
       function isSuperSession() {
@@ -8022,7 +8021,6 @@
       if (waydeanPremiumOpenBtn) {
         updateWaydeanPremiumEntry();
         waydeanPremiumOpenBtn.addEventListener('click', function () {
-          if (sessionRole !== 'super') return;
           setNavMenuOpen(false);
           window.location.assign('waydean-preview.html?source=account&state=all-tree');
         });

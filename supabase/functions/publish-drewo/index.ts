@@ -1,4 +1,5 @@
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
+import { authorizeWaydeanAdmin } from './waydean-admin-access.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -61,6 +62,7 @@ import {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -1094,15 +1096,53 @@ Deno.serve(async (request) => {
   }
 
   try {
+    const body = await request.json();
+    const action =
+      typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
+
+    if (action === 'waydean-admin-auth') {
+      let user: Awaited<ReturnType<typeof requireHubUser>>;
+      try {
+        user = await requireHubUser(request);
+      } catch (err) {
+        const error = err as Error & { status?: number };
+        const status = error.status || (error.message === 'Supabase env is not configured' ? 503 : 401);
+        return jsonResponse(
+          {
+            ok: false,
+            code: status === 503 ? 'auth_service_unavailable' : 'authentication_required',
+            error: status === 503 ? 'Supabase Auth is unavailable' : 'Войдите в администраторскую учётную запись',
+          },
+          status
+        );
+      }
+
+      const decision = authorizeWaydeanAdmin({
+        treeDir: body.treeDir,
+        authenticatedUserId: user.id,
+        allowedUserId: Deno.env.get('WAYDEAN_ADMIN_USER_ID'),
+      });
+      if (!decision.ok) {
+        const errors = {
+          invalid_tree: 'Waydean preview is available only for the drewo tree',
+          authentication_required: 'Войдите в администраторскую учётную запись',
+          account_not_allowed: 'Для Waydean нужен разрешённый администраторский аккаунт',
+          allowlist_not_configured: 'Waydean admin account is not configured',
+        };
+        return jsonResponse(
+          { ok: false, code: decision.code, error: errors[decision.code] },
+          decision.status
+        );
+      }
+
+      return jsonResponse({ ok: true, treeDir: decision.treeDir });
+    }
+
     const githubToken = Deno.env.get('GITHUB_TOKEN');
     const githubRepo = Deno.env.get('GITHUB_REPO') ?? 'mansurkhatuev-coder/QuranAppWebsite';
     if (!githubToken) {
       return jsonResponse({ error: 'GITHUB_TOKEN secret is missing' }, 500);
     }
-
-    const body = await request.json();
-    const action =
-      typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
 
     const registry = await loadRegistry(githubToken, githubRepo);
     const allowedDirs = knownTreeDirs(registry);

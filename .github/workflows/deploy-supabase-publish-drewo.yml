@@ -30,6 +30,7 @@ jobs:
           DREWO_REKLAMA_SUPER_PASSWORD: ${{ secrets.DREWO_REKLAMA_SUPER_PASSWORD }}
           DREWO_SESSION_SECRET: ${{ secrets.DREWO_SESSION_SECRET }}
           DREWO_VAULT_KEY: ${{ secrets.DREWO_VAULT_KEY }}
+          WAYDEAN_ADMIN_USER_ID: ${{ secrets.WAYDEAN_ADMIN_USER_ID }}
           VAPID_PUBLIC_KEY: ${{ secrets.VAPID_PUBLIC_KEY }}
           VAPID_PRIVATE_KEY: ${{ secrets.VAPID_PRIVATE_KEY }}
           VAPID_SUBJECT: ${{ secrets.VAPID_SUBJECT }}
@@ -76,6 +77,11 @@ jobs:
             SECRET_ARGS+=(DREWO_VAULT_KEY="$DREWO_VAULT_KEY")
           else
             echo "Warning: DREWO_VAULT_KEY is empty; the credential vault stays unreadable (hub-credentials shows no passwords)."
+          fi
+          if [ -n "$WAYDEAN_ADMIN_USER_ID" ]; then
+            SECRET_ARGS+=(WAYDEAN_ADMIN_USER_ID="$WAYDEAN_ADMIN_USER_ID")
+          else
+            echo "Warning: WAYDEAN_ADMIN_USER_ID is empty; preserving the existing Supabase value."
           fi
           if [ -n "$VAPID_PUBLIC_KEY" ] && [ -n "$VAPID_PRIVATE_KEY" ]; then
             SECRET_ARGS+=(
