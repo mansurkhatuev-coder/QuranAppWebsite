@@ -75,6 +75,7 @@
   wireLinkButtons('[data-link="rustore"]', LINKS.rustore);
   wireLinkButtons('[data-link="appstore"]', LINKS.appStore);
   wireLinkButtons('[data-link="apk"]', LINKS.apk, { download: true });
+  wireLinkButtons('[data-link="googleplay"]', LINKS.googlePlay);
 
   var versionEl = document.getElementById('app-version');
   function setVersionLabel(version, code) {

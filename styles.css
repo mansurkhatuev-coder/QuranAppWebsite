@@ -312,16 +312,49 @@ img {
   width: 100%;
 }
 
+.download-primary-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.85rem;
+  width: min(100%, 34rem);
+}
+
+.download-primary-actions > .btn {
+  width: 100%;
+  min-width: 0;
+  min-height: 4.35rem;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+
 .download-android-panel {
-  width: min(100%, 36rem);
-  padding: 0.85rem;
-  border-radius: 20px;
+  width: min(100%, 34rem);
+  padding: 0.8rem 1rem 0.75rem;
+  border-radius: 18px;
   background: rgba(248, 248, 248, 0.04);
   border: 1px solid rgba(248, 248, 248, 0.12);
 }
 
-.download-android-panel[hidden] {
-  display: none;
+.download-android-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 0.75rem;
+  color: var(--text-2);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.045em;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.download-android-heading::before,
+.download-android-heading::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(248, 248, 248, 0.13);
 }
 
 .download-android-options {
@@ -330,12 +363,34 @@ img {
   gap: 0.75rem;
 }
 
+.download-android-options > .btn {
+  min-width: 0;
+  min-height: 3.4rem;
+  padding: 0.65rem 0.75rem;
+  align-items: center;
+  text-align: center;
+}
+
+.download-android-options .btn-sub {
+  font-size: 0.66rem;
+}
+
 .download-android-note {
   margin: 0.75rem 0 0;
   font-size: 0.75rem;
   line-height: 1.45;
   color: rgba(166, 166, 166, 0.75);
   text-align: center;
+}
+
+.download-share {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+}
+
+.download-share .btn-share {
+  min-height: 2.75rem;
 }
 
 .btn-stack {
@@ -1428,8 +1483,17 @@ img {
     gap: 0.75rem;
   }
 
-  .download-android-options {
+  .download-primary-actions {
     grid-template-columns: 1fr;
+  }
+
+  .download-android-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .download-android-options > .btn.btn-stack {
+    min-width: 0;
+    padding-inline: 0.4rem;
   }
 
   .btn {

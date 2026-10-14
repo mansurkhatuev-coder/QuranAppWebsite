@@ -1,6 +1,6 @@
 # Сайт «Коран и Азкары»
 
-Статический лендинг для ссылок на RuStore, APK (Яндекс.Диск) и будущий App Store. Три страницы: главная, политика конфиденциальности, поддержка.
+Статический лендинг со ссылками на приложения в App Store и Google Play, а также альтернативными способами установки на Android: RuStore и APK. Три основные страницы: главная, политика конфиденциальности, поддержка.
 
 Работает без VPN из РФ при размещении на **российском хостинге** (Beget, Timeweb, Reg.ru и т.п.).
 
@@ -106,6 +106,7 @@ npm run publish:website-apk
 |------|----------|
 | `rustore` | Ссылка на карточку в RuStore. Пустая строка → кнопка «RuStore» с бейджем «Скоро». |
 | `apk` | Прямая ссылка на APK (GitHub Release). Пустая → кнопка неактивна. |
+| `googlePlay` | Ссылка на приложение в Google Play. |
 | `appStore` | Ссылка App Store. Пустая → «Скоро». |
 | `supportEmail` | Email для поддержки и политики. |
 | `supportTelegram` | Ссылка `https://t.me/...`. Пустая → строка скрыта. |
@@ -141,9 +142,9 @@ npm run publish:website-apk
 
 Подробнее: [RUSTORE_RELEASE.md](../RUSTORE_RELEASE.md).
 
-### App Store (позже)
+### App Store и Google Play
 
-Когда приложение появится в App Store, задайте `appStore: 'https://apps.apple.com/app/id...'` — кнопка станет активной автоматически.
+Карточки приложений задаются в `LINKS.appStore` и `LINKS.googlePlay`. Для Google Play используется постоянная ссылка по package ID приложения.
 
 ---
 

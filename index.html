@@ -40,6 +40,7 @@
         "url": "https://waydean.ru/",
         "image": "https://waydean.ru/assets/icon.png",
         "downloadUrl": [
+          "https://play.google.com/store/apps/details?id=com.sheyhmansur.quranapp",
           "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
           "https://apps.apple.com/app/id6782619598"
         ],
@@ -105,29 +106,65 @@
           без рекламы и лишнего.
         </p>
         <div class="download-cta" data-stage="4">
-          <div class="hero-actions">
+          <div class="download-primary-actions">
             <a
               id="btn-appstore"
               class="btn btn-gold btn-stack btn-disabled"
               aria-disabled="true"
+              data-link="appstore"
               data-magnetic
               data-ripple
             >
               <span class="btn-label">Скачать на iPhone</span>
               <span class="btn-sub">App Store</span>
             </a>
-            <button
-              type="button"
-              class="btn btn-gold btn-stack"
-              data-android-toggle
-              aria-expanded="false"
-              aria-controls="hero-android-panel"
+            <a
+              class="btn btn-gold btn-stack btn-disabled"
+              data-link="googleplay"
+              aria-disabled="true"
               data-magnetic
               data-ripple
             >
               <span class="btn-label">Скачать на Android</span>
-              <span class="btn-sub">два способа ↓</span>
-            </button>
+              <span class="btn-sub">Google Play</span>
+            </a>
+          </div>
+          <div
+            id="hero-android-panel"
+            class="download-android-panel"
+            role="region"
+            aria-label="Другие способы скачивания для Android"
+          >
+            <p class="download-android-heading">Другие способы для Android</p>
+            <div class="download-android-options">
+              <a
+                id="btn-rustore"
+                class="btn btn-equal btn-stack btn-download-secondary btn-disabled"
+                data-link="rustore"
+                aria-disabled="true"
+                data-magnetic
+                data-ripple
+              >
+                <span class="btn-label">RuStore</span>
+                <span class="btn-sub">магазин приложений</span>
+              </a>
+              <a
+                id="btn-apk"
+                class="btn btn-equal btn-stack btn-download-secondary btn-disabled"
+                data-link="apk"
+                aria-disabled="true"
+                data-magnetic
+                data-ripple
+              >
+                <span class="btn-label">APK-файл</span>
+                <span class="btn-sub">прямая установка</span>
+              </a>
+            </div>
+            <p class="download-android-note">
+              При установке файла разрешите установку из неизвестных источников в настройках Android.
+            </p>
+          </div>
+          <div class="download-share">
             <button type="button" class="btn btn-ghost btn-share" data-action="share" data-magnetic data-ripple>
               <svg class="btn-share-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                 <path
@@ -137,39 +174,6 @@
               </svg>
               Поделиться
             </button>
-          </div>
-          <div
-            id="hero-android-panel"
-            class="download-android-panel"
-            hidden
-            role="region"
-            aria-label="Способы скачивания для Android"
-          >
-            <div class="download-android-options">
-              <a
-                id="btn-apk"
-                class="btn btn-equal btn-stack btn-disabled"
-                aria-disabled="true"
-                data-magnetic
-                data-ripple
-              >
-                <span class="btn-label">Файл установки</span>
-                <span class="btn-sub">прямое скачивание</span>
-              </a>
-              <a
-                id="btn-rustore"
-                class="btn btn-equal btn-stack btn-disabled"
-                aria-disabled="true"
-                data-magnetic
-                data-ripple
-              >
-                <span class="btn-label">Скачать через RuStore</span>
-                <span class="btn-sub">страница приложения</span>
-              </a>
-            </div>
-            <p class="download-android-note">
-              При установке файла разрешите установку из неизвестных источников в настройках Android.
-            </p>
           </div>
         </div>
         <p class="hero-note" data-stage="5">Бесплатно · Android · iOS</p>
@@ -562,7 +566,7 @@
               Бесплатно для Android и iOS.
             </p>
             <div class="download-cta">
-              <div class="hero-actions">
+              <div class="download-primary-actions">
                 <a
                   class="btn btn-gold btn-stack btn-disabled"
                   data-link="appstore"
@@ -573,18 +577,51 @@
                   <span class="btn-label">Скачать на iPhone</span>
                   <span class="btn-sub">App Store</span>
                 </a>
-                <button
-                  type="button"
-                  class="btn btn-gold btn-stack"
-                  data-android-toggle
-                  aria-expanded="false"
-                  aria-controls="cta-android-panel"
+                <a
+                  class="btn btn-gold btn-stack btn-disabled"
+                  data-link="googleplay"
+                  aria-disabled="true"
                   data-magnetic
                   data-ripple
                 >
                   <span class="btn-label">Скачать на Android</span>
-                  <span class="btn-sub">два способа ↓</span>
-                </button>
+                  <span class="btn-sub">Google Play</span>
+                </a>
+              </div>
+              <div
+                id="cta-android-panel"
+                class="download-android-panel"
+                role="region"
+                aria-label="Другие способы скачивания для Android"
+              >
+                <p class="download-android-heading">Другие способы для Android</p>
+                <div class="download-android-options">
+                  <a
+                    class="btn btn-equal btn-stack btn-download-secondary btn-disabled"
+                    data-link="rustore"
+                    aria-disabled="true"
+                    data-magnetic
+                    data-ripple
+                  >
+                    <span class="btn-label">RuStore</span>
+                    <span class="btn-sub">магазин приложений</span>
+                  </a>
+                  <a
+                    class="btn btn-equal btn-stack btn-download-secondary btn-disabled"
+                    data-link="apk"
+                    aria-disabled="true"
+                    data-magnetic
+                    data-ripple
+                  >
+                    <span class="btn-label">APK-файл</span>
+                    <span class="btn-sub">прямая установка</span>
+                  </a>
+                </div>
+                <p class="download-android-note">
+                  При установке файла разрешите установку из неизвестных источников в настройках Android.
+                </p>
+              </div>
+              <div class="download-share">
                 <button type="button" class="btn btn-ghost btn-share" data-action="share" data-magnetic data-ripple>
                   <svg class="btn-share-icon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
                     <path
@@ -594,39 +631,6 @@
                   </svg>
                   Поделиться
                 </button>
-              </div>
-              <div
-                id="cta-android-panel"
-                class="download-android-panel"
-                hidden
-                role="region"
-                aria-label="Способы скачивания для Android"
-              >
-                <div class="download-android-options">
-                  <a
-                    class="btn btn-equal btn-stack btn-disabled"
-                    data-link="apk"
-                    aria-disabled="true"
-                    data-magnetic
-                    data-ripple
-                  >
-                    <span class="btn-label">Файл установки</span>
-                    <span class="btn-sub">прямое скачивание</span>
-                  </a>
-                  <a
-                    class="btn btn-equal btn-stack btn-disabled"
-                    data-link="rustore"
-                    aria-disabled="true"
-                    data-magnetic
-                    data-ripple
-                  >
-                    <span class="btn-label">Скачать через RuStore</span>
-                    <span class="btn-sub">страница приложения</span>
-                  </a>
-                </div>
-                <p class="download-android-note">
-                  При установке файла разрешите установку из неизвестных источников в настройках Android.
-                </p>
               </div>
             </div>
           </div>
