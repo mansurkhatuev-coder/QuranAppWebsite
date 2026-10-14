@@ -4,6 +4,7 @@ import {
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=6';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
+import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -1212,6 +1213,18 @@ function showError(error) {
   const retryButton = $('#retryTreeLoad');
   const loginRequired = error?.code === 'WAYDEAN_AUTH_REQUIRED';
   const accessDenied = error?.code === 'WAYDEAN_ACCESS_DENIED';
+  const accountHint = $('#waydeanAccountHint');
+  if (accountHint) {
+    accountHint.hidden = true;
+    accountHint.textContent = '';
+    if (accessDenied) {
+      void readWaydeanAdminEmail(window.AdminSupabase).then((email) => {
+        if (!email) return;
+        accountHint.textContent = `В этой вкладке выполнен вход как ${email}.`;
+        accountHint.hidden = false;
+      });
+    }
+  }
   const showLogin = loginRequired || accessDenied;
   if (title) {
     title.textContent = error?.code === 'WAYDEAN_PREVIEW_LOCAL_ONLY'
