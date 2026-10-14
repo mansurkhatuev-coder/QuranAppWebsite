@@ -18,6 +18,7 @@
   <link rel="stylesheet" href="waydean-preview-desktop-controls.css">
   <link rel="stylesheet" href="waydean-preview-mobile-controls.css?v=stage-bounds-1">
   <link rel="stylesheet" href="waydean-preview-layout.css?v=8">
+  <link rel="stylesheet" href="waydean-preview-auth.css?v=admin-auth-1">
 </head>
 <body>
   <main class="app-shell">
@@ -116,8 +117,20 @@
       <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Текущее древо</strong><small>Открыть привычную версию</small></button>
     </section>
     <div class="backdrop" id="popoverBackdrop" hidden></div>
-    <div class="load-error" id="loadError" hidden><strong>Не удалось загрузить дерево</strong><span id="loadErrorText"></span><div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div></div>
+    <div class="load-error" id="loadError" hidden><strong id="loadErrorTitle">Не удалось загрузить дерево</strong><span id="loadErrorText"></span>    <form id="waydeanAdminLoginForm" class="waydean-admin-login" hidden>
+        <p>Войдите с тем же email и паролем, что используете в разделе управления.</p>
+        <label for="waydeanAdminEmail">Email</label>
+        <input id="waydeanAdminEmail" name="email" type="email" autocomplete="username" required>
+        <label for="waydeanAdminPassword">Пароль</label>
+        <input id="waydeanAdminPassword" name="password" type="password" autocomplete="current-password" required>
+        <p class="waydean-admin-login-error" id="waydeanAdminLoginError" role="alert" hidden></p>
+        <button id="waydeanAdminLoginSubmit" type="submit">Войти и открыть древо</button>
+      </form>
+    <div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div></div>
   </main>
-  <script type="module" src="waydean-preview.js?v=main-29"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="../admin/supabase-config.js?v=6"></script>
+  <script src="../admin/admin-supabase.js?v=16"></script>
+  <script type="module" src="waydean-preview.js?v=admin-auth-1"></script>
 </body>
 </html>

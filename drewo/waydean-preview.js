@@ -3,7 +3,7 @@ import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=6';
-import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=3';
+import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -1207,19 +1207,79 @@ function fitTree() {
 
 function showError(error) {
   ui.error.hidden = false;
+  const title = $('#loadErrorTitle');
+  const loginForm = $('#waydeanAdminLoginForm');
+  const retryButton = $('#retryTreeLoad');
+  const loginRequired = error?.code === 'WAYDEAN_AUTH_REQUIRED';
+  const accessDenied = error?.code === 'WAYDEAN_ACCESS_DENIED';
+  const showLogin = loginRequired || accessDenied;
+  if (title) {
+    title.textContent = error?.code === 'WAYDEAN_PREVIEW_LOCAL_ONLY'
+      ? 'Полное древо доступно на этом компьютере'
+      : loginRequired
+      ? 'Вход в Waydean'
+      : accessDenied ? 'Нет доступа к этому аккаунту' : 'Не удалось загрузить дерево';
+  }
+  if (loginForm) loginForm.hidden = !showLogin;
+  if (retryButton) retryButton.hidden = showLogin;
   if (error?.code === 'WAYDEAN_PREVIEW_LOCAL_ONLY') {
-    ui.error.querySelector('strong').textContent = 'Полное древо доступно на этом компьютере';
     $('#loadErrorText').textContent = 'Откройте локальную версию проекта на компьютере, где хранятся данные древа.';
+  } else if (loginRequired) {
+    $('#loadErrorText').textContent = 'Полное дерево откроется после входа в разрешённую администраторскую учётную запись.';
+  } else if (accessDenied) {
+    $('#loadErrorText').textContent = 'Войдите с учётной записью, которой разрешён просмотр Waydean.';
+  } else if (typeof error?.code === 'string' && error.code.startsWith('WAYDEAN_AUTH_')) {
+    $('#loadErrorText').textContent = error.message || 'Проверка доступа временно недоступна.';
   } else {
     $('#loadErrorText').textContent = error instanceof TypeError && error.message.includes('fetch')
       ? 'Не удалось загрузить данные древа. Откройте страницу по локальной ссылке проекта.'
       : 'Не удалось загрузить данные древа. Обновите страницу и попробуйте ещё раз.';
   }
-  $('#retryTreeLoad').addEventListener('click', () => window.location.reload());
+  if (retryButton) retryButton.onclick = () => window.location.reload();
   console.error('Waydean read-only preview failed to load.');
 }
 
+function bindWaydeanAdminLogin() {
+  const form = $('#waydeanAdminLoginForm');
+  if (!form || form.dataset.bound === 'true') return;
+  form.dataset.bound = 'true';
+
+  const emailInput = $('#waydeanAdminEmail');
+  const passwordInput = $('#waydeanAdminPassword');
+  const errorMessage = $('#waydeanAdminLoginError');
+  const submitButton = $('#waydeanAdminLoginSubmit');
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    if (errorMessage) errorMessage.hidden = true;
+    if (submitButton) {
+      submitButton.disabled = true;
+      submitButton.textContent = 'Проверяем вход…';
+    }
+
+    try {
+      if (!window.AdminSupabase?.isEnabled?.()) throw new Error('Supabase auth is unavailable');
+      await window.AdminSupabase.signIn(emailInput.value.trim(), passwordInput.value);
+      passwordInput.value = '';
+      window.location.reload();
+    } catch {
+      passwordInput.value = '';
+      if (errorMessage) {
+        errorMessage.textContent = 'Не удалось войти. Проверьте email и пароль от раздела управления.';
+        errorMessage.hidden = false;
+      }
+      passwordInput.focus();
+    } finally {
+      if (submitButton) {
+        submitButton.disabled = false;
+        submitButton.textContent = 'Войти и открыть древо';
+      }
+    }
+  });
+}
+
 async function initialize() {
+  bindWaydeanAdminLogin();
   try {
     const params = new URLSearchParams(location.search);
     const requestedState = params.get('state');
