@@ -4,20 +4,31 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="waydean-local-build" content="release-candidate-2026-10-10">
+  <meta name="waydean-local-build" content="release-candidate-2026-10-12-video-local-1">
   <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Waydean — семейное древо</title>
+  <link rel="manifest" href="./waydean-preview.webmanifest">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="stylesheet" href="waydean-preview.css">
-  <link rel="stylesheet" href="waydean-preview-camera.css">
-  <link rel="stylesheet" href="waydean-preview-master.css">
-  <link rel="stylesheet" href="waydean-preview-lod.css?v=lod-7">
+  <link rel="stylesheet" href="waydean-preview-camera.css?v=person-card-width-1">
+  <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
+  <link rel="stylesheet" href="waydean-preview-lod.css?v=person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-edit.css">
   <link rel="stylesheet" href="waydean-preview-readiness.css">
   <link rel="stylesheet" href="waydean-preview-main-polish.css?v=6">
   <link rel="stylesheet" href="waydean-preview-desktop-controls.css">
-  <link rel="stylesheet" href="waydean-preview-mobile-controls.css?v=stage-bounds-1">
+  <link rel="stylesheet" href="waydean-preview-mobile-controls.css?v=mobile-canvas-2">
   <link rel="stylesheet" href="waydean-preview-layout.css?v=8">
+  <link rel="stylesheet" href="waydean-preview-minimap.css?v=4">
+  <link rel="stylesheet" href="waydean-preview-editorial.css?v=cards-dock-5-person-card-width-1">
+  <link rel="stylesheet" href="waydean-preview-history.css?v=local-history-1">
+  <link rel="stylesheet" href="waydean-preview-pwa.css?v=pwa-1">
+  <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
+  <link rel="stylesheet" href="waydean-preview-self.css?v=self-3">
+  <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=thin-glass-1">
   <link rel="stylesheet" href="waydean-preview-auth.css?v=admin-auth-1">
 </head>
 <body>
@@ -63,7 +74,7 @@
       <section class="tree-stage" id="treeStage" aria-label="Полотно древа">
         <div class="stage-wash" aria-hidden="true"></div>
         <div class="mode-label" id="modeLabel" aria-live="polite"></div>
-        <button class="show-full-tree" id="showFullTree" type="button" title="Показать все поколения и сбросить фильтры">Показать всё дерево</button>
+        <button class="show-full-tree" id="showFullTree" type="button" title="Вернуться к полному древу">← Назад к полному древу</button>
         <div class="graph-viewport" id="graphViewport" tabindex="0" title="Колесо мыши — масштаб; перетаскивание — перемещение" aria-label="Полотно древа. Колесо мыши меняет масштаб, перетаскивание перемещает древо; на телефоне масштаб меняется щипком.">
           <div class="graph-extent" id="graphExtent">
             <div class="graph" id="graph">
@@ -73,7 +84,13 @@
           </div>
         </div>
         <div class="empty-state" id="emptyState" hidden><strong>В этой выборке никого нет</strong><span>Измени или сбрось фильтры, чтобы вернуть людей на древо.</span><button id="emptyReset">Сбросить фильтры</button></div>
-        <div class="mini-map" aria-label="Мини-карта древа"><strong>МИНИ-КАРТА</strong><svg id="miniMapSvg" viewBox="0 0 180 80" tabindex="0" role="group" aria-label="Мини-карта: нажмите для перехода, перетащите обзор или используйте стрелки"></svg><span id="miniMapSummary"></span></div>
+        <section class="mini-map" id="miniMap" aria-label="Мини-карта древа">
+          <button class="mini-map-toggle" id="miniMapToggle" type="button" aria-controls="miniMapContent" aria-expanded="true" aria-label="Свернуть мини-карту" title="Свернуть мини-карту">
+            <svg class="mini-map-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 9 6l6 12 5-12"/><circle cx="4" cy="18" r="1.7"/><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="18" r="1.7"/><circle cx="20" cy="6" r="1.7"/></svg>
+            <span class="mini-map-title">Карта</span><span class="mini-map-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="mini-map-content" id="miniMapContent"><svg id="miniMapSvg" viewBox="0 0 180 80" tabindex="0" role="group" aria-label="Мини-карта: нажмите для перехода, перетащите обзор или используйте стрелки"></svg><span id="miniMapSummary"></span></div>
+        </section>
         <div class="tree-controls" role="group" aria-label="Управление видом древа"><button id="zoomOut" type="button" aria-label="Уменьшить масштаб" title="Уменьшить масштаб (−)">−</button><span id="zoomValue">100%</span><button id="zoomIn" type="button" aria-label="Увеличить масштаб" title="Увеличить масштаб (+)">+</button><button id="fitTree" type="button" aria-label="Показать всю текущую схему" title="Показать текущую схему целиком (0)">⛶</button><button id="whoAmI" type="button" aria-label="Показать мой путь" title="Мой путь">◎ Кто я?</button></div>
       </section>
 
@@ -93,7 +110,7 @@
 
     <section class="popover search-popover" id="searchPopover" hidden aria-label="Поиск людей">
       <div class="popover-head"><strong>Поиск человека</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
-      <label class="sr-only" for="searchInput">Поиск по имени или году</label><input id="searchInput" type="search" placeholder="Имя, год или ветвь…" autocomplete="off">
+      <label class="sr-only" for="searchInput">Поиск по имени, году или тейпу</label><input id="searchInput" type="search" placeholder="Имя, год или тейп…" autocomplete="off">
       <div class="search-results" id="searchResults"></div>
     </section>
     <section class="popover filters-popover" id="filtersPopover" hidden aria-label="Фильтры древа">
@@ -106,6 +123,18 @@
       <div class="popover-head"><strong>Статистика древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
       <div class="stats-grid" id="statsGrid"></div><p id="statsNote"></p>
     </section>
+    <section class="popover local-history-popover" id="historyPopover" hidden aria-label="История локальных действий">
+      <div class="popover-head"><strong>История локальных действий</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <p class="local-data-note">Только в этом браузере. Здесь видны сохранения черновика и операции с локальными снимками.</p>
+      <div class="local-history-list" id="localHistoryList" aria-live="polite"></div>
+    </section>
+    <section class="popover local-backups-popover" id="backupsPopover" hidden aria-label="Резервные копии локального дерева">
+      <div class="popover-head"><strong>Резервные копии</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <p class="local-data-note">Локальные снимки хранятся только на этом компьютере. Как и серверные копии, они сохраняют данные дерева, но не сами файлы фотографий.</p>
+      <button class="primary-action local-snapshot-create" id="createLocalBackup" type="button">Создать снимок сейчас</button>
+      <p class="local-backup-status" id="localBackupStatus" aria-live="polite"></p>
+      <div class="local-backup-list" id="localBackupList" aria-live="polite"></div>
+    </section>
     <section class="popover more-popover" id="morePopover" hidden aria-label="Дополнительные действия">
       <div class="popover-head"><strong>Ещё</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
       <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
@@ -113,11 +142,50 @@
       <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
       <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
       <button class="more-item" id="moreExport"><strong>Экспорт дерева</strong><small>Скачать SVG или подготовить PDF и печать</small></button>
-      <button class="more-item" id="moreVideo" type="button" disabled><strong>Видео · «История рода»</strong><small>Экспорт видео вернётся после основного релиза</small></button>
+      <button class="more-item local-data-action" id="moreHistory" type="button" hidden><strong>История локальных действий</strong><small>Сохранения и восстановление в этом браузере</small></button>
+      <button class="more-item local-data-action" id="moreBackups" type="button" hidden><strong>Резервные копии · локально</strong><small>Создать снимок, закрепить или восстановить</small></button>
+      <button class="more-item" id="morePwa" type="button"><strong>Приложение и уведомления</strong><small>Установка на устройство, офлайн и проверка уведомлений</small></button>
+      <button class="more-item" id="moreVideo" type="button" hidden><strong>Создать видео</strong><small>Соберите ролик и скачайте его на этом устройстве</small></button>
       <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Текущее древо</strong><small>Открыть привычную версию</small></button>
     </section>
+    <section class="popover pwa-popover" id="pwaPopover" hidden aria-label="Приложение Waydean и уведомления">
+      <div class="popover-head"><strong>Waydean на устройстве</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <div class="pwa-state-card">
+        <span class="pwa-state-icon" aria-hidden="true">♧</span>
+        <div><strong id="pwaInstallStatus">Подготовка приложения…</strong><small id="pwaInstallHelp">Можно установить Waydean на компьютер как отдельное приложение.</small></div>
+      </div>
+      <button class="primary-action pwa-install-action" id="pwaInstall" type="button">Установить Waydean</button>
+      <div class="pwa-state-row"><span>Офлайн-режим</span><strong id="pwaOfflineStatus" aria-live="polite">Подготовка кеша…</strong></div>
+      <div class="pwa-state-row"><span>Подключение</span><strong id="pwaNetworkStatus" aria-live="polite">Проверка…</strong></div>
+      <div class="pwa-notification-block" id="pwaLocalNotificationArea">
+        <div class="pwa-state-row"><span>Уведомления на устройстве</span><strong id="pwaNotificationStatus" aria-live="polite">Проверка…</strong></div>
+        <button class="secondary-action pwa-notification-action" id="pwaNotificationEnable" type="button">Разрешить уведомления</button>
+        <button class="secondary-action pwa-notification-action" id="pwaNotificationTest" type="button" disabled>Отправить тестовое уведомление</button>
+        <p class="pwa-note" id="pwaLocalPushNote">Тестовое уведомление создаётся только на этом устройстве. Серверные push-уведомления о новых людях подключаются после привязки аккаунта Waydean; локальный просмотр не меняет подписки в проде.</p>
+      </div>
+      <div class="pwa-server-push" id="pwaServerPush" hidden>
+        <div class="pwa-state-row"><span>Push-уведомления древа</span><strong id="pwaServerPushStatus" aria-live="polite">Проверка подписки…</strong></div>
+        <button class="secondary-action pwa-notification-action" id="pwaServerPushEnable" type="button">Получать уведомления об изменениях</button>
+        <button class="secondary-action pwa-notification-action" id="pwaServerPushDisable" type="button" hidden>Отключить уведомления на этом устройстве</button>
+        <p class="pwa-note">Подписка создаётся только после вашего действия и ввода пароля редактора. Она привязана к этому устройству.</p>
+      </div>
+      <div class="pwa-push-note" id="pwaOfflineNote"><strong>Офлайн-данные</strong><span>После первой загрузки кешируются оболочка Waydean и снимок HOTI. Локальные правки остаются в хранилище этого браузера.</span></div>
+    </section>
+    <dialog class="pwa-push-dialog" id="pwaPushDialog" aria-labelledby="pwaPushDialogTitle">
+      <form id="pwaPushForm">
+        <strong id="pwaPushDialogTitle">Пароль редактора</strong>
+        <p id="pwaPushDialogHelp">Подтвердите доступ, чтобы изменить подписку этого устройства на уведомления дерева.</p>
+        <label for="pwaPushPassword">Пароль для правок</label>
+        <input id="pwaPushPassword" type="password" autocomplete="current-password" required>
+        <p class="pwa-push-error" id="pwaPushError" role="alert" hidden></p>
+        <div class="pwa-push-dialog-actions"><button class="primary-action" id="pwaPushSubmit" type="submit">Продолжить</button><button class="secondary-action" id="pwaPushCancel" type="button">Отмена</button></div>
+      </form>
+    </dialog>
     <div class="backdrop" id="popoverBackdrop" hidden></div>
-    <div class="load-error" id="loadError" hidden><strong id="loadErrorTitle">Не удалось загрузить дерево</strong><span id="loadErrorText"></span>    <form id="waydeanAdminLoginForm" class="waydean-admin-login" hidden>
+    <div class="load-error" id="loadError" hidden>
+      <strong id="loadErrorTitle">Не удалось загрузить дерево</strong>
+      <span id="loadErrorText"></span>
+      <form id="waydeanAdminLoginForm" class="waydean-admin-login" hidden>
         <p>Войдите с тем же email и паролем, что используете в разделе управления.</p>
         <p class="waydean-admin-account-hint" id="waydeanAccountHint" hidden></p>
         <label for="waydeanAdminEmail">Email</label>
@@ -127,11 +195,12 @@
         <p class="waydean-admin-login-error" id="waydeanAdminLoginError" role="alert" hidden></p>
         <button id="waydeanAdminLoginSubmit" type="submit">Войти и открыть древо</button>
       </form>
-    <div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div></div>
+      <div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div>
+    </div>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../admin/supabase-config.js?v=6"></script>
   <script src="../admin/admin-supabase.js?v=16"></script>
-  <script type="module" src="waydean-preview.js?v=admin-auth-2"></script>
+  <script type="module" src="waydean-preview.js?v=waydean-live-20261015"></script>
 </body>
 </html>

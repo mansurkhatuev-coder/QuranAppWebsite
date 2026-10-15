@@ -8,7 +8,7 @@ $ErrorActionPreference = 'Stop'
 
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $pagePath = '/drewo/waydean-preview.html?state=all-tree'
-$buildMarker = '<meta name="waydean-local-build" content="release-candidate-2026-10-10">'
+$buildMarker = '<meta name="waydean-local-build" content="release-candidate-2026-10-12-video-local-1">'
 $python = Get-Command py, python -ErrorAction SilentlyContinue | Select-Object -First 1
 
 if (-not $python) {
@@ -70,6 +70,8 @@ foreach ($candidatePort in 8784..8800) {
 if (-not $selectedPort) {
   throw 'Не удалось запустить Waydean local. Проверь Python и порты 8784–8800.'
 }
+
+& (Join-Path $PSScriptRoot 'start-waydean-video-local.ps1')
 
 $url = "http://127.0.0.1:$selectedPort$pagePath"
 Write-Host "Waydean local готов: $url"

@@ -1,7 +1,7 @@
-const DETAIL_TO_COMPACT = 82;
-const COMPACT_TO_DETAIL = 88;
-const COMPACT_TO_OVERVIEW = 56;
-const OVERVIEW_TO_COMPACT = 62;
+const DETAIL_TO_COMPACT = 58;
+const COMPACT_TO_DETAIL = 64;
+const COMPACT_TO_OVERVIEW = 34;
+const OVERVIEW_TO_COMPACT = 40;
 
 export function compactRouteClass(personId, routePeople) {
   return routePeople?.has(personId) ? ' route' : '';

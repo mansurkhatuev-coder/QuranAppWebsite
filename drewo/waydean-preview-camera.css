@@ -25,7 +25,7 @@
 .graph[data-lod="compact"] .node-copy small { display: none; }
 
 .graph[data-lod="overview"] .person-node {
-  width: 80px !important;
+  width: var(--person-card-width, 80px) !important;
   height: 94px;
   padding: 5px;
   justify-content: center;

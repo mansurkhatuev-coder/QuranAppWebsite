@@ -4,3 +4,7 @@ downloads/*.apk
 downloads/*.aab
 tools/supabase-cli/
 qf-proxy/node_modules/
+/docs/design/waydean/export/video-prototype/hoti-people.mjs
+/docs/design/waydean/export/video-prototype/remotion-preview/node_modules/
+/docs/design/waydean/export/video-prototype/remotion-preview/build/
+/docs/design/waydean/export/video-prototype/remotion-preview/out/

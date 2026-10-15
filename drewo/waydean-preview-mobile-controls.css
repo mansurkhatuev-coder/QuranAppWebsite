@@ -48,7 +48,7 @@
   }
 
   .workspace { min-width: 0; }
-  .tree-stage { inset: 0 0 72px; min-width: 0; min-height: 0; }
+  .tree-stage { inset: 0; min-width: 0; min-height: 0; }
   .graph-viewport {
     touch-action: none;
     -webkit-overflow-scrolling: touch;
@@ -56,6 +56,27 @@
     scrollbar-width: none;
   }
   .graph-viewport::-webkit-scrollbar { display: none; }
+
+  /* Keep a person-shaped card marker in the far-out overview instead of a dot. */
+  .graph[data-lod="overview"] .person-node::after {
+    width: calc(var(--overview-dot-size, 20px) * .84);
+    height: calc(var(--overview-dot-size, 20px) * 1.14);
+    border: 1px solid rgba(226, 194, 125, .86);
+    border-radius: 4px;
+    background:
+      radial-gradient(circle at 50% 29%, #ddc688 0 10%, transparent 11%),
+      radial-gradient(ellipse at 50% 82%, #c8b37c 0 22%, transparent 23%),
+      linear-gradient(145deg, rgba(30, 42, 41, .97), rgba(6, 15, 18, .98));
+    box-shadow: inset 0 0 0 2px rgba(235, 218, 173, .13), 0 4px 11px rgba(0, 0, 0, .62);
+    opacity: .96;
+    transform: translate(-50%, -50%);
+  }
+  .graph[data-lod="overview"] .person-node.selected::after {
+    width: calc(var(--overview-dot-size, 20px) * 1.08);
+    height: calc(var(--overview-dot-size, 20px) * 1.28);
+    border-color: #ffe18c;
+    box-shadow: inset 0 0 0 2px rgba(255, 225, 140, .2), 0 0 13px rgba(255, 195, 76, .68);
+  }
 
   .mini-map {
     top: max(9px, env(safe-area-inset-top, 0px));
@@ -118,12 +139,7 @@
   .mobile-nav button span { font-size: 19px; line-height: 1.1; }
   .mobile-nav button small { font-size: 10px; }
 
-  .mobile-selected {
-    bottom: 0;
-    min-height: 64px;
-    height: auto;
-    padding: 7px max(12px, env(safe-area-inset-left, 0px));
-  }
+  .mobile-selected { display: none; }
 
   .app-shell.profile-open .profile-panel {
     inset: max(12px, env(safe-area-inset-top, 0px)) 0 calc(58px + env(safe-area-inset-bottom, 0px));

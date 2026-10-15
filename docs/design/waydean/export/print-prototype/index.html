@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Waydean — Print Studio</title>
-  <link rel="stylesheet" href="./styles.css?v=workspace-2">
+  <link rel="stylesheet" href="./styles.css?v=workspace-21">
 </head>
 <body>
   <div class="studio-shell">
@@ -17,8 +17,8 @@
         <span><strong>WAYDEAN</strong><small>СЕМЕЙНОЕ ДРЕВО</small></span>
       </a>
       <div class="header-title">
-        <span class="eyebrow">МАСТЕРСКАЯ ЭКСПОРТА</span>
-        <h1>Печатный макет</h1>
+        <a class="studio-back" href="../../../../../drewo/waydean-preview.html?state=all-tree" aria-label="Назад к древу"><span aria-hidden="true">←</span><span>К древу</span></a>
+        <div class="header-title-copy"><span class="eyebrow">МАСТЕРСКАЯ ЭКСПОРТА</span><h1>Печатный макет</h1></div>
       </div>
     </header>
 
@@ -71,11 +71,21 @@
           <label class="toggle-row"><span><strong>Заголовок макета</strong><small>Название можно изменить</small></span><input id="includeTitle" type="checkbox" checked><i aria-hidden="true"></i></label>
           <label class="field-label title-label" for="treeTitle">Заголовок</label>
           <input id="treeTitle" class="field-control" type="text" value="История рода" maxlength="60">
-          <div class="qr-lock" aria-disabled="true">
-            <span class="qr-icon" aria-hidden="true">▦</span>
-            <span><strong>QR-код</strong><small>Будет доступен после утверждения правил доступа к семейным данным.</small></span>
-            <span class="lock-mark" aria-label="Недоступно">⌑</span>
+          <span class="field-label theme-label">Кинематографичный фон</span>
+          <div class="theme-picker" role="group" aria-label="Фон печатного дерева">
+            <button type="button" class="theme-choice" data-print-theme="heritage" aria-pressed="true"><span class="theme-preview theme-preview-heritage" aria-hidden="true"></span><span>Горное наследие</span></button>
+            <button type="button" class="theme-choice" data-print-theme="dawn" aria-pressed="false"><span class="theme-preview theme-preview-dawn" aria-hidden="true"></span><span>Тихий рассвет</span></button>
+            <button type="button" class="theme-choice" data-print-theme="lake" aria-pressed="false"><span class="theme-preview theme-preview-lake" aria-hidden="true"></span><span>Лунное озеро</span></button>
           </div>
+          <p class="field-hint theme-hint">Фон картины продолжается между листами и сохраняется в SVG и PDF. Вид карточек настраивается отдельно.</p>
+          <span class="field-label card-style-label">Оформление карточек</span>
+          <div class="card-style-picker" role="group" aria-label="Оформление карточек людей">
+            <button type="button" class="card-style-choice" data-print-card-style="glass" aria-pressed="true"><span class="card-style-swatch card-style-swatch-glass" aria-hidden="true"><i></i></span><span>Тонкое стекло</span></button>
+            <button type="button" class="card-style-choice" data-print-card-style="frost" aria-pressed="false"><span class="card-style-swatch card-style-swatch-frost" aria-hidden="true"><i></i></span><span>Мягкий матовый кант</span></button>
+            <button type="button" class="card-style-choice" data-print-card-style="halo" aria-pressed="false"><span class="card-style-swatch card-style-swatch-halo" aria-hidden="true"><i></i></span><span>Тёплый ореол</span></button>
+          </div>
+          <p class="field-hint card-style-hint">Портрет и имя остаются открытыми; меняется только лёгкая кромка блока.</p>
+          <label class="toggle-row qr-option"><span><strong>Добавить QR-код</strong><small>Откроет семейный вход на waydean.ru; потребуется пароль. QR содержит только адрес сайта.</small></span><input id="includeQr" type="checkbox"><i aria-hidden="true"></i></label>
         </section>
 
         <section class="panel-card paper-card">
@@ -106,24 +116,37 @@
           </div>
           <div class="output-actions">
             <button type="button" class="output-button" id="downloadSvg"><span aria-hidden="true">◇</span><span><strong>Скачать SVG</strong><small>Вектор текущего листа</small></span><b aria-hidden="true">↓</b></button>
+            <button type="button" class="output-button" id="downloadWorkspaceSvg"><span aria-hidden="true">◇</span><span><strong>SVG всех листов</strong><small>Общее полотно с переходами</small></span><b aria-hidden="true">↓</b></button>
             <button type="button" class="output-button output-button-primary" id="printPdf"><span aria-hidden="true">▤</span><span><strong>Печать / PDF</strong><small>Все листы макета</small></span><b aria-hidden="true">↗</b></button>
+            <button type="button" class="output-button" id="downloadTreeJson"><span aria-hidden="true">{ }</span><span><strong>Данные дерева · JSON</strong><small>Люди, связи и локальные правки; без фотофайлов</small></span><b aria-hidden="true">↓</b></button>
           </div>
-          <p class="privacy-note"><span aria-hidden="true">◈</span><span id="privacyCopy">Правки макета действуют в этой вкладке и не меняют исходные данные.</span></p>
+          <div class="draft-history" aria-label="История правок">
+            <button type="button" id="undoDraft" aria-label="Отменить последнее действие" aria-keyshortcuts="Control+Z Meta+Z" title="Отменить · Ctrl/⌘ Z">↶ Отменить</button>
+            <button type="button" id="redoDraft" aria-label="Повторить отменённое действие" aria-keyshortcuts="Control+Shift+Z Meta+Shift+Z Control+Y" title="Повторить · Ctrl/⌘ Shift Z">↷ Повторить</button>
+          </div>
+          <button type="button" class="draft-reset" id="resetDraft">Сбросить локальные правки</button>
+          <p class="privacy-note"><span aria-hidden="true">◈</span><span id="privacyCopy">После первого изменения черновик сохраняется локально для этого адреса. Исходное древо не меняется.</span></p>
           <p class="export-status" id="exportStatus" role="status" aria-live="polite">Макет готов к редактированию.</p>
         </section>
       </aside>
 
       <section class="preview-column" aria-label="Предпросмотр печатного макета">
         <div class="preview-toolbar">
-          <div><span class="eyebrow">РАБОЧЕЕ ПОЛЕ</span><h2>Все листы печати</h2><p class="edit-hint">При открытии активный лист показан крупно. Кнопка «Все листы» включает общий обзор. Карточки перетаскиваются между листами; клик открывает правку.</p></div>
-          <div class="page-controls">
-            <button type="button" id="previousPage" aria-label="Предыдущий лист">‹</button>
-            <span id="pageCounter" aria-live="polite">Лист 1 из 1</span>
-            <button type="button" id="nextPage" aria-label="Следующий лист">›</button>
-            <button type="button" id="zoomOut" aria-label="Уменьшить масштаб">−</button>
-            <span id="zoomValue" class="zoom-value" aria-live="polite">100%</span>
-            <button type="button" id="zoomIn" aria-label="Увеличить масштаб">+</button>
-            <button type="button" class="fit-button" id="fitPreview" title="Показать все листы целиком">Все листы</button>
+          <div><span class="eyebrow">РАБОЧЕЕ ПОЛЕ</span><h2>Все листы печати</h2><p class="edit-hint">Перетаскивай карточки по общему полотну и между листами; нажми карточку, чтобы изменить имя, тейп и даты. На телефоне двигай поле одним пальцем и меняй масштаб жестом двух пальцев.</p></div>
+          <div class="toolbar-actions">
+            <div class="page-controls" role="group" aria-label="Навигация по печатным листам">
+              <button type="button" id="previousPage" aria-label="Предыдущий лист">‹</button>
+              <span id="pageCounter" aria-live="polite">Лист 1 из 1</span>
+              <button type="button" id="nextPage" aria-label="Следующий лист">›</button>
+            </div>
+            <div class="workspace-controls" role="group" aria-label="Масштаб рабочего полотна">
+              <span class="zoom-title">Полотно</span>
+              <button type="button" id="zoomOut" aria-label="Отдалить рабочее полотно" title="Отдалить">−</button>
+              <output id="zoomValue" class="zoom-value" aria-live="polite">100%</output>
+              <button type="button" id="zoomIn" aria-label="Приблизить рабочее полотно" title="Приблизить">+</button>
+              <button type="button" class="fit-button" id="fitPreview" title="Вписать всё рабочее полотно">Вписать полотно</button>
+            </div>
+            <p class="zoom-help">Это масштаб просмотра на экране. Размер печатного листа задаётся отдельно в разделе «Бумага и раскладка».</p>
           </div>
         </div>
 
@@ -150,6 +173,6 @@
   </div>
 
   <div id="printPages" aria-hidden="true"></div>
-  <script type="module" src="./app.mjs?v=workspace-2"></script>
+  <script type="module" src="./app.mjs?v=workspace-21"></script>
 </body>
 </html>

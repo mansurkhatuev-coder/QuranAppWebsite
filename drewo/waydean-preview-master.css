@@ -4,7 +4,7 @@
 }
 
 .person-node {
-  width: var(--tree-card-width) !important;
+  width: var(--person-card-width, var(--tree-card-width)) !important;
   height: var(--tree-card-height) !important;
   display: flex;
   flex-direction: column;
@@ -48,7 +48,7 @@
 
 .graph[data-lod="compact"] .person-node,
 .graph[data-lod="overview"] .person-node {
-  width: var(--tree-card-width) !important;
+  width: var(--person-card-width, var(--tree-card-width)) !important;
   height: var(--tree-card-height) !important;
 }
 

@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>WAYDEAN · Варианты карточек для постера</title>
+  <style>
+    :root { color-scheme: dark; --gold: #c6a15d; --ivory: #eee4cd; --muted: #b7aa89; --ink: #101817; }
+    * { box-sizing: border-box; }
+    body { margin: 0; min-height: 100vh; background: #070d0e; color: var(--ivory); font-family: "Segoe UI", Arial, sans-serif; }
+    .wrap { width: min(1500px, calc(100% - 52px)); margin: 0 auto; padding: 34px 0 30px; }
+    .masthead { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin: 0 0 24px; }
+    .eyebrow { color: var(--gold); font-size: 10px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; }
+    h1 { margin: 8px 0 0; font: 500 clamp(26px, 3vw, 38px)/1.1 Georgia, serif; letter-spacing: -.025em; }
+    .intro { max-width: 390px; margin: 0 0 2px; color: #a9ad9f; font-size: 13px; line-height: 1.55; }
+    .options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+    .option { min-width: 0; overflow: hidden; border: 1px solid rgba(197, 169, 112, .24); border-radius: 15px; background: #0d1515; box-shadow: 0 18px 48px rgba(0,0,0,.24); }
+    .option-head { min-height: 73px; display: flex; align-items: center; gap: 12px; padding: 15px 17px 13px; }
+    .number { flex: 0 0 30px; width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(198,161,93,.52); border-radius: 50%; color: var(--gold); font: 13px Georgia,serif; }
+    h2 { margin: 0; font: 500 19px/1.1 Georgia,serif; color: #f0e6d2; }
+    .choice { margin-top: 5px; color: #959c91; font-size: 10px; letter-spacing: .11em; text-transform: uppercase; }
+    .recommended { color: #d6b66f; }
+    .scene { height: clamp(260px, 25vw, 340px); position: relative; display: grid; place-items: center; isolation: isolate; overflow: hidden; background: #101714; }
+    .scene::before { content: ""; position: absolute; inset: 0; z-index: -2; background: linear-gradient(180deg, rgba(5,10,10,.24), rgba(4,9,9,.56)), url("./assets/backgrounds/mountain-heritage.jpg") center 48% / cover; }
+    .scene::after { content: ""; position: absolute; inset: 0; z-index: -1; background: radial-gradient(ellipse at 50% 53%, transparent 8%, rgba(3,8,8,.22) 100%); pointer-events: none; }
+    .branches { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    .branches path { fill: none; stroke: #b9904e; stroke-width: 1.1; opacity: .7; vector-effect: non-scaling-stroke; }
+    .node { position: relative; z-index: 1; width: min(78%, 355px); min-height: 158px; }
+    .portrait { position: relative; flex: 0 0 70px; width: 70px; height: 70px; overflow: hidden; border: 1px solid rgba(205,171,102,.84); border-radius: 50%; background: radial-gradient(circle at 40% 35%, #435148, #17211e 72%); box-shadow: inset 0 0 0 5px rgba(8,15,14,.76), 0 0 0 3px rgba(199,161,91,.13); }
+    .portrait::before { content: ""; position: absolute; width: 18px; height: 18px; left: 25px; top: 13px; border-radius: 50%; background: #aa9a73; }
+    .portrait::after { content: ""; position: absolute; width: 42px; height: 25px; left: 13px; bottom: 9px; border-radius: 24px 24px 11px 11px; background: #aa9a73; }
+    .generation { color: #d0b171; font-size: 9px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+    .name { margin: 7px 0 0; color: #f3ead7; font: 500 31px/.98 "Palatino Linotype", Georgia, serif; text-shadow: 0 2px 16px rgba(0,0,0,.6); }
+    .dates { margin-top: 9px; color: #c5b68f; font: 11px/1.2 "Segoe UI", Arial, sans-serif; letter-spacing: .06em; }
+    .small-rule { width: 38px; height: 1px; margin-top: 11px; background: linear-gradient(90deg, transparent, #b88f4d, transparent); }
+
+    /* Three refinements of the open portrait: a glass edge, not an opaque plaque. */
+    .node--edge, .node--frost, .node--halo { display: flex; align-items: center; gap: 20px; min-height: 148px; padding: 20px 23px; }
+    .node--edge { border: 1px solid rgba(230,235,220,.34); border-radius: 18px; background: linear-gradient(135deg, rgba(14,23,21,.30), rgba(7,13,13,.12)); box-shadow: 0 12px 34px rgba(0,0,0,.2), inset 0 1px 0 rgba(255,255,255,.2); backdrop-filter: blur(2px); }
+    .node--edge::before { content: ""; position: absolute; inset: 4px; border: 1px solid rgba(238,236,220,.09); border-radius: 14px; pointer-events: none; }
+    .node--frost { border: 1px solid rgba(232,236,225,.56); border-radius: 22px; background: linear-gradient(135deg, rgba(22,32,29,.48), rgba(5,12,12,.25)); box-shadow: 0 14px 36px rgba(0,0,0,.23), inset 0 1px 0 rgba(255,255,255,.32), 0 0 24px rgba(227,235,221,.08); backdrop-filter: blur(5px); }
+    .node--frost::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(237,236,218,.14); border-radius: 17px; pointer-events: none; }
+    .node--halo { border: 1px solid rgba(218,199,157,.52); border-radius: 999px; background: linear-gradient(100deg, rgba(15,24,21,.40), rgba(8,14,14,.18)); box-shadow: 0 0 0 1px rgba(255,255,255,.06), 0 14px 40px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,246,222,.22), 0 0 28px rgba(210,178,112,.13); backdrop-filter: blur(3px); }
+    .node--halo::before { content: ""; position: absolute; inset: 5px; border: 1px solid rgba(230,218,186,.12); border-radius: 999px; pointer-events: none; }
+    .node--edge .person-copy, .node--frost .person-copy, .node--halo .person-copy { min-width: 0; }
+    .node--edge .name, .node--frost .name, .node--halo .name { font-size: 30px; }
+    .node--edge .portrait { box-shadow: 0 0 0 1px rgba(255,255,255,.10), 0 0 0 4px rgba(196,160,91,.13), 0 7px 22px rgba(0,0,0,.34); }
+    .node--frost .portrait { border-color: rgba(236,239,224,.65); box-shadow: 0 0 0 1px rgba(255,255,255,.15), 0 0 0 4px rgba(196,160,91,.17), 0 0 22px rgba(226,235,219,.16); }
+    .node--halo .portrait { box-shadow: 0 0 0 1px rgba(10,15,13,.7), 0 0 0 5px rgba(196,160,91,.22), 0 8px 28px rgba(0,0,0,.48); }
+
+    .caption { min-height: 58px; padding: 12px 17px 15px; color: #a5aa9e; font-size: 12px; line-height: 1.5; }
+    .caption strong { color: #ded0ae; font-weight: 500; }
+    .footer { margin-top: 17px; color: #737d74; font-size: 10px; letter-spacing: .1em; text-transform: uppercase; }
+    @media (max-width: 980px) { .wrap { width: min(740px, calc(100% - 28px)); padding-top: 24px; } .masthead { display: block; } .intro { margin-top: 12px; } .options { grid-template-columns: 1fr; gap: 12px; } .scene { height: 300px; } }
+    @media (max-width: 480px) { .node { width: 88%; } .node--edge, .node--frost, .node--halo { gap: 13px; padding: 18px 15px; } .portrait { width: 58px; height: 58px; flex-basis: 58px; } .portrait::before { left: 20px; top: 10px; } .portrait::after { left: 9px; bottom: 7px; width: 38px; height: 23px; } .name { font-size: 27px; } }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <header class="masthead">
+      <div><div class="eyebrow">Waydean · Print Studio</div><h1>Три стеклянные кромки</h1></div>
+      <p class="intro">Основа — свободный портрет. Меняется только лёгкая обводка: почти невидимая, матовая или тёплая овальная.</p>
+    </header>
+    <section class="options" aria-label="Варианты оформления карточки">
+      <article class="option">
+        <header class="option-head"><span class="number">01</span><div><h2>Тонкий контур</h2><div class="choice">почти невидимая грань</div></div></header>
+        <div class="scene">
+          <svg class="branches" viewBox="0 0 500 340" preserveAspectRatio="none" aria-hidden="true"><path d="M250 0 V75 C250 105 250 105 250 118"/><path d="M250 222 V260 M250 260 H154 M250 260 H346 M154 260 V340 M346 260 V340"/></svg>
+          <div class="node node--edge"><div class="portrait" aria-hidden="true"></div><div class="person-copy"><div class="generation">Поколение 10</div><div class="name">Хьасан</div><div class="dates">Хоти · семейное древо</div><div class="small-rule"></div></div></div>
+        </div>
+        <div class="caption"><strong>Почти без рамки.</strong> Светлая стеклянная линия лишь отделяет узел от фона, не закрывая пейзаж.</div>
+      </article>
+      <article class="option">
+        <header class="option-head"><span class="number">02</span><div><h2>Матовый кант</h2><div class="choice recommended">рекомендую</div></div></header>
+        <div class="scene">
+          <svg class="branches" viewBox="0 0 500 340" preserveAspectRatio="none" aria-hidden="true"><path d="M250 0 V75 C250 105 250 105 250 126"/><path d="M250 212 V260 M250 260 H154 M250 260 H346 M154 260 V340 M346 260 V340"/></svg>
+          <div class="node node--frost"><div class="portrait" aria-hidden="true"></div><div class="person-copy"><div class="generation">Поколение 10</div><div class="name">Хьасан</div><div class="dates">Хоти · семейное древо</div><div class="small-rule"></div></div></div>
+        </div>
+        <div class="caption"><strong>Чуть заметнее, но всё ещё воздушно.</strong> Матовая кромка и мягкое рассеивание повышают читаемость на светлом фоне.</div>
+      </article>
+      <article class="option">
+        <header class="option-head"><span class="number">03</span><div><h2>Тёплый ореол</h2><div class="choice">овальная стеклянная линия</div></div></header>
+        <div class="scene">
+          <svg class="branches" viewBox="0 0 500 340" preserveAspectRatio="none" aria-hidden="true"><path d="M250 0 V75 C250 105 250 105 250 119"/><path d="M250 225 V260 M250 260 H154 M250 260 H346 M154 260 V340 M346 260 V340"/></svg>
+          <div class="node node--halo"><div class="portrait" aria-hidden="true"></div><div class="person-copy"><div class="generation">Поколение 10</div><div class="name">Хьасан</div><div class="dates">Хоти · семейное древо</div><div class="small-rule"></div></div></div>
+        </div>
+        <div class="caption"><strong>Более выразительный контур.</strong> Овальная форма поддерживает медальон портрета, а едва тёплое свечение связывает узел с золотыми линиями дерева.</div>
+      </article>
+    </section>
+    <div class="footer">Локальные визуальные концепты · не меняют печатный макет</div>
+  </main>
+</body>
+</html>

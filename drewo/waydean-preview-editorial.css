@@ -1,0 +1,267 @@
+/* Editorial tree cards: clear portrait crop, stronger name/date hierarchy, and a floating actions dock. */
+@media (min-width: 701px) {
+  body:not(.synthetic-fixture) .graph {
+    --tree-card-width: 224px;
+    --tree-card-height: 102px;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node {
+    display: grid;
+    grid-template-columns: 68px minmax(0, 1fr);
+    align-items: center;
+    gap: 13px;
+    width: var(--person-card-width, var(--tree-card-width)) !important;
+    height: var(--tree-card-height) !important;
+    padding: 9px 13px;
+    border-radius: 14px;
+    text-align: left;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar {
+    flex: 0 0 68px;
+    width: 68px;
+    height: 68px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px rgba(222, 190, 119, .12), 0 5px 16px rgba(0, 0, 0, .26);
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: 50% 27%;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar.is-empty {
+    border-color: rgba(223, 193, 127, .66);
+    background: radial-gradient(circle at 50% 38%, rgba(201, 177, 122, .22), rgba(12, 22, 23, .98) 72%);
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 5px;
+    text-align: left;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy strong {
+    width: 100%;
+    color: #f7edd5;
+    font-size: 17px;
+    line-height: 1.16;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy > small,
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-years-layer {
+    color: #d2bd8a;
+    font-size: 12px;
+    line-height: 1.25;
+    text-align: left;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node {
+    width: var(--person-card-width, var(--tree-card-width)) !important;
+    height: 80px;
+    border-radius: 12px;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="compact"] .node-copy strong {
+    font-size: 13px;
+  }
+
+  /* The menu floats above the tree; opening it never steals canvas width or moves the camera. */
+  .workspace,
+  .workspace.rail-hidden,
+  .workspace.profile-collapsed {
+    grid-template-columns: minmax(0, 1fr) 270px;
+  }
+
+  .workspace.profile-collapsed,
+  .workspace.rail-hidden.profile-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rail {
+    position: absolute;
+    z-index: 6;
+    top: 12px;
+    bottom: 12px;
+    left: 12px;
+    display: flex;
+    width: 224px;
+    max-width: calc(100% - 24px);
+    align-items: stretch;
+    gap: 7px;
+    overflow: auto;
+    padding: 13px 11px;
+    border: 1px solid rgba(218, 183, 111, .32);
+    border-radius: 15px;
+    background: linear-gradient(155deg, rgba(7, 17, 20, .48), rgba(6, 14, 17, .32));
+    box-shadow: 0 18px 46px rgba(0, 0, 0, .36), inset 0 1px 0 rgba(255, 239, 194, .08);
+    -webkit-backdrop-filter: blur(13px) saturate(1.08);
+    backdrop-filter: blur(13px) saturate(1.08);
+    text-shadow: 0 1px 5px rgba(0, 0, 0, .62);
+  }
+
+  .rail-label,
+  .rail-section-label,
+  .rail-stat-copy { display: block; }
+
+  .rail-section-label {
+    padding: 11px 9px 2px;
+    color: #b9a77e;
+    font: 600 9px/1.3 var(--ui, "Segoe UI", sans-serif);
+    letter-spacing: .14em;
+    text-transform: uppercase;
+  }
+
+  .rail-action {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 42px;
+    height: auto;
+    padding: 0 10px;
+    border-radius: 9px;
+    font: 500 12px/1.25 var(--ui, "Segoe UI", sans-serif);
+    text-align: left;
+  }
+
+  .rail-action:nth-child(2) { margin-top: 0; }
+  .rail-icon { flex: 0 0 23px; color: #e0ba68; font-size: 18px; text-align: center; }
+  .rail-label { min-width: 0; }
+
+  .rail-stat {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 10px;
+    width: 100%;
+    min-height: 58px;
+    height: auto;
+    margin-top: auto;
+    padding: 8px 10px;
+    border-radius: 10px;
+  }
+
+  .rail-stat-copy { min-width: 0; text-align: left; }
+  .rail-toggle { background: linear-gradient(145deg, rgba(17, 29, 31, .96), rgba(7, 15, 18, .98)); }
+  .rail-toggle[aria-expanded="true"] { border-color: rgba(238, 199, 116, .6); color: #ffe5a2; }
+  .workspace.rail-hidden > .rail { display: none; }
+}
+
+@media (min-width: 1001px) {
+  .workspace,
+  .workspace.rail-hidden,
+  .workspace.profile-collapsed { grid-template-columns: minmax(0, 1fr) 354px; }
+  .workspace.profile-collapsed,
+  .workspace.rail-hidden.profile-collapsed { grid-template-columns: minmax(0, 1fr); }
+  body:not(.synthetic-fixture) .graph {
+    --tree-card-width: 232px;
+    --tree-card-height: 104px;
+  }
+}
+
+@media (min-width: 701px) {
+  .rail-toggle[aria-expanded="false"] {
+    border-color: rgba(238, 199, 116, .5);
+    background: linear-gradient(145deg, rgba(85, 63, 29, .32), rgba(17, 29, 31, .82));
+    color: #ffe5a2;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .2);
+  }
+}
+
+@media (max-width: 700px) {
+  body:not(.synthetic-fixture) .graph {
+    --tree-card-width: 174px;
+    --tree-card-height: 80px;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node {
+    display: grid;
+    grid-template-columns: 50px minmax(0, 1fr);
+    align-items: center;
+    gap: 9px;
+    width: var(--person-card-width, var(--tree-card-width)) !important;
+    height: var(--tree-card-height) !important;
+    padding: 6px 8px;
+    border-radius: 11px;
+    text-align: left;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar {
+    flex: 0 0 50px;
+    width: 50px;
+    height: 50px;
+    aspect-ratio: 1;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px rgba(222, 190, 119, .13);
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar img {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    object-fit: cover;
+    object-position: 50% 27%;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy {
+    display: grid;
+    align-content: center;
+    justify-items: start;
+    gap: 4px;
+    text-align: left;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy strong {
+    width: 100%;
+    font-size: 14px;
+    line-height: 1.12;
+    white-space: nowrap;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy > small,
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-years-layer {
+    font-size: 10.5px;
+    line-height: 1.2;
+    text-align: left;
+  }
+
+  body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node {
+    width: var(--person-card-width, var(--tree-card-width)) !important;
+    height: 70px;
+  }
+  body:not(.synthetic-fixture) .graph[data-lod="compact"] .node-copy strong { font-size: 12.5px; }
+}
+
+@media (max-width: 390px) {
+  body:not(.synthetic-fixture) .graph {
+    --tree-card-width: 164px;
+    --tree-card-height: 76px;
+  }
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node { grid-template-columns: 44px minmax(0, 1fr); gap: 7px; }
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar { flex-basis: 44px; width: 44px; height: 44px; }
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-copy strong { font-size: 13px; }
+  body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-years-layer { font-size: 9.5px; }
+}
+
+/* Keep teip discoverable in search results without letting long names overflow. */
+.result-copy .result-teip {
+  max-width: 100%;
+  overflow: hidden;
+  color: #d3b773;
+  font-size: 9px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

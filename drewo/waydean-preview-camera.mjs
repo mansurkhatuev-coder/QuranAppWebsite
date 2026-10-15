@@ -1,4 +1,11 @@
 const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+export const MIN_DESKTOP_ZOOM = 0.08;
+export const MIN_MOBILE_ZOOM = 0.01;
+export const MAX_ZOOM = 3.2;
+
+export function clampZoom(value, { minimum = MIN_DESKTOP_ZOOM, maximum = MAX_ZOOM } = {}) {
+  return Math.round(clamp(Number(value) || 0, minimum, maximum) * 1000) / 1000;
+}
 
 export function createFrameCoalescer(requestFrame, callback) {
   let scheduled = false;
@@ -20,22 +27,21 @@ export function wheelZoomFactor(deltaY) {
 export function cameraLayout(viewWidth, viewHeight, graphWidth, graphHeight, zoom) {
   const scaledWidth = graphWidth * zoom;
   const scaledHeight = graphHeight * zoom;
-  const overflowX = scaledWidth > viewWidth;
-  const overflowY = scaledHeight > viewHeight;
-  // Keep half a viewport of virtual space before and after an oversized tree.
-  // This lets a person on any edge reach the center of the screen.
-  const offsetX = overflowX ? viewWidth / 2 : Math.max(0, (viewWidth - scaledWidth) / 2);
-  const offsetY = overflowY ? viewHeight / 2 : Math.max(0, (viewHeight - scaledHeight) / 2);
+  // Always leave half a viewport of working space around the tree. A short
+  // tree can still have a person on its top, bottom, left, or right edge that
+  // should be movable to the center of the screen.
+  const offsetX = viewWidth / 2;
+  const offsetY = viewHeight / 2;
   return {
-    extentWidth: overflowX ? scaledWidth + viewWidth : viewWidth,
-    extentHeight: overflowY ? scaledHeight + viewHeight : viewHeight,
+    extentWidth: scaledWidth + viewWidth,
+    extentHeight: scaledHeight + viewHeight,
     offsetX,
     offsetY
   };
 }
 
 export function readableFitZoom(viewWidth, viewHeight, graphWidth, graphHeight, { minimumZoom } = {}) {
-  const minZoom = minimumZoom ?? (viewWidth <= 700 ? 0.9 : 0.06);
+  const minZoom = minimumZoom ?? (viewWidth <= 700 ? MIN_MOBILE_ZOOM : 0.06);
   const factor = Math.min(
     (viewWidth - 32) / Math.max(graphWidth, 1),
     (viewHeight - 32) / Math.max(graphHeight, 1),

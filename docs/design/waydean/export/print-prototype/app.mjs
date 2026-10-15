@@ -2,6 +2,18 @@ import { getPrintTreeSource } from "./print-data.mjs";
 import { buildPrintLayout, getScopedPeople, recommendPaper } from "./layout.mjs";
 import { getPrintPageRule } from "./print-page-size.mjs";
 import { embedSvgImageAssets } from "./svg-photo-embed.mjs";
+import { getPosterMastheadLayout } from "./poster-masthead-layout.mjs";
+import { getConnectorPath, getNameTextLength, getPersonCardLayout, wrapPersonName } from "./person-card-layout.mjs?v=workspace-21";
+import { renderPersonCardFrame, PRINT_CARD_STYLES } from "./print-card-style.mjs?v=workspace-21";
+import { clampWorkspaceZoom, getViewportFitZoom } from "./workspace-zoom.mjs?v=workspace-21";
+import qrcode from "./vendor/qrcode-generator/qrcode.mjs";
+import { stringToBytes as utf8StringToBytes } from "./vendor/qrcode-generator/qrcode_UTF8.mjs";
+
+const TREE_ACCESS_URL = "https://waydean.ru/drewo/";
+qrcode.stringToBytes = utf8StringToBytes;
+const treeQrCode = qrcode(0, "M");
+treeQrCode.addData(TREE_ACCESS_URL, "Byte");
+treeQrCode.make();
 
 const layoutOptions = {
   marginMm: 12,
@@ -13,12 +25,39 @@ const layoutOptions = {
   rowGapMm: 10
 };
 
+const PRINT_THEMES = Object.freeze({
+  heritage: Object.freeze({
+    key: "heritage", backgroundAsset: "./assets/backgrounds/mountain-heritage.jpg", overlay: "#07100f", overlayOpacity: .44,
+    frame: "#a8874c", innerFrame: "#5b5039", title: "#f0dfb7", eyebrow: "#c0a875", subtitle: "#c5b58f",
+    generation: "#d2bd8d", name: "#f2ead8", years: "#c9b991", card: "#0d1715", selectedCard: "#172019",
+    cardInner: "#e6ebdc", cardBorder: "#e6ebdc", cardOpacity: .42, selectedCardOpacity: .68, portraitBorder: "#d0b06b", portraitBg: "#17211e", selectedBorder: "#f0c96b", rule: "#c4a770", connector: "#c29b4e",
+    silhouette: "#aa9a73", badge: "#806431", badgeText: "#fff1c5", pageLabel: "#e0cd9e",
+    pageIndex: "#202925", selectedPageIndex: "#3b321f", pageIndexBorder: "#806b40", selectedPageBorder: "#c49a47"
+  }),
+  dawn: Object.freeze({
+    key: "dawn", backgroundAsset: "./assets/backgrounds/quiet-dawn-river.jpg", overlay: "#101411", overlayOpacity: .50,
+    frame: "#b08c4c", innerFrame: "#68583b", title: "#f2e2bf", eyebrow: "#d0b273", subtitle: "#c9bd9e",
+    generation: "#d6c091", name: "#f4ecd9", years: "#d1c29e", card: "#101916", selectedCard: "#1a211b",
+    cardInner: "#e9ecdf", cardBorder: "#e9ecdf", cardOpacity: .44, selectedCardOpacity: .7, portraitBorder: "#d8b673", portraitBg: "#19211e", selectedBorder: "#f2ce78", rule: "#cfb87f", connector: "#d3aa57",
+    silhouette: "#ad9a6d", badge: "#8c6d36", badgeText: "#fff4d7", pageLabel: "#ecdaae",
+    pageIndex: "#232922", selectedPageIndex: "#42351e", pageIndexBorder: "#8b7446", selectedPageBorder: "#d5a94e"
+  }),
+  lake: Object.freeze({
+    key: "lake", backgroundAsset: "./assets/backgrounds/moonlit-lake.jpg", overlay: "#071018", overlayOpacity: .42,
+    frame: "#a8874c", innerFrame: "#4d5149", title: "#eee1c1", eyebrow: "#c0aa77", subtitle: "#c5c2ae",
+    generation: "#c7bd98", name: "#eee6d4", years: "#c4c0a8", card: "#111a20", selectedCard: "#1a2327",
+    cardInner: "#dfe5df", cardBorder: "#dfe5df", cardOpacity: .4, selectedCardOpacity: .66, portraitBorder: "#c8b581", portraitBg: "#192328", selectedBorder: "#e6c979", rule: "#b8ad8a", connector: "#c39c55",
+    silhouette: "#a69a76", badge: "#78643b", badgeText: "#fff1cc", pageLabel: "#dfd2aa",
+    pageIndex: "#1c2528", selectedPageIndex: "#383323", pageIndexBorder: "#716744", selectedPageBorder: "#be994d"
+  })
+});
+
 const elements = Object.fromEntries([
   "treeSource", "personSelect", "branchSelect", "personLabel", "branchLabel", "directionSelect", "directionLabel",
-  "depthRange", "depthValue", "includePhotos", "includeDates", "includeTitle", "treeTitle", "paperSize", "orientation",
+  "depthRange", "depthValue", "includePhotos", "includeDates", "includeTitle", "includeQr", "treeTitle", "paperSize", "orientation",
   "autoFormat", "recommendedFormat", "recommendationReason", "applyRecommendation", "paperPreview", "paperStage",
   "previousPage", "nextPage", "pageCounter", "fitPreview", "zoomOut", "zoomValue", "zoomIn", "pageGrid", "tileCount", "tileHint", "personCount",
-  "generationCount", "sheetCount", "scopeSummary", "exportStatus", "downloadSvg", "printPdf", "printPages", "privacyCopy"
+  "generationCount", "sheetCount", "scopeSummary", "exportStatus", "downloadSvg", "downloadWorkspaceSvg", "downloadTreeJson", "printPdf", "printPages", "privacyCopy", "undoDraft", "redoDraft", "resetDraft"
 ].map(id => [id, document.getElementById(id)]));
 
 const printHandoffKey = "waydean.print-handoff.v1";
@@ -53,9 +92,242 @@ const state = {
   currentSvg: "",
   personEdits: new Map(),
   placementEdits: new Map(),
-  source: initialSource
+  undoStack: [],
+  redoStack: [],
+  lastDraftSnapshot: null,
+  historyGroup: null,
+  lastHistoryGroup: null,
+  lastHistoryAt: 0,
+  draftTouched: false,
+  source: initialSource,
+  designTheme: "heritage",
+  cardStyle: "glass"
 };
 let requestedRouteFallback = false;
+let restoredDraft = false;
+let draftStorageUnavailable = false;
+
+function getDraftStorageKey(source = state.source) {
+  return "waydean.print-draft.v1:" + source.id;
+}
+
+function getPrintTheme() {
+  return PRINT_THEMES[state.designTheme] ?? PRINT_THEMES.heritage;
+}
+
+function syncPrintThemeButtons() {
+  document.querySelectorAll("[data-print-theme]").forEach(button => {
+    const active = button.dataset.printTheme === state.designTheme;
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function syncPrintCardStyleButtons() {
+  document.querySelectorAll("[data-print-card-style]").forEach(button => {
+    const active = button.dataset.printCardStyle === state.cardStyle;
+    button.setAttribute("aria-pressed", String(active));
+  });
+}
+
+function readPrintDraft(source = state.source) {
+  try {
+    const raw = window.localStorage.getItem(getDraftStorageKey(source));
+    const draft = raw ? JSON.parse(raw) : null;
+    return draft?.version === 1 && draft.sourceId === source.id ? draft : null;
+  } catch {
+    draftStorageUnavailable = true;
+    return null;
+  }
+}
+
+function restorePrintDraft(draft) {
+  if (!draft) return false;
+  const validIds = new Set(state.source.people.map(person => person.id));
+  const personEdits = Object.entries(draft.personEdits ?? {}).flatMap(([id, edit]) => {
+    if (!validIds.has(id) || !edit || typeof edit !== "object") return [];
+    const restoredEdit = {
+      name: String(edit.name ?? "").slice(0, 120),
+      born: String(edit.born ?? "").slice(0, 12),
+      died: String(edit.died ?? "").slice(0, 12)
+    };
+    if (Object.hasOwn(edit, "teip")) restoredEdit.teip = String(edit.teip ?? "").slice(0, 80);
+    return [[id, restoredEdit]];
+  });
+  const placementEdits = Object.entries(draft.placementEdits ?? {}).flatMap(([id, position]) => {
+    if (!validIds.has(id) || !position || !Number.isFinite(position.workspaceXmm) || !Number.isFinite(position.workspaceYmm)) return [];
+    return [[id, { workspaceXmm: position.workspaceXmm, workspaceYmm: position.workspaceYmm }]];
+  });
+  state.personEdits = new Map(personEdits);
+  state.placementEdits = new Map(placementEdits);
+  state.draftTouched = true;
+
+  const settings = draft.settings ?? {};
+  if (["person", "branch", "all"].includes(settings.scopeType)) state.scopeType = settings.scopeType;
+  if ([...elements.personSelect.options].some(option => option.value === settings.personId)) elements.personSelect.value = settings.personId;
+  if ([...elements.branchSelect.options].some(option => option.value === settings.branchId)) elements.branchSelect.value = settings.branchId;
+  if (["descendants", "ancestors", "both"].includes(settings.direction)) elements.directionSelect.value = settings.direction;
+  if (Number.isFinite(settings.depth)) elements.depthRange.value = String(clamp(Math.floor(settings.depth), 1, Number(elements.depthRange.max)));
+  elements.depthValue.textContent = elements.depthRange.value;
+  if (typeof settings.includePhotos === "boolean") elements.includePhotos.checked = settings.includePhotos;
+  if (typeof settings.includeDates === "boolean") elements.includeDates.checked = settings.includeDates;
+  if (typeof settings.includeTitle === "boolean") elements.includeTitle.checked = settings.includeTitle;
+  if (typeof settings.includeQr === "boolean") elements.includeQr.checked = settings.includeQr;
+  if (typeof settings.treeTitle === "string") elements.treeTitle.value = settings.treeTitle.slice(0, 60);
+  if (["A4", "A3", "A2", "A1", "A0"].includes(settings.paperSize)) elements.paperSize.value = settings.paperSize;
+  if (["portrait", "landscape"].includes(settings.orientation)) elements.orientation.value = settings.orientation;
+  if (typeof settings.autoFormat === "boolean") elements.autoFormat.checked = settings.autoFormat;
+  if (Object.hasOwn(PRINT_THEMES, settings.designTheme)) state.designTheme = settings.designTheme;
+  if (Object.hasOwn(PRINT_CARD_STYLES, settings.cardStyle)) state.cardStyle = settings.cardStyle;
+  if (Number.isFinite(settings.pageNumber)) state.pageNumber = Math.max(1, Math.floor(settings.pageNumber));
+  syncPrintThemeButtons();
+  syncPrintCardStyleButtons();
+  return true;
+}
+
+function savePrintDraft() {
+  if (!state.source || !elements.treeTitle || !state.draftTouched) return;
+  const draft = {
+    version: 1,
+    sourceId: state.source.id,
+    personEdits: Object.fromEntries(state.personEdits),
+    placementEdits: Object.fromEntries(state.placementEdits),
+    settings: {
+      scopeType: state.scopeType,
+      personId: elements.personSelect.value,
+      branchId: elements.branchSelect.value,
+      direction: elements.directionSelect.value,
+      depth: Number(elements.depthRange.value),
+      includePhotos: elements.includePhotos.checked,
+      includeDates: elements.includeDates.checked,
+      includeTitle: elements.includeTitle.checked,
+      includeQr: elements.includeQr.checked,
+      treeTitle: elements.treeTitle.value,
+      paperSize: elements.paperSize.value,
+      orientation: elements.orientation.value,
+      autoFormat: elements.autoFormat.checked,
+      designTheme: state.designTheme,
+      cardStyle: state.cardStyle,
+      pageNumber: state.pageNumber
+    }
+  };
+  try {
+    window.localStorage.setItem(getDraftStorageKey(), JSON.stringify(draft));
+    draftStorageUnavailable = false;
+  } catch {
+    draftStorageUnavailable = true;
+  }
+  updateDraftCopy();
+}
+
+function createPrintDraftSnapshot() {
+  const sortEntries = entries => Object.fromEntries([...entries].sort(([left], [right]) => left.localeCompare(right)));
+  return JSON.stringify({
+    personEdits: sortEntries(state.personEdits),
+    placementEdits: sortEntries(state.placementEdits),
+    settings: {
+      scopeType: state.scopeType,
+      personId: elements.personSelect.value,
+      branchId: elements.branchSelect.value,
+      direction: elements.directionSelect.value,
+      depth: Number(elements.depthRange.value),
+      includePhotos: elements.includePhotos.checked,
+      includeDates: elements.includeDates.checked,
+      includeTitle: elements.includeTitle.checked,
+      includeQr: elements.includeQr.checked,
+      treeTitle: elements.treeTitle.value,
+      paperSize: elements.paperSize.value,
+      orientation: elements.orientation.value,
+      autoFormat: elements.autoFormat.checked,
+      designTheme: state.designTheme,
+      cardStyle: state.cardStyle,
+      pageNumber: state.pageNumber
+    }
+  });
+}
+
+function syncDraftHistoryControls() {
+  elements.undoDraft.disabled = state.undoStack.length === 0;
+  elements.redoDraft.disabled = state.redoStack.length === 0;
+}
+
+function trackDraftHistory() {
+  const snapshot = createPrintDraftSnapshot();
+  if (state.lastDraftSnapshot === null) {
+    state.lastDraftSnapshot = snapshot;
+    state.historyGroup = null;
+    syncDraftHistoryControls();
+    return;
+  }
+  if (!state.draftTouched) {
+    state.lastDraftSnapshot = snapshot;
+    state.historyGroup = null;
+    syncDraftHistoryControls();
+    return;
+  }
+  if (snapshot !== state.lastDraftSnapshot) {
+    const now = Date.now();
+    const coalesce = state.historyGroup && state.historyGroup === state.lastHistoryGroup && now - state.lastHistoryAt < 700;
+    if (!coalesce) {
+      state.undoStack.push(state.lastDraftSnapshot);
+      if (state.undoStack.length > 40) state.undoStack.shift();
+    }
+    state.redoStack.length = 0;
+    state.lastHistoryGroup = state.historyGroup;
+    state.lastHistoryAt = now;
+    state.lastDraftSnapshot = snapshot;
+  }
+  state.historyGroup = null;
+  syncDraftHistoryControls();
+}
+
+function clearDraftHistory() {
+  state.undoStack.length = 0;
+  state.redoStack.length = 0;
+  state.lastDraftSnapshot = null;
+  state.historyGroup = null;
+  state.lastHistoryGroup = null;
+  state.lastHistoryAt = 0;
+  syncDraftHistoryControls();
+}
+
+function applyDraftHistory(targetStack, oppositeStack, statusMessage) {
+  const snapshot = targetStack.pop();
+  if (!snapshot) return;
+  const current = createPrintDraftSnapshot();
+  if (snapshot === current) {
+    syncDraftHistoryControls();
+    return;
+  }
+  oppositeStack.push(current);
+  if (oppositeStack.length > 40) oppositeStack.shift();
+  state.lastDraftSnapshot = snapshot;
+  state.historyGroup = null;
+  state.lastHistoryGroup = null;
+  state.draftTouched = true;
+  restorePrintDraft({ version: 1, sourceId: state.source.id, ...JSON.parse(snapshot) });
+  syncScopeControls();
+  update();
+  setStatus(statusMessage, "success");
+}
+
+function undoPrintDraft() {
+  applyDraftHistory(state.undoStack, state.redoStack, "Предыдущее действие отменено.");
+}
+
+function redoPrintDraft() {
+  applyDraftHistory(state.redoStack, state.undoStack, "Действие повторено.");
+}
+
+function markDraftChanged(historyGroup = null) {
+  state.draftTouched = true;
+  state.historyGroup = historyGroup;
+}
+
+function updateDraftCopy() {
+  elements.privacyCopy.textContent = draftStorageUnavailable
+    ? "Черновик доступен только в этой вкладке: браузер не разрешил локальное сохранение. Исходное древо не меняется."
+    : "После первого изменения черновик автоматически сохраняется локально для этого адреса. Исходное древо и его фото не меняются.";
+}
 
 function escapeXml(value) {
   return String(value ?? "").replace(/[&<>"']/g, character => ({
@@ -63,23 +335,70 @@ function escapeXml(value) {
   })[character]);
 }
 
-function wrapWords(value, maxCharacters) {
-  const words = String(value ?? "").trim().split(/\s+/).filter(Boolean);
-  const lines = [];
-  let current = "";
-  for (const word of words) {
-    if (word.length > maxCharacters) {
-      if (current) lines.push(current);
-      current = "";
-      for (let offset = 0; offset < word.length; offset += maxCharacters) lines.push(word.slice(offset, offset + maxCharacters));
-      continue;
+let printNameMeasureContext;
+function measurePrintNameWidth(value) {
+  printNameMeasureContext ??= document.createElement("canvas").getContext("2d");
+  if (!printNameMeasureContext) return NaN;
+  printNameMeasureContext.font = '600 4.65px "Palatino Linotype", Georgia, serif';
+  return printNameMeasureContext.measureText(value).width;
+}
+
+function renderSheetBackground(theme, width, height, suffix, viewport = {}) {
+  const id = ("waydean-print-" + theme.key + "-" + suffix).replace(/[^a-z0-9_-]/gi, "-");
+  const boardWidth = viewport.boardWidth ?? width;
+  const boardHeight = viewport.boardHeight ?? height;
+  const offsetX = viewport.offsetX ?? 0;
+  const offsetY = viewport.offsetY ?? 0;
+  return '<defs><clipPath id="' + id + '-clip"><rect width="' + width + '" height="' + height + '"/></clipPath></defs>' +
+    '<g clip-path="url(#' + id + '-clip)"><image href="' + theme.backgroundAsset + '" x="' + (-offsetX) + '" y="' + (-offsetY) + '" width="' + boardWidth + '" height="' + boardHeight + '" preserveAspectRatio="xMidYMid slice"/>' +
+    '<rect width="' + width + '" height="' + height + '" fill="' + theme.overlay + '" opacity="' + theme.overlayOpacity + '"/></g>';
+}
+
+function renderSheetArtwork(theme, width, height, suffix, viewport = {}) {
+  return renderSheetBackground(theme, width, height, suffix, viewport) +
+    '<rect x="5" y="5" width="' + (width - 10) + '" height="' + (height - 10) + '" fill="none" stroke="' + theme.frame + '" stroke-width=".35"/>' +
+    '<rect x="7.3" y="7.3" width="' + (width - 14.6) + '" height="' + (height - 14.6) + '" fill="none" stroke="' + theme.innerFrame + '" stroke-width=".22"/>';
+}
+
+function renderTreeQr(x, y, size, theme) {
+  const modules = treeQrCode.getModuleCount();
+  const quietZone = 4;
+  const moduleScale = size / (modules + quietZone * 2);
+  const path = [];
+  for (let row = 0; row < modules; row += 1) {
+    for (let column = 0; column < modules; column += 1) {
+      if (treeQrCode.isDark(row, column)) path.push('M' + column + ' ' + row + 'h1v1h-1z');
     }
-    if (!current) current = word;
-    else if ((current + " " + word).length <= maxCharacters) current += " " + word;
-    else { lines.push(current); current = word; }
   }
-  if (current) lines.push(current);
-  return lines.length ? lines : [""];
+  return '<g class="tree-qr" transform="translate(' + x + ' ' + y + ')" pointer-events="none"><title>Открыть семейное дерево на waydean.ru. Потребуется пароль семьи.</title>' +
+    '<rect width="' + size + '" height="' + size + '" rx="1.1" fill="#f4eedf" stroke="' + theme.frame + '" stroke-width=".38"/>' +
+    '<g transform="translate(' + (quietZone * moduleScale) + ' ' + (quietZone * moduleScale) + ') scale(' + moduleScale + ')"><path d="' + path.join("") + '" fill="#111817" shape-rendering="crispEdges"/></g>' +
+    '<text x="' + (size / 2) + '" y="' + (size + 2.1) + '" text-anchor="middle" fill="' + theme.eyebrow + '" font-family="Arial,sans-serif" font-size="1.35" font-weight="700" letter-spacing=".08em">ОТКРЫТЬ ДРЕВО</text>' +
+    '<text x="' + (size / 2) + '" y="' + (size + 3.75) + '" text-anchor="middle" fill="' + theme.subtitle + '" font-family="Arial,sans-serif" font-size="1.05" letter-spacing=".04em">WAYDEAN.RU/DREWO</text></g>';
+}
+
+function renderPosterMasthead(layout, theme, page = null) {
+  const boardWidthMm = layout.pageWidthMm * layout.pageCountX;
+  const title = elements.includeTitle.checked ? elements.treeTitle.value.trim() : "СЕМЕЙНОЕ ДРЕВО";
+  const subtitle = state.scopeType === "all"
+    ? "ПОЛНАЯ ЛИНИЯ · " + layout.personCount + " ЧЕЛОВЕК · " + layout.generationCount + " ПОКОЛЕНИЙ"
+    : String(layout.personCount) + " ЧЕЛОВЕК · " + layout.generationCount + " ПОКОЛЕНИЙ";
+  const mastheadLayout = getPosterMastheadLayout(layout, { title, subtitle });
+  const { titleSize, eyebrowSize, subtitleSize, centerX, dividerHalfWidthMm } = mastheadLayout;
+  const qrBelongsOnPage = !page || (page.pageX === layout.pageCountX - 1 && page.pageY === 0);
+  const qr = elements.includeQr.checked && qrBelongsOnPage ? renderTreeQr(boardWidthMm - 31.5, 3.4, 24, theme) : "";
+  const masthead = '<g class="poster-masthead" pointer-events="none">' +
+    '<text x="' + centerX + '" y="10.5" text-anchor="middle" fill="' + theme.eyebrow + '" font-family="Arial,sans-serif" font-size="' + eyebrowSize + '" font-weight="600" letter-spacing=".22em">WAYDEAN · СЕМЕЙНОЕ ДРЕВО</text>' +
+    '<text x="' + centerX + '" y="23" text-anchor="middle" fill="' + theme.title + '" font-family="Georgia,serif" font-size="' + titleSize + '" font-weight="500">' + escapeXml(title) + '</text>' +
+    '<text x="' + centerX + '" y="30.5" text-anchor="middle" fill="' + theme.subtitle + '" font-family="Arial,sans-serif" font-size="' + subtitleSize + '" letter-spacing=".14em">' + escapeXml(subtitle) + '</text>' +
+    '<path d="M ' + (centerX - dividerHalfWidthMm) + ' 34.3 H ' + (centerX + dividerHalfWidthMm) + '" stroke="' + theme.frame + '" stroke-width=".45"/>' +
+    '</g>' + qr;
+  if (!page) return masthead;
+  const offsetX = page.pageX * layout.pageWidthMm;
+  const offsetY = page.pageY * layout.pageHeightMm;
+  const clipId = 'poster-header-page-' + page.pageNumber;
+  return '<defs><clipPath id="' + clipId + '"><rect width="' + layout.pageWidthMm + '" height="' + layout.pageHeightMm + '"/></clipPath></defs>' +
+    '<g clip-path="url(#' + clipId + ')"><g transform="translate(' + -offsetX + ' ' + -offsetY + ')">' + masthead + '</g></g>';
 }
 
 function formatYears(person) {
@@ -187,6 +506,13 @@ function renderSvg(layout, pageNumber, options = {}) {
   const selectedId = getSelectedId(state.currentPeople);
   const width = layout.pageWidthMm;
   const height = layout.pageHeightMm;
+  const theme = getPrintTheme();
+  const artwork = options.workspace ? "" : renderSheetArtwork(theme, width, height, (options.thumbnail ? "thumbnail-" : "page-") + pageNumber, {
+    boardWidth: layout.pageWidthMm * layout.pageCountX,
+    boardHeight: layout.pageHeightMm * layout.pageCountY,
+    offsetX: page.pageX * width,
+    offsetY: page.pageY * height
+  });
   const title = elements.includeTitle.checked ? elements.treeTitle.value.trim() : "";
   const nameLines = [];
   const relationLines = [];
@@ -198,8 +524,7 @@ function renderSvg(layout, pageNumber, options = {}) {
       const startY = parent.yMm + parent.heightMm;
       const endX = placement.xMm + placement.widthMm / 2;
       const endY = placement.yMm;
-      const bendY = (startY + endY) / 2;
-      relationLines.push('<path d="M ' + startX + ' ' + startY + ' C ' + startX + ' ' + bendY + ', ' + endX + ' ' + bendY + ', ' + endX + ' ' + endY + '" fill="none" stroke="#9c8355" stroke-width="0.38"/>');
+      relationLines.push('<path d="' + getConnectorPath(startX, startY, endX, endY) + '" fill="none" stroke="' + theme.connector + '" stroke-width="0.38" stroke-linecap="square" stroke-linejoin="round"/>');
     }
   }
 
@@ -209,69 +534,98 @@ function renderSvg(layout, pageNumber, options = {}) {
     const y = placement.yMm;
     const w = placement.widthMm;
     const h = placement.heightMm;
-    const selected = person.id === selectedId;
-    const lines = wrapWords(person.name, 17);
+    const selected = Boolean(options.interactive) && person.id === selectedId;
+    const fullName = String(person.name ?? "").trim() || "Без имени";
     const years = elements.includeDates.checked ? formatYears(person) : "";
+    const teip = String(person.teip ?? "").trim();
+    const widthLayout = getPersonCardLayout({ x, y, width: w, height: h, hasDates: Boolean(years), hasTeip: Boolean(teip) });
+    const maxNameCharacters = Math.max(7, Math.min(12, Math.floor(widthLayout.textLimit / 2.5)));
+    const lines = wrapPersonName(fullName, maxNameCharacters);
+    if (lines.length > 2) {
+      lines.splice(2);
+      lines[1] = lines[1].replace(/[.…]*$/, "") + "…";
+    }
+    const teipLabel = teip ? "Тейп: " + teip : "";
+    const shortTeipLabel = teipLabel.length > 23 ? teipLabel.slice(0, 22) + "…" : teipLabel;
+    const card = getPersonCardLayout({ x, y, width: w, height: h, nameLines: lines.length, hasDates: Boolean(years), hasTeip: Boolean(teip) });
     const pages = [...(crossNotes.get(person.id) ?? [])];
-    const isPhotoAvailable = Boolean(person.photoUrl && elements.includePhotos?.checked);
+    const isPhotoAvailable = !options.thumbnail && Boolean(person.photoUrl && elements.includePhotos?.checked);
+    const portraitX = card.portraitX;
+    const portraitY = card.portraitY;
+    const portraitDiameter = card.portraitRadius * 2;
+    const portraitClipId = "print-portrait-" + Array.from(String(person.id), character => character.codePointAt(0).toString(16)).join("-");
     const avatar = isPhotoAvailable
-      ? '<image href="' + escapeXml(person.photoUrl) + '" x="' + (x + w / 2 - 4) + '" y="' + (y + 5) + '" width="8" height="9" preserveAspectRatio="xMidYMid slice"/>'
-      : '<circle cx="' + (x + w / 2) + '" cy="' + (y + 10) + '" r="2.8" fill="#b3a88e"/><path d="M ' + (x + w / 2 - 5.4) + ' ' + (y + 19) + ' C ' + (x + w / 2 - 5.2) + ' ' + (y + 15.7) + ', ' + (x + w / 2 - 2.5) + ' ' + (y + 14.5) + ', ' + (x + w / 2) + ' ' + (y + 14.5) + ' C ' + (x + w / 2 + 2.5) + ' ' + (y + 14.5) + ', ' + (x + w / 2 + 5.2) + ' ' + (y + 15.7) + ', ' + (x + w / 2 + 5.4) + ' ' + (y + 19) + ' Z" fill="#b3a88e"/>';
-    const nameMarkup = lines.map((line, index) => '<tspan x="' + (x + w / 2) + '" dy="' + (index === 0 ? 0 : 3.25) + '">' + escapeXml(line) + '</tspan>').join("");
+      ? '<defs><clipPath id="' + portraitClipId + '"><circle cx="' + portraitX + '" cy="' + portraitY + '" r="' + card.portraitRadius + '"/></clipPath></defs>' +
+        '<circle cx="' + portraitX + '" cy="' + portraitY + '" r="' + card.portraitRingRadius + '" fill="' + theme.portraitBg + '" stroke="' + theme.portraitBorder + '" stroke-width=".28"/>' +
+        '<image href="' + escapeXml(person.photoUrl) + '" x="' + (portraitX - card.portraitRadius) + '" y="' + (portraitY - card.portraitRadius) + '" width="' + portraitDiameter + '" height="' + portraitDiameter + '" preserveAspectRatio="xMidYMid slice" clip-path="url(#' + portraitClipId + ')"/>' +
+        '<circle cx="' + portraitX + '" cy="' + portraitY + '" r="' + card.portraitRadius + '" fill="none" stroke="' + theme.cardInner + '" stroke-width=".3"/>'
+      : '<circle cx="' + portraitX + '" cy="' + portraitY + '" r="' + card.portraitRingRadius + '" fill="' + theme.portraitBg + '" stroke="' + theme.portraitBorder + '" stroke-width=".28"/>' +
+        '<circle cx="' + portraitX + '" cy="' + portraitY + '" r="' + card.portraitRadius + '" fill="' + theme.portraitBg + '"/>' +
+        '<circle cx="' + portraitX + '" cy="' + (portraitY - 1.7 * card.scale) + '" r="' + (1.55 * card.scale) + '" fill="' + theme.silhouette + '"/>' +
+        '<path d="M ' + (portraitX - 3.45 * card.scale) + ' ' + (portraitY + 3.45 * card.scale) + ' C ' + (portraitX - 3.35 * card.scale) + ' ' + (portraitY + 1.15 * card.scale) + ', ' + (portraitX - 1.8 * card.scale) + ' ' + (portraitY + .1 * card.scale) + ', ' + portraitX + ' ' + (portraitY + .1 * card.scale) + ' C ' + (portraitX + 1.8 * card.scale) + ' ' + (portraitY + .1 * card.scale) + ', ' + (portraitX + 3.35 * card.scale) + ' ' + (portraitY + 1.15 * card.scale) + ', ' + (portraitX + 3.45 * card.scale) + ' ' + (portraitY + 3.45 * card.scale) + ' Z" fill="' + theme.silhouette + '"/>';
+    const nameMarkup = lines.map((line, index) => {
+      const textLength = getNameTextLength(measurePrintNameWidth(line), card.textLimit);
+      const fitAttributes = textLength ? ' textLength="' + textLength + '" lengthAdjust="spacingAndGlyphs"' : '';
+      return '<tspan x="' + card.nameX + '" dy="' + (index === 0 ? 0 : card.nameLineGap) + '"' + fitAttributes + '>' + escapeXml(line) + '</tspan>';
+    }).join("");
     const pageBadges = pages.slice(0, 2).map((otherPage, index) => {
       const badgeX = x + w - 3.8 - index * 6.2;
-      return '<g><title>Родственная связь продолжается на листе ' + otherPage + '</title><circle cx="' + badgeX + '" cy="' + (y + 4) + '" r="2.7" fill="#7c6845"/><text x="' + badgeX + '" y="' + (y + 4.9) + '" text-anchor="middle" class="badge-text">' + otherPage + '</text></g>';
+      return '<g><title>Родственная связь продолжается на листе ' + otherPage + '</title><circle cx="' + badgeX + '" cy="' + (y + 4) + '" r="2.7" fill="' + theme.badge + '"/><text x="' + badgeX + '" y="' + (y + 4.9) + '" text-anchor="middle" class="badge-text">' + otherPage + '</text></g>';
     }).join("");
+    const interactionAttributes = options.interactive
+      ? ' data-person-id="' + escapeXml(person.id) + '" role="button" tabindex="0" aria-label="Редактировать: ' + escapeXml(person.name) + '"'
+      : "";
     nameLines.push(
-      '<g class="person-card" data-person-id="' + escapeXml(person.id) + '" role="button" tabindex="0" aria-label="Редактировать: ' + escapeXml(person.name) + '">' +
-      '<rect x="' + x + '" y="' + y + '" width="' + w + '" height="' + h + '" rx="1.4" fill="' + (selected ? "#e9dec8" : "#e7e0d2") + '" stroke="' + (selected ? "#a7813e" : "#9d9788") + '" stroke-width="' + (selected ? ".75" : ".35") + '"/>' +
-      '<path d="M ' + (x + 2) + ' ' + (y + 5) + ' H ' + (x + w - 2) + '" stroke="#c8b78f" stroke-width=".3"/>' +
-      '<text x="' + (x + 2.5) + '" y="' + (y + 3.8) + '" class="generation-label">ПОКОЛЕНИЕ ' + placement.generation + '</text>' +
+      '<g class="person-card"' + interactionAttributes + '><title>' + escapeXml(fullName + (years ? ' · ' + years : '') + (teipLabel ? ' · ' + teipLabel : '')) + '</title>' +
+      '<rect x="' + (x + .55) + '" y="' + (y + .75) + '" width="' + w + '" height="' + h + '" rx="1.8" fill="#000000" opacity=".18"/>' +
+      renderPersonCardFrame({ styleKey: state.cardStyle, x, y, width: w, height: h, theme, selected }) +
+      '<text x="' + card.generationX + '" y="' + card.generationY + '" text-anchor="start" class="generation-label">ПОКОЛЕНИЕ ' + placement.generation + '</text>' +
+      '<path d="M ' + card.generationX + ' ' + card.ruleY + ' H ' + (x + w - 3.2) + '" stroke="' + theme.rule + '" stroke-opacity=".62" stroke-width=".18"/>' +
       pageBadges + avatar +
-      '<text x="' + (x + w / 2) + '" y="' + (y + 23) + '" text-anchor="middle" class="person-name">' + nameMarkup + '</text>' +
-      (years ? '<text x="' + (x + w / 2) + '" y="' + (y + h - 2.5) + '" text-anchor="middle" class="person-years">' + escapeXml(years) + '</text>' : '') +
+      '<text x="' + card.nameX + '" y="' + card.nameY + '" text-anchor="' + card.nameAnchor + '" class="person-name">' + nameMarkup + '</text>' +
+      (years ? '<text x="' + card.nameX + '" y="' + card.dateY + '" text-anchor="start" class="person-years">' + escapeXml(years) + '</text>' : '') +
+      (teip ? '<text x="' + card.nameX + '" y="' + card.teipY + '" text-anchor="start" class="person-teip"><title>' + escapeXml(teipLabel) + '</title>' + escapeXml(shortTeipLabel) + '</text>' : '') +
       '</g>'
     );
   }
 
-  const titleBlock = title
-    ? '<text x="' + (width / 2) + '" y="22" text-anchor="middle" class="tree-title">' + escapeXml(title) + '</text>'
-    : '<text x="' + (width / 2) + '" y="22" text-anchor="middle" class="tree-title">СЕМЕЙНОЕ ДРЕВО</text>';
   const subtitle = state.scopeType === "all"
     ? "ПОЛНАЯ ЛИНИЯ · " + layout.personCount + " ЧЕЛОВЕК · " + layout.generationCount + " ПОКОЛЕНИЙ"
     : String(layout.personCount) + " ЧЕЛОВЕК · " + layout.generationCount + " ПОКОЛЕНИЙ";
+  const pageMasthead = options.workspace || options.posterMasthead ? "" :
+    '<g class="masthead"><text x="' + (width / 2) + '" y="13" text-anchor="middle" class="eyebrow">WAYDEAN · СЕМЕЙНОЕ ДРЕВО</text>' +
+    '<text x="' + (width / 2) + '" y="22" text-anchor="middle" class="tree-title">' + escapeXml(title || "СЕМЕЙНОЕ ДРЕВО") + '</text>' +
+    '<text x="' + (width / 2) + '" y="28" text-anchor="middle" class="paper-subtitle">' + escapeXml(subtitle) + '</text>' +
+    '<path d="M ' + (width / 2 - 15) + ' 32 H ' + (width / 2 + 15) + '" stroke="' + theme.frame + '" stroke-width=".35"/></g>';
+  const posterMasthead = options.posterMasthead ? renderPosterMasthead(layout, theme, page) : "";
+  const qrMarkup = !options.workspace && !options.thumbnail && !options.posterMasthead && options.includeQr !== false && elements.includeQr.checked
+    ? renderTreeQr(width - 31.5, 3.4, 24, theme)
+    : "";
 
   return [
     '<svg xmlns="http://www.w3.org/2000/svg" class="paper-svg" width="' + width + 'mm" height="' + height + 'mm" viewBox="0 0 ' + width + ' ' + height + '" role="img" aria-label="Печатный лист ' + pageNumber + ' из ' + layout.pageCount + '">',
     '<title>' + escapeXml(title || "Семейное древо") + ' · лист ' + pageNumber + '</title>',
-    '<style>.paper-title{font-family:Georgia,serif;fill:#35392f;letter-spacing:.08em}.eyebrow{font-family:Arial,sans-serif;fill:#85724f;letter-spacing:.18em;font-size:2.2px}.tree-title{font-family:Georgia,serif;fill:#302f29;font-size:5.5px}.paper-subtitle{font-family:Arial,sans-serif;fill:#81775f;font-size:2.4px;letter-spacing:.13em}.generation-label{font-family:Arial,sans-serif;fill:#917b50;font-size:1.7px;letter-spacing:.13em}.person-name{font-family:Georgia,serif;fill:#30342d;font-size:3.15px}.person-years{font-family:Arial,sans-serif;fill:#6b6a60;font-size:2.4px}.badge-text{font-family:Arial,sans-serif;fill:#fff3d2;font-size:2.2px}</style>',
-    '<rect width="' + width + '" height="' + height + '" fill="#f1ebdf"/>',
-    '<rect x="5" y="5" width="' + (width - 10) + '" height="' + (height - 10) + '" fill="none" stroke="#a89162" stroke-width=".35"/>',
-    '<rect x="7.3" y="7.3" width="' + (width - 14.6) + '" height="' + (height - 14.6) + '" fill="none" stroke="#c8b995" stroke-width=".22"/>',
-    '<g class="masthead"><text x="' + (width / 2) + '" y="13" text-anchor="middle" class="eyebrow">WAYDEAN · СЕМЕЙНОЕ ДРЕВО</text>',
-    titleBlock,
-    '<text x="' + (width / 2) + '" y="28" text-anchor="middle" class="paper-subtitle">' + escapeXml(subtitle) + '</text>',
-    '<path d="M ' + (width / 2 - 15) + ' 32 H ' + (width / 2 + 15) + '" stroke="#b99c61" stroke-width=".35"/>',
-    '</g><g class="tree-content"' + treeTransform + '>', relationLines.join(""), nameLines.join(""), '</g>',
-    '<text x="' + (width / 2) + '" y="' + (height - 9) + '" text-anchor="middle" class="paper-subtitle">ЛИСТ ' + pageNumber + ' ИЗ ' + layout.pageCount + ' · WAYDEAN</text>',
+    '<style>.paper-title{font-family:Georgia,serif;fill:' + theme.title + ';letter-spacing:.08em}.eyebrow{font-family:Arial,sans-serif;fill:' + theme.eyebrow + ';letter-spacing:.18em;font-size:2.2px}.tree-title{font-family:Georgia,serif;fill:' + theme.title + ';font-size:5.5px}.paper-subtitle{font-family:Arial,sans-serif;fill:' + theme.subtitle + ';font-size:2.4px;letter-spacing:.13em}.generation-label{font-family:Arial,sans-serif;fill:' + theme.generation + ';font-size:1.8px;font-weight:700;letter-spacing:.16em}.person-name{font-family:\'Palatino Linotype\',Georgia,serif;fill:' + theme.name + ';font-size:4.65px;font-weight:600}.person-years{font-family:Arial,sans-serif;fill:' + theme.years + ';font-size:2.65px;font-weight:600;letter-spacing:.08em}.person-teip{font-family:Arial,sans-serif;fill:' + theme.years + ';font-size:2.15px;font-weight:500;letter-spacing:.035em}.badge-text{font-family:Arial,sans-serif;fill:' + theme.badgeText + ';font-size:2.2px}</style>',
+    artwork,
+    pageMasthead, posterMasthead, qrMarkup,
+    '<g class="tree-content"' + treeTransform + '>', relationLines.join(""), nameLines.join(""), '</g>',
+    options.workspace ? "" : '<text x="' + (width / 2) + '" y="' + (height - 9) + '" text-anchor="middle" class="paper-subtitle">ЛИСТ ' + pageNumber + ' ИЗ ' + layout.pageCount + ' · WAYDEAN</text>',
     '</svg>'
   ].join("");
 }
 
-function renderWorkspaceSvg(layout) {
+function renderWorkspaceSvg(layout, { interactive = true } = {}) {
   const boardWidthMm = layout.pageWidthMm * layout.pageCountX;
   const boardHeightMm = layout.pageHeightMm * layout.pageCountY;
+  const theme = getPrintTheme();
   const placementById = new Map(layout.placements.map(item => [item.person.id, item]));
+  const background = renderSheetBackground(theme, boardWidthMm, boardHeightMm, "board-background");
   const surfaces = layout.pages.map(page => {
     const x = page.pageX * layout.pageWidthMm;
     const y = page.pageY * layout.pageHeightMm;
-    const active = page.pageNumber === state.pageNumber;
-    return '<g class="workspace-sheet-surface" transform="translate(' + x + ' ' + y + ')" pointer-events="none">' +
-      '<rect width="' + layout.pageWidthMm + '" height="' + layout.pageHeightMm + '" fill="#f1ebdf" stroke="#7d7056" stroke-width="1.1"/>' +
-      '<rect x="5" y="5" width="' + (layout.pageWidthMm - 10) + '" height="' + (layout.pageHeightMm - 10) + '" fill="none" stroke="#a89162" stroke-width=".35"/>' +
-      '<rect x="7.3" y="7.3" width="' + (layout.pageWidthMm - 14.6) + '" height="' + (layout.pageHeightMm - 14.6) + '" fill="none" stroke="#c8b995" stroke-width=".22"/>' +
-      '<text x="' + (layout.pageWidthMm - 12) + '" y="13" text-anchor="end" class="workspace-page-label">ЛИСТ ' + page.pageNumber + '</text>' +
-      '<rect class="workspace-page-outline" x=".6" y=".6" width="' + (layout.pageWidthMm - 1.2) + '" height="' + (layout.pageHeightMm - 1.2) + '"' + (active ? ' style="stroke:#be994d;stroke-width:1.7"' : '') + '/>' +
+    const active = interactive && page.pageNumber === state.pageNumber;
+    return '<g class="workspace-sheet-surface' + (active ? ' is-active' : '') + '" transform="translate(' + x + ' ' + y + ')" pointer-events="none">' +
+      '<rect width="' + layout.pageWidthMm + '" height="' + layout.pageHeightMm + '" fill="none" stroke="' + theme.frame + '" stroke-width="1.1"/>' +
       '</g>';
   }).join("");
   const crossPageLinks = layout.placements.map(placement => {
@@ -283,19 +637,32 @@ function renderWorkspaceSvg(layout) {
     const startY = parentPoint.y + parent.heightMm;
     const endX = childPoint.x + placement.widthMm / 2;
     const endY = childPoint.y;
-    const bendY = (startY + endY) / 2;
-    return '<path class="workspace-cross-link" d="M ' + startX + ' ' + startY + ' C ' + startX + ' ' + bendY + ', ' + endX + ' ' + bendY + ', ' + endX + ' ' + endY + '"/>';
+    return '<path class="workspace-cross-link" d="' + getConnectorPath(startX, startY, endX, endY) + '"/>';
   }).join("");
   const pageContent = layout.pages.map(page => {
-    const pageSvg = renderSvg(layout, page.pageNumber, { workspace: true });
+    const pageSvg = renderSvg(layout, page.pageNumber, { workspace: true, interactive });
     const pageBody = pageSvg.replace(/^<svg\b[^>]*>/, "").replace(/<\/svg>$/, "");
-    return '<g class="workspace-page' + (page.pageNumber === state.pageNumber ? ' is-active' : '') + '" data-page-number="' + page.pageNumber + '" transform="translate(' + (page.pageX * layout.pageWidthMm) + ' ' + (page.pageY * layout.pageHeightMm) + ')">' +
-      '<rect class="workspace-hit-area" width="' + layout.pageWidthMm + '" height="' + layout.pageHeightMm + '" fill="transparent"/>' + pageBody + '</g>';
+    const pageAttributes = interactive ? ' is-active" data-page-number="' + page.pageNumber : '"';
+    const hitArea = interactive
+      ? '<rect class="workspace-hit-area" width="' + layout.pageWidthMm + '" height="' + layout.pageHeightMm + '" fill="transparent"/>'
+      : "";
+    return '<g class="workspace-page' + pageAttributes + '" transform="translate(' + (page.pageX * layout.pageWidthMm) + ' ' + (page.pageY * layout.pageHeightMm) + ')">' + hitArea + pageBody + '</g>';
+  }).join("");
+  const pageOverlays = layout.pages.map(page => {
+    const active = interactive && page.pageNumber === state.pageNumber;
+    return '<g class="workspace-sheet-overlay' + (active ? ' is-active' : '') + '" transform="translate(' + (page.pageX * layout.pageWidthMm) + ' ' + (page.pageY * layout.pageHeightMm) + ')" pointer-events="none">' +
+      '<g class="workspace-page-index' + (active ? ' is-active' : '') + '" aria-hidden="true"><rect x="7.5" y="7.5" width="31" height="8" rx="1.6"/><text x="10.5" y="13" text-anchor="start" class="workspace-page-label">ЛИСТ ' + page.pageNumber + '</text></g>' +
+      '<rect class="workspace-page-outline' + (active ? ' is-active' : '') + '" x=".6" y=".6" width="' + (layout.pageWidthMm - 1.2) + '" height="' + (layout.pageHeightMm - 1.2) + '"/>' +
+      '</g>';
   }).join("");
 
+  const interactionStyles = interactive
+    ? '.workspace-hit-area{fill:transparent;pointer-events:all}.person-card{cursor:grab;touch-action:none}.person-card:active{cursor:grabbing}'
+    : "";
+  const workspaceThemeStyles = '.workspace-page-label{font-family:Arial,sans-serif;fill:' + theme.pageLabel + ';font-size:2.7px;font-weight:600;letter-spacing:.1em}.workspace-cross-link{fill:none;stroke:' + theme.connector + ';stroke-width:.38;stroke-linecap:square;stroke-linejoin:round;opacity:.58;pointer-events:none}.workspace-page-outline{fill:none;stroke:transparent;stroke-width:1.25;pointer-events:none}.workspace-page-outline.is-active{stroke:' + theme.selectedBorder + ';stroke-width:1.7}.workspace-page-index rect{fill:' + theme.pageIndex + ';stroke:' + theme.pageIndexBorder + ';stroke-width:.35}.workspace-page-index.is-active rect{fill:' + theme.selectedPageIndex + ';stroke:' + theme.selectedPageBorder + ';stroke-width:.55}.workspace-sheet-overlay.is-active{filter:drop-shadow(0 0 1.1px rgba(190,153,77,.45))}';
   return '<svg xmlns="http://www.w3.org/2000/svg" class="paper-svg workspace-svg" width="' + boardWidthMm + 'mm" height="' + boardHeightMm + 'mm" viewBox="0 0 ' + boardWidthMm + ' ' + boardHeightMm + '" role="group" aria-label="Общее рабочее поле, ' + layout.pageCount + ' листов">' +
-    '<style>.workspace-page>rect:nth-of-type(n+2):nth-of-type(-n+4){visibility:hidden}.workspace-page-label{font-family:Arial,sans-serif;fill:#78633e;font-size:2.25px;letter-spacing:.12em}.workspace-cross-link{fill:none;stroke:#aa8d58;stroke-width:.42;stroke-dasharray:1.4 1.1;opacity:.78;pointer-events:none}.workspace-page-outline{fill:none;stroke:transparent;stroke-width:1.25;pointer-events:none}.workspace-hit-area{fill:transparent;pointer-events:all}.person-card{cursor:grab;touch-action:none}.person-card:active{cursor:grabbing}</style>' +
-    surfaces + '<g class="workspace-cross-links" aria-hidden="true">' + crossPageLinks + '</g>' + pageContent + '</svg>';
+    '<style>.workspace-page>rect:nth-of-type(n+2):nth-of-type(-n+4){visibility:hidden}' + workspaceThemeStyles + interactionStyles + '</style>' +
+    background + surfaces + '<g class="workspace-cross-links" aria-hidden="true">' + crossPageLinks + '</g>' + pageContent + renderPosterMasthead(layout, theme) + pageOverlays + '</svg>';
 }
 
 function pluralSheets(value) {
@@ -308,12 +675,14 @@ function pluralSheets(value) {
 }
 
 function renderPageGrid(layout) {
-  elements.pageGrid.innerHTML = layout.pages.map(page =>
-    '<button type="button" class="tile-button' + (page.pageNumber === state.pageNumber ? ' is-active' : '') + '" data-page="' + page.pageNumber + '" aria-label="Открыть лист ' + page.pageNumber + ' из ' + layout.pageCount + '"' + (page.pageNumber === state.pageNumber ? ' aria-current="page"' : '') + '><span>◇</span><small>' + page.pageNumber + '</small></button>'
-  ).join("");
+  elements.pageGrid.innerHTML = layout.pages.map(page => {
+    const thumbnail = renderSvg(layout, page.pageNumber, { thumbnail: true });
+    return '<button type="button" class="tile-button' + (page.pageNumber === state.pageNumber ? ' is-active' : '') + '" data-page="' + page.pageNumber + '" style="aspect-ratio:' + layout.pageWidthMm + ' / ' + layout.pageHeightMm + '" aria-label="Открыть лист ' + page.pageNumber + ' из ' + layout.pageCount + '"' + (page.pageNumber === state.pageNumber ? ' aria-current="page"' : '') + '><span class="tile-preview" aria-hidden="true">' + thumbnail + '</span><small>Лист ' + page.pageNumber + '</small></button>';
+  }).join("");
   elements.pageGrid.style.gridTemplateColumns = "repeat(" + Math.min(Math.max(layout.pageCountX, 1), 4) + ", minmax(0, 1fr))";
   elements.pageGrid.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => {
     state.pageNumber = Number(button.dataset.page);
+    markDraftChanged();
     update();
     focusWorkspacePage(state.pageNumber, true, "page");
   }));
@@ -326,7 +695,7 @@ function setStatus(message, kind = "normal") {
 
 function renderPrintable(layout) {
   elements.printPages.innerHTML = layout.pages.map(page =>
-    '<section class="print-page" style="--page-width:' + page.pageWidthMm + 'mm;--page-height:' + page.pageHeightMm + 'mm">' + renderSvg(layout, page.pageNumber) + '</section>'
+    '<section class="print-page" style="--page-width:' + page.pageWidthMm + 'mm;--page-height:' + page.pageHeightMm + 'mm">' + renderSvg(layout, page.pageNumber, { posterMasthead: true }) + '</section>'
   ).join("");
   let style = document.getElementById("printPageStyle");
   if (!style) {
@@ -349,6 +718,7 @@ function update() {
     elements.paperSize.value = recommendation.paperSize;
     elements.orientation.value = recommendation.orientation;
   }
+  trackDraftHistory();
 
   state.currentLayout = buildPrintLayout(state.currentPeople, {
     ...layoutOptions,
@@ -380,6 +750,7 @@ function update() {
     elements.printPages.innerHTML = "";
     elements.paperPreview.style.width = "";
     elements.paperPreview.style.height = "";
+    savePrintDraft();
     return;
   }
 
@@ -399,7 +770,7 @@ function update() {
   elements.pageCounter.textContent = "Лист " + state.pageNumber + " из " + layout.pageCount;
   elements.tileCount.textContent = layout.pageCount + " " + pluralSheets(layout.pageCount);
   elements.tileHint.textContent = layout.pageCount > 1
-    ? "Все листы связаны на общем поле. Активный лист открыт крупно; кнопка обзора покажет раскладку целиком."
+    ? "Все листы связаны на одном полотне. Нажми «Вписать полотно», чтобы увидеть общую раскладку."
     : "Макет целиком помещается на один лист.";
   elements.personCount.textContent = String(layout.personCount);
   elements.generationCount.textContent = String(layout.generationCount);
@@ -411,43 +782,42 @@ function update() {
   updateWorkspaceViewControl();
   renderPrintable(layout);
   setStatus("Макет обновлён. Выбери SVG или PDF, чтобы сохранить его.");
+  savePrintDraft();
 }
 
 const CSS_PIXELS_PER_MM = 96 / 25.4;
 
 function setWorkspaceDimensions() {
   if (!state.currentLayout || !state.workspaceZoom) return;
+  state.workspaceZoom = clampWorkspaceZoom(state.workspaceZoom);
   const widthMm = state.currentLayout.pageWidthMm * state.currentLayout.pageCountX;
   const heightMm = state.currentLayout.pageHeightMm * state.currentLayout.pageCountY;
   elements.paperPreview.style.width = Math.max(1, widthMm * CSS_PIXELS_PER_MM * state.workspaceZoom) + "px";
   elements.paperPreview.style.height = Math.max(1, heightMm * CSS_PIXELS_PER_MM * state.workspaceZoom) + "px";
-  elements.zoomValue.textContent = Math.round(state.workspaceZoom * 100) + "%";
+  const percent = state.workspaceZoom * 100;
+  elements.zoomValue.textContent = (percent < 1 ? percent.toFixed(1) : Math.round(percent)) + "%";
 }
 
 function updateWorkspaceViewControl() {
-  const showingAllPages = state.workspaceZoomMode === "fit";
-  elements.fitPreview.textContent = showingAllPages ? "Лист" : "Все листы";
-  elements.fitPreview.title = showingAllPages ? "Приблизить активный лист" : "Показать все листы целиком";
-  if (state.currentLayout?.pageCount > 1) {
-    elements.tileHint.textContent = showingAllPages
-      ? "Общий обзор всех листов. Нажми «Лист», чтобы вернуться к активному листу крупно."
-      : "Все листы связаны на общем поле. Кнопка «Все листы» покажет общую раскладку.";
-  }
+  elements.fitPreview.textContent = "Вписать полотно";
+  elements.fitPreview.title = "Вписать все печатные листы в рабочее поле";
 }
 
-function setWorkspaceZoom(nextZoom, clientX, clientY, mode = "manual") {
+function applyWorkspaceZoom(nextZoom, clientX, clientY, mode = "manual") {
   if (!state.currentLayout) return;
   const stage = elements.paperStage;
   const previousZoom = state.workspaceZoom;
+  const modeChanged = state.workspaceZoomMode !== mode;
+  state.workspaceZoom = clampWorkspaceZoom(nextZoom);
+  state.workspaceZoomMode = mode;
+  if (modeChanged) updateWorkspaceViewControl();
+  if (Math.abs(state.workspaceZoom - previousZoom) < 0.00001) return;
   const stageRect = stage.getBoundingClientRect();
   const anchorX = clientX ?? (stageRect.left + stage.clientWidth / 2);
   const anchorY = clientY ?? (stageRect.top + stage.clientHeight / 2);
   const paperRect = elements.paperPreview.getBoundingClientRect();
   const paperOffsetX = anchorX - paperRect.left;
   const paperOffsetY = anchorY - paperRect.top;
-  state.workspaceZoom = clamp(nextZoom, 0.01, 3.5);
-  state.workspaceZoomMode = mode;
-  updateWorkspaceViewControl();
   setWorkspaceDimensions();
   if (previousZoom > 0) {
     const ratio = state.workspaceZoom / previousZoom;
@@ -456,15 +826,51 @@ function setWorkspaceZoom(nextZoom, clientX, clientY, mode = "manual") {
   }
 }
 
+let workspaceZoomFrame = 0;
+let pendingWorkspaceZoomLog = 0;
+let pendingWorkspaceZoomAnchor = null;
+
+function clearQueuedWorkspaceZoom() {
+  if (workspaceZoomFrame) cancelAnimationFrame(workspaceZoomFrame);
+  workspaceZoomFrame = 0;
+  pendingWorkspaceZoomLog = 0;
+  pendingWorkspaceZoomAnchor = null;
+}
+
+function setWorkspaceZoom(nextZoom, clientX, clientY, mode = "manual") {
+  clearQueuedWorkspaceZoom();
+  applyWorkspaceZoom(nextZoom, clientX, clientY, mode);
+}
+
+function queueWorkspaceZoom(factor, clientX, clientY, mode = "manual") {
+  if (!Number.isFinite(factor) || factor <= 0) return;
+  pendingWorkspaceZoomLog = clamp(pendingWorkspaceZoomLog + Math.log(factor), -Math.log(350), Math.log(350));
+  pendingWorkspaceZoomAnchor = { x: clientX, y: clientY, mode };
+  if (workspaceZoomFrame) return;
+  workspaceZoomFrame = requestAnimationFrame(() => {
+    const zoomFactor = Math.exp(pendingWorkspaceZoomLog);
+    const anchor = pendingWorkspaceZoomAnchor;
+    workspaceZoomFrame = 0;
+    pendingWorkspaceZoomLog = 0;
+    pendingWorkspaceZoomAnchor = null;
+    if (!anchor || Math.abs(zoomFactor - 1) < 0.00001) return;
+    applyWorkspaceZoom(state.workspaceZoom * zoomFactor, anchor.x, anchor.y, anchor.mode);
+  });
+}
+
 function fitWorkspace() {
   const layout = state.currentLayout;
   if (!layout?.pageCount) return;
   const stage = elements.paperStage;
-  const availableWidth = Math.max(120, stage.clientWidth - 56);
-  const availableHeight = Math.max(120, stage.clientHeight - 56);
   const boardWidthPx = layout.pageWidthMm * layout.pageCountX * CSS_PIXELS_PER_MM;
   const boardHeightPx = layout.pageHeightMm * layout.pageCountY * CSS_PIXELS_PER_MM;
-  const scale = Math.min(availableWidth / boardWidthPx, availableHeight / boardHeightPx, 1.5);
+  const scale = getViewportFitZoom({
+    stageWidth: stage.clientWidth,
+    stageHeight: stage.clientHeight,
+    contentWidth: boardWidthPx,
+    contentHeight: boardHeightPx,
+    maxZoom: 1.5
+  });
   setWorkspaceZoom(scale, undefined, undefined, "fit");
   stage.scrollLeft = 0;
   stage.scrollTop = 0;
@@ -480,13 +886,13 @@ function focusWorkspacePage(pageNumber, zoomToPage = false, zoomMode = "manual")
   if (!page) return;
   if (zoomToPage) {
     const stage = elements.paperStage;
-    const availableWidth = Math.max(120, stage.clientWidth - 56);
-    const availableHeight = Math.max(120, stage.clientHeight - 56);
-    const scale = Math.min(
-      availableWidth / (layout.pageWidthMm * CSS_PIXELS_PER_MM),
-      availableHeight / (layout.pageHeightMm * CSS_PIXELS_PER_MM),
-      1.5
-    );
+    const scale = getViewportFitZoom({
+      stageWidth: stage.clientWidth,
+      stageHeight: stage.clientHeight,
+      contentWidth: layout.pageWidthMm * CSS_PIXELS_PER_MM,
+      contentHeight: layout.pageHeightMm * CSS_PIXELS_PER_MM,
+      maxZoom: 1.5
+    });
     setWorkspaceZoom(scale, undefined, undefined, zoomMode);
   }
   const stage = elements.paperStage;
@@ -523,14 +929,13 @@ function bindCardInteractions() {
       card,
       pointerId: event.pointerId,
       personId: placement.person.id,
+      startPageNumber: placement.pageNumber,
       startClientX: event.clientX,
       startClientY: event.clientY,
       startPointX: point.x,
       startPointY: point.y,
       startX: workspacePoint.x,
       startY: workspacePoint.y,
-      originalLocalX: placement.xMm,
-      originalLocalY: placement.yMm,
       moved: false,
       nextPlacement: null
     };
@@ -552,9 +957,7 @@ function bindCardInteractions() {
       drag.startX + point.x - drag.startPointX,
       drag.startY + point.y - drag.startPointY);
     drag.nextPlacement = next;
-    const visualX = next.workspaceXmm - drag.originalLocalX;
-    const visualY = next.workspaceYmm - drag.originalLocalY;
-    drag.card.setAttribute("transform", "translate(" + visualX + " " + visualY + ")");
+    drag.card.setAttribute("transform", "translate(" + next.workspaceXmm + " " + next.workspaceYmm + ")");
   });
 
   svg.addEventListener("pointerup", event => {
@@ -562,6 +965,7 @@ function bindCardInteractions() {
     const finished = drag;
     drag = null;
     if (finished.moved && finished.nextPlacement) {
+      markDraftChanged();
       state.placementEdits.set(finished.personId, {
         workspaceXmm: finished.nextPlacement.workspaceXmm,
         workspaceYmm: finished.nextPlacement.workspaceYmm
@@ -570,6 +974,11 @@ function bindCardInteractions() {
       suppressClick = true;
       window.setTimeout(() => { suppressClick = false; }, 300);
       update();
+      if (finished.startPageNumber !== state.pageNumber && state.workspaceZoomMode !== "fit") {
+        focusWorkspacePage(state.pageNumber);
+      }
+      const movedPerson = state.currentPeople.find(person => person.id === finished.personId);
+      setStatus("Карточка «" + (movedPerson?.name || "человек") + "» перенесена на лист " + state.pageNumber + ". Правка действует только в макете.", "success");
     } else {
       suppressClick = true;
       window.setTimeout(() => { suppressClick = false; }, 300);
@@ -593,6 +1002,7 @@ function bindCardInteractions() {
     const page = event.target.closest?.(".workspace-page[data-page-number]");
     if (page) {
       state.pageNumber = Number(page.dataset.pageNumber);
+      markDraftChanged();
       update();
       focusWorkspacePage(state.pageNumber);
     }
@@ -614,22 +1024,23 @@ function openPersonEditor(personId) {
     dialog = document.createElement("dialog");
     dialog.id = "personEditor";
     dialog.className = "person-editor";
-    dialog.innerHTML = '<form method="dialog"><h2>Карточка человека</h2><label>Имя<input name="name" required maxlength="120"></label><label>Год рождения<input name="born" inputmode="numeric" maxlength="12"></label><label>Год смерти<input name="died" inputmode="numeric" maxlength="12"></label><div class="editor-actions"><button type="button" data-cancel>Отмена</button><button type="submit">Сохранить в макете</button></div></form>';
+    dialog.innerHTML = '<form method="dialog"><h2>Карточка человека</h2><label>Имя<input name="name" required maxlength="120"></label><label>Тейп<input name="teip" maxlength="80" autocomplete="off"></label><label>Год рождения<input name="born" inputmode="numeric" maxlength="12"></label><label>Год смерти<input name="died" inputmode="numeric" maxlength="12"></label><div class="editor-actions"><button type="button" data-cancel>Отмена</button><button type="submit">Сохранить в макете</button></div></form>';
     document.body.append(dialog);
     dialog.querySelector("[data-cancel]").addEventListener("click", () => dialog.close());
     dialog.addEventListener("submit", event => {
       event.preventDefault();
       const id = dialog.dataset.personId;
-      const [name, born, died] = ["name", "born", "died"].map(field => dialog.elements[field].value.trim());
+      const [name, teip, born, died] = ["name", "teip", "born", "died"].map(field => dialog.elements[field].value.trim());
       if (!name) return;
-      state.personEdits.set(id, { name, born, died });
+      markDraftChanged();
+      state.personEdits.set(id, { name, teip, born, died });
       dialog.close();
       update();
-      setStatus("Изменения сохранены только в макете этой вкладки.", "success");
+      setStatus("Изменения применены к макету и его экспорту.", "success");
     });
   }
   dialog.dataset.personId = personId;
-  for (const field of ["name", "born", "died"]) dialog.elements[field].value = person[field] ?? "";
+  for (const field of ["name", "teip", "born", "died"]) dialog.elements[field].value = person[field] ?? "";
   if (typeof dialog.showModal === "function") dialog.showModal();
 }
 
@@ -651,6 +1062,7 @@ function populateSelects() {
 
 function applyRequestedRoute() {
   if (!requestedScope) return;
+  state.scopeType = requestedScope;
 
   if (requestedScope === "person") {
     const requestedPersonId = requestedHandoff?.personId;
@@ -686,11 +1098,15 @@ function applyRequestedRoute() {
 
 function changeTreeSource(sourceId) {
   state.source = getPrintTreeSource(sourceId);
+  clearDraftHistory();
   state.personEdits.clear();
   state.placementEdits.clear();
+  state.draftTouched = false;
+  state.draftTouched = false;
   state.scopeType = state.source.id === "hoti" ? "all" : "person";
   state.pageNumber = 1;
   populateSelects();
+  const sourceDraftRestored = restorePrintDraft(readPrintDraft());
   syncScopeControls();
   const url = new URL(window.location.href);
   if (state.source.id === "hoti") url.searchParams.set("tree", "hoti");
@@ -698,16 +1114,49 @@ function changeTreeSource(sourceId) {
   window.history.replaceState(null, "", url);
   update();
   updateSourceCopy();
-  setStatus(state.source.id === "hoti"
-    ? "Древо HOTI готово к макету."
-    : "Демонстрационное древо готово к макету.");
+  setStatus(sourceDraftRestored
+    ? "Локальный черновик для этого дерева восстановлен."
+    : state.source.id === "hoti"
+      ? "Древо HOTI готово к макету."
+      : "Демонстрационное древо готово к макету.");
 }
 
 function updateSourceCopy() {
-  elements.privacyCopy.textContent = "Правки макета действуют в этой вкладке и не меняют исходные данные.";
+  updateDraftCopy();
   document.getElementById("footerDataMode").textContent = state.source.id === "hoti"
     ? "Источник: HOTI"
     : "Источник: демонстрационное дерево";
+}
+
+function resetPrintDraft() {
+  try {
+    window.localStorage.removeItem(getDraftStorageKey());
+    draftStorageUnavailable = false;
+  } catch {
+    draftStorageUnavailable = true;
+  }
+  updateDraftCopy();
+  markDraftChanged();
+  state.personEdits.clear();
+  state.placementEdits.clear();
+  state.scopeType = state.source.id === "hoti" ? "all" : "person";
+  state.pageNumber = 1;
+  elements.includePhotos.checked = true;
+  elements.includeDates.checked = true;
+  elements.includeTitle.checked = true;
+  elements.includeQr.checked = false;
+  elements.treeTitle.value = "История рода";
+  state.designTheme = "heritage";
+  state.cardStyle = "glass";
+  syncPrintThemeButtons();
+  syncPrintCardStyleButtons();
+  elements.paperSize.value = "A4";
+  elements.orientation.value = "portrait";
+  elements.autoFormat.checked = true;
+  populateSelects();
+  syncScopeControls();
+  update();
+  setStatus("Локальные правки макета сброшены. Исходное древо не менялось.", "success");
 }
 
 function syncScopeControls() {
@@ -738,28 +1187,104 @@ function downloadBlob(blob, filename) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1200);
 }
 
-function fileStem() {
+function fileStem(scope = "page") {
   const source = elements.includeTitle.checked ? elements.treeTitle.value : "waydean-tree";
   const safe = source.toLocaleLowerCase("ru-RU").replace(/[^a-z0-9а-яё]+/giu, "-").replace(/^-|-$/g, "");
-  return (safe || "waydean-tree") + "-" + elements.paperSize.value.toLowerCase() + "-page-" + state.pageNumber;
+  const suffix = scope === "all" ? "-all-pages" : scope === "data" ? "-tree-data" : "-page-" + state.pageNumber;
+  return (safe || "waydean-tree") + "-" + elements.paperSize.value.toLowerCase() + suffix;
 }
 
-async function exportSvg() {
-  if (!state.currentSvg) return;
-  setStatus("Подготавливаю SVG с фотографиями.");
+function jsonDate(value) {
+  const text = String(value ?? "").trim();
+  if (!text) return null;
+  return /^-?\d{1,4}$/.test(text) ? Number(text) : text;
+}
+
+function applyLocalEditsToRawTree(person) {
+  if (!person || typeof person !== "object" || Array.isArray(person)) return person;
+  const id = String(person.id ?? "");
+  const edit = state.personEdits.get(id);
+  const next = { ...person };
+  if (edit) {
+    if (typeof edit.name === "string") next.name = edit.name;
+    if (typeof edit.teip === "string") next.teip = edit.teip;
+    if (Object.hasOwn(edit, "born")) next.born = jsonDate(edit.born);
+    if (Object.hasOwn(edit, "died")) next.died = jsonDate(edit.died);
+  }
+  if (Array.isArray(person.sons)) next.sons = person.sons.map(applyLocalEditsToRawTree);
+  return next;
+}
+
+function getExportTreeData() {
+  if (state.source.rawTree) return applyLocalEditsToRawTree(state.source.rawTree);
+  return {
+    id: state.source.id,
+    people: state.source.people.map(person => {
+      const { photoUrl, ...safePerson } = person;
+      return { ...safePerson, ...(state.personEdits.get(person.id) ?? {}) };
+    })
+  };
+}
+
+function downloadTreeJson() {
+  if (!state.currentLayout || !state.source) return;
+  const data = {
+    format: "waydean-family-tree-export",
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    source: { id: state.source.id, label: state.source.label },
+    tree: getExportTreeData(),
+    print: {
+      title: elements.includeTitle.checked ? elements.treeTitle.value.trim() : "СЕМЕЙНОЕ ДРЕВО",
+      scope: getScopeDescription(state.currentPeople),
+      paperSize: elements.paperSize.value,
+      orientation: elements.orientation.value,
+      design: state.designTheme,
+      background: state.designTheme,
+      cardDesign: state.cardStyle,
+      includePhotos: elements.includePhotos.checked,
+      includeDates: elements.includeDates.checked,
+      includeQr: elements.includeQr.checked,
+      pages: state.currentLayout.pageCount,
+      peopleInLayout: state.currentLayout.placements.map(placement => ({
+        personId: placement.person.id,
+        generation: placement.generation,
+        page: placement.pageNumber,
+        positionMm: {
+          x: Number(placement.xMm.toFixed(2)),
+          y: Number(placement.yMm.toFixed(2)),
+          width: placement.widthMm,
+          height: placement.heightMm
+        }
+      }))
+    },
+    photos: { included: false, note: "Фотофайлы и локальные адреса не включены; исходные метки наличия фото остаются в данных дерева." }
+  };
+  downloadBlob(new Blob([JSON.stringify(data, null, 2)], { type: "application/json;charset=utf-8" }), fileStem("data") + ".json");
+  setStatus("JSON с полным деревом и расположением карточек сохранён в браузере. Фотофайлы не включены.", "success");
+}
+
+async function exportSvg(svgMarkup = state.currentSvg, filename = fileStem(), successMessage = "SVG текущего листа создан.") {
+  if (!svgMarkup) return;
+  setStatus("Подготавливаю SVG с фоном и фотографиями.");
   try {
-    const demoAssets = new URL("../../assets/demo/", import.meta.url);
-    const portableSvg = await embedSvgImageAssets(state.currentSvg, async href => {
+    const allowedAssetRoots = [new URL("../../assets/demo/", import.meta.url), new URL("./assets/backgrounds/", import.meta.url)];
+    const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
+    if (state.source.id === "hoti" && loopbackHosts.has(location.hostname)) {
+      allowedAssetRoots.push(new URL("../../../../../drewo/photos/", import.meta.url));
+    }
+    const portableSvg = await embedSvgImageAssets(svgMarkup, async href => {
       const url = new URL(href, document.baseURI);
-      if (url.origin !== location.origin || !url.pathname.startsWith(demoAssets.pathname)) {
-        throw new Error("Only local demo portraits can be embedded.");
+      const isAllowedLocalAsset = allowedAssetRoots.some(root => url.pathname.startsWith(root.pathname));
+      if (url.origin !== location.origin || !isAllowedLocalAsset) {
+        throw new Error("Only approved same-origin print images can be embedded.");
       }
       return fetch(url.href, { credentials: "same-origin" });
     });
-    downloadBlob(new Blob([portableSvg], { type: "image/svg+xml;charset=utf-8" }), fileStem() + ".svg");
-    setStatus("SVG создан; фотографии встроены в файл.", "success");
+    downloadBlob(new Blob([portableSvg], { type: "image/svg+xml;charset=utf-8" }), filename + ".svg");
+    setStatus(successMessage + " Фон и доступные фотографии встроены в файл.", "success");
   } catch {
-    setStatus("Не удалось подготовить SVG. Повтори попытку.", "error");
+    setStatus("Не удалось встроить фон или фото в SVG. Проверь доступность изображений и повтори попытку.", "error");
   }
 }
 
@@ -776,26 +1301,52 @@ if (getPrintTreeSource("hoti").id !== "hoti") {
 }
 elements.treeSource.addEventListener("change", event => changeTreeSource(event.currentTarget.value));
 populateSelects();
-applyRequestedRoute();
+restoredDraft = restorePrintDraft(readPrintDraft());
+if (!restoredDraft || requestedHandoff) applyRequestedRoute();
 updateSourceCopy();
 syncScopeControls();
 document.querySelectorAll("[data-scope]").forEach(button => button.addEventListener("click", () => {
   state.scopeType = button.dataset.scope;
+  markDraftChanged();
   state.pageNumber = 1;
   syncScopeControls();
   update();
 }));
 
-for (const control of [elements.personSelect, elements.branchSelect, elements.directionSelect, elements.depthRange, elements.includePhotos, elements.includeDates, elements.includeTitle, elements.treeTitle]) {
-  control.addEventListener("input", update);
-  control.addEventListener("change", update);
+document.querySelectorAll("[data-print-theme]").forEach(button => button.addEventListener("click", () => {
+  const nextTheme = button.dataset.printTheme;
+  if (!Object.hasOwn(PRINT_THEMES, nextTheme) || nextTheme === state.designTheme) return;
+  state.designTheme = nextTheme;
+  markDraftChanged("control:designTheme");
+  syncPrintThemeButtons();
+  update();
+}));
+
+document.querySelectorAll("[data-print-card-style]").forEach(button => button.addEventListener("click", () => {
+  const nextStyle = button.dataset.printCardStyle;
+  if (!Object.hasOwn(PRINT_CARD_STYLES, nextStyle) || nextStyle === state.cardStyle) return;
+  state.cardStyle = nextStyle;
+  markDraftChanged("control:cardStyle");
+  syncPrintCardStyleButtons();
+  update();
+  setStatus("Оформление карточек обновлено. Масштаб и размер печати не менялись.", "success");
+}));
+
+for (const control of [elements.personSelect, elements.branchSelect, elements.directionSelect, elements.depthRange, elements.includePhotos, elements.includeDates, elements.includeTitle, elements.includeQr, elements.treeTitle]) {
+  const updateFromControl = () => { markDraftChanged("control:" + control.id); update(); };
+  control.addEventListener("input", updateFromControl);
+  control.addEventListener("change", updateFromControl);
 }
 
-elements.paperSize.addEventListener("change", () => { elements.autoFormat.checked = false; update(); });
-elements.orientation.addEventListener("change", () => { elements.autoFormat.checked = false; update(); });
-elements.autoFormat.addEventListener("change", update);
+elements.paperSize.addEventListener("change", () => { markDraftChanged("control:" + elements.paperSize.id); elements.autoFormat.checked = false; update(); });
+elements.orientation.addEventListener("change", () => { markDraftChanged("control:" + elements.orientation.id); elements.autoFormat.checked = false; update(); });
+elements.autoFormat.addEventListener("change", () => { markDraftChanged("control:" + elements.autoFormat.id); update(); });
+elements.undoDraft.addEventListener("click", undoPrintDraft);
+elements.redoDraft.addEventListener("click", redoPrintDraft);
+elements.resetDraft.addEventListener("click", resetPrintDraft);
 elements.applyRecommendation.addEventListener("click", () => {
   if (!state.currentPeople.length) return;
+  markDraftChanged();
   const recommendation = recommendPaper(state.currentPeople, layoutOptions);
   elements.paperSize.value = recommendation.paperSize;
   elements.orientation.value = recommendation.orientation;
@@ -804,11 +1355,13 @@ elements.applyRecommendation.addEventListener("click", () => {
 });
 elements.depthRange.addEventListener("input", () => { elements.depthValue.value = elements.depthRange.value; });
 elements.previousPage.addEventListener("click", () => {
+  markDraftChanged();
   state.pageNumber = Math.max(1, state.pageNumber - 1);
   update();
   focusWorkspacePage(state.pageNumber, true, "page");
 });
 elements.nextPage.addEventListener("click", () => {
+  markDraftChanged();
   state.pageNumber = Math.min(state.currentLayout.pageCount, state.pageNumber + 1);
   update();
   focusWorkspacePage(state.pageNumber, true, "page");
@@ -816,68 +1369,148 @@ elements.nextPage.addEventListener("click", () => {
 elements.zoomOut.addEventListener("click", () => setWorkspaceZoom(state.workspaceZoom / 1.2));
 elements.zoomIn.addEventListener("click", () => setWorkspaceZoom(state.workspaceZoom * 1.2));
 elements.fitPreview.addEventListener("click", () => {
-  if (state.workspaceZoomMode === "fit") {
-    fitActivePage();
-    setStatus("Активный лист увеличен; остальные листы остаются на общем поле.");
-  } else {
-    fitWorkspace();
-    setStatus("Все листы показаны целиком в рабочем поле.");
-  }
+  fitWorkspace();
+  setStatus("Всё рабочее полотно вписано в область просмотра. Настройки печатных листов не менялись.", "success");
 });
 
-let stagePan = null;
+let stageGesture = null;
+const stagePointers = new Map();
 let ignoreWorkspaceClickUntil = 0;
+const getStagePointerPair = () => {
+  const [first, second] = [...stagePointers.values()];
+  return {
+    x: (first.x + second.x) / 2,
+    y: (first.y + second.y) / 2,
+    distance: Math.hypot(first.x - second.x, first.y - second.y)
+  };
+};
+const beginStagePan = (pointer, pageNumber = null) => ({
+  type: "pan",
+  pointerId: pointer.pointerId,
+  startX: pointer.x,
+  startY: pointer.y,
+  scrollLeft: elements.paperStage.scrollLeft,
+  scrollTop: elements.paperStage.scrollTop,
+  pageNumber,
+  moved: false
+});
 elements.paperStage.addEventListener("pointerdown", event => {
   if (event.button !== 0 || event.target.closest?.(".person-card")) return;
-  stagePan = {
-    pointerId: event.pointerId,
-    startX: event.clientX,
-    startY: event.clientY,
-    scrollLeft: elements.paperStage.scrollLeft,
-    scrollTop: elements.paperStage.scrollTop,
-    pageNumber: Number(event.target.closest?.(".workspace-page[data-page-number]")?.dataset.pageNumber) || null,
-    moved: false
-  };
-  elements.paperStage.classList.add("is-panning");
+  const pointer = { pointerId: event.pointerId, x: event.clientX, y: event.clientY };
+  stagePointers.set(event.pointerId, pointer);
   elements.paperStage.setPointerCapture(event.pointerId);
+  if (stagePointers.size > 1) {
+    const pair = getStagePointerPair();
+    stageGesture = { type: "pinch", lastX: pair.x, lastY: pair.y, lastDistance: pair.distance, moved: false };
+  } else {
+    const pageNumber = Number(event.target.closest?.(".workspace-page[data-page-number]")?.dataset.pageNumber) || null;
+    stageGesture = beginStagePan(pointer, pageNumber);
+  }
+  elements.paperStage.classList.add("is-panning");
 });
 elements.paperStage.addEventListener("pointermove", event => {
-  if (!stagePan || event.pointerId !== stagePan.pointerId) return;
-  const dx = event.clientX - stagePan.startX;
-  const dy = event.clientY - stagePan.startY;
-  if (Math.hypot(dx, dy) > 4) stagePan.moved = true;
-  if (!stagePan.moved) return;
-  elements.paperStage.scrollLeft = stagePan.scrollLeft - dx;
-  elements.paperStage.scrollTop = stagePan.scrollTop - dy;
+  const pointer = stagePointers.get(event.pointerId);
+  if (!pointer) return;
+  pointer.x = event.clientX;
+  pointer.y = event.clientY;
+  if (stagePointers.size > 1) {
+    const pair = getStagePointerPair();
+    const before = stageGesture?.type === "pinch"
+      ? { x: stageGesture.lastX, y: stageGesture.lastY, distance: stageGesture.lastDistance }
+      : pair;
+    stageGesture = stageGesture?.type === "pinch"
+      ? stageGesture
+      : { type: "pinch", lastX: before.x, lastY: before.y, lastDistance: before.distance, moved: false };
+    const deltaX = pair.x - before.x;
+    const deltaY = pair.y - before.y;
+    if (Math.hypot(deltaX, deltaY) > 2 || Math.abs(pair.distance - before.distance) > 2) stageGesture.moved = true;
+    elements.paperStage.scrollLeft -= deltaX;
+    elements.paperStage.scrollTop -= deltaY;
+    if (before.distance > 0 && pair.distance > 0 && Math.abs(pair.distance - before.distance) > 0.5) {
+      queueWorkspaceZoom(pair.distance / before.distance, pair.x, pair.y, "manual");
+    }
+    stageGesture.lastX = pair.x;
+    stageGesture.lastY = pair.y;
+    stageGesture.lastDistance = pair.distance;
+    event.preventDefault();
+    return;
+  }
+  if (stageGesture?.type !== "pan" || event.pointerId !== stageGesture.pointerId) return;
+  const dx = event.clientX - stageGesture.startX;
+  const dy = event.clientY - stageGesture.startY;
+  if (Math.hypot(dx, dy) > 4) stageGesture.moved = true;
+  if (stageGesture.moved) {
+    elements.paperStage.scrollLeft = stageGesture.scrollLeft - dx;
+    elements.paperStage.scrollTop = stageGesture.scrollTop - dy;
+  }
 });
 elements.paperStage.addEventListener("pointerup", event => {
-  if (!stagePan || event.pointerId !== stagePan.pointerId) return;
-  const clicked = stagePan;
-  if (clicked.moved) ignoreWorkspaceClickUntil = Date.now() + 250;
-  stagePan = null;
+  if (!stagePointers.has(event.pointerId)) return;
+  const ending = stagePointers.get(event.pointerId);
+  const gesture = stageGesture;
+  stagePointers.delete(event.pointerId);
+  if (elements.paperStage.hasPointerCapture(event.pointerId)) elements.paperStage.releasePointerCapture(event.pointerId);
+  if (gesture?.type === "pinch") {
+    ignoreWorkspaceClickUntil = Date.now() + 250;
+    const remaining = [...stagePointers.values()][0];
+    stageGesture = remaining ? beginStagePan(remaining) : null;
+    if (!remaining) elements.paperStage.classList.remove("is-panning");
+    return;
+  }
+  if (gesture?.type !== "pan" || event.pointerId !== gesture.pointerId) return;
+  if (gesture.moved) ignoreWorkspaceClickUntil = Date.now() + 250;
+  stageGesture = null;
   elements.paperStage.classList.remove("is-panning");
-  if (!clicked.moved && clicked.pageNumber && clicked.pageNumber !== state.pageNumber) {
-    state.pageNumber = clicked.pageNumber;
+  if (!gesture.moved && gesture.pageNumber && gesture.pageNumber !== state.pageNumber) {
+    state.pageNumber = gesture.pageNumber;
     update();
     focusWorkspacePage(state.pageNumber);
   }
 });
-elements.paperStage.addEventListener("pointercancel", () => {
-  stagePan = null;
-  elements.paperStage.classList.remove("is-panning");
+elements.paperStage.addEventListener("pointercancel", event => {
+  if (stagePointers.has(event.pointerId)) stagePointers.delete(event.pointerId);
+  if (elements.paperStage.hasPointerCapture(event.pointerId)) elements.paperStage.releasePointerCapture(event.pointerId);
+  const remaining = [...stagePointers.values()][0];
+  if (stagePointers.size > 1) {
+    const pair = getStagePointerPair();
+    stageGesture = { type: "pinch", lastX: pair.x, lastY: pair.y, lastDistance: pair.distance, moved: true };
+  } else if (remaining) stageGesture = beginStagePan(remaining);
+  else {
+    stageGesture = null;
+    elements.paperStage.classList.remove("is-panning");
+  }
 });
 elements.paperStage.addEventListener("wheel", event => {
   event.preventDefault();
-  const factor = Math.exp(-event.deltaY * .001);
-  setWorkspaceZoom(state.workspaceZoom * factor, event.clientX, event.clientY);
+  const deltaY = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * elements.paperStage.clientHeight : event.deltaY;
+  const factor = Math.exp(-deltaY * .001);
+  queueWorkspaceZoom(factor, event.clientX, event.clientY);
 }, { passive: false });
 window.addEventListener("resize", () => {
   if (state.workspaceZoomMode === "fit") fitWorkspace();
   else if (state.workspaceZoomMode === "page") fitActivePage();
 });
-elements.downloadSvg.addEventListener("click", exportSvg);
+elements.downloadSvg.addEventListener("click", () => exportSvg());
+elements.downloadWorkspaceSvg.addEventListener("click", () => {
+  if (!state.currentLayout) return;
+  const allPagesSvg = renderWorkspaceSvg(state.currentLayout, { interactive: false });
+  exportSvg(allPagesSvg, fileStem("all"), "SVG всего рабочего поля создан.");
+});
+elements.downloadTreeJson.addEventListener("click", downloadTreeJson);
 elements.printPdf.addEventListener("click", printPdf);
-window.addEventListener("afterprint", () => setStatus("Печатный диалог закрыт. Настройки и превью сохранены в этой вкладке."));
+window.addEventListener("afterprint", () => setStatus("Печатный диалог закрыт. Локальный черновик остаётся в этом браузере."));
+window.addEventListener("keydown", event => {
+  const key = event.key.toLowerCase();
+  if (!(event.ctrlKey || event.metaKey) || event.altKey || !["z", "y"].includes(key)) return;
+  if (event.target.closest?.("input, textarea, select, [contenteditable='true']") || document.querySelector("dialog[open]")) return;
+  const redo = event.shiftKey || (key === "y" && event.ctrlKey);
+  const stack = redo ? state.redoStack : state.undoStack;
+  if (!stack.length) return;
+  event.preventDefault();
+  if (redo) redoPrintDraft();
+  else undoPrintDraft();
+});
 
 update();
+if (restoredDraft) setStatus("Локальный черновик восстановлен из этого браузера.", "success");
 if (requestedRouteFallback) setStatus("Выбор из предыдущего экрана не найден в этом наборе; открыто всё доступное дерево.");
