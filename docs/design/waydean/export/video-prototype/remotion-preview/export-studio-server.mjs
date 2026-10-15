@@ -18,6 +18,7 @@ import {
 } from "./src/render-job-model.mjs";
 import { pipeRenderDownload } from "./src/render-download.mjs";
 import { createRenderJobStore } from "./src/render-job-store.mjs";
+import { isAllowedLocalRequest } from "./request-origin-guard.mjs";
 
 const projectDirectory = path.dirname(fileURLToPath(import.meta.url));
 const prototypeDirectory = path.resolve(projectDirectory, "..");
@@ -198,15 +199,6 @@ async function renderJob(job) {
 }
 
 async function handleRenderApi(request, response, url) {
-  if (["POST", "DELETE"].includes(request.method || "")) {
-    const origin = request.headers.origin;
-    const requestHost = request.headers.host;
-    if (origin && new URL(origin).host !== requestHost) {
-      sendJson(response, 403, { error: "Источник запроса не разрешён" });
-      return;
-    }
-  }
-
   if (request.method === "POST" && url.pathname === "/api/render") {
     try {
       const job = await renderJobStore.enqueue(await readJsonBody(request));
@@ -319,10 +311,11 @@ const resolveLocalPackages = {
       if (args.path.startsWith("node:")) return { path: args.path, external: true };
 
       if (args.path.startsWith("./") || args.path.startsWith("../")) {
+        const importPath = args.path.split(/[?#]/, 1)[0];
         const importerPath = path.isAbsolute(args.importer)
           ? args.importer
           : path.resolve(projectDirectory, args.importer);
-        const unresolvedPath = path.resolve(path.dirname(importerPath), args.path);
+        const unresolvedPath = path.resolve(path.dirname(importerPath), importPath);
         const candidates = path.extname(unresolvedPath)
           ? [unresolvedPath]
           : [
@@ -405,6 +398,15 @@ const browserExportAssets = await Promise.all(browserExportStaticFiles.map(async
 for (const [url, asset] of browserExportAssets) routes.set(url, asset);
 
 const server = createServer((request, response) => {
+  if (!isAllowedLocalRequest({
+    host: request.headers.host,
+    origin: request.headers.origin,
+    port
+  })) {
+    sendJson(response, 403, { error: "Источник запроса не разрешён" });
+    return;
+  }
+
   const url = new URL(request.url || "/", `http://${request.headers.host || "127.0.0.1"}`);
   if (request.method === "GET" && url.pathname === "/api/health") {
     sendJson(response, 200, {

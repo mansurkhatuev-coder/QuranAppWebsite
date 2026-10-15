@@ -47,7 +47,7 @@ Local Remotion rendering defaults to 25% of the logical CPU count. On this 12-co
 Из корня `docs/design/waydean/export/video-prototype`:
 
 ```powershell
-node --test scene-thumbnail-model.test.mjs remotion-preview/src/render-job-model.test.mjs remotion-preview/src/render-job-store.test.mjs remotion-preview/src/render-download.test.mjs remotion-preview/src/render-job-poll.test.mjs remotion-preview/src/render-temp-directory.test.mjs remotion-preview/src/project-model-title-layout.test.mjs remotion-preview/src/waydean-preview-editor-focus.browser.test.mjs remotion-preview.test.mjs export-studio-model.test.mjs cinematic-timeline.test.mjs story.test.mjs
+node --test scene-thumbnail-model.test.mjs remotion-preview/request-origin-guard.test.mjs remotion-preview/src/render-job-model.test.mjs remotion-preview/src/render-job-store.test.mjs remotion-preview/src/render-download.test.mjs remotion-preview/src/render-job-poll.test.mjs remotion-preview/src/render-temp-directory.test.mjs remotion-preview/src/project-model-title-layout.test.mjs remotion-preview/src/waydean-preview-editor-focus.browser.test.mjs remotion-preview.test.mjs export-studio-model.test.mjs cinematic-timeline.test.mjs story.test.mjs
 ```
 
 Из папки `remotion-preview`:
