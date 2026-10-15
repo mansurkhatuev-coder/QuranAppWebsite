@@ -27,3 +27,9 @@ test("video preview has an accessible play control and frame-based playback", ()
   assert.match(studioSource, /requestAnimationFrame/);
   assert.match(studioSource, /cancelAnimationFrame/);
 });
+
+test("published browser export does not statically depend on the ignored local family snapshot", () => {
+  assert.doesNotMatch(studioSource, /^import\s+\{\s*HOTI_PEOPLE\s*\}\s+from\s+["']\.\/hoti-people\.mjs/m);
+  assert.match(studioSource, /DEMO_PEOPLE/);
+  assert.match(studioSource, /Откройте экспорт из загруженного дерева/);
+});

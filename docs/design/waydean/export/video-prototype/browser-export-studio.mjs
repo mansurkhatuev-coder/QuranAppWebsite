@@ -1,4 +1,3 @@
-import { HOTI_PEOPLE } from "./hoti-people.mjs?v=20261015-abdul-1952";
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, normalizeExportSettings } from "./remotion-preview/src/export-studio-model.mjs";
 import {
   getBrowserVideoSupport,
@@ -16,7 +15,13 @@ import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-previ
 
 const root = document.getElementById("browser-export-root");
 const handoff = readVideoExportHandoff(window.sessionStorage);
-const people = handoff?.tree.people ?? HOTI_PEOPLE;
+const DEMO_PEOPLE = [
+  { id: "demo-1", name: "Первое поколение", generation: 1, parent: null, born: 1880, died: null },
+  { id: "demo-2", name: "Следующее поколение", generation: 2, parent: "demo-1", born: 1907, died: null },
+  { id: "demo-3", name: "Продолжение рода", generation: 3, parent: "demo-2", born: 1934, died: null },
+  { id: "demo-4", name: "Новая ветвь", generation: 4, parent: "demo-3", born: 1961, died: null }
+];
+const people = handoff?.tree.people?.length ? handoff.tree.people : DEMO_PEOPLE;
 let settings = normalizeExportSettings(handoff?.settings ?? DEFAULT_EXPORT_SETTINGS, people);
 let preview = buildExportPreview(settings, people);
 let frame = 0;
@@ -143,7 +148,7 @@ function renderShell() {
         <h1>История рода в видео</h1>
         <p>Кадры собираются и записываются прямо в браузере. Данные дерева остаются на устройстве.</p>
       </section>
-      ${handoff ? "" : `<p class="browser-export-demo-note" role="status">Открыта локальная демонстрация HOTI. Чтобы экспортировать своё дерево, переходите сюда из загруженного дерева.</p>`}
+      ${handoff ? "" : `<p class="browser-export-demo-note" role="status">Открыт демонстрационный пример. Откройте экспорт из загруженного дерева, чтобы создать видео своей семьи.</p>`}
       <div class="browser-export-grid">
         <section class="browser-export-preview" aria-label="Предпросмотр кадра">
           <div class="browser-export-canvas-wrap"><canvas id="browser-export-frame" aria-label="Кадр выбранной сцены"></canvas></div>
