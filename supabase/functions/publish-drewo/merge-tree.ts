@@ -50,6 +50,10 @@ function fieldValue(node: TreeNode | undefined, field: FieldName): string {
   return String(value);
 }
 
+function setFieldValue(node: TreeNode, field: FieldName, value: unknown) {
+  (node as Record<string, unknown>)[field] = value;
+}
+
 function indexTree(root: TreeNode): IndexedTree {
   const byId = new Map<string, TreeNode>();
   const parentOf = new Map<string, string>();
@@ -97,13 +101,13 @@ function applyLocalField(
   if (!lv) return;
   if (opts.onlyIfServerEmpty && sv) return;
   if (!sv) {
-    serverNode[field] = localNode[field];
+    setFieldValue(serverNode, field, localNode[field]);
     stats.filled.push({ id: serverNode.id, field, value: localNode[field] });
     return;
   }
   if (sv !== lv) {
     const previous = serverNode[field];
-    serverNode[field] = localNode[field];
+    setFieldValue(serverNode, field, localNode[field]);
     stats.overridden.push({
       id: serverNode.id,
       field,
@@ -131,7 +135,7 @@ function applyThreeWayField(
   }
   if (sv === lv) return;
   const previous = serverNode[field];
-  serverNode[field] = localNode[field];
+  setFieldValue(serverNode, field, localNode[field]);
   if (!sv) {
     stats.filled.push({ id: serverNode.id, field, value: localNode[field] });
   } else {
