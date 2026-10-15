@@ -1,0 +1,92 @@
+.person-node.my-self:not(.selected) {
+  border-color: #e9cb7e;
+  box-shadow: 0 0 0 1px #d9ad5855, 0 0 20px #d5a84642, 0 7px 20px #000b;
+}
+
+.self-indicator {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: grid;
+  place-items: center;
+  width: 19px;
+  height: 19px;
+  border: 1px solid #ffe29b;
+  border-radius: 50%;
+  background: #60491f;
+  color: #fff0bd;
+  font: 700 10px/1 "Segoe UI", Tahoma, sans-serif;
+  box-shadow: 0 1px 8px #000b;
+}
+
+.self-person-button {
+  width: 100%;
+  min-height: 38px;
+  margin-top: 9px;
+  padding: 8px 10px;
+  border: 1px solid #d9ad5870;
+  border-radius: 7px;
+  background: linear-gradient(110deg, #d9ad5818, #ffffff07);
+  color: #efd48f;
+  font-size: 12px;
+  text-align: left;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.self-person-button:hover,
+.self-person-button[aria-pressed="true"] {
+  border-color: #e9c674;
+  background: #d9ad5826;
+}
+
+.self-person-note {
+  display: block;
+  margin: 6px 2px 0;
+  color: #a89d84;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.profile-add-son {
+  display: grid;
+  gap: 7px;
+  margin: 12px 0 8px;
+  padding: 11px;
+  border: 1px solid #d8ad594d;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #d9ad5814, #ffffff05 72%);
+}
+
+.profile-add-son > strong {
+  color: #f1d38b;
+  font-size: 12px;
+}
+
+.profile-add-son > small {
+  color: #a89d84;
+  font-size: 10px;
+  line-height: 1.45;
+}
+
+.profile-add-son-button {
+  width: 100%;
+  min-height: 42px;
+  padding: 9px 12px;
+  border: 1px solid #e1b655;
+  border-radius: 7px;
+  background: linear-gradient(110deg, #8c642b, #2d2517);
+  color: #fff0c4;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.profile-add-son-button:hover {
+  filter: brightness(1.16);
+}
+
+@media (max-width: 700px) {
+  .self-person-button { min-height: 34px; margin-top: 7px; padding: 7px 9px; font-size: 11px; }
+  .self-person-note { margin-top: 4px; font-size: 9px; }
+  .profile-add-son { margin: 8px 0 6px; padding: 9px; }
+  .profile-add-son-button { min-height: 44px; }
+}

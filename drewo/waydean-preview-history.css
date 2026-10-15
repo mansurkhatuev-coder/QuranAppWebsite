@@ -1,0 +1,136 @@
+.local-history-popover,
+.local-backups-popover {
+  width: min(440px, calc(100vw - 28px));
+  max-height: min(76dvh, 680px);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.local-data-note,
+.local-backup-status {
+  margin: 10px 0 14px;
+  color: #aaa390;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.local-history-list,
+.local-backup-list {
+  display: grid;
+  gap: 8px;
+}
+
+.local-history-row,
+.local-backup-row {
+  min-width: 0;
+  padding: 11px 12px;
+  border: 1px solid #cfaa5b36;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #101b1eeb, #091215f2);
+}
+
+.local-history-row {
+  display: grid;
+  gap: 4px;
+}
+
+.local-history-row strong,
+.local-backup-heading strong {
+  color: #ead5a3;
+  font: 600 13px var(--ui);
+}
+
+.local-history-row time,
+.local-backup-heading time {
+  color: #d0c7b4;
+  font: 12px var(--ui);
+}
+
+.local-history-row small,
+.local-backup-row > small {
+  color: #918b7d;
+  font: 11px var(--ui);
+}
+
+.local-data-empty {
+  margin: 10px 0;
+  color: #aaa390;
+  font: 12px/1.55 var(--ui);
+}
+
+.local-data-empty.is-error {
+  color: #e9a59a;
+}
+
+.local-snapshot-create {
+  width: 100%;
+  min-height: 40px;
+}
+
+.local-backup-status {
+  min-height: 18px;
+  margin: 8px 0 12px;
+}
+
+.local-backup-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.local-backup-heading strong {
+  min-width: 0;
+}
+
+.local-backup-heading time {
+  flex: 0 0 auto;
+  text-align: right;
+}
+
+.local-backup-row > small {
+  display: block;
+  margin-top: 5px;
+}
+
+.local-backup-actions {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.local-backup-actions button {
+  min-height: 33px;
+  padding: 6px 10px;
+  border: 1px solid #cfaa5b55;
+  border-radius: 8px;
+  background: #c79a3c16;
+  color: #ecd7a5;
+  font: 12px var(--ui);
+}
+
+.local-backup-actions button:disabled,
+.local-snapshot-create:disabled {
+  cursor: not-allowed;
+  opacity: .46;
+}
+
+@media (max-width: 700px) {
+  .local-history-popover,
+  .local-backups-popover {
+    top: auto;
+    right: 10px;
+    bottom: calc(66px + env(safe-area-inset-bottom));
+    width: min(440px, calc(100vw - 20px));
+    max-height: min(66dvh, 560px);
+  }
+
+  .local-backup-heading {
+    display: grid;
+    gap: 4px;
+  }
+
+  .local-backup-heading time {
+    text-align: left;
+  }
+}

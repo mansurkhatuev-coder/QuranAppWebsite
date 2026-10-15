@@ -49,7 +49,7 @@
 .graph[data-lod="compact"] .person-node:not(.route)::after { width: 14px; height: 14px; opacity: .78; transform: translate(-50%, -50%) scale(1); }
 
 .graph[data-lod="overview"] .person-node {
-  width: var(--tree-card-width) !important;
+  width: var(--person-card-width, var(--tree-card-width)) !important;
   height: var(--tree-card-height) !important;
   padding: 0;
   align-items: center;

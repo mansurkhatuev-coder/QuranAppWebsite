@@ -1,0 +1,32 @@
+name: Deploy Supabase publish-drewo code only
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Deploy Edge Function without changing project secrets
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "Missing SUPABASE_ACCESS_TOKEN repository secret"
+            exit 1
+          fi
+          supabase functions deploy publish-drewo \
+            --project-ref rivjkiksknnesahrvamf \
+            --no-verify-jwt \
+            --use-api

@@ -32,6 +32,7 @@ export function flattenTree(root) {
       born: normalizeYear(node.born),
       died: normalizeYear(node.died),
       bio: String(node.bio ?? ''),
+      teip: String(node.teip ?? '').trim().slice(0, 80),
       photoKey,
       hasPhoto: Boolean(photoKey),
       generation,
@@ -44,4 +45,29 @@ export function flattenTree(root) {
 
   visit(root, null, 1);
   return flat;
+}
+
+/** Keep a person's name on one line by growing its card when needed. */
+export function getCardWidthForName(name, {
+  baseWidth,
+  fixedWidth,
+  safety = 0,
+  measureText
+} = {}) {
+  const minimum = Number(baseWidth);
+  if (!Number.isFinite(minimum) || minimum < 0) {
+    throw new TypeError('A non-negative base card width is required');
+  }
+  if (typeof measureText !== 'function') throw new TypeError('A text measurement function is required');
+
+  const label = String(name ?? '').trim();
+  if (!label) return Math.ceil(minimum);
+  const measuredWidth = Number(measureText(label));
+  const fixed = Number(fixedWidth) || 0;
+  const extra = Number(safety) || 0;
+  if (!Number.isFinite(measuredWidth) || measuredWidth < 0) {
+    throw new TypeError('Text measurement must return a non-negative number');
+  }
+
+  return Math.max(Math.ceil(minimum), Math.ceil(fixed + measuredWidth + extra));
 }

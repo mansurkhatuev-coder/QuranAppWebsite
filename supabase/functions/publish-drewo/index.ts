@@ -2388,8 +2388,8 @@ Deno.serve(async (request) => {
     const photoDeleteIds = Array.from(
       new Set(
         (Array.isArray(body.photoDeletes) ? body.photoDeletes : [])
-          .map((value) => String(value || '').trim())
-          .filter((id) => PHOTO_ID_RE.test(id))
+          .map((value: unknown) => String(value || '').trim())
+          .filter((id: string) => PHOTO_ID_RE.test(id))
       )
     );
     const photoDeleteCandidates = photoDeleteIds.flatMap((id) => [

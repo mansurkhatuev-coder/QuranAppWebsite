@@ -3,7 +3,7 @@ export function cloneTree(tree) {
 }
 
 function findPerson(tree, id) {
-  if (tree.id === id) return tree;
+  if (String(tree.id) === String(id)) return tree;
   for (const child of tree.sons || []) {
     const found = findPerson(child, id);
     if (found) return found;
@@ -12,7 +12,7 @@ function findPerson(tree, id) {
 }
 
 function findParent(tree, id) {
-  if ((tree.sons || []).some(child => child.id === id)) return tree;
+  if ((tree.sons || []).some(child => String(child.id) === String(id))) return tree;
   for (const child of tree.sons || []) {
     const found = findParent(child, id);
     if (found) return found;
@@ -21,9 +21,18 @@ function findParent(tree, id) {
 }
 
 function allIds(tree, result = new Set()) {
-  result.add(tree.id);
+  result.add(String(tree.id));
   for (const child of tree.sons || []) allIds(child, result);
   return result;
+}
+
+export function generateUniquePersonId(tree) {
+  const used = allIds(tree);
+  let id;
+  do {
+    id = `local-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  } while (used.has(id));
+  return id;
 }
 
 function normalizeLifeYear(value) {
@@ -40,8 +49,12 @@ export function updatePerson(tree, id, fields) {
   const person = findPerson(tree, id);
   if (!person) throw new Error('Person not found');
   const next = { ...person };
-  for (const key of ['name', 'born', 'died', 'bio']) {
-    if (Object.hasOwn(fields, key)) next[key] = key === 'name' ? String(fields[key] || '').trim() : fields[key];
+  for (const key of ['name', 'born', 'died', 'bio', 'teip']) {
+    if (Object.hasOwn(fields, key)) {
+      next[key] = key === 'name' ? String(fields[key] || '').trim()
+        : key === 'teip' ? String(fields[key] || '').trim().slice(0, 80)
+          : fields[key];
+    }
   }
   if (!next.name) throw new Error('Name is required');
   for (const key of ['born', 'died']) if (Object.hasOwn(fields, key)) next[key] = normalizeLifeYear(next[key]);
@@ -50,12 +63,19 @@ export function updatePerson(tree, id, fields) {
   return person;
 }
 
+export function setPersonPhotoKey(tree, id, photoKey) {
+  const person = findPerson(tree, id);
+  if (!person) throw new Error('Person not found');
+  person.photo = photoKey == null || photoKey === '' ? null : String(photoKey);
+  return person;
+}
+
 export function addChild(tree, parentId, fields) {
   const parent = findPerson(tree, parentId);
   if (!parent) throw new Error('Parent not found');
   const id = String(fields.id || '').trim();
   if (!id || allIds(tree).has(id)) throw new Error('Child ID must be unique');
-  const child = { id, name: String(fields.name || '').trim(), born: fields.born ?? null, died: fields.died ?? null, bio: String(fields.bio || ''), sons: [] };
+  const child = { id, name: String(fields.name || '').trim(), born: fields.born ?? null, died: fields.died ?? null, bio: String(fields.bio || ''), teip: String(fields.teip || '').trim().slice(0, 80), sons: [] };
   if (!child.name) throw new Error('Name is required');
   for (const key of ['born', 'died']) child[key] = normalizeLifeYear(child[key]);
   if (child.born != null && child.died != null && child.born > child.died) throw new Error('Birth year must not be later than death year');
@@ -65,25 +85,25 @@ export function addChild(tree, parentId, fields) {
 }
 
 export function reparentPerson(tree, personId, newParentId) {
-  if (personId === tree.id) throw new Error('Root cannot be reparented');
+  if (String(personId) === String(tree.id)) throw new Error('Root cannot be reparented');
   const person = findPerson(tree, personId);
   const parent = findPerson(tree, newParentId);
   if (!person || !parent) throw new Error('Person or parent not found');
   if (findPerson(person, newParentId)) throw new Error('Reparenting would create a cycle');
   const oldParent = findParent(tree, personId);
-  oldParent.sons = oldParent.sons.filter(child => child.id !== personId);
+  oldParent.sons = oldParent.sons.filter(child => String(child.id) !== String(personId));
   parent.sons ||= [];
   parent.sons.push(person);
   return person;
 }
 
 export function deleteLeaf(tree, personId) {
-  if (personId === tree.id) throw new Error('Root cannot be deleted');
+  if (String(personId) === String(tree.id)) throw new Error('Root cannot be deleted');
   const person = findPerson(tree, personId);
   if (!person) throw new Error('Person not found');
   if ((person.sons || []).length) throw new Error('Only a leaf person can be deleted');
   const parent = findParent(tree, personId);
-  parent.sons = parent.sons.filter(child => child.id !== personId);
+  parent.sons = parent.sons.filter(child => String(child.id) !== String(personId));
   return person;
 }
 
@@ -93,7 +113,7 @@ export function isDirty(original, draft) {
     if (!value || typeof value !== 'object') return value;
     return Object.fromEntries(Object.keys(value).sort().flatMap(key => {
       const field = value[key];
-      if (key === 'bio' && field === '') return [];
+      if ((key === 'bio' || key === 'teip') && field === '') return [];
       if ((key === 'born' || key === 'died') && (field == null || field === '')) return [];
       return [[key, comparable(field)]];
     }));

@@ -1,16 +1,24 @@
-import { flattenTree } from './waydean-preview-model.mjs';
+import { flattenTree, getCardWidthForName } from './waydean-preview-model.mjs?v=person-card-width-2';
 import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
+  clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
-} from './waydean-preview-camera.mjs?v=6';
+} from './waydean-preview-camera.mjs?v=9';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
-import { compactRouteClass, nextLodLevel } from './waydean-preview-lod.mjs?v=lod-6';
+import { compactRouteClass, nextLodLevel } from './waydean-preview-lod.mjs?v=lod-8';
 import { canLoadPreviewTree, initialPreviewView, isLoopbackHost, isMasterFixtureQuery } from './waydean-preview-route.mjs?v=mobile-fit-1';
-import { cloneTree, updatePerson, addChild, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs';
+import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=child-id-1';
+import {
+  loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
+  createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
+  restoreLocalTreeBackup, listLocalTreeHistory
+} from './waydean-preview-storage.mjs?v=3';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-1';
+import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
 const FIXTURE_PHOTOS = new Map([
@@ -19,13 +27,17 @@ const FIXTURE_PHOTOS = new Map([
 ]);
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const railPreferenceKey = 'waydean-preview:tree-actions:v2';
+const myPersonStoragePrefix = 'waydean-preview:my-person:v1:';
 const ui = {
   app: $('.app-shell'), mobileSelected: $('#mobileSelected'), mobileSearch: $('#mobileSearchTrigger'),
   railToggle: $('#railToggle'), profileReopen: $('#profileReopen'),
+  miniMap: $('#miniMap'), miniMapToggle: $('#miniMapToggle'),
   stage: $('#treeStage'), viewport: $('#graphViewport'), extent: $('#graphExtent'), graph: $('#graph'), nodes: $('#treeNodes'), lines: $('#treeLines'), miniSvg: $('#miniMapSvg'),
   profile: $('#profilePanel'), summary: $('#datasetSummary'), railCount: $('#railCount'), mode: $('#modeLabel'),
   empty: $('#emptyState'), search: $('#searchPopover'), filters: $('#filtersPopover'), stats: $('#statsPopover'),
-  more: $('#morePopover'), backdrop: $('#popoverBackdrop'), toast: $('#toast'), error: $('#loadError')
+  more: $('#morePopover'), history: $('#historyPopover'), backups: $('#backupsPopover'), pwa: $('#pwaPopover'),
+  backdrop: $('#popoverBackdrop'), toast: $('#toast'), error: $('#loadError')
 };
 
 let records = [];
@@ -33,6 +45,7 @@ let byId = new Map();
 let childrenById = new Map();
 let selectedId = null;
 let contextAnchorId = null;
+let myPersonId = null;
 let mode = 'all';
 let zoom = 1;
 let filters = { min: 1, max: Infinity, photosOnly: false };
@@ -40,6 +53,7 @@ let lastFocus = null;
 let toastTimer = 0;
 let fullDataDepth = 1;
 let syntheticFixture = false;
+let localTreeDraft = false;
 let masterMobileOverview = false;
 let currentCameraLayout = null;
 let lastNodeMetrics = null;
@@ -52,6 +66,15 @@ let nextSaveFails = false;
 let editDisclosureOpen = false;
 let currentProfileTab = 'info';
 let rawDraftDirty = false;
+let localDraftKey = '';
+let localDraftRevision = 0;
+let localDraftPersistenceError = '';
+let localMediaStatus = '';
+let pwaController = null;
+let pwaPushAction = 'subscribe';
+const localPhotoUrls = new Map();
+const pendingLocalPhotoWrites = new Map();
+const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
 const scheduleMiniViewportUpdate = createFrameCoalescer(requestAnimationFrame, updateMiniViewport);
 
@@ -61,6 +84,59 @@ function nodeMetrics() {
     width: parseFloat(style.getPropertyValue('--tree-card-width')) || 132,
     height: parseFloat(style.getPropertyValue('--tree-card-height')) || 140
   };
+}
+
+function measurePersonCardWidths(people, metrics) {
+  const previousLod = ui.graph.dataset.lod;
+  ui.graph.dataset.lod = 'detail';
+  const probe = document.createElement('button');
+  probe.type = 'button';
+  probe.className = 'person-node';
+  probe.setAttribute('aria-hidden', 'true');
+  probe.tabIndex = -1;
+  probe.style.cssText = `position:absolute;left:-10000px;top:-10000px;visibility:hidden;width:${metrics.width}px;height:${metrics.height}px;`;
+  const copy = document.createElement('span');
+  copy.className = 'node-copy';
+  copy.style.width = 'max-content';
+  copy.style.minWidth = 'max-content';
+  const name = document.createElement('strong');
+  name.textContent = 'Имя';
+  name.style.width = 'max-content';
+  name.style.maxWidth = 'none';
+  name.style.overflow = 'visible';
+  name.style.textOverflow = 'clip';
+  name.style.whiteSpace = 'nowrap';
+  copy.append(name);
+  probe.append(copy);
+  ui.nodes.append(probe);
+
+  const cardStyle = getComputedStyle(probe);
+  const nameStyle = getComputedStyle(name);
+  const horizontalPadding = (parseFloat(cardStyle.paddingLeft) || 0) + (parseFloat(cardStyle.paddingRight) || 0);
+  const gap = parseFloat(cardStyle.columnGap || cardStyle.gap) || 0;
+  const gridColumns = cardStyle.display === 'grid'
+    ? cardStyle.gridTemplateColumns.split(/\s+/).map(value => parseFloat(value)).filter(Number.isFinite)
+    : [];
+  const fixedWidth = horizontalPadding + (gridColumns.length > 1
+    ? gridColumns.slice(0, -1).reduce((sum, width) => sum + width, 0) + gap
+    : 0);
+  const letterSpacing = parseFloat(nameStyle.letterSpacing) || 0;
+  const measureText = value => {
+    name.textContent = value;
+    const chars = Array.from(value).length;
+    return name.scrollWidth + Math.max(0, chars - 1) * letterSpacing;
+  };
+  const widths = new Map(people.map(person => [person.id, getCardWidthForName(person.name, {
+    baseWidth: metrics.width,
+    fixedWidth,
+    safety: 12,
+    measureText
+  })]));
+
+  probe.remove();
+  if (previousLod) ui.graph.dataset.lod = previousLod;
+  else delete ui.graph.dataset.lod;
+  return widths;
 }
 
 function syncCameraLayout() {
@@ -77,12 +153,7 @@ function syncCameraLayout() {
   ui.graph.style.setProperty('--overview-dot-size', `${Math.min(30, Math.max(8, 7 / zoom))}px`);
   ui.graph.style.setProperty('--overview-line-width', `${Math.min(4.5, Math.max(1.6, 1.1 / zoom))}px`);
   const isMobile = window.matchMedia('(max-width: 700px)').matches;
-  const preserveMobileMasterCards = syntheticFixture && masterMobileOverview && isMobile;
-  const preserveMobileHomeCards = !syntheticFixture && mode === 'all' && ui.nodes.childElementCount <= 9
-    && isMobile && zoom >= 0.88;
-  const nextLevel = preserveMobileMasterCards || preserveMobileHomeCards
-    ? 'detail'
-    : nextLodLevel(lodLevel, renderedCardWidth);
+  const nextLevel = isMobile ? 'detail' : nextLodLevel(lodLevel, renderedCardWidth);
   lodLevel = nextLevel;
   ui.graph.dataset.lod = lodLevel;
   updateZoomCaption();
@@ -128,11 +199,33 @@ function preparePreviewRecords(root) {
 
 function photoSource(person) {
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
+  if (localTreeDraft && localPhotoUrls.has(person.id)) return localPhotoUrls.get(person.id);
   return person.hasPhoto ? `photos/${encodeURIComponent(person.id)}-thumb.jpg` : null;
+}
+
+async function restoreLocalPhotoUrls() {
+  for (const url of localPhotoUrls.values()) URL.revokeObjectURL(url);
+  localPhotoUrls.clear();
+  const photos = await listLocalTreePhotos(localDraftKey);
+  for (const photo of photos) {
+    if (photo.thumb instanceof Blob) localPhotoUrls.set(photo.personId, URL.createObjectURL(photo.thumb));
+  }
 }
 
 function hasDisplayPhoto(person) {
   return Boolean(photoSource(person));
+}
+
+function editableDraftRoot() {
+  return syntheticFixture || localTreeDraft ? fixtureRoot : null;
+}
+
+function canEditDraft() {
+  return Boolean(editableDraftRoot());
+}
+
+function draftSubject() {
+  return syntheticFixture ? 'синтетическое дерево' : 'локальную копию древа';
 }
 
 function russianPlural(value, one, few, many) {
@@ -206,6 +299,69 @@ function currentRecords() {
   return candidates.filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photosOnly || hasDisplayPhoto(person)));
 }
 
+function myPersonStorageKey() {
+  return `${myPersonStoragePrefix}${syntheticFixture ? 'demo' : 'hoti'}`;
+}
+
+function loadMyPersonPreference() {
+  try {
+    const stored = localStorage.getItem(myPersonStorageKey());
+    myPersonId = stored && byId.has(stored) ? stored : null;
+    if (stored && !myPersonId) localStorage.removeItem(myPersonStorageKey());
+  } catch {
+    myPersonId = null;
+  }
+}
+
+function syncWhoAmIButton() {
+  const button = $('#whoAmI');
+  if (!button) return;
+  const hasSelf = Boolean(myPersonId && byId.has(myPersonId));
+  const showingPath = mode === 'path' && hasSelf;
+  button.textContent = showingPath ? '◎ Всё древо' : hasSelf ? '◎ Мой путь' : '◎ Кто я?';
+  button.setAttribute('aria-label', showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь');
+  button.title = showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь';
+}
+
+function setSelfPerson(id) {
+  if (!byId.has(id)) return;
+  myPersonId = String(id);
+  let persisted = false;
+  try {
+    localStorage.setItem(myPersonStorageKey(), myPersonId);
+    persisted = true;
+  } catch {
+    // Keep the mark for this page session if browser storage is unavailable.
+  }
+  selectPerson(myPersonId);
+  syncWhoAmIButton();
+  announce(persisted ? 'Отметка «Это я» сохранена в этом браузере.' : 'Отметка действует до закрытия этой страницы: браузер не разрешил сохранение.');
+}
+
+function clearSelfPerson() {
+  const previous = myPersonId;
+  myPersonId = null;
+  try {
+    localStorage.removeItem(myPersonStorageKey());
+  } catch {
+    // Clearing the in-memory mark is still useful for this page session.
+  }
+  if (mode === 'path') {
+    mode = 'all-tree';
+    resetGenerationFilters();
+    syncModeButtons(mode);
+    contextAnchorId = selectedId;
+    renderProfile();
+    drawTree();
+    fitTree();
+  } else {
+    renderProfile();
+    drawTree();
+  }
+  syncWhoAmIButton();
+  announce(previous ? 'Отметка «Это я» сброшена.' : 'Отметка уже была сброшена.');
+}
+
 function createAvatar(person, className = 'avatar') {
   const src = photoSource(person);
   const wrapper = document.createElement('span');
@@ -238,7 +394,11 @@ function filteredRootNodes(visible) {
 function drawTree() {
   const visible = currentRecords();
   const hasActiveFilters = filters.min > 1 || filters.max < fullDataDepth || filters.photosOnly;
-  $('#showFullTree').hidden = mode === 'all-tree' && !hasActiveFilters;
+  const treeBack = $('#showFullTree');
+  treeBack.hidden = mode === 'all-tree' && !hasActiveFilters;
+  treeBack.textContent = mode === 'all-tree' ? 'Сбросить фильтры' : '← Назад к полному древу';
+  treeBack.title = mode === 'all-tree' ? 'Показать всех людей без фильтров' : 'Вернуться к полному древу';
+  treeBack.setAttribute('aria-label', treeBack.title);
   const metrics = nodeMetrics();
   const mobileViewport = window.matchMedia('(max-width: 700px)').matches;
   const compactMobileMaster = syntheticFixture && mobileViewport;
@@ -269,11 +429,14 @@ function drawTree() {
   const widthById = new Map();
   const visibleChildren = new Map();
   for (const person of visible) visibleChildren.set(person.id, (childrenById.get(person.id) || []).filter(child => matches.has(child.id)));
+  const cardWidthById = syntheticFixture
+    ? new Map(visible.map(person => [person.id, metrics.width]))
+    : measurePersonCardWidths(visible, metrics);
   const siblingGap = compactMobileMaster ? 16 : 24;
   function measure(person) {
     const kids = visibleChildren.get(person.id) || [];
     const childWidth = kids.reduce((sum, child, index) => sum + measure(child) + (index ? siblingGap : 0), 0);
-    const width = metrics.width;
+    const width = cardWidthById.get(person.id) || metrics.width;
     const demoBranchWidth = syntheticFixture && !compactMobileMaster ? width * 2 + siblingGap : width;
     const total = kids.length ? Math.max(width, childWidth, demoBranchWidth) : width;
     widthById.set(person.id, total);
@@ -302,7 +465,7 @@ function drawTree() {
   const positions = new Map();
   function place(person, left, generation) {
     const subtreeWidth = widthById.get(person.id);
-    const cardWidth = metrics.width;
+    const cardWidth = cardWidthById.get(person.id) || metrics.width;
     const centerX = left + subtreeWidth / 2;
     const depth = generation - minGeneration;
     const centerY = (compactMobileShort ? 46 : compactMobileMaster ? 60 : mobileViewport ? 80 : syntheticFixture ? 75 : 132) + depth * generationStep;
@@ -348,13 +511,13 @@ function drawTree() {
     if (!point) continue;
     const card = document.createElement('button');
     card.type = 'button';
-    card.className = `person-node${person.id === selectedId ? ' selected' : ''}${compactRouteClass(person.id, labelRoute)}${related && !related.has(person.id) ? ' dimmed' : ''}`;
+    card.className = `person-node${person.id === selectedId ? ' selected' : ''}${person.id === myPersonId ? ' my-self' : ''}${compactRouteClass(person.id, labelRoute)}${related && !related.has(person.id) ? ' dimmed' : ''}`;
     card.dataset.personId = person.id;
-    card.setAttribute('aria-label', `${person.name}, ${formatYears(person)}, поколение ${person.generation}`);
+    card.setAttribute('aria-label', `${person.name}, ${formatYears(person)}, поколение ${person.generation}${person.id === myPersonId ? ', это вы' : ''}`);
     card.title = `${person.name} · ${formatYears(person)}`;
     card.style.left = `${point.centerX}px`;
     card.style.top = `${point.centerY}px`;
-    card.style.width = `${point.cardWidth}px`;
+    card.style.setProperty('--person-card-width', `${point.cardWidth}px`);
     card.append(createAvatar(person, 'node-avatar'));
     const copy = document.createElement('span');
     copy.className = 'node-copy';
@@ -378,6 +541,13 @@ function drawTree() {
       copy.append(years);
     }
     card.append(copy);
+    if (person.id === myPersonId) {
+      const selfMark = document.createElement('span');
+      selfMark.className = 'self-indicator';
+      selfMark.textContent = 'Я';
+      selfMark.setAttribute('aria-hidden', 'true');
+      card.append(selfMark);
+    }
     card.addEventListener('click', () => {
       if (suppressPersonClick === person.id) {
         suppressPersonClick = null;
@@ -489,7 +659,8 @@ function renderProfile(tab = 'info') {
       ['Поколение', String(person.generation)],
       ['Отец', parent?.name || 'Не указан'],
       ['Сыновья', `${children.length} человек`],
-      ['Ветвь', branchAnchor ? `Линия ${branchAnchor.name}` : 'Основная линия']
+      ['Ветвь', branchAnchor ? `Линия ${branchAnchor.name}` : 'Основная линия'],
+      ['Тейп', String(person.teip ?? '').trim() || 'Не указан']
     ];
     for (const [label, value] of values) {
       const row = document.createElement('div');
@@ -500,8 +671,48 @@ function renderProfile(tab = 'info') {
     const branch = document.createElement('button');
     branch.type = 'button'; branch.className = 'branch-button'; branch.textContent = 'Показать ветвь　›';
     branch.addEventListener('click', () => setMode('branch'));
+    let addSonAction = null;
+    if (canEditDraft()) {
+      addSonAction = document.createElement('section');
+      addSonAction.className = 'profile-add-son';
+      const addSonTitle = document.createElement('strong');
+      addSonTitle.textContent = 'Продолжить семейную историю';
+      const addSonNote = document.createElement('small');
+      addSonNote.textContent = syntheticFixture
+        ? 'Демо-изменение действует только в этой вкладке.'
+        : 'После добавления нажми «Сохранить локально»; production не меняется.';
+      const addSonButton = document.createElement('button');
+      addSonButton.type = 'button';
+      addSonButton.className = 'profile-add-son-button';
+      addSonButton.dataset.profileFocus = 'action:add-son';
+      addSonButton.textContent = '＋ Добавить ребёнка';
+      addSonButton.setAttribute('aria-label', `Добавить ребёнка к ${person.name}`);
+      addSonButton.addEventListener('click', () => {
+        renderProfile('relatives');
+        requestAnimationFrame(() => {
+          const form = ui.profile.querySelector('[data-add-child-form]');
+          const nameInput = form?.querySelector('input[name="name"]');
+          form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          nameInput?.focus({ preventScroll: true });
+        });
+      });
+      addSonAction.append(addSonTitle, addSonNote, addSonButton);
+    }
+    const selfAction = document.createElement('button');
+    selfAction.type = 'button';
+    selfAction.className = 'self-person-button';
+    const isSelf = person.id === myPersonId;
+    selfAction.setAttribute('aria-pressed', String(isSelf));
+    selfAction.textContent = isSelf ? '✓ Это вы · сбросить отметку' : 'Отметить как меня';
+    selfAction.title = isSelf ? 'Убрать сохранённую отметку «Это я»' : 'Запомнить этого человека как вас в этом браузере';
+    selfAction.addEventListener('click', () => isSelf ? clearSelfPerson() : setSelfPerson(person.id));
+    const selfNote = document.createElement('small');
+    selfNote.className = 'self-person-note';
+    selfNote.textContent = isSelf ? 'Теперь «Мой путь» ведёт от предков к этой карточке.' : 'Отметка хранится отдельно для HOTI и демонстрационного дерева.';
     body.append(facts, branch);
-    if (syntheticFixture) body.append(buildEditControls(person));
+    if (addSonAction) body.append(addSonAction);
+    body.append(selfAction, selfNote);
+    if (canEditDraft()) body.append(buildEditControls(person));
   } else if (tab === 'relatives') {
     const relatives = [...(parent ? [parent] : []), ...children];
     if (!relatives.length) {
@@ -518,7 +729,7 @@ function renderProfile(tab = 'info') {
       }
       body.append(list);
     }
-    if (syntheticFixture) body.append(buildRelationshipControls(person));
+    if (canEditDraft()) body.append(buildRelationshipControls(person));
   } else {
     const media = document.createElement('div'); media.className = 'media-state';
     if (hasDisplayPhoto(person)) {
@@ -529,6 +740,7 @@ function renderProfile(tab = 'info') {
       media.append(title);
     }
     body.append(media);
+    if (localTreeDraft) body.append(buildLocalPhotoControls(person));
   }
   const close = document.createElement('button');
   close.type = 'button'; close.className = 'profile-close'; close.setAttribute('aria-label','Свернуть профиль'); close.title = 'Свернуть профиль';
@@ -560,6 +772,140 @@ function addField(form, labelText, name, value = '', type = 'text') {
   label.append(input); form.append(label); return input;
 }
 
+function squareJpegBlob(source, size, quality) {
+  const side = Math.min(source.width, source.height);
+  const sx = Math.floor((source.width - side) / 2);
+  const sy = Math.floor((source.height - side) / 2);
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const context = canvas.getContext('2d', { alpha: false });
+  if (!context) return Promise.reject(new Error('Не удалось подготовить изображение.'));
+  context.drawImage(source, sx, sy, side, side, 0, 0, size, size);
+  return new Promise((resolve, reject) => canvas.toBlob(blob => {
+    if (blob) resolve(blob);
+    else reject(new Error('Не удалось сжать фотографию.'));
+  }, 'image/jpeg', quality));
+}
+
+async function localPhotoVariants(file) {
+  if (!file?.type?.startsWith('image/')) throw new Error('Выберите файл изображения.');
+  if (file.size > 20 * 1024 * 1024) throw new Error('Размер фотографии должен быть меньше 20 МБ.');
+  if (!globalThis.createImageBitmap) throw new Error('Этот браузер не поддерживает обработку фотографий.');
+  const bitmap = await createImageBitmap(file);
+  try {
+    const [full, thumb] = await Promise.all([
+      squareJpegBlob(bitmap, 800, 0.84),
+      squareJpegBlob(bitmap, 320, 0.82)
+    ]);
+    return { full, thumb };
+  } finally {
+    bitmap.close?.();
+  }
+}
+
+async function stageLocalPersonPhoto(personId, file) {
+  if (!localTreeDraft || !file) return;
+  try {
+    const photo = await localPhotoVariants(file);
+    const oldUrl = localPhotoUrls.get(personId);
+    if (oldUrl) URL.revokeObjectURL(oldUrl);
+    localPhotoUrls.set(personId, URL.createObjectURL(photo.thumb));
+    pendingLocalPhotoWrites.set(personId, { personId, ...photo });
+    pendingLocalPhotoDeletes.delete(personId);
+    setPersonPhotoKey(editableDraftRoot(), personId, `local-${Date.now()}`);
+    localMediaStatus = 'Фото подготовлено. Нажмите «Сохранить локально», чтобы оставить его в браузере.';
+    editStatus = 'dirty';
+    rawDraftDirty = false;
+    refreshEditableModel();
+    renderProfile('media');
+  } catch (error) {
+    localMediaStatus = error?.message || 'Не удалось подготовить фотографию.';
+    renderProfile('media');
+  }
+}
+
+function removeLocalPersonPhoto(person) {
+  if (!localTreeDraft || !hasDisplayPhoto(person)) return;
+  if (!window.confirm(`Удалить фотографию ${person.name} из локального черновика?`)) return;
+  const oldUrl = localPhotoUrls.get(person.id);
+  if (oldUrl) URL.revokeObjectURL(oldUrl);
+  localPhotoUrls.delete(person.id);
+  pendingLocalPhotoWrites.delete(person.id);
+  pendingLocalPhotoDeletes.add(person.id);
+  setPersonPhotoKey(editableDraftRoot(), person.id, null);
+  localMediaStatus = 'Фотография будет удалена из локальной копии после сохранения. Прод не меняется.';
+  editStatus = 'dirty';
+  rawDraftDirty = false;
+  refreshEditableModel();
+  renderProfile('media');
+}
+
+function buildLocalPhotoControls(person) {
+  const controls = document.createElement('div');
+  controls.className = 'mock-editor local-photo-editor';
+  const title = document.createElement('strong');
+  title.textContent = 'Фотография в локальной копии';
+  const actions = document.createElement('div');
+  actions.className = 'mock-edit-actions';
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.hidden = true;
+  input.setAttribute('aria-label', `Выбрать фотографию для ${person.name}`);
+  const choose = document.createElement('button');
+  choose.type = 'button';
+  choose.textContent = hasDisplayPhoto(person) ? 'Заменить фотографию' : 'Добавить фотографию';
+  choose.addEventListener('click', () => input.click());
+  input.addEventListener('change', () => {
+    const [file] = input.files || [];
+    void stageLocalPersonPhoto(person.id, file);
+    input.value = '';
+  });
+  actions.append(input, choose);
+  if (editStatus === 'dirty') {
+    const save = document.createElement('button');
+    save.type = 'button';
+    save.textContent = 'Сохранить локально';
+    save.addEventListener('click', submitMockSave);
+    actions.append(save);
+  } else if (editStatus === 'error') {
+    const retry = document.createElement('button');
+    retry.type = 'button';
+    retry.textContent = 'Повторить сохранение';
+    retry.addEventListener('click', submitMockSave);
+    actions.append(retry);
+  } else if (editStatus === 'conflict') {
+    const reload = document.createElement('button');
+    reload.type = 'button';
+    reload.textContent = 'Загрузить сохранённую версию';
+    reload.addEventListener('click', reloadLocalDraftFromStorage);
+    actions.append(reload);
+  }
+  if (editStatus === 'saving') {
+    const saving = document.createElement('span');
+    saving.className = 'mock-edit-status status-saving';
+    saving.textContent = 'Сохраняется…';
+    actions.append(saving);
+  }
+  if (hasDisplayPhoto(person)) {
+    const remove = document.createElement('button');
+    remove.type = 'button';
+    remove.textContent = 'Убрать фотографию';
+    remove.addEventListener('click', () => removeLocalPersonPhoto(person));
+    actions.append(remove);
+  }
+  const status = document.createElement('p');
+  status.className = `mock-edit-status${editStatus === 'error' || editStatus === 'conflict' || localMediaStatus.includes('Не удалось') ? ' status-error' : ''}`;
+  status.setAttribute('aria-live', 'polite');
+  status.textContent = editStatus === 'saving' ? 'Сохраняются дерево и фото…'
+    : editStatus === 'conflict' ? 'Древо изменилось в другой вкладке. Сначала загрузите сохранённую версию.'
+      : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить локальную копию.'
+        : localMediaStatus || 'Изображение останется только в этом браузере.';
+  controls.append(title, actions, status);
+  return controls;
+}
+
 function setProfileCollapsed(collapsed) {
   ui.profile.classList.toggle('collapsed', collapsed);
   ui.profile.parentElement.classList.toggle('profile-collapsed', collapsed);
@@ -578,40 +924,51 @@ function buildEditControls(person) {
   section.open = editDisclosureOpen;
   section.addEventListener('toggle', () => { editDisclosureOpen = section.open; });
   const title = document.createElement('summary'); title.className = 'mock-editor-summary';
-  title.textContent = 'Редактировать демо-запись'; section.append(title);
+  title.textContent = syntheticFixture ? 'Редактировать демо-запись' : 'Редактировать данные в локальном черновике'; section.append(title);
   const form = document.createElement('form'); form.className = 'mock-edit-form';
   addField(form, 'Имя', 'name', person.name);
+  addField(form, 'Тейп', 'teip', person.teip || '');
   addField(form, 'Год рождения', 'born', person.born, 'text');
   addField(form, 'Год смерти', 'died', person.died, 'text');
   addField(form, 'Биография', 'bio', person.bio || '');
-  const failureLabel = document.createElement('label'); failureLabel.className = 'mock-edit-failure';
-  const failure = document.createElement('input'); failure.type = 'checkbox'; failure.checked = nextSaveFails;
-  failure.dataset.profileFocus = 'action:simulate-error';
-  failure.addEventListener('change', () => { nextSaveFails = failure.checked; });
-  failureLabel.append(failure, document.createTextNode('Имитировать ошибку следующего сохранения')); form.append(failureLabel);
+  if (syntheticFixture) {
+    const failureLabel = document.createElement('label'); failureLabel.className = 'mock-edit-failure';
+    const failure = document.createElement('input'); failure.type = 'checkbox'; failure.checked = nextSaveFails;
+    failure.dataset.profileFocus = 'action:simulate-error';
+    failure.addEventListener('change', () => { nextSaveFails = failure.checked; });
+    failureLabel.append(failure, document.createTextNode('Имитировать ошибку следующего сохранения')); form.append(failureLabel);
+  }
   const actions = document.createElement('div'); actions.className = 'mock-edit-actions';
-  const save = document.createElement('button'); save.type = 'submit'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : 'Сохранить в памяти'; save.disabled = editStatus === 'saving';
+  const save = document.createElement('button'); save.type = 'submit'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : syntheticFixture ? 'Сохранить демо-черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict';
   save.dataset.profileFocus = 'action:save';
   const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
+  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', reloadLocalDraftFromStorage);
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Отменить черновик'; cancel.dataset.profileFocus = 'action:cancel'; cancel.addEventListener('click', cancelDraft);
-  const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = 'Сбросить фикстуру'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
-  actions.append(save, retry, cancel, reset); form.append(actions);
+  const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = syntheticFixture ? 'Сбросить фикстуру' : 'Вернуть исходное древо'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
+  actions.append(save, retry, reloadSaved, cancel, reset); form.append(actions);
   const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
-  const messages = { clean: 'Нет несохранённых изменений.', dirty: 'Есть несохранённые изменения.', saving: 'Сохранение имитируется…', saved: 'Изменения сохранены только в памяти текущей страницы.', error: 'Ошибка сохранения. Черновик сохранён; можно повторить.' };
+  const messages = {
+    clean: `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || 'Это локальная копия; прод не меняется.'}`,
+    dirty: 'Есть несохранённые изменения.',
+    saving: 'Обновляется локальный черновик…',
+    saved: syntheticFixture ? 'Изменения сохранены только в памяти этой страницы.' : 'Локальная копия сохранена в этом браузере. Прод не меняется.',
+    error: 'Не удалось сохранить черновик. Изменения остались на странице; можно повторить.',
+    conflict: 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию, чтобы продолжить.'
+  };
   status.textContent = messages[editStatus];
   form.addEventListener('input', () => {
     rawDraftDirty = true;
     const values = Object.fromEntries(new FormData(form).entries());
     try {
-      updatePerson(fixtureRoot, person.id, values);
+      updatePerson(editableDraftRoot(), person.id, values);
       rawDraftDirty = false;
-      editStatus = isDirty(originalFixtureRoot, fixtureRoot) ? 'dirty' : 'clean';
+      editStatus = isDirty(originalFixtureRoot, editableDraftRoot()) ? 'dirty' : 'clean';
       status.textContent = messages[editStatus]; status.className = `mock-edit-status status-${editStatus}`;
     } catch (error) { rawDraftDirty = true; status.textContent = error.message; status.className = 'mock-edit-status status-error'; }
   });
   form.addEventListener('submit', event => {
     event.preventDefault();
-    try { updatePerson(fixtureRoot, person.id, Object.fromEntries(new FormData(form).entries())); }
+    try { updatePerson(editableDraftRoot(), person.id, Object.fromEntries(new FormData(form).entries())); }
     catch (error) { status.textContent = error.message; return; }
     editStatus = 'dirty'; submitMockSave();
   });
@@ -620,26 +977,33 @@ function buildEditControls(person) {
 
 function buildRelationshipControls(person) {
   const section = document.createElement('section'); section.className = 'mock-editor';
-  const title = document.createElement('strong'); title.textContent = 'Связи синтетического дерева'; section.append(title);
+  const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : 'Связи локальной копии'; section.append(title);
   const addForm = document.createElement('form'); addForm.className = 'mock-edit-form';
-  addField(addForm, 'ID нового человека', 'id'); addField(addForm, 'Имя ребёнка', 'name'); addField(addForm, 'Год рождения', 'born', '', 'text');
-  const addButton = document.createElement('button'); addButton.type = 'submit'; addButton.textContent = 'Проверить ребёнка'; addButton.dataset.profileFocus = 'action:preview-child'; addForm.append(addButton);
+  addForm.dataset.addChildForm = 'true';
+  const idNote = document.createElement('p'); idNote.className = 'mock-edit-status';
+  idNote.textContent = syntheticFixture
+    ? 'ID создаётся автоматически; демо-изменение останется только в этой вкладке.'
+    : 'ID создаётся автоматически; исходное дерево не меняется.';
+  addForm.append(idNote);
+  addField(addForm, 'Имя ребёнка', 'name'); addField(addForm, 'Тейп', 'teip'); addField(addForm, 'Год рождения', 'born', '', 'text');
+  const addButton = document.createElement('button'); addButton.type = 'submit'; addButton.textContent = 'Проверить данные'; addButton.dataset.profileFocus = 'action:preview-child'; addForm.append(addButton);
   const addPreview = document.createElement('p'); addPreview.className = 'mock-edit-status'; addPreview.setAttribute('role', 'status'); addPreview.setAttribute('aria-live', 'polite'); addPreview.setAttribute('aria-atomic', 'true'); addPreview.dataset.profileFocus = 'preview-status'; addPreview.tabIndex = -1; addForm.append(addPreview);
-  const addConfirm = document.createElement('button'); addConfirm.type = 'button'; addConfirm.textContent = 'Подтвердить добавление'; addConfirm.hidden = true; addConfirm.dataset.profileFocus = 'action:confirm-child'; addForm.append(addConfirm);
+  const addConfirm = document.createElement('button'); addConfirm.type = 'button'; addConfirm.textContent = 'Добавить в дерево'; addConfirm.hidden = true; addConfirm.dataset.profileFocus = 'action:confirm-child'; addForm.append(addConfirm);
   let proposedChild = null;
   addForm.addEventListener('input', () => { proposedChild = null; addConfirm.hidden = true; addPreview.textContent = ''; });
   addForm.addEventListener('submit', event => {
     event.preventDefault();
     try {
       proposedChild = Object.fromEntries(new FormData(addForm).entries());
-      const previewTree = cloneTree(fixtureRoot); addChild(previewTree, person.id, proposedChild);
+      if (!proposedChild.id) proposedChild.id = generateUniquePersonId(editableDraftRoot());
+      const previewTree = cloneTree(editableDraftRoot()); addChild(previewTree, person.id, proposedChild);
       addPreview.textContent = `Предпросмотр: «${proposedChild.name}» будет добавлен ребёнком к «${person.name}».`;
       addConfirm.hidden = false;
     } catch (error) { proposedChild = null; addConfirm.hidden = true; addPreview.textContent = error.message; }
   });
   addConfirm.addEventListener('click', () => {
     if (!proposedChild) return;
-    try { addChild(fixtureRoot, person.id, proposedChild); proposedChild = null; markRelationshipDirty(); }
+    try { addChild(editableDraftRoot(), person.id, proposedChild); proposedChild = null; markRelationshipDirty(); }
     catch (error) { addPreview.textContent = error.message; }
   });
   section.append(addForm);
@@ -661,7 +1025,7 @@ function buildRelationshipControls(person) {
   const showPreview = () => {
     proposed = null;
     try {
-      const candidate = cloneTree(fixtureRoot);
+      const candidate = cloneTree(editableDraftRoot());
       reparentPerson(candidate, moving.value, parent.value);
       proposed = { personId: moving.value, parentId: parent.value };
       preview.textContent = `Предпросмотр: ${byId.get(moving.value)?.name || moving.value} станет ребёнком ${byId.get(parent.value)?.name || parent.value}.`;
@@ -672,7 +1036,7 @@ function buildRelationshipControls(person) {
   parent.addEventListener('change', showPreview);
   apply.addEventListener('click', () => {
     if (!proposed) return;
-    try { reparentPerson(fixtureRoot, proposed.personId, proposed.parentId); markRelationshipDirty(); }
+    try { reparentPerson(editableDraftRoot(), proposed.personId, proposed.parentId); markRelationshipDirty(); }
     catch (error) { preview.textContent = error.message; }
   });
   section.append(moveForm);
@@ -682,18 +1046,30 @@ function buildRelationshipControls(person) {
   remove.dataset.profileFocus = 'action:delete';
   remove.addEventListener('click', () => {
     if (!target.value) { announce('Сначала выберите человека.'); return; }
-    if (!window.confirm('Удалить выбранного листового человека из синтетического черновика?')) return;
-    try { deleteLeaf(fixtureRoot, target.value); markRelationshipDirty(); }
+    if (!window.confirm(`Удалить выбранного листового человека из ${draftSubject()}?`)) return;
+    try {
+      const removedPerson = byId.get(target.value);
+      deleteLeaf(editableDraftRoot(), target.value);
+      if (localTreeDraft && removedPerson?.hasPhoto) {
+        const oldUrl = localPhotoUrls.get(target.value);
+        if (oldUrl) URL.revokeObjectURL(oldUrl);
+        localPhotoUrls.delete(target.value);
+        pendingLocalPhotoWrites.delete(target.value);
+        pendingLocalPhotoDeletes.add(target.value);
+      }
+      markRelationshipDirty();
+    }
     catch (error) { announce(error.message); }
   });
   deleteForm.append(remove); section.append(deleteForm);
-  const save = document.createElement('button'); save.type = 'button'; save.textContent = 'Сохранить изменения в памяти'; save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
-  const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить сохранение'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
+  const save = document.createElement('button'); save.type = 'button'; save.textContent = syntheticFixture ? 'Сохранить демо-черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict'; save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
+  const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
+  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', reloadLocalDraftFromStorage);
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Отменить черновик'; cancel.dataset.profileFocus = 'action:cancel'; cancel.addEventListener('click', cancelDraft);
-  const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = 'Сбросить фикстуру'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
+  const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = syntheticFixture ? 'Сбросить фикстуру' : 'Вернуть исходное древо'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
   const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
-  status.textContent = editStatus === 'error' ? 'Ошибка сохранения; изменения остались в черновике.' : editStatus === 'saved' ? 'Сохранено только в памяти этой страницы.' : editStatus === 'saving' ? 'Сохранение имитируется…' : editStatus === 'dirty' ? 'Есть несохранённые изменения.' : 'Нет несохранённых изменений.';
-  section.append(save, retry, cancel, reset, status); return section;
+  status.textContent = editStatus === 'conflict' ? 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию.' : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить; изменения остались на странице.' : editStatus === 'saved' ? syntheticFixture ? 'Сохранено только в памяти этой страницы.' : 'Сохранено в этом браузере. Прод не меняется.' : editStatus === 'saving' ? 'Обновляется локальный черновик…' : editStatus === 'dirty' ? 'Есть несохранённые изменения.' : `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || 'Прод не меняется.'}`;
+  section.append(save, retry, reloadSaved, cancel, reset, status); return section;
 }
 
 function markRelationshipDirty() {
@@ -702,40 +1078,119 @@ function markRelationshipDirty() {
 }
 
 function refreshEditableModel() {
-  records = preparePreviewRecords(fixtureRoot);
+  records = preparePreviewRecords(editableDraftRoot());
   byId = new Map(records.map(person => [person.id, person]));
+  const lostSelf = Boolean(myPersonId && !byId.has(myPersonId));
+  if (lostSelf) {
+    myPersonId = null;
+    try { localStorage.removeItem(myPersonStorageKey()); } catch { /* Keep the page usable without browser storage. */ }
+  }
   if (!byId.has(selectedId) && records.length) selectedId = records[0].id;
   childrenById = new Map(records.map(person => [person.id, []]));
   for (const item of records) if (item.parentId) childrenById.get(item.parentId)?.push(item);
   fullDataDepth = Math.max(...records.map(person => person.generation));
+  if (lostSelf && mode === 'path') {
+    mode = 'all-tree';
+    resetGenerationFilters();
+    contextAnchorId = selectedId;
+    syncModeButtons(mode);
+  }
+  syncWhoAmIButton();
   drawTree(); updateStats();
 }
 
 async function submitMockSave() {
-  if (!syntheticFixture || !fixtureRoot || editStatus === 'saving') return;
+  if (!canEditDraft() || editStatus === 'saving') return;
   editStatus = 'saving'; renderProfile(currentProfileTab);
-  const fail = nextSaveFails; nextSaveFails = false;
+  const fail = syntheticFixture && nextSaveFails; nextSaveFails = false;
   try {
-    await mockSave({ shouldFail: fail });
-    originalFixtureRoot = cloneTree(fixtureRoot); editStatus = 'saved'; rawDraftDirty = false; refreshEditableModel(); renderProfile(currentProfileTab);
-  } catch { editStatus = 'error'; renderProfile(currentProfileTab); }
+    if (syntheticFixture) await mockSave({ shouldFail: fail });
+    else {
+      const result = await saveLocalTreeDraft(localDraftKey, editableDraftRoot(), localDraftRevision, {
+        puts: [...pendingLocalPhotoWrites.values()],
+        deletes: [...pendingLocalPhotoDeletes]
+      });
+      localDraftRevision = result.revision;
+      localDraftPersistenceError = '';
+      pendingLocalPhotoWrites.clear();
+      pendingLocalPhotoDeletes.clear();
+      localMediaStatus = 'Изменения и фотографии сохранены в этом браузере. Прод не меняется.';
+    }
+    originalFixtureRoot = cloneTree(editableDraftRoot()); editStatus = 'saved'; rawDraftDirty = false; refreshEditableModel(); renderProfile(currentProfileTab);
+    if (localTreeDraft && !ui.history.hidden) await renderLocalHistory();
+    if (localTreeDraft && !ui.backups.hidden) await renderLocalBackups();
+  } catch (error) {
+    editStatus = error?.code === 'LOCAL_DRAFT_CONFLICT' ? 'conflict' : 'error';
+    localDraftPersistenceError = error?.message || '';
+    renderProfile(currentProfileTab);
+  }
 }
 
-function cancelDraft() {
-  if (!syntheticFixture) return;
-  if ((rawDraftDirty || isDirty(originalFixtureRoot, fixtureRoot)) && !window.confirm('Отменить изменения и вернуть последнюю имитацию сохранения?')) return;
+async function reloadLocalDraftFromStorage() {
+  if (!localTreeDraft) return;
+  if ((rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))
+    && !window.confirm('Заменить несохранённые изменения последней версией из этого браузера?')) return;
+  try {
+    const stored = await loadLocalTreeDraft(localDraftKey);
+    if (!stored) throw new Error('Сохранённая локальная версия не найдена. Обновите страницу.');
+    fixtureRoot = cloneTree(stored.tree);
+    originalFixtureRoot = cloneTree(stored.tree);
+    localDraftRevision = stored.revision;
+    localDraftPersistenceError = '';
+    pendingLocalPhotoWrites.clear();
+    pendingLocalPhotoDeletes.clear();
+    localMediaStatus = '';
+    await restoreLocalPhotoUrls();
+    editStatus = 'saved';
+    rawDraftDirty = false;
+    refreshEditableModel();
+    renderProfile(currentProfileTab);
+  } catch (error) {
+    localDraftPersistenceError = error?.message || 'Не удалось прочитать локальную версию.';
+    editStatus = 'error';
+    renderProfile(currentProfileTab);
+  }
+}
+
+async function cancelDraft() {
+  if (!canEditDraft()) return;
+  if ((rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot())) && !window.confirm('Отменить изменения и вернуть последнюю версию черновика?')) return;
+  if (localTreeDraft) {
+    pendingLocalPhotoWrites.clear();
+    pendingLocalPhotoDeletes.clear();
+    localMediaStatus = '';
+    try { await restoreLocalPhotoUrls(); }
+    catch (error) { localDraftPersistenceError = error?.message || ''; }
+  }
   fixtureRoot = cloneTree(originalFixtureRoot); editStatus = 'clean'; rawDraftDirty = false; refreshEditableModel(); renderProfile(currentProfileTab);
 }
 
-function resetFixture() {
-  if (!syntheticFixture) return;
-  if ((rawDraftDirty || isDirty(originalFixtureRoot, fixtureRoot)) && !window.confirm('Сбросить синтетический черновик к исходной фикстуре?')) return;
+async function resetFixture() {
+  if (!canEditDraft()) return;
+  if ((rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot())) && !window.confirm(`Вернуть исходное состояние ${draftSubject()}?`)) return;
+  if (localTreeDraft) {
+    try {
+      await clearLocalTreeDraft(localDraftKey, localDraftRevision);
+      localDraftRevision = 0;
+      localDraftPersistenceError = '';
+      pendingLocalPhotoWrites.clear();
+      pendingLocalPhotoDeletes.clear();
+      localMediaStatus = '';
+      for (const url of localPhotoUrls.values()) URL.revokeObjectURL(url);
+      localPhotoUrls.clear();
+    } catch (error) {
+      editStatus = error?.code === 'LOCAL_DRAFT_CONFLICT' ? 'conflict' : 'error';
+      localDraftPersistenceError = error?.message || '';
+      renderProfile(currentProfileTab);
+      return;
+    }
+  }
   fixtureRoot = cloneTree(sourceFixtureRoot); originalFixtureRoot = cloneTree(sourceFixtureRoot); editStatus = 'clean'; rawDraftDirty = false;
   refreshEditableModel(); renderProfile(currentProfileTab);
 }
 
 window.addEventListener('beforeunload', event => {
-  if (syntheticFixture && fixtureRoot && (rawDraftDirty || isDirty(originalFixtureRoot, fixtureRoot))) { event.preventDefault(); event.returnValue = ''; }
+  if (canEditDraft() && (rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))) { event.preventDefault(); event.returnValue = ''; }
 });
 
 function centerPerson(id) {
@@ -759,7 +1214,12 @@ function centerVisiblePerson() {
 function selectPerson(id, { preserveContext = false } = {}) {
   if (!byId.has(id)) return;
   if (id === 'demo-ali') masterMobileOverview = false;
-  if (!preserveContext) contextAnchorId = id;
+  if (mode === 'path' && !preserveContext && !ancestors(myPersonId).includes(id)) {
+    mode = 'all-tree';
+    resetGenerationFilters();
+    syncModeButtons(mode);
+  }
+  if (!preserveContext) contextAnchorId = mode === 'path' ? myPersonId : id;
   const filterResult = includePersonInFilters(filters, byId.get(id));
   filters = filterResult.filters;
   $('#minGeneration').value = String(filters.min);
@@ -774,7 +1234,8 @@ function selectPerson(id, { preserveContext = false } = {}) {
   closePopovers();
   drawTree();
   renderProfile();
-  if (zoom < 0.9) setZoom(0.9);
+  syncWhoAmIButton();
+  if (zoom < 0.9 && mode !== 'all-tree') setZoom(0.9);
   centerPerson(id);
   if (filterResult.changed) announce('Фильтр расширен, чтобы показать выбранного человека.');
 }
@@ -792,7 +1253,7 @@ function openPrintStudio() {
   } else {
     printUrl.searchParams.set('scope', 'person');
     handoff.scope = 'person';
-    handoff.personId = selectedId;
+    handoff.personId = mode === 'path' ? myPersonId : selectedId;
     handoff.direction = mode === 'path' ? 'ancestors' : 'both';
     handoff.depth = mode === 'path' ? fullDataDepth : Math.min(5, fullDataDepth);
     printUrl.searchParams.set('direction', handoff.direction);
@@ -805,6 +1266,29 @@ function openPrintStudio() {
     // Print Studio falls back to the full local tree if tab storage is unavailable.
   }
   window.location.assign(printUrl);
+}
+
+function openVideoStudio() {
+  const scopeType = mode === 'path' || mode === 'branch' ? mode : 'all';
+  const selectedPersonId = scopeType === 'path' ? (myPersonId || selectedId) : selectedId;
+  const handoff = createBrowserVideoHandoff(records, {
+    scopeType,
+    selectedPersonId,
+    title: 'История рода',
+    includeDates: true,
+    aspectRatio: window.matchMedia('(max-width: 700px)').matches ? '9:16' : '16:9'
+  });
+
+  try {
+    window.sessionStorage.setItem(VIDEO_HANDOFF_KEY, JSON.stringify(handoff));
+  } catch {
+    announce('Браузер не разрешил временно подготовить видео. Проверьте свободную память и повторите.');
+    return;
+  }
+
+  const videoUrl = new URL('../docs/design/waydean/export/video-prototype/browser-export.html', location.href);
+  closePopovers();
+  window.location.assign(videoUrl.href);
 }
 
 function openPopover(popover) {
@@ -829,6 +1313,220 @@ function announce(message) {
   ui.toast.classList.add('visible');
   clearTimeout(toastTimer);
   toastTimer = setTimeout(() => ui.toast.classList.remove('visible'), 2200);
+}
+
+function renderPwaStatus(state = pwaController?.getState()) {
+  if (!state) return;
+  const installStatus = $('#pwaInstallStatus');
+  const installHelp = $('#pwaInstallHelp');
+  const installButton = $('#pwaInstall');
+  const offlineStatus = $('#pwaOfflineStatus');
+  const networkStatus = $('#pwaNetworkStatus');
+  const notificationStatus = $('#pwaNotificationStatus');
+  const notificationEnable = $('#pwaNotificationEnable');
+  const notificationTest = $('#pwaNotificationTest');
+
+  installStatus.textContent = state.installed
+    ? 'Приложение уже установлено'
+    : state.localPreview ? 'Waydean готов к установке' : 'Установка доступна в локальном preview';
+  installHelp.textContent = state.installed
+    ? 'Откройте Waydean с главного экрана или из списка приложений.'
+    : !state.localPreview
+      ? 'Установка отдельного приложения появится после выпуска Waydean.'
+      : state.installPromptAvailable
+        ? 'Браузер предлагает установить Waydean отдельным приложением.'
+        : state.installInstructions;
+  installButton.textContent = state.installed
+    ? 'Waydean установлено'
+    : state.installPromptAvailable ? 'Установить Waydean' : 'Как установить Waydean';
+  installButton.disabled = state.installed || !state.localPreview;
+
+  offlineStatus.textContent = !state.localPreview
+    ? 'Подключим вместе с выпуском Waydean'
+    : state.offlineReady
+      ? 'Готово после первой загрузки'
+      : state.serviceWorkerError
+        ? 'Не удалось включить кеш'
+        : 'Кешируется при первом открытии';
+  networkStatus.textContent = state.online ? 'В сети' : 'Нет сети';
+  $('#pwaOfflineNote').hidden = !state.localPreview;
+
+  const permissionText = {
+    unsupported: 'не поддерживаются',
+    denied: 'запрещены в браузере',
+    default: 'ещё не разрешены',
+    granted: 'разрешены'
+  };
+  notificationStatus.textContent = permissionText[state.notificationPermission] || 'статус неизвестен';
+  $('#pwaLocalNotificationArea').hidden = state.serverPushAvailable;
+  notificationEnable.hidden = state.serverPushAvailable || state.notificationPermission === 'granted' || state.notificationPermission === 'unsupported';
+  notificationEnable.disabled = !state.localPreview || state.notificationPermission === 'denied';
+  notificationTest.hidden = !state.localPreview;
+  notificationTest.disabled = !state.localPreview || state.notificationPermission !== 'granted' || !state.serviceWorkerReady;
+  $('#pwaLocalPushNote').hidden = state.serverPushAvailable;
+  $('#pwaServerPush').hidden = !state.serverPushAvailable;
+  $('#pwaServerPushStatus').textContent = state.serverPushAvailable
+    ? state.serverPushSubscribed ? 'Подключены на этом устройстве' : 'Не подключены на этом устройстве'
+    : 'Недоступно';
+  $('#pwaServerPushEnable').hidden = !state.serverPushAvailable || state.serverPushSubscribed;
+  $('#pwaServerPushEnable').disabled = !state.online || !state.serviceWorkerReady;
+  $('#pwaServerPushDisable').hidden = !state.serverPushAvailable || !state.serverPushSubscribed;
+  $('#pwaServerPushDisable').disabled = !state.online || !state.serviceWorkerReady;
+  if (state.notificationPermission === 'denied') {
+    notificationEnable.textContent = 'Разрешение отключено в настройках браузера';
+  } else {
+    notificationEnable.textContent = 'Разрешить уведомления';
+  }
+}
+
+function hasUncommittedDraft() {
+  return Boolean(localTreeDraft && editableDraftRoot()
+    && (rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot())));
+}
+
+function openPwaPushDialog(action) {
+  pwaPushAction = action;
+  const dialog = $('#pwaPushDialog');
+  const subscribing = action === 'subscribe';
+  $('#pwaPushDialogTitle').textContent = subscribing ? 'Включить push-уведомления' : 'Отключить push-уведомления';
+  $('#pwaPushDialogHelp').textContent = subscribing
+    ? 'Введите пароль редактора. Браузер также попросит разрешить уведомления.'
+    : 'Введите пароль редактора, чтобы удалить подписку этого устройства с сервера.';
+  $('#pwaPushSubmit').textContent = subscribing ? 'Включить' : 'Отключить';
+  $('#pwaPushPassword').value = '';
+  $('#pwaPushError').hidden = true;
+  if (dialog.showModal) dialog.showModal();
+  else announce('Браузер не поддерживает окно подтверждения уведомлений.');
+  $('#pwaPushPassword').focus();
+}
+
+function formatLocalDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 'Дата неизвестна' : date.toLocaleString('ru-RU', {
+    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+  });
+}
+
+async function renderLocalHistory() {
+  const list = $('#localHistoryList');
+  list.replaceChildren();
+  if (!localTreeDraft) {
+    const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'Локальная история доступна только в рабочей копии на этом компьютере.'; list.append(empty); return;
+  }
+  try {
+    const entries = await listLocalTreeHistory(localDraftKey);
+    if (!entries.length) {
+      const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'История появится после первого локального сохранения или снимка.'; list.append(empty); return;
+    }
+    for (const entry of entries) {
+      const row = document.createElement('article'); row.className = 'local-history-row';
+      const title = document.createElement('strong'); title.textContent = entry.label;
+      const date = document.createElement('time'); date.dateTime = entry.createdAt; date.textContent = formatLocalDate(entry.createdAt);
+      const meta = document.createElement('small'); meta.textContent = `${entry.personCount ?? records.length} человек${entry.revision ? ` · ревизия ${entry.revision}` : ''}`;
+      row.append(title, date, meta); list.append(row);
+    }
+  } catch (error) {
+    const message = document.createElement('p'); message.className = 'local-data-empty is-error'; message.textContent = error?.message || 'Не удалось прочитать локальную историю.'; list.append(message);
+  }
+}
+
+async function renderLocalBackups() {
+  const list = $('#localBackupList');
+  const status = $('#localBackupStatus');
+  const create = $('#createLocalBackup');
+  list.replaceChildren();
+  const dirty = hasUncommittedDraft();
+  create.disabled = !localTreeDraft || dirty || editStatus === 'saving' || editStatus === 'conflict';
+  status.textContent = dirty ? 'Сначала сохраните или отмените несохранённые изменения.' : 'Снимки содержат дерево и отметки фото; сами файлы фото в них не входят.';
+  if (!localTreeDraft) {
+    const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'Локальные резервные копии доступны только в рабочей копии на этом компьютере.'; list.append(empty); return;
+  }
+  try {
+    const backups = await listLocalTreeBackups(localDraftKey);
+    if (!backups.length) {
+      const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'Снимков пока нет. Перед первым сохранением предыдущей версии ещё не существует.'; list.append(empty); return;
+    }
+    for (const backup of backups) {
+      const row = document.createElement('article'); row.className = 'local-backup-row';
+      const heading = document.createElement('div'); heading.className = 'local-backup-heading';
+      const title = document.createElement('strong'); title.textContent = backup.label;
+      const date = document.createElement('time'); date.dateTime = backup.createdAt; date.textContent = formatLocalDate(backup.createdAt);
+      heading.append(title, date);
+      const details = document.createElement('small'); details.textContent = `${backup.personCount} человек · ${backup.photoCount} отметок фото${backup.pinned ? ' · закреплён' : ''}${backup.safety ? ' · страховочный снимок' : ''}`;
+      const actions = document.createElement('div'); actions.className = 'local-backup-actions';
+      const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = 'Восстановить'; restore.disabled = dirty || editStatus === 'saving' || editStatus === 'conflict';
+      restore.addEventListener('click', () => restoreLocalBackup(backup));
+      const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = backup.pinned ? 'Открепить' : 'Закрепить';
+      pin.addEventListener('click', () => toggleLocalBackupPin(backup));
+      actions.append(restore, pin); row.append(heading, details, actions); list.append(row);
+    }
+  } catch (error) {
+    status.textContent = error?.message || 'Не удалось прочитать локальные снимки.';
+  }
+}
+
+async function makeLocalBackup() {
+  if (!localTreeDraft || hasUncommittedDraft() || editStatus === 'saving' || editStatus === 'conflict') {
+    await renderLocalBackups();
+    return;
+  }
+  const create = $('#createLocalBackup');
+  const status = $('#localBackupStatus');
+  create.disabled = true;
+  status.textContent = 'Создаю снимок локального дерева…';
+  try {
+    await createLocalTreeBackup(localDraftKey, editableDraftRoot(), localDraftRevision);
+    status.textContent = 'Локальный снимок создан.';
+    await Promise.all([renderLocalBackups(), renderLocalHistory()]);
+    announce('Создан локальный снимок. Он хранится только в этом браузере.');
+  } catch (error) {
+    status.textContent = error?.message || 'Не удалось создать локальный снимок.';
+    create.disabled = false;
+  }
+}
+
+async function toggleLocalBackupPin(backup) {
+  try {
+    await setLocalTreeBackupPinned(localDraftKey, backup.id, !backup.pinned);
+    await Promise.all([renderLocalBackups(), renderLocalHistory()]);
+    announce(backup.pinned ? 'Снимок откреплён.' : 'Снимок закреплён.');
+  } catch (error) {
+    $('#localBackupStatus').textContent = error?.message || 'Не удалось изменить снимок.';
+  }
+}
+
+async function restoreLocalBackup(backup) {
+  if (!localTreeDraft || hasUncommittedDraft() || editStatus === 'saving' || editStatus === 'conflict') {
+    await renderLocalBackups();
+    return;
+  }
+  const confirmed = window.confirm(`Восстановить локальное дерево из снимка «${backup.label}» от ${formatLocalDate(backup.createdAt)}? Текущее сохранённое дерево автоматически останется в снимках. Фотофайлы из этой копии не восстанавливаются.`);
+  if (!confirmed) return;
+  const status = $('#localBackupStatus');
+  status.textContent = 'Восстанавливаю локальную копию…';
+  try {
+    const result = await restoreLocalTreeBackup(localDraftKey, backup.id, localDraftRevision);
+    fixtureRoot = cloneTree(result.tree);
+    originalFixtureRoot = cloneTree(result.tree);
+    localDraftRevision = result.revision;
+    editStatus = 'saved'; rawDraftDirty = false;
+    pendingLocalPhotoWrites.clear(); pendingLocalPhotoDeletes.clear();
+    await restoreLocalPhotoUrls();
+    for (const id of ['minGeneration', 'maxGeneration']) document.getElementById(id).replaceChildren();
+    populateGenerationFilters();
+    resetGenerationFilters();
+    refreshEditableModel();
+    if (!byId.has(selectedId)) selectedId = records[0]?.id ?? null;
+    renderProfile();
+    await Promise.all([renderLocalBackups(), renderLocalHistory()]);
+    status.textContent = 'Снимок восстановлен. Текущая версия сохранена автоматически.';
+    announce('Локальный снимок восстановлен. Текущая версия осталась в списке снимков.');
+  } catch (error) {
+    editStatus = error?.code === 'LOCAL_DRAFT_CONFLICT' ? 'conflict' : 'error';
+    localDraftPersistenceError = error?.message || 'Не удалось восстановить локальный снимок.';
+    renderProfile(currentProfileTab);
+    status.textContent = localDraftPersistenceError;
+  }
 }
 
 function startHijriYearPulse() {
@@ -879,25 +1577,42 @@ function resetGenerationFilters() {
 
 function setMode(next, announceMode = true) {
   masterMobileOverview = false;
+  if (next === 'path' && (!myPersonId || !byId.has(myPersonId))) {
+    openPopover(ui.search);
+    $('#searchInput').focus({ preventScroll: true });
+    announce('Сначала выберите человека и отметьте его в профиле как себя.');
+    return;
+  }
   if (next === 'all-tree') resetGenerationFilters();
   mode = next;
-  contextAnchorId = selectedId;
+  if (next === 'path') {
+    selectedId = myPersonId;
+    resetGenerationFilters();
+  }
+  contextAnchorId = next === 'path' ? myPersonId : selectedId;
   ui.app.classList.remove('profile-open');
   closePopovers();
   syncModeButtons(next);
   drawTree();
   fitTree();
+  syncWhoAmIButton();
   const labels = { path: 'Подсвечен путь от старшего известного предка.', branch: 'Показана выбранная ветвь.', all: 'Показаны ближайшие три поколения.', 'all-tree': 'Всё дерево доступно. Мини-карта поможет перейти к другим ветвям.' };
   if (announceMode) announce(labels[next] || labels.all);
 }
 
 function updateSearch(value) {
-  const q = value.trim().replace(/1/g, 'I').toLocaleLowerCase('ru');
-  const found = records.filter(person => `${person.name} ${person.born ?? ''} ${person.died ?? ''}`.toLocaleLowerCase('ru').includes(q));
+  const q = value.trim().toLocaleLowerCase('ru');
+  const nameQuery = q.replace(/1/g, 'i');
+  const found = records.filter(person => {
+    const name = String(person.name ?? '').toLocaleLowerCase('ru');
+    const teip = String(person.teip ?? '').trim().toLocaleLowerCase('ru');
+    const years = `${person.born ?? ''} ${person.died ?? ''}`.toLocaleLowerCase('ru');
+    return !q || name.includes(nameQuery) || years.includes(q) || teip.includes(q);
+  });
   const list = $('#searchResults');
   list.replaceChildren();
   if (!found.length) {
-    const empty = document.createElement('p'); empty.className = 'empty-search'; empty.textContent = q ? `По запросу «${value}» никого не найдено.` : 'Введи имя или год.'; list.append(empty); return;
+    const empty = document.createElement('p'); empty.className = 'empty-search'; empty.textContent = q ? `По запросу «${value}» никого не найдено.` : 'Введи имя, год или тейп.'; list.append(empty); return;
   }
   const shown = found.slice(0, 35);
   for (const person of shown) {
@@ -907,6 +1622,14 @@ function updateSearch(value) {
     const name = document.createElement('strong'); name.textContent = person.name;
     const meta = document.createElement('small'); meta.textContent = `${formatYears(person)} · поколение ${person.generation}`;
     copy.append(name, meta); button.append(copy);
+    const teip = String(person.teip ?? '').trim();
+    if (teip) {
+      const teipLabel = document.createElement('small');
+      teipLabel.className = 'result-teip';
+      teipLabel.textContent = `Тейп: ${teip}`;
+      teipLabel.title = teipLabel.textContent;
+      copy.append(teipLabel);
+    }
     const arrow = document.createElement('span'); arrow.className = 'result-arrow'; arrow.textContent = '›'; button.append(arrow);
     button.addEventListener('click', () => selectPerson(person.id));
     list.append(button);
@@ -986,15 +1709,12 @@ function populateGenerationFilters() {
 }
 
 function bindControls() {
+  ui.miniMapToggle.addEventListener('click', () => {
+    setMiniMapCollapsed(!ui.miniMap.classList.contains('collapsed'));
+  });
   ui.railToggle.addEventListener('click', () => {
-    const hidden = ui.profile.parentElement.classList.toggle('rail-hidden');
-    ui.railToggle.setAttribute('aria-expanded', String(!hidden));
-    ui.railToggle.setAttribute('aria-label', hidden ? 'Показать панель действий' : 'Скрыть панель действий');
-    ui.railToggle.title = hidden ? 'Показать панель действий' : 'Скрыть панель действий';
-    requestAnimationFrame(() => {
-      syncCameraLayout();
-      centerVisiblePerson();
-    });
+    const collapsed = !ui.profile.parentElement.classList.contains('rail-hidden');
+    setRailCollapsed(collapsed, { persist: true });
   });
   ui.profileReopen.addEventListener('click', () => setProfileCollapsed(false));
   ui.mobileSelected.addEventListener('click', () => {
@@ -1017,10 +1737,72 @@ function bindControls() {
   $('#mobileStats').addEventListener('click', () => openPopover(ui.stats));
   $('#moreOpen').addEventListener('click', () => openPopover(ui.more));
   $('#mobileMore').addEventListener('click', () => openPopover(ui.more));
+  $('#morePwa').addEventListener('click', () => { openPopover(ui.pwa); renderPwaStatus(); });
+  $('#pwaInstall').addEventListener('click', async () => {
+    try {
+      const result = await pwaController.install();
+      if (result === 'accepted' || result === 'installed') announce('Waydean добавлен на устройство.');
+      else if (result === 'dismissed') announce('Установка отменена.');
+      else announce(pwaController.getState().installInstructions);
+      renderPwaStatus();
+    } catch (error) {
+      announce(error?.message || 'Не удалось установить Waydean.');
+    }
+  });
+  $('#pwaNotificationEnable').addEventListener('click', async () => {
+    try {
+      const permission = await pwaController.requestNotificationPermission();
+      announce(permission === 'granted'
+        ? 'Разрешение получено. Теперь можно отправить тестовое уведомление.'
+        : permission === 'denied'
+          ? 'Уведомления запрещены в настройках браузера.'
+          : 'Браузер не поддерживает уведомления.');
+      renderPwaStatus();
+    } catch (error) {
+      announce(error?.message || 'Не удалось запросить разрешение на уведомления.');
+    }
+  });
+  $('#pwaNotificationTest').addEventListener('click', async () => {
+    try {
+      await pwaController.sendTestNotification();
+      announce('Отправлено тестовое уведомление на это устройство.');
+    } catch (error) {
+      announce(error?.message || 'Не удалось отправить тестовое уведомление.');
+    }
+  });
+  $('#pwaServerPushEnable').addEventListener('click', () => openPwaPushDialog('subscribe'));
+  $('#pwaServerPushDisable').addEventListener('click', () => openPwaPushDialog('unsubscribe'));
+  $('#pwaPushCancel').addEventListener('click', () => $('#pwaPushDialog').close());
+  $('#pwaPushForm').addEventListener('submit', async event => {
+    event.preventDefault();
+    const submit = $('#pwaPushSubmit');
+    const error = $('#pwaPushError');
+    const password = $('#pwaPushPassword').value;
+    submit.disabled = true;
+    $('#pwaPushCancel').disabled = true;
+    error.hidden = true;
+    try {
+      if (pwaPushAction === 'subscribe') await pwaController.subscribeServerPush(password, 'drewo');
+      else await pwaController.unsubscribeServerPush(password, 'drewo');
+      $('#pwaPushDialog').close();
+      announce(pwaPushAction === 'subscribe' ? 'Push-уведомления включены для этого устройства.' : 'Push-уведомления отключены для этого устройства.');
+      renderPwaStatus();
+    } catch (failure) {
+      error.textContent = failure?.message || 'Не удалось изменить подписку.';
+      error.hidden = false;
+    } finally {
+      submit.disabled = false;
+      $('#pwaPushCancel').disabled = false;
+    }
+  });
+  $('#moreHistory').addEventListener('click', () => { openPopover(ui.history); renderLocalHistory(); });
+  $('#moreBackups').addEventListener('click', () => { openPopover(ui.backups); renderLocalBackups(); });
+  $('#createLocalBackup').addEventListener('click', makeLocalBackup);
   $('#openCurrentTree').addEventListener('click', () => window.location.assign('./index.html'));
   $('#shareOpen').addEventListener('click', shareLocalPreview);
   $('#printOpen').addEventListener('click', openPrintStudio);
   $('#moreExport').addEventListener('click', openPrintStudio);
+  $('#moreVideo').addEventListener('click', openVideoStudio);
   $$('.popover [data-close]').forEach(button => button.addEventListener('click', closePopovers));
   ui.backdrop.addEventListener('click', closePopovers);
   $$('.nav-item[data-mode],.more-item[data-mode],.rail-action[data-mode],.mobile-nav [data-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
@@ -1034,11 +1816,30 @@ function bindControls() {
     masterMobileOverview = false;
     const previousSelectedId = selectedId;
     filters = { min: Number($('#minGeneration').value), max: Number($('#maxGeneration').value), photosOnly: $('#photosOnly').checked };
+    let pathFiltersAdjusted = false;
+    if (mode === 'path' && myPersonId) {
+      const pathPeople = ancestors(myPersonId).map(id => byId.get(id)).filter(Boolean);
+      if (pathPeople.length) {
+        const firstGeneration = Math.min(...pathPeople.map(person => person.generation));
+        const lastGeneration = Math.max(...pathPeople.map(person => person.generation));
+        const requested = filters;
+        filters = {
+          min: Math.min(filters.min, firstGeneration),
+          max: Math.max(filters.max, lastGeneration),
+          photosOnly: false
+        };
+        pathFiltersAdjusted = filters.min !== requested.min || filters.max !== requested.max || requested.photosOnly;
+        $('#minGeneration').value = String(filters.min);
+        $('#maxGeneration').value = String(filters.max);
+        $('#photosOnly').checked = false;
+      }
+    }
     selectedId = fallbackSelectedPersonId(selectedId, currentRecords());
     closePopovers();
     if (selectedId !== previousSelectedId) renderProfile();
     drawTree(); fitTree();
     if (selectedId !== previousSelectedId) announce('Выбранный человек скрыт фильтром. Выбрана первая карточка в результатах.');
+    else if (pathFiltersAdjusted) announce('Фильтры скорректированы, чтобы показать всю линию предков.');
   });
   $('#resetFilters').addEventListener('click', () => {
     masterMobileOverview = false;
@@ -1050,8 +1851,13 @@ function bindControls() {
   $('#zoomOut').addEventListener('click', () => setZoom(zoom - 0.1));
   $('#fitTree').addEventListener('click', fitTree);
   $('#whoAmI').addEventListener('click', () => {
+    if (myPersonId && byId.has(myPersonId)) {
+      setMode(mode === 'path' ? 'all-tree' : 'path');
+      return;
+    }
     openPopover(ui.search);
     $('#searchInput').focus({ preventScroll: true });
+    announce('Выберите человека, откройте его карточку и нажмите «Отметить как меня».');
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
@@ -1074,6 +1880,37 @@ function bindControls() {
     scheduleMiniViewportUpdate();
   });
   bindCameraGestures();
+}
+
+function initialRailCollapsed() {
+  try {
+    const preference = localStorage.getItem(railPreferenceKey);
+    if (preference === 'open') return false;
+    if (preference === 'collapsed') return true;
+  } catch {
+    // Private browsing or storage restrictions should not block the preview.
+  }
+  return window.matchMedia('(min-width: 701px)').matches;
+}
+
+function setRailCollapsed(collapsed, { persist = false } = {}) {
+  ui.profile.parentElement.classList.toggle('rail-hidden', collapsed);
+  ui.railToggle.setAttribute('aria-expanded', String(!collapsed));
+  ui.railToggle.setAttribute('aria-label', collapsed ? 'Показать панель действий' : 'Скрыть панель действий');
+  ui.railToggle.title = collapsed ? 'Показать панель действий' : 'Скрыть панель действий';
+  if (!persist) return;
+  try {
+    localStorage.setItem(railPreferenceKey, collapsed ? 'collapsed' : 'open');
+  } catch {
+    // The panel remains usable for this session if storage is unavailable.
+  }
+}
+
+function setMiniMapCollapsed(collapsed) {
+  ui.miniMap.classList.toggle('collapsed', collapsed);
+  ui.miniMapToggle.setAttribute('aria-expanded', String(!collapsed));
+  ui.miniMapToggle.setAttribute('aria-label', `${collapsed ? 'Развернуть' : 'Свернуть'} мини-карту`);
+  ui.miniMapToggle.title = `${collapsed ? 'Развернуть' : 'Свернуть'} мини-карту`;
 }
 
 function bindCameraGestures() {
@@ -1181,7 +2018,10 @@ function setZoom(next, anchorX = ui.viewport.clientWidth / 2, anchorY = ui.viewp
   const previousLayout = currentCameraLayout;
   const scrollLeft = ui.viewport.scrollLeft;
   const scrollTop = ui.viewport.scrollTop;
-  zoom = Math.round(Math.max(0.25, Math.min(2.4, next)) * 1000) / 1000;
+  const minimumZoom = window.matchMedia('(max-width: 700px)').matches
+    ? MIN_MOBILE_ZOOM
+    : MIN_DESKTOP_ZOOM;
+  zoom = clampZoom(next, { minimum: minimumZoom });
   syncCameraLayout();
   const target = zoomAroundAnchor({
     previousZoom, nextZoom: zoom, scrollLeft, scrollTop, anchorX, anchorY,
@@ -1203,7 +2043,16 @@ function fitTree() {
     ui.graph.offsetWidth, ui.graph.offsetHeight,
     compactMobileMaster ? { minimumZoom: 0.65 } : undefined
   ));
-  centerVisiblePerson();
+  const scaledWidth = ui.graph.offsetWidth * zoom;
+  const scaledHeight = ui.graph.offsetHeight * zoom;
+  if (scaledWidth <= ui.viewport.clientWidth && scaledHeight <= ui.viewport.clientHeight) {
+    // If the entire layout fits, center it as a whole.
+    ui.viewport.scrollTo({ left: scaledWidth / 2, top: scaledHeight / 2, behavior: 'instant' });
+  } else {
+    // A large tree stays readable and opens around the selected person.
+    centerVisiblePerson();
+  }
+  scheduleMiniViewportUpdate();
 }
 
 function showError(error) {
@@ -1294,10 +2143,16 @@ function bindWaydeanAdminLogin() {
 async function initialize() {
   bindWaydeanAdminLogin();
   try {
+    setRailCollapsed(initialRailCollapsed());
+    setMiniMapCollapsed(false);
     const params = new URLSearchParams(location.search);
     const requestedState = params.get('state');
     syntheticFixture = isMasterFixtureQuery(location.search);
     const accountPreview = params.get('source') === 'account';
+    localTreeDraft = !syntheticFixture && !accountPreview && isLoopbackHost(location.hostname);
+    $('#moreHistory').hidden = !localTreeDraft;
+    $('#moreBackups').hidden = !localTreeDraft;
+    $('#moreVideo').hidden = true;
     if (accountPreview && isLoopbackHost(location.hostname)) {
       throw new Error('Режим аккаунта открывается на сайте. Для локального просмотра выберите обычное древо.');
     }
@@ -1307,6 +2162,8 @@ async function initialize() {
       throw error;
     }
     if (accountPreview) await requireWaydeanAdminAccess('drewo');
+    pwaController = createWaydeanPwaController(renderPwaStatus, { allowServerPush: accountPreview });
+    renderPwaStatus();
     const initialView = initialPreviewView(requestedState, {
       mobile: window.matchMedia('(max-width: 700px)').matches
     });
@@ -1317,6 +2174,7 @@ async function initialize() {
       && !params.has('state')
       && !params.has('person');
     document.body.classList.toggle('synthetic-fixture', syntheticFixture);
+    document.body.classList.toggle('local-tree-draft', localTreeDraft);
     document.title = 'Waydean — семейное древо';
     const dataUrl = syntheticFixture
       ? '../docs/design/waydean/fixtures/master-tree.json'
@@ -1328,21 +2186,44 @@ async function initialize() {
       sourceFixtureRoot = cloneTree(root);
       originalFixtureRoot = cloneTree(root);
       fixtureRoot = cloneTree(root);
+    } else if (localTreeDraft) {
+      localDraftKey = new URL('./family-tree.json', location.href).pathname;
+      sourceFixtureRoot = cloneTree(root);
+      let storedDraft = null;
+      try {
+        storedDraft = await loadLocalTreeDraft(localDraftKey);
+      } catch (error) {
+        localDraftPersistenceError = error?.message || 'Локальное сохранение пока недоступно.';
+      }
+      localDraftRevision = storedDraft?.revision || 0;
+      fixtureRoot = cloneTree(storedDraft?.tree || root);
+      originalFixtureRoot = cloneTree(fixtureRoot);
+      editStatus = storedDraft ? 'saved' : 'clean';
+      try {
+        await restoreLocalPhotoUrls();
+      } catch (error) {
+        localDraftPersistenceError = error?.message || 'Не удалось прочитать локальные фотографии.';
+      }
     }
-    records = preparePreviewRecords(syntheticFixture ? fixtureRoot : root);
+    records = preparePreviewRecords(syntheticFixture || localTreeDraft ? fixtureRoot : root);
+    $('#moreVideo').hidden = !(localTreeDraft || accountPreview);
     fullDataDepth = Math.max(...records.map(person => person.generation));
     byId = new Map(records.map(person => [person.id, person]));
     childrenById = new Map(records.map(person => [person.id, []]));
     for (const person of records) if (person.parentId) childrenById.get(person.parentId)?.push(person);
+    loadMyPersonPreference();
     const initial = records.find(person => person.generation === 3) || records[0];
     const requestedPerson = params.get('person');
     const fixturePerson = syntheticFixture ? masterFixtureFocus(window.innerWidth) : null;
-    selectedId = requestedPerson && byId.has(requestedPerson)
+    selectedId = mode === 'path' && myPersonId
+      ? myPersonId
+      : requestedPerson && byId.has(requestedPerson)
       ? requestedPerson
       : fixturePerson && byId.has(fixturePerson) ? fixturePerson : initial.id;
     contextAnchorId = selectedId;
     populateGenerationFilters();
     bindControls();
+    syncWhoAmIButton();
     renderProfile();
     const started = performance.now();
     drawTree();

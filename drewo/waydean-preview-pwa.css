@@ -1,0 +1,28 @@
+.pwa-popover{width:min(410px,calc(100vw - 28px));}
+.pwa-state-card{display:flex;align-items:center;gap:13px;padding:13px;border:1px solid #d1aa5a55;border-radius:10px;background:linear-gradient(145deg,#172427,#0a1417);}
+.pwa-state-card>div{display:grid;gap:5px;min-width:0;}
+.pwa-state-card strong{font:15px var(--sans);color:#f2dda4;}
+.pwa-state-card small,.pwa-note,.pwa-push-note span{font-size:11px;line-height:1.5;color:#aaa18e;}
+.pwa-state-icon{display:grid;place-items:center;flex:0 0 42px;width:42px;height:42px;border:1px solid #d4ad5d77;border-radius:50%;color:#f0cd76;font-size:24px;}
+.pwa-install-action{margin-top:12px;}
+.pwa-state-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 1px;border-bottom:1px solid #ffffff14;color:#c7beab;font-size:12px;}
+.pwa-state-row strong{max-width:58%;color:#ead69f;text-align:right;font-weight:500;}
+.pwa-notification-block{margin-top:10px;padding:0 12px 10px;border:1px solid #ffffff17;border-radius:9px;background:#ffffff05;}
+.pwa-notification-block .pwa-state-row{align-items:flex-start;}
+.pwa-notification-action{width:100%;margin-top:8px;padding:10px;border:1px solid #ffffff26;border-radius:7px;background:#ffffff08;color:#e4d8ba;}
+.pwa-notification-action:hover:not(:disabled){border-color:#d4ac5a;background:#d4ac5a14;}
+.pwa-notification-action:disabled{opacity:.5;cursor:not-allowed;}
+.pwa-note{margin:10px 1px 0;}
+.pwa-push-note{display:grid;gap:5px;margin-top:10px;padding:12px;border-left:2px solid #d2a84f88;background:#d4ac5a0a;}
+.pwa-push-note strong{font:13px var(--sans);color:#e8d39c;}
+.pwa-push-dialog{width:min(420px,calc(100vw - 28px));padding:20px;border:1px solid #d4ad5d99;border-radius:12px;background:linear-gradient(155deg,#132125,#071114);color:var(--text);box-shadow:0 22px 70px #000c;}
+.pwa-push-dialog::backdrop{background:#000a;backdrop-filter:blur(5px);}
+.pwa-push-dialog form{display:grid;gap:11px;}
+.pwa-push-dialog form>strong{font:19px var(--sans);color:#f0d58f;}
+.pwa-push-dialog form>p{margin:0;color:#aaa18e;font-size:12px;line-height:1.5;}
+.pwa-push-dialog label{color:#d6c9aa;font-size:12px;}
+.pwa-push-dialog input{width:100%;padding:11px;border:1px solid #d0a64f66;border-radius:7px;background:#050d10;color:#f0eadc;}
+.pwa-push-dialog-actions{display:grid;grid-template-columns:1fr auto;gap:8px;margin-top:4px;}
+.pwa-push-dialog-actions>button{min-width:108px;padding:10px 14px;}
+.pwa-push-error{color:#ffb6a7!important;}
+@media(max-width:700px){.pwa-popover{top:auto;right:10px;bottom:calc(80px + env(safe-area-inset-bottom));width:calc(100vw - 20px);max-height:calc(100dvh - 120px);}.pwa-state-row{font-size:11px;}}

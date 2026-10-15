@@ -1,13 +1,25 @@
 import { PROTOTYPE_PEOPLE } from "../../fixtures/prototype-people.mjs";
+import { loadLocalTreeDraft, listLocalTreePhotos } from "../../../../../drewo/waydean-preview-storage.mjs?v=2";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const mayReadHoti = typeof window !== "undefined" && LOOPBACK_HOSTS.has(window.location.hostname);
 const HOTI_TREE_URL = new URL("../../../../../drewo/family-tree.json", import.meta.url);
+let hotiDraftLoaded = false;
+let HOTI_RAW_TREE = null;
 
 function normalizeYear(value) {
   if (value == null || value === "") return null;
   const year = Number(value);
   return Number.isFinite(year) ? year : null;
+}
+
+function blobToDataUrl(blob) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : null);
+    reader.onerror = () => reject(reader.error || new Error("Could not read the local portrait."));
+    reader.readAsDataURL(blob);
+  });
 }
 
 async function loadLocalHotiPeople() {
@@ -16,8 +28,21 @@ async function loadLocalHotiPeople() {
   try {
     const response = await fetch(HOTI_TREE_URL, { credentials: "same-origin", cache: "no-store" });
     if (!response.ok) return [];
-    const root = await response.json();
+    const sourceRoot = await response.json();
+    const storedDraft = await loadLocalTreeDraft(HOTI_TREE_URL.pathname).catch(() => null);
+    const root = storedDraft?.tree ?? sourceRoot;
+    hotiDraftLoaded = Boolean(storedDraft);
     if (!root || typeof root !== "object" || Array.isArray(root)) return [];
+    HOTI_RAW_TREE = root;
+
+    const localPhotos = new Map();
+    const photoRows = await listLocalTreePhotos(HOTI_TREE_URL.pathname).catch(() => []);
+    await Promise.all(photoRows.map(async photo => {
+      if (photo.thumb instanceof Blob) {
+        const dataUrl = await blobToDataUrl(photo.thumb).catch(() => null);
+        if (dataUrl) localPhotos.set(String(photo.personId), dataUrl);
+      }
+    }));
 
     const people = [];
     const seen = new Set();
@@ -33,12 +58,13 @@ async function loadLocalHotiPeople() {
         name: String(person.name ?? "").trim().replace(/1/g, "I") || "Без имени",
         born: normalizeYear(person.born),
         died: normalizeYear(person.died),
+        teip: String(person.teip ?? "").trim().slice(0, 80),
         parent,
         generation,
         photo: hasPhoto,
-        photoUrl: hasPhoto
+        photoUrl: localPhotos.get(id) ?? (hasPhoto
           ? new URL(`../../../../../drewo/photos/${encodeURIComponent(id)}-thumb.jpg`, import.meta.url).href
-          : null
+          : null)
       });
 
       const children = Array.isArray(person.sons) ? person.sons : [];
@@ -91,7 +117,7 @@ function getBranchLabels(people, source) {
   return Object.fromEntries(labels);
 }
 
-function createSource(id, people, label) {
+function createSource(id, people, label, rawTree = null) {
   const printPeople = people.map(person => ({
     ...person,
     photoUrl: person.photoUrl ?? (id === "demo" && person.photo ? `../${person.photo}` : null)
@@ -101,6 +127,7 @@ function createSource(id, people, label) {
     id,
     label,
     people: printPeople,
+    rawTree,
     personCount: printPeople.length,
     generationCount: getGenerationCount(printPeople),
     parentLinkCount: getParentLinkCount(printPeople),
@@ -110,7 +137,7 @@ function createSource(id, people, label) {
 
 const SOURCES = Object.freeze({
   demo: createSource("demo", PROTOTYPE_PEOPLE, "Демонстрационное дерево · 12 человек"),
-  hoti: createSource("hoti", HOTI_PEOPLE, "HOTI · локальный снимок, только чтение")
+  hoti: createSource("hoti", HOTI_PEOPLE, hotiDraftLoaded ? "HOTI · сохранённая локальная версия" : "HOTI · локальная копия", HOTI_RAW_TREE)
 });
 
 export function getPrintTreeSource(id = "demo") {

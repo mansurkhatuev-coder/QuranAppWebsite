@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import {
   cameraLayout,
   readableFitZoom,
+  clampZoom,
+  MIN_MOBILE_ZOOM,
   zoomAroundAnchor,
   wheelZoomFactor,
   miniMapViewport,
@@ -15,18 +17,38 @@ test('a large wheel event remains one controlled zoom step', () => {
   assert.equal(wheelZoomFactor(0), 1);
 });
 
-test('a scaled graph smaller than the viewport stays centered', () => {
+test('camera keeps half a viewport of panning space around the scaled tree', () => {
   assert.deepEqual(cameraLayout(900, 600, 1000, 700, 0.5), {
-    extentWidth: 900,
-    extentHeight: 600,
-    offsetX: 200,
-    offsetY: 125
+    extentWidth: 1400,
+    extentHeight: 950,
+    offsetX: 450,
+    offsetY: 300
   });
 });
 
-test('fit keeps cards readable when the full tree is much wider than the viewport', () => {
-  assert.equal(readableFitZoom(900, 600, 18000, 2800), 0.7);
-  assert.equal(readableFitZoom(390, 583, 18000, 2800), 0.9);
+test('camera can center people at the far edges of a scaled tree', () => {
+  const layout = cameraLayout(390, 700, 18000, 2800, MIN_MOBILE_ZOOM);
+  const maxScrollLeft = layout.extentWidth - 390;
+  const maxScrollTop = layout.extentHeight - 700;
+  const leftPersonCenter = layout.offsetX + 50 * MIN_MOBILE_ZOOM - 390 / 2;
+  const rightPersonCenter = layout.offsetX + (18000 - 50) * MIN_MOBILE_ZOOM - 390 / 2;
+
+  assert.equal(leftPersonCenter, 0.5);
+  assert.equal(rightPersonCenter, maxScrollLeft - 0.5);
+  assert.equal(maxScrollTop, 2800 * MIN_MOBILE_ZOOM);
+});
+
+test('mobile camera zoom allows a much wider far-out range while keeping a safe maximum', () => {
+  assert.equal(clampZoom(0.01), 0.08);
+  assert.equal(clampZoom(0.005, { minimum: MIN_MOBILE_ZOOM }), 0.01);
+  assert.equal(clampZoom(0.015, { minimum: MIN_MOBILE_ZOOM }), 0.015);
+  assert.equal(clampZoom(0.32), 0.32);
+  assert.equal(clampZoom(5), 3.2);
+});
+
+test('fit can show a very large mobile tree while desktop retains its readability floor', () => {
+  assert.equal(readableFitZoom(900, 600, 18000, 2800), 0.06);
+  assert.equal(readableFitZoom(390, 583, 18000, 2800), 0.02);
   assert.equal(readableFitZoom(900, 600, 1000, 700), 0.81);
 });
 
@@ -85,5 +107,5 @@ test('mini-map click centers the requested world location and clamps to extents'
   const middle = miniMapScrollTarget({ ...params, miniX: 90, miniY: 36 });
   assert.deepEqual(middle, { left: 1600, top: 750 });
   const end = miniMapScrollTarget({ ...params, miniX: 180, miniY: 80 });
-  assert.deepEqual(end, { left: 3200, top: 1500 });
+  assert.deepEqual(end, { left: 3600, top: 1750 });
 });
