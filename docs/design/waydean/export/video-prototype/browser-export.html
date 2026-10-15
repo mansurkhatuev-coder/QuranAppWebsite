@@ -12,6 +12,16 @@
   <main id="browser-export-root" aria-live="polite">
     <p class="browser-export-loading">Открываем локальный экспорт…</p>
   </main>
-  <script type="module" src="./browser-export-studio.mjs?v=20261015-preview-play"></script>
+  <script type="module">
+    import("./browser-export-studio.mjs?v=20261015-preview-play").catch(error => {
+      const root = document.getElementById("browser-export-root");
+      const message = document.createElement("p");
+      message.className = "browser-export-error";
+      message.setAttribute("role", "alert");
+      message.textContent = "Не удалось открыть видеоэкспорт. Обновите страницу или вернитесь к древу.";
+      root.replaceChildren(message);
+      console.error("Waydean video export failed to load", error);
+    });
+  </script>
 </body>
 </html>

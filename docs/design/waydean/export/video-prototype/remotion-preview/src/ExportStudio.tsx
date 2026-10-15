@@ -19,6 +19,8 @@ import type { PublicRenderJob } from "./render-job-model.mjs";
 import { LOCAL_RENDER_SCALE } from "./render-job-model.mjs";
 import { summarizeSuccessfulRenderPoll } from "./render-job-poll.mjs";
 
+const EXPORT_PEOPLE = [...HOTI_PEOPLE];
+
 function loadSettings(): ExportSettings {
   let storedSettings: Partial<ExportSettings> = {};
   try {
@@ -36,7 +38,7 @@ function loadSettings(): ExportSettings {
     ...storedSettings,
     ...(scope === "all" || scope === "path" || scope === "branch" ? { scopeType: scope } : {}),
     ...(knownPersonId ? { selectedPersonId: knownPersonId } : {})
-  });
+  }, EXPORT_PEOPLE);
 }
 
 function getTreeReturnUrl() {
@@ -112,7 +114,7 @@ function SceneThumbnail({ story, shot }: { story: StoryModel; shot: StoryShot })
 
 function ExportStudio() {
   const [settings, setSettings] = useState<ExportSettings>(loadSettings);
-  const preview = useMemo(() => buildExportPreview(settings), [settings]);
+  const preview = useMemo(() => buildExportPreview(settings, EXPORT_PEOPLE), [settings]);
   const [activeShotIndex, setActiveShotIndex] = useState(0);
   const [saveLabel, setSaveLabel] = useState("Локальные настройки");
   const [renderJobs, setRenderJobs] = useState<PublicRenderJob[]>([]);
@@ -205,7 +207,7 @@ function ExportStudio() {
   }, [renderPollingNeeded]);
 
   const updateSettings = (patch: Partial<ExportSettings>) => {
-    setSettings(current => normalizeExportSettings({ ...current, ...patch }));
+    setSettings(current => normalizeExportSettings({ ...current, ...patch }, EXPORT_PEOPLE));
   };
 
   const resetSettings = () => {
@@ -214,7 +216,7 @@ function ExportStudio() {
     } catch {
       // Private browsing may disable local storage.
     }
-    setSettings(DEFAULT_EXPORT_SETTINGS);
+    setSettings(normalizeExportSettings(DEFAULT_EXPORT_SETTINGS, EXPORT_PEOPLE));
     setSaveLabel("Настройки сброшены");
   };
 

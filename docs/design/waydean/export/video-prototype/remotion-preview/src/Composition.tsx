@@ -5,9 +5,12 @@ import {
   type CalculateMetadataFunction
 } from "remotion";
 import { CinematicShot } from "./CinematicShot";
+import { HOTI_PEOPLE } from "../../hoti-people.mjs";
 import { getVideoFormat } from "./composition-config.mjs";
 import { buildRemotionStory, getShotIndexAtFrame } from "./project-model.mjs";
 import type { StoryModel } from "./project-model.mjs";
+
+const COMPOSITION_PEOPLE = [...HOTI_PEOPLE];
 
 export type FamilyHistoryProps = {
   title: string;
@@ -18,7 +21,7 @@ export type FamilyHistoryProps = {
 };
 
 export const calculateMetadata: CalculateMetadataFunction<FamilyHistoryProps> = ({ props }) => {
-  const story = buildRemotionStory(props);
+  const story = buildRemotionStory({ ...props, people: COMPOSITION_PEOPLE });
   const frame = getVideoFormat(props.aspectRatio);
   return {
     durationInFrames: story.timeline.totalFrames,
@@ -30,7 +33,7 @@ export const calculateMetadata: CalculateMetadataFunction<FamilyHistoryProps> = 
 export const FamilyHistoryVideo = (props: FamilyHistoryProps) => {
   const { scopeType, selectedPersonId, title, includeDates } = props;
   const story: StoryModel = useMemo(
-    () => buildRemotionStory({ scopeType, selectedPersonId, title, includeDates }),
+    () => buildRemotionStory({ scopeType, selectedPersonId, title, includeDates, people: COMPOSITION_PEOPLE }),
     [scopeType, selectedPersonId, title, includeDates]
   );
   const frame = useCurrentFrame();

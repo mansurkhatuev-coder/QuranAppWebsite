@@ -1,4 +1,3 @@
-import { HOTI_PEOPLE } from "../../hoti-people.mjs";
 import { buildRemotionStory } from "./project-model.mjs";
 import {
   DEFAULT_FAMILY_HISTORY_PROPS,
@@ -18,14 +17,13 @@ const SCOPE_TYPES = new Set(["all", "path", "branch"]);
 const ASPECT_RATIOS = new Set(Object.keys(VIDEO_FORMATS));
 
 function defaultPersonId(people) {
-  if (people === HOTI_PEOPLE) return DEFAULT_FAMILY_HISTORY_PROPS.selectedPersonId;
   return [...people]
     .sort((left, right) => Number(left.generation ?? 0) - Number(right.generation ?? 0))
     .at(-1)?.id ?? "";
 }
 
-export function normalizeExportSettings(input = {}, people = HOTI_PEOPLE) {
-  const sourcePeople = Array.isArray(people) && people.length ? people : HOTI_PEOPLE;
+export function normalizeExportSettings(input = {}, people = []) {
+  const sourcePeople = Array.isArray(people) ? people : [];
   const peopleIds = new Set(sourcePeople.map(person => person.id));
   const suppliedTitle = typeof input.title === "string" ? input.title.trim() : "";
   const title = (suppliedTitle || DEFAULT_FAMILY_HISTORY_PROPS.title).slice(0, 80).trim();
@@ -47,8 +45,8 @@ export function normalizeExportSettings(input = {}, people = HOTI_PEOPLE) {
   };
 }
 
-export function buildExportPreview(input = DEFAULT_EXPORT_SETTINGS, people = HOTI_PEOPLE) {
-  const sourcePeople = Array.isArray(people) && people.length ? people : HOTI_PEOPLE;
+export function buildExportPreview(input = DEFAULT_EXPORT_SETTINGS, people = []) {
+  const sourcePeople = Array.isArray(people) ? people : [];
   const settings = normalizeExportSettings(input, sourcePeople);
   const story = buildRemotionStory({ ...settings, people: sourcePeople });
   const generations = new Set(story.people.map(person => Number(person.generation ?? 0)));
