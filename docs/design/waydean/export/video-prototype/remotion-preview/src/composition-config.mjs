@@ -1,5 +1,3 @@
-import { DEFAULT_HOTI_SELECTED_PERSON_ID } from "../../hoti-people.mjs";
-
 export const REMOTION_COMPOSITION = Object.freeze({
   id: "WaydeanFamilyStory",
   width: 1920,
@@ -22,7 +20,7 @@ export function getVideoFormat(aspectRatio) {
 export const DEFAULT_FAMILY_HISTORY_PROPS = Object.freeze({
   title: "История рода",
   scopeType: "all",
-  selectedPersonId: DEFAULT_HOTI_SELECTED_PERSON_ID,
+  selectedPersonId: "",
   includeDates: true,
   aspectRatio: DEFAULT_VIDEO_ASPECT_RATIO
 });

@@ -1,4 +1,3 @@
-import { HOTI_PEOPLE, DEFAULT_HOTI_SELECTED_PERSON_ID } from "../../hoti-people.mjs?v=20261015-abdul-1952";
 import { buildStoryScenes, getGenerationDateExcerpt, getStoryPeople } from "../../story.mjs?v=20261015-abdul-1952";
 import {
   buildCinematicTimeline,
@@ -26,14 +25,13 @@ function transitionProgress(shotCount, transitionFrames, localFrame) {
 export function buildRemotionStory(options = {}) {
   const sourcePeople = Array.isArray(options.people) && options.people.length
     ? options.people
-    : HOTI_PEOPLE;
+    : [];
   const scopeType = VALID_SCOPES.has(options.scopeType)
     ? options.scopeType
     : DEFAULT_FAMILY_HISTORY_PROPS.scopeType;
   const suppliedId = typeof options.selectedPersonId === "string" ? options.selectedPersonId : "";
-  const defaultSelectedPersonId = sourcePeople === HOTI_PEOPLE
-    ? DEFAULT_HOTI_SELECTED_PERSON_ID
-    : [...sourcePeople].sort((left, right) => Number(left.generation ?? 0) - Number(right.generation ?? 0)).at(-1)?.id ?? "";
+  const defaultSelectedPersonId = [...sourcePeople]
+    .sort((left, right) => Number(left.generation ?? 0) - Number(right.generation ?? 0)).at(-1)?.id ?? "";
   const selectedPersonId = sourcePeople.some(person => person.id === suppliedId)
     ? suppliedId
     : defaultSelectedPersonId;
