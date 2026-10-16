@@ -107,6 +107,20 @@ export function getBrowserVideoSupport({ canvas, MediaRecorderCtor = globalThis.
   return { supported: true, mimeType: chooseRecordingMimeType(MediaRecorderCtor), reason: "" };
 }
 
+export function chooseVideoBitrate({ durationSeconds, targetBytes = 42 * 1024 * 1024, audioBitsPerSecond = 96_000 } = {}) {
+  const duration = Math.max(1, Number(durationSeconds) || 1);
+  const budgetBitsPerSecond = Math.floor((Math.max(1, Number(targetBytes) || 1) * 8) / duration);
+  return Math.min(2_500_000, Math.max(500_000, budgetBitsPerSecond - Math.max(0, Number(audioBitsPerSecond) || 0)));
+}
+
+export function isRecordedVideoLongEnough(actualDurationSeconds, expectedDurationSeconds, tolerance = 0.2) {
+  const actual = Number(actualDurationSeconds);
+  const expected = Number(expectedDurationSeconds);
+  if (!Number.isFinite(actual) || !Number.isFinite(expected) || actual <= 0 || expected <= 0) return true;
+  const allowedShortfall = Math.min(0.8, Math.max(0, Number(tolerance) || 0));
+  return actual >= expected * (1 - allowedShortfall);
+}
+
 function abortError() {
   return new DOMException("Экспорт видео отменён", "AbortError");
 }
@@ -119,6 +133,7 @@ export function recordCanvasVideo({
   onProgress = () => {},
   signal,
   audioTracks = [],
+  durationSeconds = Number(totalFrames) / Math.max(1, Number(fps) || 24),
   MediaRecorderCtor = globalThis.MediaRecorder,
   sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
 }) {
@@ -127,8 +142,23 @@ export function recordCanvasVideo({
   const frameCount = Math.max(1, Math.floor(Number(totalFrames) || 0));
   const frameRate = Math.min(30, Math.max(1, Number(fps) || 24));
   let stream;
+  let manualFrameCapture = false;
   try {
-    stream = canvas.captureStream(frameRate);
+    let manualCaptureRequested = true;
+    try {
+      stream = canvas.captureStream(0);
+    } catch {
+      manualCaptureRequested = false;
+      stream = canvas.captureStream(frameRate);
+    }
+    let videoTrack = stream.getVideoTracks?.()[0] ?? stream.getTracks?.().find(track => track.kind === "video");
+    if (manualCaptureRequested && typeof videoTrack?.requestFrame === "function") {
+      manualFrameCapture = true;
+    } else if (manualCaptureRequested) {
+      stream.getTracks?.().forEach(track => track.stop?.());
+      stream = canvas.captureStream(frameRate);
+      videoTrack = stream.getVideoTracks?.()[0] ?? stream.getTracks?.().find(track => track.kind === "video");
+    }
     for (const track of audioTracks) {
       if (!track || stream.getTracks?.().includes(track)) continue;
       if (typeof stream.addTrack !== "function") throw new Error("This browser cannot combine audio with the video stream.");
@@ -140,11 +170,15 @@ export function recordCanvasVideo({
 
   let recorder;
   try {
-    const options = support.mimeType ? { mimeType: support.mimeType } : undefined;
+    const options = {
+      ...(support.mimeType ? { mimeType: support.mimeType } : {}),
+      videoBitsPerSecond: chooseVideoBitrate({ durationSeconds }),
+      audioBitsPerSecond: 96_000
+    };
     try {
       recorder = new MediaRecorderCtor(stream, options);
     } catch {
-      recorder = new MediaRecorderCtor(stream);
+      recorder = new MediaRecorderCtor(stream, support.mimeType ? { mimeType: support.mimeType } : undefined);
     }
   } catch {
     stream.getTracks?.().forEach(track => track.stop());
@@ -175,12 +209,16 @@ export function recordCanvasVideo({
     };
 
     try {
-      recorder.start(1000);
+      recorder.start();
       void (async () => {
         try {
           for (let frame = 0; frame < frameCount; frame += 1) {
             if (signal?.aborted) throw abortError();
             await drawFrame(frame);
+            if (manualFrameCapture) {
+              const videoTrack = stream.getVideoTracks?.()[0] ?? stream.getTracks?.().find(track => track.kind === "video");
+              videoTrack?.requestFrame?.();
+            }
             onProgress(frame + 1, frameCount);
             await sleep(1000 / frameRate);
           }

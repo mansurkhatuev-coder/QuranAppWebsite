@@ -8,6 +8,20 @@ export function initialPreviewView(state, { mobile = false } = {}) {
   };
 }
 
+export function previewUrlForMode(href, mode) {
+  if (mode !== 'path' && mode !== 'all-tree') return null;
+  const url = new URL(href);
+  url.searchParams.set('state', mode);
+  url.searchParams.delete('person');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
+export function accountPreviewUrl(href) {
+  const url = new URL(href);
+  url.searchParams.set('source', 'account');
+  return `${url.pathname}${url.search}${url.hash}`;
+}
+
 export function isMasterFixtureQuery(search) {
   const fixtures = new URLSearchParams(search).getAll('fixture');
   return fixtures.length === 1 && fixtures[0] === 'master';

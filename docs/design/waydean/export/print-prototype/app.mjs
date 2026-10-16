@@ -6,12 +6,13 @@ import { getPosterMastheadLayout } from "./poster-masthead-layout.mjs";
 import { getConnectorPath, getNameTextLength, getPersonCardLayout, wrapPersonName } from "./person-card-layout.mjs?v=workspace-21";
 import { renderPersonCardFrame, PRINT_CARD_STYLES } from "./print-card-style.mjs?v=workspace-21";
 import { clampWorkspaceZoom, getViewportFitZoom } from "./workspace-zoom.mjs?v=workspace-21";
+import { excludePagePersonIds, getPagePersonIds, restorePageExclusions, snapPlacementToPeers } from "./workspace-editing.mjs?v=workspace-3";
 import qrcode from "./vendor/qrcode-generator/qrcode.mjs";
 import { stringToBytes as utf8StringToBytes } from "./vendor/qrcode-generator/qrcode_UTF8.mjs";
 
 const TREE_ACCESS_URL = "https://waydean.ru/drewo/";
 qrcode.stringToBytes = utf8StringToBytes;
-const treeQrCode = qrcode(0, "M");
+const treeQrCode = qrcode(0, "H");
 treeQrCode.addData(TREE_ACCESS_URL, "Byte");
 treeQrCode.make();
 
@@ -92,6 +93,8 @@ const state = {
   currentSvg: "",
   personEdits: new Map(),
   placementEdits: new Map(),
+  excludedPersonIds: new Set(),
+  excludedScopeKey: null,
   undoStack: [],
   redoStack: [],
   lastDraftSnapshot: null,
@@ -157,6 +160,7 @@ function restorePrintDraft(draft) {
     if (!validIds.has(id) || !position || !Number.isFinite(position.workspaceXmm) || !Number.isFinite(position.workspaceYmm)) return [];
     return [[id, { workspaceXmm: position.workspaceXmm, workspaceYmm: position.workspaceYmm }]];
   });
+  const excludedPersonIds = new Set((Array.isArray(draft.excludedPersonIds) ? draft.excludedPersonIds : []).filter(id => validIds.has(id)));
   state.personEdits = new Map(personEdits);
   state.placementEdits = new Map(placementEdits);
   state.draftTouched = true;
@@ -179,6 +183,8 @@ function restorePrintDraft(draft) {
   if (Object.hasOwn(PRINT_THEMES, settings.designTheme)) state.designTheme = settings.designTheme;
   if (Object.hasOwn(PRINT_CARD_STYLES, settings.cardStyle)) state.cardStyle = settings.cardStyle;
   if (Number.isFinite(settings.pageNumber)) state.pageNumber = Math.max(1, Math.floor(settings.pageNumber));
+  state.excludedScopeKey = JSON.stringify(getCurrentScope());
+  state.excludedPersonIds = restorePageExclusions([...excludedPersonIds], draft.excludedScopeKey, state.excludedScopeKey, validIds);
   syncPrintThemeButtons();
   syncPrintCardStyleButtons();
   return true;
@@ -191,6 +197,8 @@ function savePrintDraft() {
     sourceId: state.source.id,
     personEdits: Object.fromEntries(state.personEdits),
     placementEdits: Object.fromEntries(state.placementEdits),
+    excludedPersonIds: [...state.excludedPersonIds],
+    excludedScopeKey: state.excludedScopeKey,
     settings: {
       scopeType: state.scopeType,
       personId: elements.personSelect.value,
@@ -224,6 +232,8 @@ function createPrintDraftSnapshot() {
   return JSON.stringify({
     personEdits: sortEntries(state.personEdits),
     placementEdits: sortEntries(state.placementEdits),
+    excludedPersonIds: [...state.excludedPersonIds].sort(),
+    excludedScopeKey: state.excludedScopeKey,
     settings: {
       scopeType: state.scopeType,
       personId: elements.personSelect.value,
@@ -370,11 +380,16 @@ function renderTreeQr(x, y, size, theme) {
       if (treeQrCode.isDark(row, column)) path.push('M' + column + ' ' + row + 'h1v1h-1z');
     }
   }
+  const center = size / 2;
+  const markSize = size * .09;
   return '<g class="tree-qr" transform="translate(' + x + ' ' + y + ')" pointer-events="none"><title>Открыть семейное дерево на waydean.ru. Потребуется пароль семьи.</title>' +
     '<rect width="' + size + '" height="' + size + '" rx="1.1" fill="#f4eedf" stroke="' + theme.frame + '" stroke-width=".38"/>' +
     '<g transform="translate(' + (quietZone * moduleScale) + ' ' + (quietZone * moduleScale) + ') scale(' + moduleScale + ')"><path d="' + path.join("") + '" fill="#111817" shape-rendering="crispEdges"/></g>' +
-    '<text x="' + (size / 2) + '" y="' + (size + 2.1) + '" text-anchor="middle" fill="' + theme.eyebrow + '" font-family="Arial,sans-serif" font-size="1.35" font-weight="700" letter-spacing=".08em">ОТКРЫТЬ ДРЕВО</text>' +
-    '<text x="' + (size / 2) + '" y="' + (size + 3.75) + '" text-anchor="middle" fill="' + theme.subtitle + '" font-family="Arial,sans-serif" font-size="1.05" letter-spacing=".04em">WAYDEAN.RU/DREWO</text></g>';
+    '<circle cx="' + center + '" cy="' + center + '" r="' + markSize + '" fill="#f4eedf" stroke="' + theme.frame + '" stroke-width=".48"/>' +
+    '<path d="M ' + center + ' ' + (center + markSize * .58) + ' V ' + (center - markSize * .48) + ' M ' + center + ' ' + (center - markSize * .05) + ' L ' + (center - markSize * .56) + ' ' + (center - markSize * .52) + ' M ' + center + ' ' + (center - markSize * .2) + ' L ' + (center + markSize * .56) + ' ' + (center - markSize * .68) + '" fill="none" stroke="#17211e" stroke-width=".72" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '<circle cx="' + center + '" cy="' + (center - markSize * .55) + '" r=".43" fill="' + theme.frame + '"/><circle cx="' + (center - markSize * .56) + '" cy="' + (center - markSize * .52) + '" r=".43" fill="' + theme.frame + '"/><circle cx="' + (center + markSize * .56) + '" cy="' + (center - markSize * .68) + '" r=".43" fill="' + theme.frame + '"/>' +
+    '<text x="' + center + '" y="' + (size + 2.2) + '" text-anchor="middle" fill="' + theme.eyebrow + '" font-family="Arial,sans-serif" font-size="1.45" font-weight="700" letter-spacing=".08em">ОТКРЫТЬ ДРЕВО</text>' +
+    '<text x="' + center + '" y="' + (size + 4) + '" text-anchor="middle" fill="' + theme.subtitle + '" font-family="Arial,sans-serif" font-size="1.15" letter-spacing=".04em">WAYDEAN.RU/DREWO</text></g>';
 }
 
 function renderPosterMasthead(layout, theme, page = null) {
@@ -386,7 +401,7 @@ function renderPosterMasthead(layout, theme, page = null) {
   const mastheadLayout = getPosterMastheadLayout(layout, { title, subtitle });
   const { titleSize, eyebrowSize, subtitleSize, centerX, dividerHalfWidthMm } = mastheadLayout;
   const qrBelongsOnPage = !page || (page.pageX === layout.pageCountX - 1 && page.pageY === 0);
-  const qr = elements.includeQr.checked && qrBelongsOnPage ? renderTreeQr(boardWidthMm - 31.5, 3.4, 24, theme) : "";
+  const qr = elements.includeQr.checked && qrBelongsOnPage ? renderTreeQr(boardWidthMm - 40, 3.4, 32, theme) : "";
   const masthead = '<g class="poster-masthead" pointer-events="none">' +
     '<text x="' + centerX + '" y="10.5" text-anchor="middle" fill="' + theme.eyebrow + '" font-family="Arial,sans-serif" font-size="' + eyebrowSize + '" font-weight="600" letter-spacing=".22em">WAYDEAN · СЕМЕЙНОЕ ДРЕВО</text>' +
     '<text x="' + centerX + '" y="23" text-anchor="middle" fill="' + theme.title + '" font-family="Georgia,serif" font-size="' + titleSize + '" font-weight="500">' + escapeXml(title) + '</text>' +
@@ -599,7 +614,7 @@ function renderSvg(layout, pageNumber, options = {}) {
     '<path d="M ' + (width / 2 - 15) + ' 32 H ' + (width / 2 + 15) + '" stroke="' + theme.frame + '" stroke-width=".35"/></g>';
   const posterMasthead = options.posterMasthead ? renderPosterMasthead(layout, theme, page) : "";
   const qrMarkup = !options.workspace && !options.thumbnail && !options.posterMasthead && options.includeQr !== false && elements.includeQr.checked
-    ? renderTreeQr(width - 31.5, 3.4, 24, theme)
+    ? renderTreeQr(width - 40, 3.4, 32, theme)
     : "";
 
   return [
@@ -659,7 +674,7 @@ function renderWorkspaceSvg(layout, { interactive = true } = {}) {
   const interactionStyles = interactive
     ? '.workspace-hit-area{fill:transparent;pointer-events:all}.person-card{cursor:grab;touch-action:none}.person-card:active{cursor:grabbing}'
     : "";
-  const workspaceThemeStyles = '.workspace-page-label{font-family:Arial,sans-serif;fill:' + theme.pageLabel + ';font-size:2.7px;font-weight:600;letter-spacing:.1em}.workspace-cross-link{fill:none;stroke:' + theme.connector + ';stroke-width:.38;stroke-linecap:square;stroke-linejoin:round;opacity:.58;pointer-events:none}.workspace-page-outline{fill:none;stroke:transparent;stroke-width:1.25;pointer-events:none}.workspace-page-outline.is-active{stroke:' + theme.selectedBorder + ';stroke-width:1.7}.workspace-page-index rect{fill:' + theme.pageIndex + ';stroke:' + theme.pageIndexBorder + ';stroke-width:.35}.workspace-page-index.is-active rect{fill:' + theme.selectedPageIndex + ';stroke:' + theme.selectedPageBorder + ';stroke-width:.55}.workspace-sheet-overlay.is-active{filter:drop-shadow(0 0 1.1px rgba(190,153,77,.45))}';
+  const workspaceThemeStyles = '.workspace-page-label{font-family:Arial,sans-serif;fill:' + theme.pageLabel + ';font-size:2.7px;font-weight:600;letter-spacing:.1em}.workspace-cross-link{fill:none;stroke:' + theme.connector + ';stroke-width:.38;stroke-linecap:square;stroke-linejoin:round;opacity:.58;pointer-events:none}.workspace-page-outline{fill:none;stroke:transparent;stroke-width:1.25;pointer-events:none}.workspace-page-outline.is-active{stroke:' + theme.selectedBorder + ';stroke-width:1.7}.workspace-page-index rect{fill:' + theme.pageIndex + ';stroke:' + theme.pageIndexBorder + ';stroke-width:.35}.workspace-page-index.is-active rect{fill:' + theme.selectedPageIndex + ';stroke:' + theme.selectedPageBorder + ';stroke-width:.55}.workspace-sheet-overlay.is-active{filter:drop-shadow(0 0 1.1px rgba(190,153,77,.45))}.workspace-snap-guide{stroke:' + theme.selectedBorder + ';stroke-width:.28;stroke-dasharray:1.25 .85;opacity:.94;filter:drop-shadow(0 0 .55px rgba(240,201,107,.7));pointer-events:none}';
   return '<svg xmlns="http://www.w3.org/2000/svg" class="paper-svg workspace-svg" width="' + boardWidthMm + 'mm" height="' + boardHeightMm + 'mm" viewBox="0 0 ' + boardWidthMm + ' ' + boardHeightMm + '" role="group" aria-label="Общее рабочее поле, ' + layout.pageCount + ' листов">' +
     '<style>.workspace-page>rect:nth-of-type(n+2):nth-of-type(-n+4){visibility:hidden}' + workspaceThemeStyles + interactionStyles + '</style>' +
     background + surfaces + '<g class="workspace-cross-links" aria-hidden="true">' + crossPageLinks + '</g>' + pageContent + renderPosterMasthead(layout, theme) + pageOverlays + '</svg>';
@@ -677,7 +692,9 @@ function pluralSheets(value) {
 function renderPageGrid(layout) {
   elements.pageGrid.innerHTML = layout.pages.map(page => {
     const thumbnail = renderSvg(layout, page.pageNumber, { thumbnail: true });
-    return '<button type="button" class="tile-button' + (page.pageNumber === state.pageNumber ? ' is-active' : '') + '" data-page="' + page.pageNumber + '" style="aspect-ratio:' + layout.pageWidthMm + ' / ' + layout.pageHeightMm + '" aria-label="Открыть лист ' + page.pageNumber + ' из ' + layout.pageCount + '"' + (page.pageNumber === state.pageNumber ? ' aria-current="page"' : '') + '><span class="tile-preview" aria-hidden="true">' + thumbnail + '</span><small>Лист ' + page.pageNumber + '</small></button>';
+    const active = page.pageNumber === state.pageNumber;
+    const removalDisabled = layout.pageCount <= 1;
+    return '<div class="tile-card"><button type="button" class="tile-button' + (active ? ' is-active' : '') + '" data-page="' + page.pageNumber + '" style="aspect-ratio:' + layout.pageWidthMm + ' / ' + layout.pageHeightMm + '" aria-label="Открыть лист ' + page.pageNumber + ' из ' + layout.pageCount + '"' + (active ? ' aria-current="page"' : '') + '><span class="tile-preview" aria-hidden="true">' + thumbnail + '</span><small>Лист ' + page.pageNumber + '</small></button><button type="button" class="tile-remove" data-remove-page="' + page.pageNumber + '" aria-label="Убрать лист ' + page.pageNumber + ' вместе с его карточками из печатного макета" title="Убрать лист вместе с карточками"' + (removalDisabled ? ' disabled' : '') + '>×</button></div>';
   }).join("");
   elements.pageGrid.style.gridTemplateColumns = "repeat(" + Math.min(Math.max(layout.pageCountX, 1), 4) + ", minmax(0, 1fr))";
   elements.pageGrid.querySelectorAll("[data-page]").forEach(button => button.addEventListener("click", () => {
@@ -686,6 +703,28 @@ function renderPageGrid(layout) {
     update();
     focusWorkspacePage(state.pageNumber, true, "page");
   }));
+  elements.pageGrid.querySelectorAll("[data-remove-page]").forEach(button => button.addEventListener("click", event => {
+    event.stopPropagation();
+    removePrintPage(Number(button.dataset.removePage));
+  }));
+}
+
+function removePrintPage(pageNumber) {
+  if (!state.currentLayout || state.currentLayout.pageCount <= 1) return;
+  const personIds = getPagePersonIds(state.currentLayout, pageNumber);
+  if (!personIds.length) {
+    setStatus("На этом листе нет карточек для удаления.");
+    return;
+  }
+  const confirmed = window.confirm("Убрать лист " + pageNumber + " вместе с карточками " + personIds.length + " человек из этого печатного макета? Оставшиеся карточки перераспределятся. Исходное древо не изменится; действие можно отменить.");
+  if (!confirmed) return;
+
+  markDraftChanged("remove-page:" + pageNumber);
+  state.excludedPersonIds = excludePagePersonIds(state.excludedPersonIds, state.currentLayout, pageNumber);
+  state.excludedScopeKey = JSON.stringify(getCurrentScope());
+  state.pageNumber = Math.max(1, pageNumber - 1);
+  update();
+  setStatus("Лист убран из печатного макета. Исключено карточек: " + personIds.length + ". Исходное древо сохранено; правку можно отменить.", "success");
 }
 
 function setStatus(message, kind = "normal") {
@@ -707,7 +746,11 @@ function renderPrintable(layout) {
 }
 
 function update() {
-  state.currentPeople = getScopedPeople(state.source.people, getCurrentScope()).map(person => ({
+  const scopedPeople = getScopedPeople(state.source.people, getCurrentScope());
+  const currentScopeKey = JSON.stringify(getCurrentScope());
+  if (state.excludedScopeKey && state.excludedScopeKey !== currentScopeKey) state.excludedPersonIds.clear();
+  state.excludedScopeKey = currentScopeKey;
+  state.currentPeople = scopedPeople.filter(person => !state.excludedPersonIds.has(person.id)).map(person => ({
     ...person,
     ...(state.personEdits.get(person.id) ?? {})
   }));
@@ -735,7 +778,7 @@ function update() {
 
   if (!state.currentPeople.length) {
     elements.paperPreview.style.setProperty("--paper-ratio", "0.707");
-    elements.paperPreview.innerHTML = '<div class="empty-preview"><span>◇</span><strong>В этом охвате нет людей</strong><small>Измени ветвь или глубину поколений.</small></div>';
+    elements.paperPreview.innerHTML = '<div class="empty-preview"><span>◇</span><strong>' + (scopedPeople.length ? 'Все карточки этого охвата исключены' : 'В этом охвате нет людей') + '</strong><small>' + (scopedPeople.length ? 'Отмени действие в истории правок, чтобы вернуть их.' : 'Измени ветвь или глубину поколений.') + '</small></div>';
     elements.pageGrid.innerHTML = "";
     elements.pageCounter.textContent = "Листов нет";
     elements.tileCount.textContent = "0 листов";
@@ -770,8 +813,8 @@ function update() {
   elements.pageCounter.textContent = "Лист " + state.pageNumber + " из " + layout.pageCount;
   elements.tileCount.textContent = layout.pageCount + " " + pluralSheets(layout.pageCount);
   elements.tileHint.textContent = layout.pageCount > 1
-    ? "Все листы связаны на одном полотне. Нажми «Вписать полотно», чтобы увидеть общую раскладку."
-    : "Макет целиком помещается на один лист.";
+    ? "Все листы связаны на одном полотне. Крестик убирает лист вместе с его карточками; исходное древо сохранится, правку можно отменить."
+    : "Один лист нельзя убрать отдельно. Макет целиком помещается на лист.";
   elements.personCount.textContent = String(layout.personCount);
   elements.generationCount.textContent = String(layout.generationCount);
   elements.sheetCount.textContent = String(layout.pageCount);
@@ -948,16 +991,45 @@ function bindCardInteractions() {
     if (!drag.moved) {
       drag.moved = true;
       drag.card.remove();
-      svg.append(drag.card);
+      drag.guidesLayer = document.createElementNS("http://www.w3.org/2000/svg", "g");
+      drag.guidesLayer.setAttribute("class", "workspace-snap-guides");
+      drag.guidesLayer.setAttribute("aria-hidden", "true");
+      svg.append(drag.guidesLayer, drag.card);
     }
     const point = localSvgPoint(event, svg);
     const placement = state.currentLayout.placements.find(item => item.person.id === drag.personId);
     if (!placement) return;
-    const next = placeInWorkspace(state.currentLayout, placement,
-      drag.startX + point.x - drag.startPointX,
-      drag.startY + point.y - drag.startPointY);
+    const rawX = drag.startX + point.x - drag.startPointX;
+    const rawY = drag.startY + point.y - drag.startPointY;
+    const peers = state.currentLayout.placements.filter(item => item.person.id !== drag.personId).map(item => {
+      const workspacePoint = getWorkspacePoint(item);
+      return { ...workspacePoint, width: item.widthMm, height: item.heightMm };
+    });
+    const snap = snapPlacementToPeers(
+      { x: rawX, y: rawY, width: placement.widthMm, height: placement.heightMm },
+      peers,
+      7 / (CSS_PIXELS_PER_MM * Math.max(state.workspaceZoom, .01))
+    );
+    const next = placeInWorkspace(state.currentLayout, placement, snap.x, snap.y);
     drag.nextPlacement = next;
     drag.card.setAttribute("transform", "translate(" + next.workspaceXmm + " " + next.workspaceYmm + ")");
+    const visibleGuides = {};
+    if (Number.isFinite(snap.guides.x) && Math.abs(next.workspaceXmm - snap.x) < .02) visibleGuides.x = snap.guides.x;
+    if (Number.isFinite(snap.guides.y) && Math.abs(next.workspaceYmm - snap.y) < .02) visibleGuides.y = snap.guides.y;
+    const guideLines = [];
+    if (Number.isFinite(visibleGuides.x)) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", visibleGuides.x); line.setAttribute("x2", visibleGuides.x);
+      line.setAttribute("y1", "0"); line.setAttribute("y2", String(state.currentLayout.pageHeightMm * state.currentLayout.pageCountY));
+      line.setAttribute("class", "workspace-snap-guide"); guideLines.push(line);
+    }
+    if (Number.isFinite(visibleGuides.y)) {
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", "0"); line.setAttribute("x2", String(state.currentLayout.pageWidthMm * state.currentLayout.pageCountX));
+      line.setAttribute("y1", visibleGuides.y); line.setAttribute("y2", visibleGuides.y);
+      line.setAttribute("class", "workspace-snap-guide"); guideLines.push(line);
+    }
+    drag.guidesLayer.replaceChildren(...guideLines);
   });
 
   svg.addEventListener("pointerup", event => {
@@ -1101,7 +1173,8 @@ function changeTreeSource(sourceId) {
   clearDraftHistory();
   state.personEdits.clear();
   state.placementEdits.clear();
-  state.draftTouched = false;
+  state.excludedPersonIds.clear();
+  state.excludedScopeKey = null;
   state.draftTouched = false;
   state.scopeType = state.source.id === "hoti" ? "all" : "person";
   state.pageNumber = 1;
@@ -1139,6 +1212,8 @@ function resetPrintDraft() {
   markDraftChanged();
   state.personEdits.clear();
   state.placementEdits.clear();
+  state.excludedPersonIds.clear();
+  state.excludedScopeKey = null;
   state.scopeType = state.source.id === "hoti" ? "all" : "person";
   state.pageNumber = 1;
   elements.includePhotos.checked = true;

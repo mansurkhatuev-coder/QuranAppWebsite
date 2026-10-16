@@ -1,6 +1,6 @@
 import { SCENE_TRANSITION_FRAMES, easeCinematic } from "./cinematic-timeline.mjs";
 
-const SUPPORTED_STYLES = new Set(["click"]);
+const SUPPORTED_STYLES = new Set(["click", "whoosh"]);
 export const ACTIVE_HIGHLIGHT_EMPHASIS_THRESHOLD = 0.25;
 
 function getHighlightStartOffset(transitionFrames, threshold) {
@@ -57,7 +57,31 @@ function buildClickBuffer(context) {
   return buffer;
 }
 
-export function createTransitionAudioTrack({
+function buildWhooshBuffer(context) {
+  const sampleRate = Number(context.sampleRate) || 44100;
+  const duration = 0.82;
+  const length = Math.ceil(sampleRate * duration);
+  const buffer = context.createBuffer(1, length, sampleRate);
+  const samples = buffer.getChannelData(0);
+  let filteredNoise = 0;
+  let phase = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    const progress = index / Math.max(1, length - 1);
+    const time = index / sampleRate;
+    const noiseSeed = Math.sin(index * 127.1 + 311.7) * 43758.5453;
+    const whiteNoise = (noiseSeed - Math.floor(noiseSeed)) * 2 - 1;
+    filteredNoise += (whiteNoise - filteredNoise) * 0.14;
+    const envelope = Math.pow(Math.max(0, Math.sin(Math.PI * progress)), 1.45);
+    const sweepFrequency = 185 - progress * 88;
+    phase += (2 * Math.PI * sweepFrequency) / sampleRate;
+    const lowSweep = Math.sin(phase) * (0.12 + 0.08 * Math.sin(progress * Math.PI));
+    samples[index] = (filteredNoise * 0.28 + whiteNoise * 0.075 + lowSweep) * envelope;
+  }
+  return buffer;
+}
+
+export async function createTransitionAudioTrack({
   style = "click",
   AudioContextCtor = globalThis.AudioContext ?? globalThis.webkitAudioContext,
   monitor = false
@@ -66,7 +90,7 @@ export function createTransitionAudioTrack({
 
   let context;
   let destination;
-  let clickBuffer;
+  let soundBuffer;
   try {
     context = new AudioContextCtor();
     if (typeof context.createMediaStreamDestination !== "function") {
@@ -74,7 +98,7 @@ export function createTransitionAudioTrack({
       return null;
     }
     destination = context.createMediaStreamDestination();
-    clickBuffer = buildClickBuffer(context);
+    soundBuffer = style === "whoosh" ? buildWhooshBuffer(context) : buildClickBuffer(context);
   } catch {
     void context?.close?.();
     return null;
@@ -83,6 +107,7 @@ export function createTransitionAudioTrack({
   let closed = false;
   return {
     audioTracks: destination.stream?.getAudioTracks?.() ?? [],
+    duration: Number(soundBuffer.duration) || (style === "click" ? 0.08 : 1),
     async resume() {
       if (context.state === "suspended") await context.resume();
     },
@@ -90,8 +115,8 @@ export function createTransitionAudioTrack({
       if (closed) return;
       const source = context.createBufferSource();
       const gain = context.createGain();
-      source.buffer = clickBuffer;
-      gain.gain.value = 0.52;
+      source.buffer = soundBuffer;
+      gain.gain.value = style === "whoosh" ? 0.44 : 0.52;
       source.connect(gain);
       gain.connect(destination);
       if (monitor && context.destination) gain.connect(context.destination);

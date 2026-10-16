@@ -1,15 +1,17 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, normalizeExportSettings } from "./remotion-preview/src/export-studio-model.mjs";
 import {
   getBrowserVideoSupport,
+  isRecordedVideoLongEnough,
   readVideoExportHandoff,
   recordCanvasVideo
 } from "./remotion-preview/src/browser-export-model.mjs";
+import { createWaydeanVideoLink, listWaydeanVideos, uploadWaydeanVideo } from "./browser-video-storage.mjs?v=20261016-account-upload";
 import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
 } from "./remotion-preview/src/browser-canvas-renderer.mjs";
-import { createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261015-click-sync";
+import { createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261016-whoosh";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
 
@@ -33,6 +35,7 @@ let playbackStartFrame = 0;
 let background = null;
 let videoBlob = null;
 let videoUrl = "";
+let videoObjectPath = "";
 let renderController = null;
 let rendering = false;
 let transitionSoundStyle = "click";
@@ -51,6 +54,7 @@ function timeLabel(seconds) {
 
 function clearVideo() {
   videoBlob = null;
+  videoObjectPath = "";
   if (videoUrl) URL.revokeObjectURL(videoUrl);
   videoUrl = "";
   const ready = root.querySelector(".browser-export-ready");
@@ -61,7 +65,11 @@ function clearVideo() {
 function setPreviewPlaybackButton(playing) {
   const button = root.querySelector("#browser-export-play");
   if (!button) return;
-  button.textContent = playing ? "❚❚ Пауза" : "▶ Воспроизвести";
+  const icon = playing
+    ? '<svg viewBox="0 0 20 20" focusable="false"><path d="M6 4.5h3v11H6zm5 0h3v11h-3z"/></svg>'
+    : '<svg viewBox="0 0 20 20" focusable="false"><path d="M6.5 3.8a.8.8 0 0 1 1.2-.7l9 6.1a1 1 0 0 1 0 1.6l-9 6.1a.8.8 0 0 1-1.2-.7z"/></svg>';
+  button.innerHTML = '<span class="browser-export-play-icon" aria-hidden="true">' + icon + '</span><span class="browser-export-play-label">' + (playing ? "Пауза" : "Воспроизвести") + '</span>';
+  button.setAttribute("aria-label", playing ? "Приостановить предпросмотр видео" : "Воспроизвести предпросмотр видео");
   button.setAttribute("aria-pressed", String(playing));
 }
 
@@ -146,14 +154,14 @@ function renderShell() {
       <section class="browser-export-intro">
         <span class="browser-export-eyebrow">МОБИЛЬНЫЙ ЭКСПОРТ · ${people.length} ЗАПИСЕЙ</span>
         <h1>История рода в видео</h1>
-        <p>Кадры собираются и записываются прямо в браузере. Данные дерева остаются на устройстве.</p>
+        <p>Видео рендерится на телефоне и после записи автоматически загружается в закрытый раздел вашего аккаунта.</p>
       </section>
       ${handoff ? "" : `<p class="browser-export-demo-note" role="status">Открыт демонстрационный пример. Откройте экспорт из загруженного дерева, чтобы создать видео своей семьи.</p>`}
       <div class="browser-export-grid">
         <section class="browser-export-preview" aria-label="Предпросмотр кадра">
           <div class="browser-export-canvas-wrap"><canvas id="browser-export-frame" aria-label="Кадр выбранной сцены"></canvas></div>
           <div class="browser-export-timeline-controls">
-            <button id="browser-export-play" type="button" aria-label="Воспроизвести предпросмотр видео" aria-pressed="false">▶ Воспроизвести</button>
+            <button id="browser-export-play" class="browser-export-play" type="button" aria-label="Воспроизвести предпросмотр видео" aria-pressed="false"><span class="browser-export-play-icon" aria-hidden="true"><svg viewBox="0 0 20 20" focusable="false"><path d="M6.5 3.8a.8.8 0 0 1 1.2-.7l9 6.1a1 1 0 0 1 0 1.6l-9 6.1a.8.8 0 0 1-1.2-.7z"/></svg></span><span class="browser-export-play-label">Воспроизвести</span></button>
             <label class="browser-export-frame">Сцена и кадр<input id="browser-export-scrub" type="range" min="0" max="${Math.max(0, preview.durationFrames - 1)}" value="0" aria-label="Кадр сцены"></label>
           </div>
           <div class="browser-export-summary" aria-label="Параметры видео"></div>
@@ -171,12 +179,13 @@ function renderShell() {
           <div class="browser-export-sound-control">
             <label class="browser-export-field" for="browser-export-sound">Звук переходов<select id="browser-export-sound">
               <option value="click" selected>Приятный щелчок</option>
+              <option value="whoosh">Кинематографичный «вжух»</option>
               <option value="none">Без звука</option>
             </select></label>
             <button type="button" class="browser-export-sound-preview">Прослушать</button>
           </div>
           <p class="browser-export-sound-status" role="status">Короткий мягкий щелчок звучит при появлении подсветки следующей карточки.</p>
-          <div class="browser-export-local-note"><strong>Только на этом устройстве</strong><span>Браузер записывает видео в реальном времени; длинный ролик может занять несколько минут. Не закрывайте вкладку. Для большого дерева начните с ветви.</span></div>
+          <div class="browser-export-local-note"><strong>Рендер на телефоне · сохранение в аккаунте</strong><span>Видео собирается в реальном времени и загружается после записи. Не закрывайте страницу. Для длинной истории оставьте экран включённым и подключите стабильный Wi‑Fi. В аккаунт загружаются ролики до 50 МБ; готовый файл можно сохранить в Фото или Файлы.</span></div>
           <button id="browser-export-start" type="button" class="browser-export-start">Создать видео на устройстве</button>
           <div class="browser-export-progress" role="progressbar" aria-label="Рендер видео" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
           <button type="button" class="browser-export-cancel" hidden>Остановить</button>
@@ -186,6 +195,10 @@ function renderShell() {
           <div class="browser-export-ready" hidden></div>
         </section>
       </div>
+      <section class="browser-export-library" aria-label="Видео в аккаунте" hidden>
+        <div class="browser-export-library-heading"><h2>Видео в аккаунте</h2><p class="browser-export-library-status" role="status"></p></div>
+        <div class="browser-export-library-items"></div>
+      </section>
     </div>`;
   bindEvents();
   updatePreview();
@@ -200,9 +213,7 @@ function bindEvents() {
     transitionSoundStyle = event.currentTarget.value;
     clearVideo();
     root.querySelector(".browser-export-sound-preview").disabled = transitionSoundStyle === "none";
-    root.querySelector(".browser-export-sound-status").textContent = transitionSoundStyle === "none"
-      ? "Звук переходов отключён."
-      : "Короткий мягкий щелчок прозвучит при появлении подсветки следующей карточки.";
+    root.querySelector(".browser-export-sound-status").textContent = getSoundDescription(transitionSoundStyle);
   });
   root.querySelector(".browser-export-sound-preview").addEventListener("click", () => void previewTransitionSound());
   root.querySelector("#browser-export-play").addEventListener("click", () => {
@@ -242,6 +253,42 @@ function updateProgress(current, total) {
   root.querySelector("#browser-export-start").textContent = `Создаём видео · ${percent}%`;
 }
 
+function getSoundDescription(style) {
+  if (style === "none") return "Звук переходов отключён.";
+  if (style === "whoosh") return "Мягкий кинематографичный «вжух» совпадает с появлением подсветки следующей карточки.";
+  return "Короткий мягкий щелчок прозвучит при появлении подсветки следующей карточки.";
+}
+
+function inspectRecordedDuration(blob) {
+  return new Promise(resolve => {
+    let objectUrl = "";
+    let video;
+    let settled = false;
+    const finish = value => {
+      if (settled) return;
+      settled = true;
+      window.clearTimeout(timer);
+      if (video) {
+        video.removeAttribute("src");
+        video.load();
+      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      resolve(Number.isFinite(value) && value > 0 ? value : null);
+    };
+    const timer = window.setTimeout(() => finish(null), 5000);
+    try {
+      video = document.createElement("video");
+      video.preload = "metadata";
+      video.onloadedmetadata = () => finish(video.duration);
+      video.onerror = () => finish(null);
+      objectUrl = URL.createObjectURL(blob);
+      video.src = objectUrl;
+    } catch {
+      finish(null);
+    }
+  });
+}
+
 async function stopSoundPreview() {
   window.clearTimeout(soundPreviewTimer);
   soundPreviewTimer = 0;
@@ -253,7 +300,7 @@ async function stopSoundPreview() {
 async function previewTransitionSound() {
   if (transitionSoundStyle === "none") return;
   await stopSoundPreview();
-  const player = createTransitionAudioTrack({ style: transitionSoundStyle, monitor: true });
+  const player = await createTransitionAudioTrack({ style: transitionSoundStyle, monitor: true });
   const status = root.querySelector(".browser-export-sound-status");
   if (!player) {
     status.textContent = "Предпрослушивание звука не поддерживается этим браузером.";
@@ -263,11 +310,11 @@ async function previewTransitionSound() {
     soundPreviewPlayer = player;
     await player.resume();
     player.playCue();
-    status.textContent = "Воспроизводится короткий мягкий щелчок.";
+    status.textContent = transitionSoundStyle === "whoosh" ? "Воспроизводится «вжух» для перехода." : "Воспроизводится короткий мягкий щелчок.";
     soundPreviewTimer = window.setTimeout(() => {
       void stopSoundPreview();
-      status.textContent = "Короткий мягкий щелчок звучит при появлении подсветки следующей карточки.";
-    }, 300);
+      status.textContent = getSoundDescription(transitionSoundStyle);
+    }, Math.max(300, player.duration * 1000 + 180));
   } catch {
     await stopSoundPreview();
     status.textContent = "Не удалось воспроизвести звук перехода.";
@@ -280,7 +327,7 @@ async function startExport() {
   const plan = buildBrowserRenderPlan(preview.story, settings.aspectRatio);
   const drawFrame = createBrowserCanvasFrameRenderer({ canvas, story: preview.story, backgroundImage: background });
   stopPreviewPlayback();
-  const audioPlayer = createTransitionAudioTrack({ style: transitionSoundStyle });
+  const audioPlayer = await createTransitionAudioTrack({ style: transitionSoundStyle });
   const cueFrames = new Set(getTransitionCueFrames(preview.story.timeline.shots, {
     sourceFps: plan.sourceFps,
     fps: plan.fps,
@@ -294,13 +341,15 @@ async function startExport() {
   root.querySelector(".browser-export-cancel").hidden = false;
   root.querySelector("#browser-export-scrub").disabled = true;
   showError(""); updateProgress(0, plan.totalFrames);
+  let wakeLock = null;
   try {
+    try { wakeLock = await navigator.wakeLock?.request?.("screen"); } catch { wakeLock = null; }
     if (transitionSoundStyle !== "none" && !audioPlayer) {
-      root.querySelector(".browser-export-sound-status").textContent = "В этом браузере звуковая дорожка недоступна; видео будет без звука.";
+      root.querySelector(".browser-export-sound-status").textContent = "Не удалось загрузить выбранный звук; видео будет без звука.";
     }
     await audioPlayer?.resume();
     videoBlob = await recordCanvasVideo({
-      canvas, totalFrames: plan.totalFrames, fps: plan.fps, signal: renderController.signal,
+      canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: plan.totalFrames / plan.fps, signal: renderController.signal,
       audioTracks: audioPlayer?.audioTracks,
       drawFrame: outputFrame => {
         drawFrame(getSourceFrameForBrowserExport(outputFrame, plan));
@@ -309,18 +358,29 @@ async function startExport() {
       onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
     });
     videoUrl = URL.createObjectURL(videoBlob);
+    const actualDuration = await inspectRecordedDuration(videoBlob);
     const extension = videoBlob.type.includes("mp4") ? "mp4" : "webm";
     const fileName = `waydean-family-story.${extension}`;
     const ready = root.querySelector(".browser-export-ready");
     ready.hidden = false;
-    ready.innerHTML = `<strong>Видео готово</strong><video controls playsinline></video><button type="button" class="browser-export-start">Сохранить в Фото или Файлы</button><a download="${fileName}">Скачать видео</a>`;
+    ready.innerHTML = `<strong>Видео готово</strong><video controls playsinline></video><button type="button" class="browser-export-start browser-export-save-local">Сохранить в Фото или Файлы</button><a class="browser-export-download" download="${fileName}">Скачать видео</a><section class="browser-export-account-upload" aria-live="polite"><div class="browser-export-upload-heading"><strong>Сохранение в аккаунт</strong><span class="browser-export-upload-status">Готовим защищённую загрузку…</span></div><div class="browser-export-upload-progress" role="progressbar" aria-label="Загрузка видео в аккаунт" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><a class="browser-export-account-login" href="/admin/" target="_blank" rel="noopener" hidden>Войти в аккаунт Waydean</a><a class="browser-export-account-link" target="_blank" rel="noopener" hidden>Открыть сохранённое видео</a><button type="button" class="browser-export-start browser-export-retry" hidden>Повторить загрузку</button></section>`;
     ready.querySelector("video").src = videoUrl;
-    ready.querySelector("a").href = videoUrl;
-    ready.querySelector("button").addEventListener("click", () => void saveVideo(fileName));
+    ready.querySelector(".browser-export-download").href = videoUrl;
+    ready.querySelector(".browser-export-save-local").addEventListener("click", () => void saveVideo(fileName));
     updateProgress(plan.totalFrames, plan.totalFrames);
+    if (actualDuration !== null && !isRecordedVideoLongEnough(actualDuration, plan.totalFrames / plan.fps)) {
+      const status = ready.querySelector(".browser-export-upload-status");
+      const retry = ready.querySelector(".browser-export-retry");
+      status.textContent = `Проверка длительности остановила загрузку: получилось ${timeLabel(actualDuration)}, ожидалось около ${timeLabel(plan.totalFrames / plan.fps)}. Видео осталось на этой странице — сохраните его в Фото или Файлы, затем повторите рендер.`;
+      retry.hidden = true;
+    } else {
+      root.querySelector(".browser-export-cancel").hidden = true;
+      await uploadVideoToAccount(fileName);
+    }
   } catch (error) {
     showError(error instanceof DOMException && error.name === "AbortError" ? "Экспорт остановлен." : error instanceof Error ? error.message : "Не удалось создать видео на этом устройстве.");
   } finally {
+    try { await wakeLock?.release?.(); } catch { /* screen lock is optional */ }
     try { await audioPlayer?.close(); } catch { /* retain the video result if browser audio teardown fails */ }
     rendering = false; renderController = null;
     root.querySelector("#browser-export-start").disabled = !support.supported || !background;
@@ -328,6 +388,102 @@ async function startExport() {
     root.querySelector("#browser-export-play").disabled = preview.durationFrames < 2;
     root.querySelector(".browser-export-cancel").hidden = true;
     root.querySelector("#browser-export-scrub").disabled = false;
+  }
+}
+
+async function uploadVideoToAccount(fileName) {
+  if (!videoBlob) return;
+  const section = root.querySelector(".browser-export-account-upload");
+  const status = section?.querySelector(".browser-export-upload-status");
+  const progress = section?.querySelector(".browser-export-upload-progress");
+  const retry = section?.querySelector(".browser-export-retry");
+  const login = section?.querySelector(".browser-export-account-login");
+  const link = section?.querySelector(".browser-export-account-link");
+  if (!section || !status || !progress || !retry || !login || !link) return;
+  section.hidden = false;
+  retry.hidden = true;
+  login.hidden = true;
+  link.hidden = true;
+  status.textContent = "Загружаем видео в закрытый раздел аккаунта…";
+  progress.setAttribute("aria-valuenow", "0");
+  progress.querySelector("i").style.width = "0%";
+  try {
+    const result = await uploadWaydeanVideo({
+      blob: videoBlob,
+      fileName,
+      title: settings.title,
+      objectPath: videoObjectPath,
+      client: window.AdminSupabase?.getClient?.(),
+      config: window.SUPABASE_CONFIG,
+      tusClient: window.tus,
+      onObjectPath: path => { videoObjectPath = path; },
+      onProgress: (uploaded, total) => {
+        const percent = total ? Math.min(100, Math.round(uploaded / total * 100)) : 0;
+        progress.setAttribute("aria-valuenow", String(percent));
+        progress.querySelector("i").style.width = `${percent}%`;
+        status.textContent = `Загружаем в аккаунт · ${percent}%`;
+      }
+    });
+    progress.setAttribute("aria-valuenow", "100");
+    progress.querySelector("i").style.width = "100%";
+    status.textContent = "Видео сохранено в аккаунте. Временная ссылка действует 7 дней.";
+    videoObjectPath = result.path;
+    link.href = result.signedUrl;
+    link.hidden = false;
+    await loadVideoLibrary();
+  } catch (error) {
+    status.textContent = error instanceof Error ? error.message : "Не удалось сохранить видео в аккаунте. Видео пока доступно на этой странице — сохраните его в Фото или Файлы.";
+    if (error?.uploaded) status.textContent = "Видео уже сохранено в закрытом разделе аккаунта, но временную ссылку не удалось создать.";
+    login.hidden = error?.code !== "WAYDEAN_VIDEO_AUTH_REQUIRED";
+    retry.hidden = Boolean(error?.uploaded);
+    retry.onclick = error?.uploaded ? null : () => void uploadVideoToAccount(fileName);
+  }
+}
+
+async function loadVideoLibrary() {
+  const section = root.querySelector(".browser-export-library");
+  const status = section?.querySelector(".browser-export-library-status");
+  const items = section?.querySelector(".browser-export-library-items");
+  if (!section || !status || !items) return;
+  try {
+    const videos = await listWaydeanVideos({ client: window.AdminSupabase?.getClient?.(), limit: 20 });
+    if (videos.length === 0 && !videoBlob) return;
+    section.hidden = false;
+    status.textContent = videos.length ? `${videos.length} сохранено` : "Сохранённых видео пока нет.";
+    if (!videos.length) {
+      items.replaceChildren();
+      return;
+    }
+    items.innerHTML = videos.map(video => {
+      const date = video.createdAt ? new Date(video.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" }) : "";
+      const size = video.sizeBytes ? `${Math.max(1, Math.round(video.sizeBytes / (1024 * 1024)))} МБ` : "";
+      const title = video.title || "История семьи";
+      return `<article class="browser-export-library-item"><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml([date, size].filter(Boolean).join(" · "))}</small></div><button type="button" class="browser-export-library-open" data-video-path="${escapeHtml(video.path)}">Открыть</button></article>`;
+    }).join("");
+    items.querySelectorAll("[data-video-path]").forEach(button => button.addEventListener("click", () => void openLibraryVideo(button.dataset.videoPath, button)));
+  } catch {
+    section.hidden = true;
+  }
+}
+
+async function openLibraryVideo(path, button) {
+  const popup = window.open("about:blank", "_blank");
+  const section = root.querySelector(".browser-export-library");
+  const status = section?.querySelector(".browser-export-library-status");
+  if (!popup) {
+    if (status) status.textContent = "Разрешите новое окно и нажмите «Открыть» ещё раз.";
+    return;
+  }
+  popup.opener = null;
+  button.disabled = true;
+  try {
+    const signedUrl = await createWaydeanVideoLink({ client: window.AdminSupabase?.getClient?.(), path });
+    popup.location.replace(signedUrl);
+  } catch {
+    popup.close();
+    if (status) status.textContent = "Не удалось открыть это видео. Войдите в аккаунт и повторите попытку.";
+  } finally {
+    button.disabled = false;
   }
 }
 
@@ -365,3 +521,4 @@ function loadBackground() {
 renderShell();
 showSupport();
 loadBackground();
+void loadVideoLibrary();

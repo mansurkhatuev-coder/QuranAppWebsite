@@ -1,0 +1,95 @@
+name: Apply Waydean video library migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - admin/supabase-migration-waydean-video-library.sql
+      - .github/workflows/apply-waydean-video-library-migration.yml
+      - scripts/apply-academy-live-migration.sh
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create the private video bucket and owner policies
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-waydean-video-library.sql
+
+      - name: Verify private bucket and access policies
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          BODY=$(mktemp)
+          RESP=$(mktemp)
+          python3 - <<'PY' > "$BODY"
+          import json
+          print(json.dumps({"query": """
+          select
+            b.id,
+            b.public,
+            count(distinct p.policyname) filter (
+              where p.policyname in (
+                'Waydean video owner read', 'Waydean video owner upload',
+                'Waydean video owner update', 'Waydean video owner delete'
+              )
+            ) as owner_policy_count,
+            count(distinct p.policyname) filter (
+              where p.policyname in (
+                'Waydean video owner read guard', 'Waydean video owner upload guard',
+                'Waydean video owner update guard', 'Waydean video owner delete guard'
+            ) and p.permissive = 'RESTRICTIVE'
+              and p.roles @> ARRAY['public']::name[]
+            ) as public_guard_count
+          from storage.buckets b
+          left join pg_policies p
+            on p.schemaname = 'storage'
+           and p.tablename = 'objects'
+           and p.policyname in (
+             'Waydean video owner read', 'Waydean video owner upload',
+             'Waydean video owner update', 'Waydean video owner delete',
+             'Waydean video owner read guard', 'Waydean video owner upload guard',
+             'Waydean video owner update guard', 'Waydean video owner delete guard'
+           )
+          where b.id = 'waydean-videos'
+          group by b.id, b.public;
+          """}))
+          PY
+          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+            --data-binary @"$BODY")
+          echo "HTTP $CODE"
+          if [ "$CODE" != "201" ] && [ "$CODE" != "200" ]; then cat "$RESP"; exit 1; fi
+          python3 - "$RESP" <<'PY'
+          import json, sys
+          rows = json.load(open(sys.argv[1], encoding='utf-8'))
+          if not isinstance(rows, list) or len(rows) != 1:
+              raise SystemExit(f"Private bucket verification failed: {rows!r}"[:400])
+          row = rows[0]
+          if (
+              row.get('public') is not False
+              or int(row.get('owner_policy_count') or 0) != 4
+              or int(row.get('public_guard_count') or 0) != 4
+          ):
+              raise SystemExit(f"Private bucket policies are incomplete: {row!r}")
+          print("OK: private bucket, four owner policies, and four restrictive owner guards are present")
+          PY
+          rm -f "$BODY" "$RESP"

@@ -1,0 +1,130 @@
+.tree-loading-overlay {
+  position: absolute;
+  z-index: 4;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(3, 9, 11, .28), transparent 62%);
+  opacity: 1;
+  transition: opacity .24s ease;
+}
+
+.tree-loading-overlay[hidden] { display: none; }
+.tree-loading-overlay.is-done { opacity: 0; }
+
+.tree-loading-card {
+  display: grid;
+  justify-items: center;
+  gap: 9px;
+  width: min(320px, 100%);
+  padding: 24px 28px 22px;
+  border: 1px solid rgba(226, 190, 112, .4);
+  border-radius: 16px;
+  background: linear-gradient(145deg, rgba(9, 20, 23, .92), rgba(5, 12, 15, .9));
+  box-shadow: 0 18px 56px rgba(0, 0, 0, .4), inset 0 1px rgba(255, 255, 255, .06);
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  text-align: center;
+}
+
+.tree-loading-card > strong {
+  color: #f1d58e;
+  font: 600 16px Georgia, "Times New Roman", serif;
+}
+
+.tree-loading-card > span:not(.tree-loading-track) {
+  color: #c1b9a7;
+  font-size: 12px;
+}
+
+.tree-loading-mark { width: 58px; height: 58px; overflow: visible; color: #e6bd68; }
+.tree-loader-halo {
+  fill: none;
+  stroke: rgba(230, 189, 104, .22);
+  stroke-width: 1;
+  stroke-dasharray: 2 4;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tree-halo-breathe 2.1s ease-in-out infinite;
+}
+.tree-loader-line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 38;
+  stroke-dashoffset: 38;
+  animation: tree-line-draw 1.8s cubic-bezier(.2, .7, .2, 1) infinite;
+}
+.tree-loader-branch-left { animation-delay: .14s; }
+.tree-loader-branch-right { animation-delay: .28s; }
+.tree-loader-branch-upper-left { animation-delay: .42s; }
+.tree-loader-branch-upper-right { animation-delay: .56s; }
+.tree-loader-node {
+  fill: #f0d78a;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: tree-node-glow 1.8s ease-in-out infinite;
+}
+.tree-loading-mark .tree-loader-node:nth-of-type(2) { animation-delay: .18s; }
+.tree-loading-mark .tree-loader-node:nth-of-type(3) { animation-delay: .34s; }
+.tree-loading-mark .tree-loader-node:nth-of-type(4) { animation-delay: .5s; }
+.tree-loading-mark .tree-loader-node:nth-of-type(5) { animation-delay: .66s; }
+.tree-loading-mark .tree-loader-node:nth-of-type(6) { animation-delay: .82s; }
+
+.tree-loading-track {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 2px;
+  margin-top: 4px;
+  overflow: hidden;
+  border-radius: 99px;
+  background: rgba(230, 189, 104, .2);
+}
+.tree-loading-track > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 34%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, transparent, #f4d990, #fff0c3, transparent);
+  animation: tree-progress-sweep 1.35s cubic-bezier(.4, 0, .6, 1) infinite;
+}
+
+@keyframes tree-line-draw {
+  0%, 10% { stroke-dashoffset: 38; opacity: .25; }
+  48%, 88% { stroke-dashoffset: 0; opacity: 1; }
+  100% { stroke-dashoffset: 0; opacity: .55; }
+}
+@keyframes tree-node-glow {
+  0%, 100% { transform: scale(.78); opacity: .45; }
+  48% { transform: scale(1.16); opacity: 1; filter: drop-shadow(0 0 4px #e7bd65); }
+}
+@keyframes tree-halo-breathe {
+  0%, 100% { opacity: .45; transform: scale(.95); }
+  50% { opacity: .9; transform: scale(1.04); }
+}
+@keyframes tree-progress-sweep {
+  0% { transform: translateX(-110%); }
+  100% { transform: translateX(330%); }
+}
+
+@media (max-width: 700px) {
+  .tree-loading-overlay { padding: 16px; }
+  .tree-loading-card { width: min(290px, 100%); padding: 20px 22px 18px; }
+  .tree-loading-mark { width: 52px; height: 52px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .tree-loading-overlay { transition: none; }
+  .tree-loader-halo,
+  .tree-loader-line,
+  .tree-loader-node,
+  .tree-loading-track > span { animation: none !important; }
+  .tree-loader-line { stroke-dashoffset: 0; opacity: .9; }
+  .tree-loader-node { opacity: .9; }
+  .tree-loading-track > span { width: 64%; transform: none; opacity: .75; }
+}

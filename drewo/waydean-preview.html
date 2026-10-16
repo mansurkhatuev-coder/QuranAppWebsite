@@ -12,7 +12,8 @@
   <title>Waydean — семейное древо</title>
   <link rel="manifest" href="./waydean-preview.webmanifest">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-  <link rel="stylesheet" href="waydean-preview.css">
+  <link rel="stylesheet" href="waydean-preview.css?v=tree-loader-1">
+  <link rel="stylesheet" href="waydean-preview-loading.css?v=1">
   <link rel="stylesheet" href="waydean-preview-camera.css?v=person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-lod.css?v=person-card-width-1">
@@ -73,6 +74,27 @@
 
       <section class="tree-stage" id="treeStage" aria-label="Полотно древа">
         <div class="stage-wash" aria-hidden="true"></div>
+        <div class="tree-loading-overlay" id="treeLoading" role="status" aria-live="polite">
+          <div class="tree-loading-card">
+            <svg class="tree-loading-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+              <circle class="tree-loader-halo" cx="32" cy="35" r="25"></circle>
+              <path class="tree-loader-line tree-loader-trunk" d="M32 54V23"></path>
+              <path class="tree-loader-line tree-loader-branch-left" d="M32 43L18 29"></path>
+              <path class="tree-loader-line tree-loader-branch-right" d="M32 43L46 29"></path>
+              <path class="tree-loader-line tree-loader-branch-upper-left" d="M32 32L24 21"></path>
+              <path class="tree-loader-line tree-loader-branch-upper-right" d="M32 32L40 21"></path>
+              <circle class="tree-loader-node" cx="32" cy="54" r="3.4"></circle>
+              <circle class="tree-loader-node" cx="18" cy="29" r="3.1"></circle>
+              <circle class="tree-loader-node" cx="46" cy="29" r="3.1"></circle>
+              <circle class="tree-loader-node" cx="24" cy="21" r="2.8"></circle>
+              <circle class="tree-loader-node" cx="40" cy="21" r="2.8"></circle>
+              <circle class="tree-loader-node" cx="32" cy="32" r="2.5"></circle>
+            </svg>
+            <strong>Открываем семейное древо</strong>
+            <span id="treeLoadingText">Подготавливаем данные и связи</span>
+            <span class="tree-loading-track" aria-hidden="true"><span></span></span>
+          </div>
+        </div>
         <div class="mode-label" id="modeLabel" aria-live="polite"></div>
         <button class="show-full-tree" id="showFullTree" type="button" title="Вернуться к полному древу">← Назад к полному древу</button>
         <div class="graph-viewport" id="graphViewport" tabindex="0" title="Колесо мыши — масштаб; перетаскивание — перемещение" aria-label="Полотно древа. Колесо мыши меняет масштаб, перетаскивание перемещает древо; на телефоне масштаб меняется щипком.">
@@ -201,6 +223,6 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../admin/supabase-config.js?v=6"></script>
   <script src="../admin/admin-supabase.js?v=16"></script>
-  <script type="module" src="waydean-preview.js?v=waydean-live-20261015"></script>
+  <script type="module" src="waydean-preview.js?v=waydean-account-route-20261016-1"></script>
 </body>
 </html>

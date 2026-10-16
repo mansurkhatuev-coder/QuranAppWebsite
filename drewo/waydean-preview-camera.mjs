@@ -52,11 +52,12 @@ export function readableFitZoom(viewWidth, viewHeight, graphWidth, graphHeight, 
 
 export function zoomAroundAnchor({
   previousZoom, nextZoom, scrollLeft, scrollTop, anchorX, anchorY,
+  previousAnchorX = anchorX, previousAnchorY = anchorY,
   previousOffsetX, previousOffsetY, nextOffsetX, nextOffsetY,
   maxScrollLeft, maxScrollTop
 }) {
-  const worldX = (scrollLeft + anchorX - previousOffsetX) / previousZoom;
-  const worldY = (scrollTop + anchorY - previousOffsetY) / previousZoom;
+  const worldX = (scrollLeft + previousAnchorX - previousOffsetX) / previousZoom;
+  const worldY = (scrollTop + previousAnchorY - previousOffsetY) / previousZoom;
   return {
     left: clamp(nextOffsetX + worldX * nextZoom - anchorX, 0, maxScrollLeft),
     top: clamp(nextOffsetY + worldY * nextZoom - anchorY, 0, maxScrollTop)
