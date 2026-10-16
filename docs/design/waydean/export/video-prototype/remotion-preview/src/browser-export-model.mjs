@@ -116,7 +116,7 @@ export function chooseVideoBitrate({ durationSeconds, targetBytes = 42 * 1024 * 
 export function isRecordedVideoLongEnough(actualDurationSeconds, expectedDurationSeconds, tolerance = 0.2) {
   const actual = Number(actualDurationSeconds);
   const expected = Number(expectedDurationSeconds);
-  if (!Number.isFinite(actual) || !Number.isFinite(expected) || actual <= 0 || expected <= 0) return true;
+  if (!Number.isFinite(actual) || !Number.isFinite(expected) || actual <= 0 || expected <= 0) return false;
   const allowedShortfall = Math.min(0.8, Math.max(0, Number(tolerance) || 0));
   return actual >= expected * (1 - allowedShortfall);
 }
@@ -142,23 +142,10 @@ export function recordCanvasVideo({
   const frameCount = Math.max(1, Math.floor(Number(totalFrames) || 0));
   const frameRate = Math.min(30, Math.max(1, Number(fps) || 24));
   let stream;
-  let manualFrameCapture = false;
   try {
-    let manualCaptureRequested = true;
-    try {
-      stream = canvas.captureStream(0);
-    } catch {
-      manualCaptureRequested = false;
-      stream = canvas.captureStream(frameRate);
-    }
-    let videoTrack = stream.getVideoTracks?.()[0] ?? stream.getTracks?.().find(track => track.kind === "video");
-    if (manualCaptureRequested && typeof videoTrack?.requestFrame === "function") {
-      manualFrameCapture = true;
-    } else if (manualCaptureRequested) {
-      stream.getTracks?.().forEach(track => track.stop?.());
-      stream = canvas.captureStream(frameRate);
-      videoTrack = stream.getVideoTracks?.()[0] ?? stream.getTracks?.().find(track => track.kind === "video");
-    }
+    // Use a real-time frame clock. On iOS, manually requested canvas frames
+    // can be encoded with compressed timestamps even while the render loop waits.
+    stream = canvas.captureStream(frameRate);
     for (const track of audioTracks) {
       if (!track || stream.getTracks?.().includes(track)) continue;
       if (typeof stream.addTrack !== "function") throw new Error("This browser cannot combine audio with the video stream.");
@@ -191,8 +178,14 @@ export function recordCanvasVideo({
     recorder.ondataavailable = event => {
       if (event.data?.size) chunks.push(event.data);
     };
+    let rejectStarted;
+    const started = new Promise((resolve, reject) => {
+      recorder.onstart = resolve;
+      rejectStarted = reject;
+    });
     recorder.onerror = () => {
       failure = new Error("Запись видео прервалась в браузере.");
+      rejectStarted?.(failure);
       if (recorder.state !== "inactive") recorder.stop();
     };
     recorder.onstop = () => {
@@ -209,18 +202,28 @@ export function recordCanvasVideo({
     };
 
     try {
-      recorder.start();
+      recorder.start(1000);
+      const frameDurationMs = 1000 / frameRate;
+      const waitUntil = async deadline => {
+        while (true) {
+          if (signal?.aborted) throw abortError();
+          const remaining = deadline - performance.now();
+          if (remaining <= 0) return;
+          await sleep(Math.min(remaining, 250));
+        }
+      };
       void (async () => {
         try {
+          await started;
           for (let frame = 0; frame < frameCount; frame += 1) {
             if (signal?.aborted) throw abortError();
+            const frameStartedAt = performance.now();
             await drawFrame(frame);
-            if (manualFrameCapture) {
-              const videoTrack = stream.getVideoTracks?.()[0] ?? stream.getTracks?.().find(track => track.kind === "video");
-              videoTrack?.requestFrame?.();
-            }
             onProgress(frame + 1, frameCount);
-            await sleep(1000 / frameRate);
+            // Base each frame interval on the previous frame's actual start.
+            // If iOS suspends timers, a recording-wide deadline makes the
+            // remaining frames catch up in a burst and compress the video.
+            await waitUntil(frameStartedAt + frameDurationMs);
           }
           recorder.stop();
         } catch (error) {

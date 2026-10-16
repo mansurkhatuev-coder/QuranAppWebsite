@@ -3,7 +3,7 @@ import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
   clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
-} from './waydean-preview-camera.mjs?v=10';
+} from './waydean-preview-camera.mjs?v=ios-pinch-stable-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
@@ -1949,9 +1949,24 @@ function bindCameraGestures() {
   });
 
   const pointers = new Map();
+  let pinchStart = null;
   const pair = () => {
     const [a, b] = [...pointers.values()];
     return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, distance: Math.hypot(a.x - b.x, a.y - b.y) };
+  };
+  const beginPinch = () => {
+    if (pointers.size < 2) return;
+    const start = pair();
+    const bounds = ui.viewport.getBoundingClientRect();
+    pinchStart = {
+      distance: Math.max(1, start.distance),
+      zoom,
+      scrollLeft: ui.viewport.scrollLeft,
+      scrollTop: ui.viewport.scrollTop,
+      anchorX: start.x - bounds.left,
+      anchorY: start.y - bounds.top,
+      layout: { ...currentCameraLayout }
+    };
   };
   ui.viewport.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
@@ -1966,6 +1981,7 @@ function bindCameraGestures() {
       captureTarget
     });
     captureTarget.setPointerCapture(event.pointerId);
+    if (pointers.size === 2) beginPinch();
   });
   ui.viewport.addEventListener('pointermove', event => {
     const previous = pointers.get(event.pointerId);
@@ -1981,19 +1997,17 @@ function bindCameraGestures() {
       previous.x = event.clientX;
       previous.y = event.clientY;
     } else {
-      const before = pair();
       for (const pointer of pointers.values()) pointer.dragging = true;
       previous.x = event.clientX;
       previous.y = event.clientY;
       const after = pair();
       const bounds = ui.viewport.getBoundingClientRect();
-      const scaleFactor = before.distance > 0 && after.distance > 0
-        ? after.distance / before.distance
-        : 1;
+      if (!pinchStart || after.distance <= 0) return;
       setZoom(
-        zoom * scaleFactor,
+        pinchStart.zoom * (after.distance / pinchStart.distance),
         after.x - bounds.left, after.y - bounds.top,
-        before.x - bounds.left, before.y - bounds.top
+        pinchStart.anchorX, pinchStart.anchorY,
+        pinchStart
       );
     }
     event.preventDefault();
@@ -2006,7 +2020,10 @@ function bindCameraGestures() {
         if (suppressPersonClick === pointer.personId) suppressPersonClick = null;
       }, 450);
     }
+    const wasPinching = pointers.size >= 2;
     pointers.delete(event.pointerId);
+    if (wasPinching && pointers.size >= 2) beginPinch();
+    else if (pointers.size < 2) pinchStart = null;
     const captureTarget = pointer?.captureTarget || ui.viewport;
     if (captureTarget.hasPointerCapture(event.pointerId)) captureTarget.releasePointerCapture(event.pointerId);
   };
@@ -2024,12 +2041,13 @@ function setZoom(
   anchorX = ui.viewport.clientWidth / 2,
   anchorY = ui.viewport.clientHeight / 2,
   previousAnchorX = anchorX,
-  previousAnchorY = anchorY
+  previousAnchorY = anchorY,
+  gestureOrigin = null
 ) {
-  const previousZoom = zoom;
-  const previousLayout = currentCameraLayout;
-  const scrollLeft = ui.viewport.scrollLeft;
-  const scrollTop = ui.viewport.scrollTop;
+  const previousZoom = gestureOrigin?.zoom ?? zoom;
+  const previousLayout = gestureOrigin?.layout ?? currentCameraLayout;
+  const scrollLeft = gestureOrigin?.scrollLeft ?? ui.viewport.scrollLeft;
+  const scrollTop = gestureOrigin?.scrollTop ?? ui.viewport.scrollTop;
   const minimumZoom = window.matchMedia('(max-width: 700px)').matches
     ? MIN_MOBILE_ZOOM
     : MIN_DESKTOP_ZOOM;

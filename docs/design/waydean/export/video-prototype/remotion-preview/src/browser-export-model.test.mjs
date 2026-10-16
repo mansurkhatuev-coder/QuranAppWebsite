@@ -99,7 +99,7 @@ test("chooses a steady phone-friendly bitrate that keeps long exports near the s
 test("rejects a recording whose embedded duration is far shorter than the render timeline", () => {
   assert.equal(isRecordedVideoLongEnough(4, 245), false);
   assert.equal(isRecordedVideoLongEnough(200, 245), true);
-  assert.equal(isRecordedVideoLongEnough(Number.NaN, 245), true);
+  assert.equal(isRecordedVideoLongEnough(Number.NaN, 245), false);
 });
 
 test("canvas recording renders frames, reports progress, and closes captured tracks", async () => {
@@ -112,7 +112,7 @@ test("canvas recording renders frames, reports progress, and closes captured tra
       this.options = options;
       this.state = "inactive";
     }
-    start() { this.state = "recording"; }
+    start(...args) { this.startArgs = args; this.state = "recording"; this.onstart?.(); }
     stop() {
       this.state = "inactive";
       this.ondataavailable?.({ data: new Blob(["video"], { type: "video/webm" }) });
@@ -142,13 +142,13 @@ test("canvas recording renders frames, reports progress, and closes captured tra
   assert.equal(stoppedTrack, true);
 });
 
-test("canvas recording emits one real-time stream and requests each drawn frame explicitly", async () => {
+test("canvas recording uses the real-time capture clock and flushes periodic chunks", async () => {
   const events = [];
   const videoTrack = { requestFrame: () => events.push(["request-frame"]), stop() { events.push(["stop-track"]); } };
   class Recorder {
     static isTypeSupported() { return false; }
     constructor() { this.state = "inactive"; }
-    start(...args) { events.push(["start", ...args]); this.state = "recording"; }
+    start(...args) { events.push(["start", ...args]); this.state = "recording"; this.onstart?.(); }
     stop() {
       this.state = "inactive";
       this.ondataavailable?.({ data: new Blob(["full-video"], { type: "video/webm" }) });
@@ -165,18 +165,48 @@ test("canvas recording emits one real-time stream and requests each drawn frame 
     sleep: async () => {}
   });
 
-  assert.deepEqual(events.find(event => event[0] === "capture"), ["capture", 0]);
-  assert.deepEqual(events.find(event => event[0] === "start"), ["start"]);
-  assert.deepEqual(events.filter(event => event[0] === "request-frame").length, 3);
+  assert.deepEqual(events.find(event => event[0] === "capture"), ["capture", 24]);
+  assert.deepEqual(events.find(event => event[0] === "start"), ["start", 1000]);
+  assert.deepEqual(events.filter(event => event[0] === "request-frame").length, 0);
   assert.deepEqual(events.filter(event => event[0] === "draw").map(event => event[1]), [0, 1, 2]);
 });
 
-test("falls back to browser-timed canvas capture when manual frame capture is unavailable", async () => {
+test("canvas recording does not burst through frames after a delayed mobile timer", async () => {
+  const frameTimes = [];
+  let delayFirstWait = true;
+  class Recorder {
+    static isTypeSupported() { return false; }
+    constructor() { this.state = "inactive"; }
+    start() { this.state = "recording"; this.onstart?.(); }
+    stop() {
+      this.state = "inactive";
+      this.ondataavailable?.({ data: new Blob(["video"], { type: "video/webm" }) });
+      this.onstop?.();
+    }
+  }
+
+  await recordCanvasVideo({
+    canvas: { captureStream: () => ({ getTracks: () => [{ stop() {} }] }) },
+    totalFrames: 3,
+    fps: 24,
+    drawFrame: async () => frameTimes.push(performance.now()),
+    MediaRecorderCtor: Recorder,
+    sleep: milliseconds => new Promise(resolve => {
+      const extraDelay = delayFirstWait ? 120 : 0;
+      delayFirstWait = false;
+      setTimeout(resolve, milliseconds + extraDelay);
+    })
+  });
+
+  assert.ok(frameTimes[2] - frameTimes[1] >= 30, "frames following a delayed timer keep their own playback interval");
+});
+
+test("starts a browser-timed canvas stream at the requested frame rate", async () => {
   const captureRates = [];
   class Recorder {
     static isTypeSupported() { return false; }
     constructor() { this.state = "inactive"; }
-    start() { this.state = "recording"; }
+    start() { this.state = "recording"; this.onstart?.(); }
     stop() {
       this.state = "inactive";
       this.ondataavailable?.({ data: new Blob(["video"], { type: "video/webm" }) });
@@ -199,7 +229,7 @@ test("falls back to browser-timed canvas capture when manual frame capture is un
     sleep: async () => {}
   });
 
-  assert.deepEqual(captureRates, [0, 24]);
+  assert.deepEqual(captureRates, [24]);
 });
 
 test("canvas recording combines the requested transition sound track and stops it afterward", async () => {
@@ -216,7 +246,7 @@ test("canvas recording combines the requested transition sound track and stops i
       assert.equal(recordedStream.getTracks().includes(audioTrack), true);
       this.state = "inactive";
     }
-    start() { this.state = "recording"; }
+    start() { this.state = "recording"; this.onstart?.(); }
     stop() {
       this.state = "inactive";
       this.ondataavailable?.({ data: new Blob(["video+audio"], { type: "video/webm" }) });

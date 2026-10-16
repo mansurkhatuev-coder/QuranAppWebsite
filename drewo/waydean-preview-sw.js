@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v5';
+const CACHE_NAME = 'waydean-preview-shell-v6';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -12,15 +12,15 @@ const PRECACHE = [
   './waydean-preview-loading.css?v=1',
   './waydean-preview.css?v=tree-loader-1',
   './waydean-preview.css',
-  './waydean-preview-camera.css?v=person-card-width-1',
+  './waydean-preview-camera.css?v=ios-pinch-stable-1',
   './waydean-preview-master.css?v=person-card-width-1',
   './waydean-preview-lod.css?v=person-card-width-1',
   './waydean-preview-edit.css',
   './waydean-preview-readiness.css',
   './waydean-preview-main-polish.css?v=6',
   './waydean-preview-desktop-controls.css',
-  './waydean-preview-mobile-controls.css?v=mobile-canvas-2',
-  './waydean-preview-layout.css?v=8',
+  './waydean-preview-mobile-controls.css?v=ios-safe-area-1',
+  './waydean-preview-layout.css?v=ios-safe-area-1',
   './waydean-preview-minimap.css?v=4',
   './waydean-preview-editorial.css?v=cards-dock-5-person-card-width-1',
   './waydean-preview-history.css?v=local-history-1',
@@ -29,10 +29,10 @@ const PRECACHE = [
   './waydean-preview-self.css?v=self-3',
   './waydean-preview-glass-cards.css?v=thin-glass-1',
   './waydean-preview-auth.css?v=admin-auth-1',
-  './waydean-preview.js?v=waydean-account-route-20261016-1',
+  './waydean-preview.js?v=ios-touch-safe-20261017-1',
   './waydean-preview-pwa.mjs?v=pwa-1',
   './waydean-preview-model.mjs',
-  './waydean-preview-camera.mjs?v=10',
+  './waydean-preview-camera.mjs?v=ios-pinch-stable-1',
   './waydean-preview-access.mjs?v=3',
   './waydean-preview-lines.mjs',
   './waydean-preview-fixture.mjs',
