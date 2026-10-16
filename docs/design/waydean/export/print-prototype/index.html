@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Waydean — Print Studio</title>
-  <link rel="stylesheet" href="./styles.css?v=workspace-21">
+  <link rel="stylesheet" href="./styles.css?v=workspace-22">
 </head>
 <body>
   <div class="studio-shell">
@@ -132,7 +132,7 @@
 
       <section class="preview-column" aria-label="Предпросмотр печатного макета">
         <div class="preview-toolbar">
-          <div><span class="eyebrow">РАБОЧЕЕ ПОЛЕ</span><h2>Все листы печати</h2><p class="edit-hint">Перетаскивай карточки по общему полотну и между листами; нажми карточку, чтобы изменить имя, тейп и даты. На телефоне двигай поле одним пальцем и меняй масштаб жестом двух пальцев.</p></div>
+          <div><span class="eyebrow">РАБОЧЕЕ ПОЛЕ</span><h2>Все листы печати</h2><p class="edit-hint">Перетаскивай карточки: золотые направляющие сами выровняют их по краям и центрам соседних блоков. Нажми карточку, чтобы изменить имя, тейп и даты. На телефоне двигай поле одним пальцем и меняй масштаб жестом двух пальцев.</p></div>
           <div class="toolbar-actions">
             <div class="page-controls" role="group" aria-label="Навигация по печатным листам">
               <button type="button" id="previousPage" aria-label="Предыдущий лист">‹</button>
@@ -157,7 +157,7 @@
           <aside class="tile-overview" aria-label="Карта листов">
             <div class="tile-heading"><span class="eyebrow">РАСКЛАДКА</span><strong id="tileCount">1 лист</strong></div>
             <div class="tile-grid" id="pageGrid"></div>
-            <p class="tile-hint" id="tileHint">Разделительные линии не режут людей.</p>
+            <p class="tile-hint" id="tileHint">Нажми × на листе, чтобы убрать его карточки из макета. Исходное древо сохранится, действие можно отменить.</p>
           </aside>
         </div>
 
@@ -173,6 +173,6 @@
   </div>
 
   <div id="printPages" aria-hidden="true"></div>
-  <script type="module" src="./app.mjs?v=workspace-21"></script>
+  <script type="module" src="./app.mjs?v=workspace-25"></script>
 </body>
 </html>

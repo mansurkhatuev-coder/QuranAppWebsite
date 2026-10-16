@@ -3,14 +3,14 @@ import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
   clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
-} from './waydean-preview-camera.mjs?v=9';
+} from './waydean-preview-camera.mjs?v=10';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
 import { compactRouteClass, nextLodLevel } from './waydean-preview-lod.mjs?v=lod-8';
-import { canLoadPreviewTree, initialPreviewView, isLoopbackHost, isMasterFixtureQuery } from './waydean-preview-route.mjs?v=mobile-fit-1';
+import { accountPreviewUrl, canLoadPreviewTree, initialPreviewView, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode } from './waydean-preview-route.mjs?v=account-route-20261016-1';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=child-id-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
@@ -1589,6 +1589,8 @@ function setMode(next, announceMode = true) {
     selectedId = myPersonId;
     resetGenerationFilters();
   }
+  const nextUrl = previewUrlForMode(location.href, next);
+  if (nextUrl) history.replaceState(history.state, '', nextUrl);
   contextAnchorId = next === 'path' ? myPersonId : selectedId;
   ui.app.classList.remove('profile-open');
   closePopovers();
@@ -1984,11 +1986,15 @@ function bindCameraGestures() {
       previous.x = event.clientX;
       previous.y = event.clientY;
       const after = pair();
-      ui.viewport.scrollBy({ left: before.x - after.x, top: before.y - after.y, behavior: 'instant' });
-      if (before.distance > 0 && after.distance > 0) {
-        const bounds = ui.viewport.getBoundingClientRect();
-        setZoom(zoom * after.distance / before.distance, after.x - bounds.left, after.y - bounds.top);
-      }
+      const bounds = ui.viewport.getBoundingClientRect();
+      const scaleFactor = before.distance > 0 && after.distance > 0
+        ? after.distance / before.distance
+        : 1;
+      setZoom(
+        zoom * scaleFactor,
+        after.x - bounds.left, after.y - bounds.top,
+        before.x - bounds.left, before.y - bounds.top
+      );
     }
     event.preventDefault();
   });
@@ -2013,7 +2019,13 @@ function bindCameraGestures() {
   }, { passive: false });
 }
 
-function setZoom(next, anchorX = ui.viewport.clientWidth / 2, anchorY = ui.viewport.clientHeight / 2) {
+function setZoom(
+  next,
+  anchorX = ui.viewport.clientWidth / 2,
+  anchorY = ui.viewport.clientHeight / 2,
+  previousAnchorX = anchorX,
+  previousAnchorY = anchorY
+) {
   const previousZoom = zoom;
   const previousLayout = currentCameraLayout;
   const scrollLeft = ui.viewport.scrollLeft;
@@ -2024,7 +2036,7 @@ function setZoom(next, anchorX = ui.viewport.clientWidth / 2, anchorY = ui.viewp
   zoom = clampZoom(next, { minimum: minimumZoom });
   syncCameraLayout();
   const target = zoomAroundAnchor({
-    previousZoom, nextZoom: zoom, scrollLeft, scrollTop, anchorX, anchorY,
+    previousZoom, nextZoom: zoom, scrollLeft, scrollTop, anchorX, anchorY, previousAnchorX, previousAnchorY,
     previousOffsetX: previousLayout.offsetX, previousOffsetY: previousLayout.offsetY,
     nextOffsetX: currentCameraLayout.offsetX, nextOffsetY: currentCameraLayout.offsetY,
     maxScrollLeft: currentCameraLayout.extentWidth - ui.viewport.clientWidth,
@@ -2056,6 +2068,8 @@ function fitTree() {
 }
 
 function showError(error) {
+  const loading = $('#treeLoading');
+  if (loading) loading.hidden = true;
   ui.error.hidden = false;
   const title = $('#loadErrorTitle');
   const loginForm = $('#waydeanAdminLoginForm');
@@ -2143,6 +2157,9 @@ function bindWaydeanAdminLogin() {
 async function initialize() {
   bindWaydeanAdminLogin();
   try {
+    const loading = $('#treeLoading');
+    const loadingText = $('#treeLoadingText');
+    const setLoadingText = (message) => { if (loadingText) loadingText.textContent = message; };
     setRailCollapsed(initialRailCollapsed());
     setMiniMapCollapsed(false);
     const params = new URLSearchParams(location.search);
@@ -2157,11 +2174,13 @@ async function initialize() {
       throw new Error('Режим аккаунта открывается на сайте. Для локального просмотра выберите обычное древо.');
     }
     if (!canLoadPreviewTree(location.hostname, syntheticFixture) && !accountPreview) {
-      const error = new Error('The real-tree preview is restricted to loopback hosts.');
-      error.code = 'WAYDEAN_PREVIEW_LOCAL_ONLY';
-      throw error;
+      window.location.replace(accountPreviewUrl(window.location.href));
+      return;
     }
-    if (accountPreview) await requireWaydeanAdminAccess('drewo');
+    if (accountPreview) {
+      setLoadingText('Проверяем доступ к данным');
+      await requireWaydeanAdminAccess('drewo');
+    }
     pwaController = createWaydeanPwaController(renderPwaStatus, { allowServerPush: accountPreview });
     renderPwaStatus();
     const initialView = initialPreviewView(requestedState, {
@@ -2179,9 +2198,11 @@ async function initialize() {
     const dataUrl = syntheticFixture
       ? '../docs/design/waydean/fixtures/master-tree.json'
       : './family-tree.json';
-    const response = await fetch(dataUrl, { cache: 'no-store' });
+    setLoadingText('Загружаем данные рода');
+    const response = await fetch(dataUrl, { cache: 'no-cache' });
     if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
     const root = await response.json();
+    setLoadingText('Собираем поколения и связи');
     if (syntheticFixture) {
       sourceFixtureRoot = cloneTree(root);
       originalFixtureRoot = cloneTree(root);
@@ -2238,6 +2259,10 @@ async function initialize() {
     if (requestedState === 'stats') openPopover(ui.stats);
     window.waydeanPreview = { records, drawTree, selectPerson, get initialRenderMs() { return renderDuration; } };
     scheduleMiniViewportUpdate();
+    if (loading) {
+      loading.classList.add('is-done');
+      window.setTimeout(() => { loading.hidden = true; }, 260);
+    }
   } catch (error) {
     showError(error);
   }

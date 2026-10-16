@@ -33,13 +33,29 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261015-preview-play"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261016-account-upload"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
+  assert.match(studioSource, /Кинематографичный «вжух»/);
+  assert.match(studioSource, /value="whoosh"/);
   assert.match(studioSource, /value="none"/);
   assert.match(studioSource, /появлении подсветки следующей карточки/);
   assert.match(studioSource, /browser-export-sound-preview/);
+});
+
+test("browser video export auto-uploads finished renders to the private account library", () => {
+  assert.match(studioHtml, /assets\/tus\.min\.js/);
+  assert.match(studioHtml, /supabase-config\.js/);
+  assert.match(studioSource, /uploadWaydeanVideo\(/);
+  assert.match(studioSource, /автоматически загружается в закрытый раздел/);
+  assert.match(studioSource, /Сохранить в Фото или Файлы/);
+  assert.match(studioSource, /Повторить загрузку/);
+  assert.match(studioSource, /готовый файл можно сохранить в Фото или Файлы/);
+});
+
+test("account login opens separately so the rendered video stays in the current export page", () => {
+  assert.match(studioSource, /class="browser-export-account-login" href="\/admin\/" target="_blank" rel="noopener"/);
 });
 
 test("video preview has an accessible play control and frame-based playback", () => {

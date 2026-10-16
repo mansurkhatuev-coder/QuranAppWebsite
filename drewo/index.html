@@ -13,11 +13,13 @@
   <meta name="theme-color" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
-  <link rel="preload" as="image" href="bg.jpg" fetchpriority="high">
-  <link rel="preload" as="image" href="bg-night.jpg">
+  <link rel="preload" as="image" href="bg.jpg" fetchpriority="low">
+  <link rel="preload" as="image" href="bg-night.jpg" fetchpriority="low">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="">
-  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet">
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap">
+  <link id="waydean-font-styles" href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet" media="print" onload="this.media='all';this.dataset.ready='true'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&amp;family=Source+Sans+3:wght@400;600&amp;display=swap" rel="stylesheet"></noscript>
   <style>
     :root {
       --bg0: #12262f;
@@ -1519,16 +1521,88 @@
       line-height: 1.45;
     }
 
-    .center-banner[data-busy='true'] .center-banner-text::before {
-      content: '';
+    .tree-loading-mark {
       display: block;
-      width: 1.35rem;
-      height: 1.35rem;
-      margin: 0 auto 0.75rem;
-      border: 2px solid color-mix(in srgb, var(--sand) 30%, transparent);
-      border-top-color: var(--sand);
-      border-radius: 50%;
-      animation: save-spin 0.7s linear infinite;
+      width: 3.2rem;
+      height: 3.2rem;
+      color: var(--sand);
+      overflow: visible;
+    }
+    .tree-loader-halo {
+      fill: none;
+      stroke: color-mix(in srgb, var(--sand) 20%, transparent);
+      stroke-width: 1;
+      stroke-dasharray: 2 4;
+      animation: tree-halo-breathe 2.1s ease-in-out infinite;
+    }
+    .tree-loader-line {
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.3;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 38;
+      stroke-dashoffset: 38;
+      animation: tree-line-draw 1.8s cubic-bezier(.2,.7,.2,1) infinite;
+    }
+    .tree-loader-branch-left { animation-delay: .14s; }
+    .tree-loader-branch-right { animation-delay: .28s; }
+    .tree-loader-branch-upper-left { animation-delay: .42s; }
+    .tree-loader-branch-upper-right { animation-delay: .56s; }
+    .tree-loader-node {
+      fill: #f0d78a;
+      transform-box: fill-box;
+      transform-origin: center;
+      animation: tree-node-glow 1.8s ease-in-out infinite;
+    }
+    .tree-loader-node:nth-of-type(2) { animation-delay: .18s; }
+    .tree-loader-node:nth-of-type(3) { animation-delay: .34s; }
+    .tree-loader-node:nth-of-type(4) { animation-delay: .50s; }
+    .tree-loader-node:nth-of-type(5) { animation-delay: .66s; }
+    .tree-loader-node:nth-of-type(6) { animation-delay: .82s; }
+    .tree-loading-track {
+      display: block;
+      position: relative;
+      width: min(100%, 14rem);
+      height: 2px;
+      overflow: hidden;
+      border-radius: 99px;
+      background: color-mix(in srgb, var(--sand) 20%, transparent);
+    }
+    .tree-loading-track > span {
+      position: absolute;
+      inset: 0 auto 0 0;
+      width: 34%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, transparent, #f4d990, #fff0c3, transparent);
+      animation: tree-progress-sweep 1.35s cubic-bezier(.4,0,.6,1) infinite;
+    }
+    @keyframes tree-line-draw {
+      0%, 10% { stroke-dashoffset: 38; opacity: .25; }
+      48%, 88% { stroke-dashoffset: 0; opacity: 1; }
+      100% { stroke-dashoffset: 0; opacity: .55; }
+    }
+    @keyframes tree-node-glow {
+      0%, 100% { transform: scale(.78); opacity: .45; }
+      48% { transform: scale(1.16); opacity: 1; filter: drop-shadow(0 0 4px #e7bd65); }
+    }
+    @keyframes tree-halo-breathe {
+      0%, 100% { opacity: .45; transform: scale(.95); transform-origin: center; }
+      50% { opacity: .9; transform: scale(1.04); transform-origin: center; }
+    }
+    @keyframes tree-progress-sweep {
+      0% { transform: translateX(-110%); }
+      100% { transform: translateX(330%); }
+    }
+    .center-banner > .tree-loading-mark,
+    .center-banner > .tree-loading-track { display: none; }
+    .center-banner[data-busy='true'] > .tree-loading-mark {
+      display: block;
+      margin: 0 auto .35rem;
+    }
+    .center-banner[data-busy='true'] > .tree-loading-track {
+      display: block;
+      margin: 0 auto .8rem;
     }
 
     .center-banner-actions {
@@ -2020,8 +2094,13 @@
     }
 
     .gate-status {
+      display: grid;
+      grid-template-columns: 2.75rem minmax(0, 1fr);
+      grid-template-rows: auto 2px;
+      align-items: center;
+      gap: 0.2rem 0.7rem;
       margin: 0;
-      padding: 0.55rem 0.7rem;
+      padding: 0.65rem 0.75rem;
       border-radius: 8px;
       border: 1px solid color-mix(in srgb, var(--sand) 28%, transparent);
       background: color-mix(in srgb, var(--bg1) 35%, transparent);
@@ -2030,20 +2109,17 @@
       font-weight: 600;
       line-height: 1.35;
     }
-    .gate-status.is-busy::before {
-      content: "";
-      display: inline-block;
-      width: 0.7em;
-      height: 0.7em;
-      margin-right: 0.45em;
-      border-radius: 50%;
-      border: 2px solid color-mix(in srgb, var(--sand) 35%, transparent);
-      border-top-color: #f0d78a;
-      vertical-align: -0.05em;
-      animation: gate-spin 0.8s linear infinite;
-    }
-    @keyframes gate-spin {
-      to { transform: rotate(360deg); }
+    .gate-status[hidden] { display: none !important; }
+    .gate-status .tree-loading-mark { grid-row: 1 / 3; width: 2.75rem; height: 2.75rem; }
+    .gate-status .tree-loading-track { grid-column: 2; width: 100%; }
+    @media (prefers-reduced-motion: reduce) {
+      .tree-loader-halo,
+      .tree-loader-line,
+      .tree-loader-node,
+      .tree-loading-track > span { animation: none !important; }
+      .tree-loader-line { stroke-dashoffset: 0; opacity: .9; }
+      .tree-loader-node { opacity: .9; }
+      .tree-loading-track > span { width: 64%; transform: none; opacity: .75; }
     }
     .gate-net-hint {
       font-size: 0.78rem !important;
@@ -2330,7 +2406,24 @@
         <input id="gate-password" type="password" name="password" autocomplete="current-password" required>
       </label>
       <p id="gate-error" class="dialog-error" hidden></p>
-      <p id="gate-status" class="gate-status" hidden></p>
+      <p id="gate-status" class="gate-status" role="status" aria-live="polite" hidden>
+        <svg class="tree-loading-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+          <circle class="tree-loader-halo" cx="32" cy="35" r="25"></circle>
+          <path class="tree-loader-line tree-loader-trunk" d="M32 54V23"></path>
+          <path class="tree-loader-line tree-loader-branch-left" d="M32 43L18 29"></path>
+          <path class="tree-loader-line tree-loader-branch-right" d="M32 43L46 29"></path>
+          <path class="tree-loader-line tree-loader-branch-upper-left" d="M32 32L24 21"></path>
+          <path class="tree-loader-line tree-loader-branch-upper-right" d="M32 32L40 21"></path>
+          <circle class="tree-loader-node" cx="32" cy="54" r="3.4"></circle>
+          <circle class="tree-loader-node" cx="18" cy="29" r="3.1"></circle>
+          <circle class="tree-loader-node" cx="46" cy="29" r="3.1"></circle>
+          <circle class="tree-loader-node" cx="24" cy="21" r="2.8"></circle>
+          <circle class="tree-loader-node" cx="40" cy="21" r="2.8"></circle>
+          <circle class="tree-loader-node" cx="32" cy="32" r="2.5"></circle>
+        </svg>
+        <span id="gate-status-text"></span>
+        <span class="tree-loading-track" aria-hidden="true"><span></span></span>
+      </p>
       <p class="install-steps gate-net-hint">Пароль проверяется через интернет. Если долго не входит — VPN.</p>
       <button type="submit" id="gate-submit">Войти</button>
     </form>
@@ -2686,6 +2779,21 @@
   <div id="toast-host" aria-live="polite" aria-relevant="additions"></div>
   <div id="center-overlay" hidden>
     <div class="center-banner" id="center-banner" role="alertdialog" aria-modal="true" aria-labelledby="center-banner-text">
+      <svg class="tree-loading-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+        <circle class="tree-loader-halo" cx="32" cy="35" r="25"></circle>
+        <path class="tree-loader-line tree-loader-trunk" d="M32 54V23"></path>
+        <path class="tree-loader-line tree-loader-branch-left" d="M32 43L18 29"></path>
+        <path class="tree-loader-line tree-loader-branch-right" d="M32 43L46 29"></path>
+        <path class="tree-loader-line tree-loader-branch-upper-left" d="M32 32L24 21"></path>
+        <path class="tree-loader-line tree-loader-branch-upper-right" d="M32 32L40 21"></path>
+        <circle class="tree-loader-node" cx="32" cy="54" r="3.4"></circle>
+        <circle class="tree-loader-node" cx="18" cy="29" r="3.1"></circle>
+        <circle class="tree-loader-node" cx="46" cy="29" r="3.1"></circle>
+        <circle class="tree-loader-node" cx="24" cy="21" r="2.8"></circle>
+        <circle class="tree-loader-node" cx="40" cy="21" r="2.8"></circle>
+        <circle class="tree-loader-node" cx="32" cy="32" r="2.5"></circle>
+      </svg>
+      <span class="tree-loading-track" aria-hidden="true"><span></span></span>
       <p class="center-banner-text" id="center-banner-text"></p>
       <div class="center-banner-actions" id="center-banner-actions" hidden>
         <button type="button" id="center-banner-ok">Да</button>
@@ -4178,6 +4286,7 @@
       var skyWatchTimer = null;
       var sunTimes = null;
       var skyImageCache = Object.create(null);
+      var skyCacheWarmupScheduled = false;
       var skyLoadGen = 0;
 
       function preferReducedSkyMotion() {
@@ -4361,6 +4470,20 @@
         SKY_DAY_IMAGES.concat([SKY_NIGHT_IMAGE]).forEach(preloadSkyImage);
       }
 
+      function scheduleSkyCacheWarmup() {
+        if (skyCacheWarmupScheduled) return;
+        skyCacheWarmupScheduled = true;
+        var warm = function () {
+          if (document.hidden) return;
+          warmSkyCache();
+        };
+        if (typeof window.requestIdleCallback === 'function') {
+          window.requestIdleCallback(warm, { timeout: 8000 });
+        } else {
+          window.setTimeout(warm, 3000);
+        }
+      }
+
       function showSkyImage(url, immediate) {
         if (!skyLayerA || !skyLayerB || !url) return;
         var gen = ++skyLoadGen;
@@ -4523,6 +4646,7 @@
       var gateError = document.getElementById('gate-error');
       var gateSubmit = document.getElementById('gate-submit');
       var gateStatus = document.getElementById('gate-status');
+      var gateStatusText = document.getElementById('gate-status-text');
       var personSheetPhoto = document.getElementById('person-sheet-photo');
       var photoLightboxDialog = document.getElementById('photo-lightbox-dialog');
       var photoLightboxTitle = document.getElementById('photo-lightbox-title');
@@ -4871,7 +4995,7 @@
       }
 
       function fetchAccessFile() {
-        return fetch('access.json?v=' + Date.now(), { cache: 'no-store' })
+        return fetch('access.json', { cache: 'no-cache' })
           .then(function (res) {
             return res.ok ? res.json() : null;
           })
@@ -6525,7 +6649,7 @@
       }
 
       function fetchRemoteTree() {
-        return fetch('family-tree.json?v=' + Date.now(), { cache: 'no-store' })
+        return fetch('family-tree.json', { cache: 'no-cache' })
           .then(function (res) {
             if (!res.ok) return null;
             return res.json();
@@ -8670,10 +8794,15 @@
           positionSearchResults();
         });
       }
-      if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(function () {
-          render(true);
-        });
+      var waydeanFontLink = document.getElementById('waydean-font-styles');
+      function renderAfterWaydeanFonts() {
+        if (document.fonts && document.fonts.ready) {
+          document.fonts.ready.then(function () { render(true); });
+        }
+      }
+      if (waydeanFontLink) {
+        if (waydeanFontLink.dataset.ready === 'true') renderAfterWaydeanFonts();
+        else waydeanFontLink.addEventListener('load', renderAfterWaydeanFonts, { once: true });
       }
 
       function setNavMenuOpen(open) {
@@ -8846,7 +8975,6 @@
           setTheme('premium', false);
         }
         startSkyWatch();
-        warmSkyCache();
         loadTreeStatus();
       }
 
@@ -8942,7 +9070,7 @@
         }
         if (gateStatus) {
           gateStatus.hidden = true;
-          gateStatus.textContent = '';
+          if (gateStatusText) gateStatusText.textContent = '';
           gateStatus.classList.remove('is-busy');
         }
         if (gateSubmit) {
@@ -8963,14 +9091,14 @@
         if (!gateStatus) return;
         gateStatus.hidden = false;
         gateStatus.classList.add('is-busy');
-        gateStatus.textContent = message || 'Загружаем…';
+        if (gateStatusText) gateStatusText.textContent = message || 'Загружаем…';
       }
 
       function clearGateBusy() {
         if (!gateStatus) return;
         gateStatus.hidden = true;
         gateStatus.classList.remove('is-busy');
-        gateStatus.textContent = '';
+        if (gateStatusText) gateStatusText.textContent = '';
       }
 
       /**
@@ -8996,6 +9124,7 @@
             maybeAskWhoami();
           }
           hideCenterBanner();
+          scheduleSkyCacheWarmup();
         });
       }
 
@@ -9453,6 +9582,7 @@
             maybeAskWhoami();
           }
           hideCenterBanner();
+          scheduleSkyCacheWarmup();
         });
       }
 
@@ -9486,7 +9616,7 @@
             if (gateStatus) {
               gateStatus.hidden = true;
               gateStatus.classList.remove('is-busy');
-              gateStatus.textContent = '';
+              if (gateStatusText) gateStatusText.textContent = '';
             }
           }
           if (!login) {
@@ -9508,14 +9638,14 @@
           if (gateStatus) {
             gateStatus.hidden = false;
             gateStatus.classList.add('is-busy');
-            gateStatus.textContent = 'Проверяем логин и пароль…';
+            if (gateStatusText) gateStatusText.textContent = 'Проверяем логин и пароль…';
           }
           loginTreeSession(login, password)
             .then(function (result) {
               if (result === 'redirect') return;
               if (gateStatus) {
                 gateStatus.classList.remove('is-busy');
-                gateStatus.textContent = 'Готово, открываем древо…';
+                if (gateStatusText) gateStatusText.textContent = 'Готово, открываем древо…';
               }
               if (gatePassword) gatePassword.value = '';
               unlockViewAfterLogin();

@@ -64,7 +64,7 @@ test("creates and schedules a short, locally synthesized click", async () => {
     async close() { events.push(["close"]); }
   }
 
-  const player = createTransitionAudioTrack({ style: "click", AudioContextCtor: MockAudioContext });
+  const player = await createTransitionAudioTrack({ style: "click", AudioContextCtor: MockAudioContext });
   assert.deepEqual(player.audioTracks, [audioTrack]);
   await player.resume();
   player.playCue(2.25);
@@ -74,7 +74,43 @@ test("creates and schedules a short, locally synthesized click", async () => {
   assert.equal(events.some(event => event[0] === "close"), true);
 });
 
-test("does not create an audio context when transition sound is disabled", () => {
-  const player = createTransitionAudioTrack({ style: "none", AudioContextCtor: class { constructor() { throw new Error("must not create"); } } });
+test("synthesizes a cinematic whoosh and plays it at the transition cue", async () => {
+  const events = [];
+  const audioTrack = { kind: "audio" };
+  let bufferLength = 0;
+  class MockAudioContext {
+    constructor() { this.currentTime = 3; this.destination = {}; this.sampleRate = 8000; }
+    createMediaStreamDestination() { return { stream: { getAudioTracks: () => [audioTrack] } }; }
+    createBuffer(_channels, length) {
+      bufferLength = length;
+      const samples = new Float32Array(length);
+      return { duration: length / this.sampleRate, getChannelData: () => samples };
+    }
+    createBufferSource() {
+      return {
+        connect: node => events.push(["connect", node]),
+        start: time => events.push(["start", time]),
+        disconnect() {}
+      };
+    }
+    createGain() { return { gain: { value: 0 }, connect() {}, disconnect() {} }; }
+    async resume() {}
+    async close() { events.push(["close"]); }
+  }
+
+  const player = await createTransitionAudioTrack({
+    style: "whoosh",
+    AudioContextCtor: MockAudioContext
+  });
+
+  assert.deepEqual(player.audioTracks, [audioTrack]);
+  assert.ok(bufferLength >= 6400 && bufferLength <= 6560, "whoosh should last about 0.82 seconds");
+  player.playCue(3.25);
+  assert.equal(events.some(event => event[0] === "start" && event[1] === 3.25), true);
+  await player.close();
+});
+
+test("does not create an audio context when transition sound is disabled", async () => {
+  const player = await createTransitionAudioTrack({ style: "none", AudioContextCtor: class { constructor() { throw new Error("must not create"); } } });
   assert.equal(player, null);
 });
