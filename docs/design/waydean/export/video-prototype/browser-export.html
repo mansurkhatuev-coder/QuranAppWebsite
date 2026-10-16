@@ -6,18 +6,18 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#080d0e">
   <title>Waydean — Видео на устройстве</title>
-  <link rel="stylesheet" href="./browser-export.css?v=20261016-account-upload">
+  <link rel="stylesheet" href="./browser-export.css?v=20261017-realtime-video-1">
 </head>
 <body class="browser-export-page">
   <main id="browser-export-root" aria-live="polite">
     <p class="browser-export-loading">Открываем локальный экспорт…</p>
   </main>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="/admin/supabase-config.js?v=20261016-account-upload"></script>
-  <script src="/admin/admin-supabase.js?v=20261016-account-upload"></script>
-  <script src="/docs/design/waydean/export/video-prototype/assets/tus.min.js?v=20261016-account-upload"></script>
+  <script src="/admin/supabase-config.js?v=20261017-realtime-video-1"></script>
+  <script src="/admin/admin-supabase.js?v=20261017-realtime-video-1"></script>
+  <script src="/docs/design/waydean/export/video-prototype/assets/tus.min.js?v=20261017-realtime-video-1"></script>
   <script type="module">
-    import("./browser-export-studio.mjs?v=20261016-account-upload").catch(error => {
+    import("./browser-export-studio.mjs?v=20261017-realtime-video-1").catch(error => {
       const root = document.getElementById("browser-export-root");
       const message = document.createElement("p");
       message.className = "browser-export-error";

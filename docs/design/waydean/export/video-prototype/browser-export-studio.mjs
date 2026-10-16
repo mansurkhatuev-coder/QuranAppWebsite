@@ -4,7 +4,7 @@ import {
   isRecordedVideoLongEnough,
   readVideoExportHandoff,
   recordCanvasVideo
-} from "./remotion-preview/src/browser-export-model.mjs";
+} from "./remotion-preview/src/browser-export-model.mjs?v=ios-realtime-capture-2";
 import { createWaydeanVideoLink, listWaydeanVideos, uploadWaydeanVideo } from "./browser-video-storage.mjs?v=20261016-account-upload";
 import {
   buildBrowserRenderPlan,
@@ -324,6 +324,7 @@ async function previewTransitionSound() {
 async function startExport() {
   const canvas = root.querySelector("#browser-export-frame");
   if (!canvas || !background || !support.supported) return;
+  clearVideo();
   const plan = buildBrowserRenderPlan(preview.story, settings.aspectRatio);
   const drawFrame = createBrowserCanvasFrameRenderer({ canvas, story: preview.story, backgroundImage: background });
   stopPreviewPlayback();
@@ -348,7 +349,7 @@ async function startExport() {
       root.querySelector(".browser-export-sound-status").textContent = "Не удалось загрузить выбранный звук; видео будет без звука.";
     }
     await audioPlayer?.resume();
-    videoBlob = await recordCanvasVideo({
+    const recordedBlob = await recordCanvasVideo({
       canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: plan.totalFrames / plan.fps, signal: renderController.signal,
       audioTracks: audioPlayer?.audioTracks,
       drawFrame: outputFrame => {
@@ -357,8 +358,16 @@ async function startExport() {
       },
       onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
     });
+    const actualDuration = await inspectRecordedDuration(recordedBlob);
+    if (actualDuration === null || !isRecordedVideoLongEnough(actualDuration, plan.totalFrames / plan.fps)) {
+      const expectedDuration = plan.totalFrames / plan.fps;
+      showError(actualDuration === null
+        ? `Браузер не подтвердил длительность записи. Файл не будет показан или загружен. Повторите рендер, не сворачивая страницу.`
+        : `Запись получилась ускоренной: ${timeLabel(actualDuration)} вместо ${timeLabel(expectedDuration)}. Файл отброшен, загрузки не было. Повторите рендер, оставив страницу открытой.`);
+      return;
+    }
+    videoBlob = recordedBlob;
     videoUrl = URL.createObjectURL(videoBlob);
-    const actualDuration = await inspectRecordedDuration(videoBlob);
     const extension = videoBlob.type.includes("mp4") ? "mp4" : "webm";
     const fileName = `waydean-family-story.${extension}`;
     const ready = root.querySelector(".browser-export-ready");
@@ -368,15 +377,8 @@ async function startExport() {
     ready.querySelector(".browser-export-download").href = videoUrl;
     ready.querySelector(".browser-export-save-local").addEventListener("click", () => void saveVideo(fileName));
     updateProgress(plan.totalFrames, plan.totalFrames);
-    if (actualDuration !== null && !isRecordedVideoLongEnough(actualDuration, plan.totalFrames / plan.fps)) {
-      const status = ready.querySelector(".browser-export-upload-status");
-      const retry = ready.querySelector(".browser-export-retry");
-      status.textContent = `Проверка длительности остановила загрузку: получилось ${timeLabel(actualDuration)}, ожидалось около ${timeLabel(plan.totalFrames / plan.fps)}. Видео осталось на этой странице — сохраните его в Фото или Файлы, затем повторите рендер.`;
-      retry.hidden = true;
-    } else {
-      root.querySelector(".browser-export-cancel").hidden = true;
-      await uploadVideoToAccount(fileName);
-    }
+    root.querySelector(".browser-export-cancel").hidden = true;
+    await uploadVideoToAccount(fileName);
   } catch (error) {
     showError(error instanceof DOMException && error.name === "AbortError" ? "Экспорт остановлен." : error instanceof Error ? error.message : "Не удалось создать видео на этом устройстве.");
   } finally {
