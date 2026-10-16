@@ -48,3 +48,41 @@ using (
   bucket_id = 'waydean-videos'
   and (storage.foldername(name))[1] = (select auth.uid()::text)
 );
+
+-- Restrictive guards are ANDed with every permissive policy, so an existing
+-- broad storage policy cannot grant access to another user's video.
+drop policy if exists "Waydean video owner read guard" on storage.objects;
+create policy "Waydean video owner read guard"
+on storage.objects as restrictive for select to public
+using (
+  bucket_id = 'waydean-videos'
+  and (storage.foldername(name))[1] = (select auth.uid()::text)
+);
+
+drop policy if exists "Waydean video owner upload guard" on storage.objects;
+create policy "Waydean video owner upload guard"
+on storage.objects as restrictive for insert to public
+with check (
+  bucket_id = 'waydean-videos'
+  and (storage.foldername(name))[1] = (select auth.uid()::text)
+);
+
+drop policy if exists "Waydean video owner update guard" on storage.objects;
+create policy "Waydean video owner update guard"
+on storage.objects as restrictive for update to public
+using (
+  bucket_id = 'waydean-videos'
+  and (storage.foldername(name))[1] = (select auth.uid()::text)
+)
+with check (
+  bucket_id = 'waydean-videos'
+  and (storage.foldername(name))[1] = (select auth.uid()::text)
+);
+
+drop policy if exists "Waydean video owner delete guard" on storage.objects;
+create policy "Waydean video owner delete guard"
+on storage.objects as restrictive for delete to public
+using (
+  bucket_id = 'waydean-videos'
+  and (storage.foldername(name))[1] = (select auth.uid()::text)
+);

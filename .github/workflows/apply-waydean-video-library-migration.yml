@@ -39,14 +39,31 @@ jobs:
           python3 - <<'PY' > "$BODY"
           import json
           print(json.dumps({"query": """
-          select b.id, b.public, count(distinct p.policyname) as policy_count
+          select
+            b.id,
+            b.public,
+            count(distinct p.policyname) filter (
+              where p.policyname in (
+                'Waydean video owner read', 'Waydean video owner upload',
+                'Waydean video owner update', 'Waydean video owner delete'
+              )
+            ) as owner_policy_count,
+            count(distinct p.policyname) filter (
+              where p.policyname in (
+                'Waydean video owner read guard', 'Waydean video owner upload guard',
+                'Waydean video owner update guard', 'Waydean video owner delete guard'
+            ) and p.permissive = 'RESTRICTIVE'
+              and p.roles @> ARRAY['public']::name[]
+            ) as public_guard_count
           from storage.buckets b
           left join pg_policies p
             on p.schemaname = 'storage'
            and p.tablename = 'objects'
            and p.policyname in (
              'Waydean video owner read', 'Waydean video owner upload',
-             'Waydean video owner update', 'Waydean video owner delete'
+             'Waydean video owner update', 'Waydean video owner delete',
+             'Waydean video owner read guard', 'Waydean video owner upload guard',
+             'Waydean video owner update guard', 'Waydean video owner delete guard'
            )
           where b.id = 'waydean-videos'
           group by b.id, b.public;
@@ -67,8 +84,12 @@ jobs:
           if not isinstance(rows, list) or len(rows) != 1:
               raise SystemExit(f"Private bucket verification failed: {rows!r}"[:400])
           row = rows[0]
-          if row.get('public') is not False or int(row.get('policy_count') or 0) != 4:
+          if (
+              row.get('public') is not False
+              or int(row.get('owner_policy_count') or 0) != 4
+              or int(row.get('public_guard_count') or 0) != 4
+          ):
               raise SystemExit(f"Private bucket policies are incomplete: {row!r}")
-          print("OK: private bucket and all four owner-only policies are present")
+          print("OK: private bucket, four owner policies, and four restrictive owner guards are present")
           PY
           rm -f "$BODY" "$RESP"
