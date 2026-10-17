@@ -184,15 +184,25 @@
 }
 
 @media (max-width: 700px) {
+  :root {
+    --mobile-safe-bottom: max(env(safe-area-inset-bottom, 0px), env(safe-area-max-inset-bottom, 0px));
+  }
+
+  html,
+  body { background: #081215; }
+
   .load-error { inset: 28% 8%; padding: 18px; }
   .load-error-actions { flex-direction: column; }
   .load-error-actions button,
   .load-error-actions a { width: 100%; }
 
   .app-shell {
-    height: 100dvh;
+    position: fixed;
+    inset: 0;
+    width: auto;
+    height: auto;
     min-height: 0;
-    grid-template-rows: calc(58px + env(safe-area-inset-top, 0px)) 46px minmax(0, 1fr) calc(58px + env(safe-area-inset-bottom, 0px));
+    grid-template-rows: calc(58px + env(safe-area-inset-top, 0px)) 46px minmax(0, 1fr) calc(58px + var(--mobile-safe-bottom));
   }
   .topbar {
     box-sizing: border-box;
@@ -201,23 +211,24 @@
   .mobile-search-trigger { grid-row: 2; }
   .workspace { grid-row: 3; }
   .mobile-nav {
-    position: fixed;
+    position: absolute;
     z-index: 20;
-    inset-inline: 0;
+    right: 0;
+    left: 0;
     bottom: 0;
     grid-row: 4;
-    height: calc(58px + env(safe-area-inset-bottom, 0px));
-    min-height: calc(58px + env(safe-area-inset-bottom, 0px));
+    height: calc(58px + var(--mobile-safe-bottom));
+    min-height: calc(58px + var(--mobile-safe-bottom));
     padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
-    padding-bottom: env(safe-area-inset-bottom, 0px);
+    padding-bottom: var(--mobile-safe-bottom);
   }
 }
 
 @media (max-width: 380px) {
-  .app-shell { grid-template-rows: calc(50px + env(safe-area-inset-top, 0px)) 42px minmax(0, 1fr) calc(56px + env(safe-area-inset-bottom, 0px)); }
+  .app-shell { grid-template-rows: calc(50px + env(safe-area-inset-top, 0px)) 42px minmax(0, 1fr) calc(56px + var(--mobile-safe-bottom)); }
   .mobile-nav {
-    height: calc(56px + env(safe-area-inset-bottom, 0px));
-    min-height: calc(56px + env(safe-area-inset-bottom, 0px));
+    height: calc(56px + var(--mobile-safe-bottom));
+    min-height: calc(56px + var(--mobile-safe-bottom));
   }
 }
 
