@@ -40,23 +40,28 @@ test('selected-person strip does not consume mobile canvas space', () => {
   assert.match(rule(mobileCss, '.tree-stage'), /inset:\s*0/);
 });
 
-test('mobile navigation reaches the full device edge and accounts for the maximum safe area', () => {
+test('mobile navigation is an inset glass dock above the device safe area', () => {
   assert.match(mobileLayoutCss, /--mobile-safe-bottom:\s*max\(env\(safe-area-inset-bottom,\s*0px\),\s*env\(safe-area-max-inset-bottom,\s*0px\)\)/);
   assert.match(rule(mobileLayoutCss, '.app-shell'), /position:\s*fixed/);
   assert.match(rule(mobileLayoutCss, '.app-shell'), /inset:\s*0/);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /position:\s*absolute/);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /bottom:\s*0/);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /var\(--mobile-safe-bottom\)/);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /padding-bottom:\s*0/);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /top:\s*100%/);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /height:\s*max\(var\(--mobile-safe-bottom\),\s*56px\)/);
+  assert.match(mobileLayoutCss, /--mobile-nav-height:\s*58px/);
+  assert.match(rule(mobileLayoutCss, '.app-shell'), /calc\(var\(--mobile-nav-height\) \+ var\(--mobile-safe-bottom\) \+ 16px\)/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /position:\s*fixed/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /left:\s*max\(12px,\s*env\(safe-area-inset-left,\s*0px\)\)/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /right:\s*max\(12px,\s*env\(safe-area-inset-right,\s*0px\)\)/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /bottom:\s*calc\(var\(--mobile-safe-bottom\) \+ 8px\)/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /border-radius:\s*26px/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /backdrop-filter:\s*blur\(18px\)/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav button.active'), /background:/);
 });
 
-test('installed iPhone navigation is fixed to the screen without shifting the app shell', () => {
-  const standaloneCss = layoutCss.slice(layoutCss.indexOf('@supports (-webkit-touch-callout: none)'));
-  assert.match(standaloneCss, /\.mobile-nav\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*0;[^}]*height:\s*calc\(58px\s*\+\s*var\(--mobile-safe-bottom\)\);[^}]*padding-bottom:\s*var\(--mobile-safe-bottom\)/s);
-  assert.match(standaloneCss, /\.mobile-nav button\s*\{[^}]*align-content:\s*end;[^}]*padding-bottom:\s*4px;/s);
-  assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /background:\s*#081215/);
-  assert.doesNotMatch(standaloneCss, /\.mobile-nav::after\s*\{[^}]*display:\s*none;/s);
-  assert.doesNotMatch(standaloneCss, /\.app-shell\s*\{[^}]*bottom:\s*calc\(0px\s*-\s*max\(/s);
+test('mobile dock fills the home-indicator strip with background, without moving controls into it', () => {
+  const underDock = rule(mobileLayoutCss, '.mobile-nav::after');
+  assert.match(underDock, /top:\s*100%/);
+  assert.match(underDock, /height:\s*calc\(var\(--mobile-safe-bottom\) \+ 8px\)/);
+  assert.match(underDock, /left:\s*calc\(-1 \* max\(12px,\s*env\(safe-area-inset-left,\s*0px\)\)\)/);
+  assert.match(underDock, /right:\s*calc\(-1 \* max\(12px,\s*env\(safe-area-inset-right,\s*0px\)\)\)/);
+  assert.match(underDock, /background:\s*#081215/);
+  assert.doesNotMatch(layoutCss, /@media\s*\(display-mode:\s*standalone\)[\s\S]*?\.mobile-nav\s*\{/);
+  assert.match(layoutCss, /@media\s*\(max-width:\s*380px\)\s*\{[^}]*--mobile-nav-height:\s*56px/s);
 });
