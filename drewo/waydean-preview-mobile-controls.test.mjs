@@ -51,3 +51,7 @@ test('mobile navigation reaches the full device edge and accounts for the maximu
   assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /top:\s*100%/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /height:\s*max\(var\(--mobile-safe-bottom\),\s*56px\)/);
 });
+
+test('installed iPhone app shell extends through the bottom inset', () => {
+  assert.match(layoutCss, /@supports\s*\(-webkit-touch-callout:\s*none\)\s*\{\s*@media\s*\(display-mode:\s*standalone\)\s+and\s+\(max-width:\s*700px\)\s*\{\s*\.app-shell\s*\{\s*bottom:\s*calc\(0px\s*-\s*max\(var\(--mobile-safe-bottom\),\s*56px\)\)/);
+});
