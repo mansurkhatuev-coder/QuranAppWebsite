@@ -55,6 +55,8 @@ test('mobile navigation reaches the full device edge and accounts for the maximu
 test('installed iPhone navigation is fixed to the screen without shifting the app shell', () => {
   const standaloneCss = layoutCss.slice(layoutCss.indexOf('@supports (-webkit-touch-callout: none)'));
   assert.match(standaloneCss, /\.mobile-nav\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*0;[^}]*height:\s*calc\(58px\s*\+\s*var\(--mobile-safe-bottom\)\);[^}]*padding-bottom:\s*var\(--mobile-safe-bottom\)/s);
-  assert.match(standaloneCss, /\.mobile-nav::after\s*\{\s*display:\s*none;/);
+  assert.match(standaloneCss, /\.mobile-nav button\s*\{[^}]*align-content:\s*end;[^}]*padding-bottom:\s*4px;/s);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /background:\s*#081215/);
+  assert.doesNotMatch(standaloneCss, /\.mobile-nav::after\s*\{[^}]*display:\s*none;/s);
   assert.doesNotMatch(standaloneCss, /\.app-shell\s*\{[^}]*bottom:\s*calc\(0px\s*-\s*max\(/s);
 });
