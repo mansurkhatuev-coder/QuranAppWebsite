@@ -51,9 +51,10 @@ test('mobile PWA viewport stays full-height and keeps the glass navigation in th
   assert.match(rule(mobileLayoutCss, '.app-shell'), /height:\s*100%/);
   assert.match(rule(mobileLayoutCss, '.app-shell'), /min-height:\s*0/);
   assert.match(mobileLayoutCss, /--mobile-nav-height:\s*58px/);
-  assert.match(rule(mobileLayoutCss, '.app-shell'), /grid-template-rows:\s*58px 46px minmax\(0,\s*1fr\) calc\(var\(--mobile-nav-height\) \+ 8px\)/);
+  assert.match(rule(mobileLayoutCss, '.app-shell'), /grid-template-rows:\s*58px 46px minmax\(0,\s*1fr\) calc\(var\(--mobile-nav-height\) \+ 16px\)/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /position:\s*relative/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /grid-row:\s*4/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /margin:\s*0 16px 10px/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /border-radius:\s*26px/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /backdrop-filter:\s*blur\(18px\)/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav button.active'), /background:/);
@@ -61,5 +62,13 @@ test('mobile PWA viewport stays full-height and keeps the glass navigation in th
 
 test('small mobile PWA keeps a dedicated navigation row without safe-area overhang', () => {
   assert.match(compactMobileLayoutCss, /--mobile-nav-height:\s*56px/);
-  assert.match(compactMobileLayoutCss, /\.app-shell\s*\{\s*grid-template-rows:\s*50px 42px minmax\(0,\s*1fr\) calc\(var\(--mobile-nav-height\) \+ 8px\)/s);
+  assert.match(compactMobileLayoutCss, /\.app-shell\s*\{\s*grid-template-rows:\s*50px 42px minmax\(0,\s*1fr\) calc\(var\(--mobile-nav-height\) \+ 16px\)/s);
+});
+
+test('installed PWA receives the updated mobile layout stylesheet', () => {
+  const html = readFileSync(new URL('waydean-preview.html', here), 'utf8');
+  const worker = readFileSync(new URL('waydean-preview-sw.js', here), 'utf8');
+  assert.match(html, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
+  assert.match(worker, /waydean-preview-shell-v12/);
+  assert.match(worker, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
 });
