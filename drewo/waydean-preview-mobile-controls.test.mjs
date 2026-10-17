@@ -3,6 +3,11 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 const here = new URL('.', import.meta.url);
 const mobileCss = readFileSync(new URL('waydean-preview-mobile-controls.css', here), 'utf8');
+const layoutCss = readFileSync(new URL('waydean-preview-layout.css', here), 'utf8');
+const mobileLayoutCss = layoutCss.slice(
+  layoutCss.indexOf('@media (max-width: 700px)'),
+  layoutCss.indexOf('@media (max-width: 380px)')
+);
 const minimapCss = readFileSync(new URL('waydean-preview-minimap.css', here), 'utf8');
 
 function rule(css, selector) {
@@ -33,4 +38,13 @@ test('mobile minimap removes captions and gives the diagram their space', () => 
 test('selected-person strip does not consume mobile canvas space', () => {
   assert.match(rule(mobileCss, '.mobile-selected'), /display:\s*none/);
   assert.match(rule(mobileCss, '.tree-stage'), /inset:\s*0/);
+});
+
+test('mobile navigation reaches the full device edge and accounts for the maximum safe area', () => {
+  assert.match(mobileLayoutCss, /--mobile-safe-bottom:\s*max\(env\(safe-area-inset-bottom,\s*0px\),\s*env\(safe-area-max-inset-bottom,\s*0px\)\)/);
+  assert.match(rule(mobileLayoutCss, '.app-shell'), /position:\s*fixed/);
+  assert.match(rule(mobileLayoutCss, '.app-shell'), /inset:\s*0/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /position:\s*absolute/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /bottom:\s*0/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /var\(--mobile-safe-bottom\)/);
 });
