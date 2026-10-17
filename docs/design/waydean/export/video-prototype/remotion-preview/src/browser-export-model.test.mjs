@@ -236,6 +236,54 @@ test("canvas recording does not burst through frames after a delayed mobile time
   assert.ok(frameTimes[2] - frameTimes[1] >= 30, "frames following a delayed timer keep their own playback interval");
 });
 
+test("canvas recording preserves real-time frame pacing and duration when the performance clock runs ahead", async () => {
+  const clock = { performance: 0, wall: 0, stoppedAt: null };
+  const drawnFrames = [];
+  const originalPerformance = globalThis.performance;
+  class Recorder {
+    static isTypeSupported() { return false; }
+    constructor() { this.state = "inactive"; }
+    start() { this.state = "recording"; this.onstart?.(); }
+    stop() {
+      clock.stoppedAt = clock.wall;
+      this.state = "inactive";
+      this.ondataavailable?.({ data: new Blob(["video"], { type: "video/webm" }) });
+      this.onstop?.();
+    }
+  }
+
+  Object.defineProperty(globalThis, "performance", {
+    configurable: true,
+    value: { now: () => clock.performance }
+  });
+  try {
+    await recordCanvasVideo({
+      canvas: { captureStream: () => ({ getTracks: () => [{ stop() {} }] }) },
+      totalFrames: 2,
+      fps: 1,
+      durationSeconds: 3,
+      drawFrame: async frame => { drawnFrames.push({ frame, wallAt: clock.wall }); },
+      MediaRecorderCtor: Recorder,
+      monotonicNow: () => clock.performance,
+      wallNow: () => clock.wall,
+      sleep: async milliseconds => {
+        clock.wall += milliseconds;
+        clock.performance += milliseconds * 3;
+      }
+    });
+  } finally {
+    Object.defineProperty(globalThis, "performance", {
+      configurable: true,
+      value: originalPerformance
+    });
+  }
+
+  assert.ok(clock.stoppedAt >= 3000, `recorder stopped after ${clock.stoppedAt}ms instead of the required 3000ms`);
+  assert.ok(drawnFrames[1].wallAt - drawnFrames[0].wallAt >= 1000, "story frames must stay one second apart in real time");
+  assert.ok(drawnFrames.length > 2, "the last canvas frame must be repainted while the recorder holds the remaining duration");
+  assert.ok(drawnFrames.slice(2).every(({ frame }) => frame === 1), "duration hold must repeat the final rendered frame");
+});
+
 test("starts a browser-timed canvas stream at the requested frame rate", async () => {
   const captureRates = [];
   class Recorder {
