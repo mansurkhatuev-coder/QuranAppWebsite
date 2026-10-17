@@ -186,8 +186,8 @@
 @media (max-width: 700px) {
   :root { --mobile-nav-height: 58px; }
 
-  /* iOS standalone PWA needs a fixed viewport root so 100%-height children
-     resolve against the available screen instead of collapsing to content. */
+  /* iOS standalone PWA needs a fixed viewport root and a viewport-anchored app
+     shell; a relative 100%-height shell can collapse to its content height. */
   html {
     position: fixed;
     top: 0;
@@ -203,8 +203,8 @@
   .load-error-actions a { width: 100%; }
 
   .app-shell {
-    position: relative;
-    inset: auto;
+    position: fixed;
+    inset: 0;
     width: 100%;
     height: 100%;
     min-height: 0;
