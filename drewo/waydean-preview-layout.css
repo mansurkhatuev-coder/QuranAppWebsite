@@ -244,8 +244,18 @@
 
 @supports (-webkit-touch-callout: none) {
   @media (display-mode: standalone) and (max-width: 700px) {
-    .app-shell {
-      bottom: calc(0px - max(var(--mobile-safe-bottom), 56px));
+    /* iOS standalone can misplace absolute bottom anchors with a translucent status bar.
+       Keep the app viewport intact and pin only the navigation to the screen. */
+    .mobile-nav {
+      position: fixed;
+      bottom: 0;
+      height: calc(58px + var(--mobile-safe-bottom));
+      min-height: calc(58px + var(--mobile-safe-bottom));
+      padding-bottom: var(--mobile-safe-bottom);
+      box-sizing: border-box;
+    }
+    .mobile-nav::after {
+      display: none;
     }
   }
 }
