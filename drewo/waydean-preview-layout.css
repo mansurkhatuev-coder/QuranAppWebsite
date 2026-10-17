@@ -186,7 +186,15 @@
 @media (max-width: 700px) {
   :root { --mobile-nav-height: 58px; }
 
-  html { height: -webkit-fill-available; }
+  /* iOS standalone PWA needs a fixed viewport root so 100%-height children
+     resolve against the available screen instead of collapsing to content. */
+  html {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: -webkit-fill-available;
+  }
   body { height: 100%; background: #081215; }
 
   .load-error { inset: 28% 8%; padding: 18px; }
