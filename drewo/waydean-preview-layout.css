@@ -222,6 +222,16 @@
     padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
     padding-bottom: var(--mobile-safe-bottom);
   }
+  .mobile-nav::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    height: max(var(--mobile-safe-bottom), 56px);
+    background: #081215;
+    pointer-events: none;
+  }
 }
 
 @media (max-width: 380px) {
