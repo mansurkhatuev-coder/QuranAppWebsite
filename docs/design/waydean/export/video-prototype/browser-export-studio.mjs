@@ -4,7 +4,7 @@ import {
   getRecordedVideoDurationIssue,
   readVideoExportHandoff,
   recordCanvasVideo
-} from "./remotion-preview/src/browser-export-model.mjs?v=20261018-mp4-duration-1";
+} from "./remotion-preview/src/browser-export-model.mjs?v=20261018-wall-clock-duration-1";
 import { createWaydeanVideoLink, listWaydeanVideos, uploadWaydeanVideo } from "./browser-video-storage.mjs?v=20261016-account-upload";
 import {
   buildBrowserRenderPlan,
@@ -352,6 +352,7 @@ async function startExport() {
     const recordedBlob = await recordCanvasVideo({
       canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: plan.totalFrames / plan.fps, signal: renderController.signal,
       audioTracks: audioPlayer?.audioTracks,
+      onTimingWait: () => { root.querySelector("#browser-export-start").textContent = "Завершаем запись видео…"; },
       drawFrame: outputFrame => {
         drawFrame(getSourceFrameForBrowserExport(outputFrame, plan));
         if (cueFrames.has(outputFrame)) audioPlayer?.playCue();

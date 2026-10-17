@@ -33,7 +33,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261016-account-upload"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261018-wall-clock-duration-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -42,6 +42,8 @@ test("browser video export lets the user choose and preview transition sounds", 
   assert.match(studioSource, /value="none"/);
   assert.match(studioSource, /появлении подсветки следующей карточки/);
   assert.match(studioSource, /browser-export-sound-preview/);
+  assert.match(studioSource, /browser-export-model\.mjs\?v=20261018-wall-clock-duration-1/);
+  assert.match(studioSource, /Завершаем запись видео/);
 });
 
 test("browser video export auto-uploads finished renders to the private account library", () => {

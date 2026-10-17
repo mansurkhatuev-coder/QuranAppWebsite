@@ -143,6 +143,9 @@ export function recordCanvasVideo({
   audioTracks = [],
   durationSeconds = Number(totalFrames) / Math.max(1, Number(fps) || 24),
   MediaRecorderCtor = globalThis.MediaRecorder,
+  monotonicNow = () => globalThis.performance.now(),
+  wallNow = () => Date.now(),
+  onTimingWait = () => {},
   sleep = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds))
 }) {
   const support = getBrowserVideoSupport({ canvas, MediaRecorderCtor });
@@ -188,7 +191,7 @@ export function recordCanvasVideo({
     };
     let rejectStarted;
     const started = new Promise((resolve, reject) => {
-      recorder.onstart = resolve;
+      recorder.onstart = () => resolve();
       rejectStarted = reject;
     });
     recorder.onerror = () => {
@@ -216,10 +219,10 @@ export function recordCanvasVideo({
       if (recordingType.includes("mp4")) recorder.start();
       else recorder.start(1000);
       const frameDurationMs = 1000 / frameRate;
-      const waitUntil = async deadline => {
+      const waitUntil = async (deadline, readNow = monotonicNow) => {
         while (true) {
           if (signal?.aborted) throw abortError();
-          const remaining = deadline - globalThis.performance.now();
+          const remaining = deadline - readNow();
           if (remaining <= 0) return;
           await sleep(Math.min(remaining, 250));
         }
@@ -227,15 +230,37 @@ export function recordCanvasVideo({
       void (async () => {
         try {
           await started;
+          const recordingStartedAt = monotonicNow();
+          const recordingStartedWallAt = wallNow();
+          const minimumDurationMs = Math.max(frameCount / frameRate, Number(durationSeconds) || 0) * 1000;
           for (let frame = 0; frame < frameCount; frame += 1) {
             if (signal?.aborted) throw abortError();
-            const frameStartedAt = globalThis.performance.now();
+            const frameStartedAt = monotonicNow();
+            const frameStartedWallAt = wallNow();
             await drawFrame(frame);
             onProgress(frame + 1, frameCount);
             // Base each frame interval on the previous frame's actual start.
-            // If iOS suspends timers, a recording-wide deadline makes the
-            // remaining frames catch up in a burst and compress the video.
-            await waitUntil(frameStartedAt + frameDurationMs);
+            // If a mobile timer clock and wall time drift under load, wait on
+            // both before advancing the story so generations cannot speed up.
+            await waitUntil(frameStartedAt + frameDurationMs, monotonicNow);
+            await waitUntil(frameStartedWallAt + frameDurationMs, wallNow);
+          }
+          if (recordingStartedAt + minimumDurationMs > monotonicNow()
+            || recordingStartedWallAt + minimumDurationMs > wallNow()) {
+            onTimingWait();
+          }
+          // Keep the recorder alive for the full requested duration using both
+          // the monotonic render clock and wall time. iOS can let these clocks
+          // drift apart under load. Canvas capture also needs a fresh paint to
+          // add a frame, so repaint the final image during any remaining time.
+          const monotonicDeadline = recordingStartedAt + minimumDurationMs;
+          const wallDeadline = recordingStartedWallAt + minimumDurationMs;
+          const holdFrameIntervalMs = Math.max(frameDurationMs, 1000);
+          while (monotonicNow() < monotonicDeadline || wallNow() < wallDeadline) {
+            if (signal?.aborted) throw abortError();
+            await drawFrame(frameCount - 1);
+            await waitUntil(Math.min(monotonicNow() + holdFrameIntervalMs, monotonicDeadline), monotonicNow);
+            await waitUntil(Math.min(wallNow() + holdFrameIntervalMs, wallDeadline), wallNow);
           }
           recorder.stop();
         } catch (error) {
