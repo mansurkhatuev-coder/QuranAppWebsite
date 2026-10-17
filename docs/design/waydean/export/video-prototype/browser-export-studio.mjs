@@ -1,10 +1,10 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, normalizeExportSettings } from "./remotion-preview/src/export-studio-model.mjs";
 import {
   getBrowserVideoSupport,
-  isRecordedVideoLongEnough,
+  getRecordedVideoDurationIssue,
   readVideoExportHandoff,
   recordCanvasVideo
-} from "./remotion-preview/src/browser-export-model.mjs?v=ios-realtime-capture-2";
+} from "./remotion-preview/src/browser-export-model.mjs?v=20261018-mp4-duration-1";
 import { createWaydeanVideoLink, listWaydeanVideos, uploadWaydeanVideo } from "./browser-video-storage.mjs?v=20261016-account-upload";
 import {
   buildBrowserRenderPlan,
@@ -359,11 +359,14 @@ async function startExport() {
       onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
     });
     const actualDuration = await inspectRecordedDuration(recordedBlob);
-    if (actualDuration === null || !isRecordedVideoLongEnough(actualDuration, plan.totalFrames / plan.fps)) {
-      const expectedDuration = plan.totalFrames / plan.fps;
-      showError(actualDuration === null
-        ? `Браузер не подтвердил длительность записи. Файл не будет показан или загружен. Повторите рендер, не сворачивая страницу.`
-        : `Запись получилась ускоренной: ${timeLabel(actualDuration)} вместо ${timeLabel(expectedDuration)}. Файл отброшен, загрузки не было. Повторите рендер, оставив страницу открытой.`);
+    const expectedDuration = plan.totalFrames / plan.fps;
+    const durationIssue = getRecordedVideoDurationIssue(actualDuration, expectedDuration);
+    if (durationIssue) {
+      showError(durationIssue === "unknown"
+        ? "Браузер не подтвердил длительность записи. Файл не будет показан или загружен. Повторите рендер, не сворачивая страницу."
+        : durationIssue === "too-long"
+          ? `Браузер вернул аномальную длительность файла (ожидалось около ${timeLabel(expectedDuration)}). Файл не сохранён и не загружен. Повторите рендер после обновления страницы.`
+          : `Запись получилась ускоренной: ${timeLabel(actualDuration)} вместо ${timeLabel(expectedDuration)}. Файл отброшен, загрузки не было. Повторите рендер, оставив страницу открытой.`);
       return;
     }
     videoBlob = recordedBlob;

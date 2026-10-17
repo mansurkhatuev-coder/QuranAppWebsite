@@ -8,6 +8,7 @@ import {
   getBrowserVideoSupport,
   chooseRecordingMimeType,
   chooseVideoBitrate,
+  getRecordedVideoDurationIssue,
   isRecordedVideoLongEnough,
   recordCanvasVideo
 } from "./browser-export-model.mjs";
@@ -96,10 +97,15 @@ test("chooses a steady phone-friendly bitrate that keeps long exports near the s
   assert.equal(chooseVideoBitrate({ durationSeconds: 10 }), 2_500_000);
 });
 
-test("rejects a recording whose embedded duration is far shorter than the render timeline", () => {
+test("rejects recordings with implausibly short or long embedded durations", () => {
   assert.equal(isRecordedVideoLongEnough(4, 245), false);
   assert.equal(isRecordedVideoLongEnough(200, 245), true);
+  assert.equal(isRecordedVideoLongEnough(12_874 * 60 * 60, 245), false);
   assert.equal(isRecordedVideoLongEnough(Number.NaN, 245), false);
+  assert.equal(getRecordedVideoDurationIssue(4, 245), "too-short");
+  assert.equal(getRecordedVideoDurationIssue(12_874 * 60 * 60, 245), "too-long");
+  assert.equal(getRecordedVideoDurationIssue(Number.NaN, 245), "unknown");
+  assert.equal(getRecordedVideoDurationIssue(245, 245), null);
 });
 
 test("canvas recording renders frames, reports progress, and closes captured tracks", async () => {
@@ -171,6 +177,35 @@ test("canvas recording uses the real-time capture clock and flushes periodic chu
   assert.deepEqual(events.filter(event => event[0] === "draw").map(event => event[1]), [0, 1, 2]);
 });
 
+test("MP4 recording omits timeslices so Safari receives one completed file", async () => {
+  const events = [];
+  class SafariRecorder {
+    static isTypeSupported(type) { return type.startsWith("video/mp4"); }
+    constructor(stream, options) {
+      this.stream = stream;
+      this.mimeType = options.mimeType;
+      this.state = "inactive";
+    }
+    start(...args) { events.push(["start", ...args]); this.state = "recording"; this.onstart?.(); }
+    stop() {
+      this.state = "inactive";
+      this.ondataavailable?.({ data: new Blob(["complete-mp4"], { type: this.mimeType }) });
+      this.onstop?.();
+    }
+  }
+
+  await recordCanvasVideo({
+    canvas: { captureStream: () => ({ getTracks: () => [{ stop() {} }] }) },
+    totalFrames: 2,
+    fps: 24,
+    drawFrame: async () => {},
+    MediaRecorderCtor: SafariRecorder,
+    sleep: async () => {}
+  });
+
+  assert.deepEqual(events.find(event => event[0] === "start"), ["start"]);
+});
+
 test("canvas recording does not burst through frames after a delayed mobile timer", async () => {
   const frameTimes = [];
   let delayFirstWait = true;
@@ -189,7 +224,7 @@ test("canvas recording does not burst through frames after a delayed mobile time
     canvas: { captureStream: () => ({ getTracks: () => [{ stop() {} }] }) },
     totalFrames: 3,
     fps: 24,
-    drawFrame: async () => frameTimes.push(performance.now()),
+    drawFrame: async () => frameTimes.push(globalThis.performance.now()),
     MediaRecorderCtor: Recorder,
     sleep: milliseconds => new Promise(resolve => {
       const extraDelay = delayFirstWait ? 120 : 0;

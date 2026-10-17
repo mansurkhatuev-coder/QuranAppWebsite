@@ -113,12 +113,20 @@ export function chooseVideoBitrate({ durationSeconds, targetBytes = 42 * 1024 * 
   return Math.min(2_500_000, Math.max(500_000, budgetBitsPerSecond - Math.max(0, Number(audioBitsPerSecond) || 0)));
 }
 
-export function isRecordedVideoLongEnough(actualDurationSeconds, expectedDurationSeconds, tolerance = 0.2) {
+export function getRecordedVideoDurationIssue(actualDurationSeconds, expectedDurationSeconds, tolerance = 0.2) {
   const actual = Number(actualDurationSeconds);
   const expected = Number(expectedDurationSeconds);
-  if (!Number.isFinite(actual) || !Number.isFinite(expected) || actual <= 0 || expected <= 0) return false;
+  if (!Number.isFinite(actual) || !Number.isFinite(expected) || actual <= 0 || expected <= 0) return "unknown";
   const allowedShortfall = Math.min(0.8, Math.max(0, Number(tolerance) || 0));
-  return actual >= expected * (1 - allowedShortfall);
+  if (actual < expected * (1 - allowedShortfall)) return "too-short";
+  // A slow device may render longer than planned, but never by orders of
+  // magnitude. Safari can expose fragmented MP4 metadata as thousands of hours.
+  if (actual > expected * 10) return "too-long";
+  return null;
+}
+
+export function isRecordedVideoLongEnough(actualDurationSeconds, expectedDurationSeconds, tolerance = 0.2) {
+  return getRecordedVideoDurationIssue(actualDurationSeconds, expectedDurationSeconds, tolerance) === null;
 }
 
 function abortError() {
@@ -202,12 +210,16 @@ export function recordCanvasVideo({
     };
 
     try {
-      recorder.start(1000);
+      const recordingType = String(recorder.mimeType || support.mimeType || "").toLowerCase();
+      // Safari's fragmented MP4 timeslices can produce a wildly incorrect
+      // duration index. Let MP4 emit one complete blob on stop instead.
+      if (recordingType.includes("mp4")) recorder.start();
+      else recorder.start(1000);
       const frameDurationMs = 1000 / frameRate;
       const waitUntil = async deadline => {
         while (true) {
           if (signal?.aborted) throw abortError();
-          const remaining = deadline - performance.now();
+          const remaining = deadline - globalThis.performance.now();
           if (remaining <= 0) return;
           await sleep(Math.min(remaining, 250));
         }
@@ -217,7 +229,7 @@ export function recordCanvasVideo({
           await started;
           for (let frame = 0; frame < frameCount; frame += 1) {
             if (signal?.aborted) throw abortError();
-            const frameStartedAt = performance.now();
+            const frameStartedAt = globalThis.performance.now();
             await drawFrame(frame);
             onProgress(frame + 1, frameCount);
             // Base each frame interval on the previous frame's actual start.
