@@ -254,8 +254,9 @@
       padding-bottom: var(--mobile-safe-bottom);
       box-sizing: border-box;
     }
-    .mobile-nav::after {
-      display: none;
+    .mobile-nav button {
+      align-content: end;
+      padding-bottom: 4px;
     }
   }
 }
