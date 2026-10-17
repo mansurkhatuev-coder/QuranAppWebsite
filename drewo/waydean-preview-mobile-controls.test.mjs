@@ -47,6 +47,7 @@ test('mobile navigation reaches the full device edge and accounts for the maximu
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /position:\s*absolute/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /bottom:\s*0/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav'), /var\(--mobile-safe-bottom\)/);
+  assert.match(rule(mobileLayoutCss, '.mobile-nav'), /padding-bottom:\s*0/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /top:\s*100%/);
   assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /height:\s*max\(var\(--mobile-safe-bottom\),\s*56px\)/);
 });

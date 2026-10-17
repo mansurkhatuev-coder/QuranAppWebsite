@@ -220,7 +220,7 @@
     height: calc(58px + var(--mobile-safe-bottom));
     min-height: calc(58px + var(--mobile-safe-bottom));
     padding-inline: max(8px, env(safe-area-inset-left, 0px)) max(8px, env(safe-area-inset-right, 0px));
-    padding-bottom: var(--mobile-safe-bottom);
+    padding-bottom: 0;
   }
   .mobile-nav::after {
     content: "";
