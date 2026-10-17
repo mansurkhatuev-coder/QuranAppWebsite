@@ -37,7 +37,7 @@ test('the local offline cache precaches the current preview entry modules', () =
   assert.ok(entryScript, 'preview HTML should use a versioned app script');
   assert.ok(worker.includes(`'./${entryScript}'`), 'offline cache should precache the current app script');
   assert.ok(worker.includes("'./waydean-preview-route.mjs?v=account-route-20261016-1'"));
-  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v5'/);
+  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v8'/);
 });
 
 test('the offline cache contains every versioned preview stylesheet referenced by the page', () => {
