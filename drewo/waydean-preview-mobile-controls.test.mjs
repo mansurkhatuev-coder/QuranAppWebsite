@@ -52,6 +52,9 @@ test('mobile navigation reaches the full device edge and accounts for the maximu
   assert.match(rule(mobileLayoutCss, '.mobile-nav::after'), /height:\s*max\(var\(--mobile-safe-bottom\),\s*56px\)/);
 });
 
-test('installed iPhone app shell extends through the bottom inset', () => {
-  assert.match(layoutCss, /@supports\s*\(-webkit-touch-callout:\s*none\)\s*\{\s*@media\s*\(display-mode:\s*standalone\)\s+and\s+\(max-width:\s*700px\)\s*\{\s*\.app-shell\s*\{\s*bottom:\s*calc\(0px\s*-\s*max\(var\(--mobile-safe-bottom\),\s*56px\)\)/);
+test('installed iPhone navigation is fixed to the screen without shifting the app shell', () => {
+  const standaloneCss = layoutCss.slice(layoutCss.indexOf('@supports (-webkit-touch-callout: none)'));
+  assert.match(standaloneCss, /\.mobile-nav\s*\{[^}]*position:\s*fixed;[^}]*bottom:\s*0;[^}]*height:\s*calc\(58px\s*\+\s*var\(--mobile-safe-bottom\)\);[^}]*padding-bottom:\s*var\(--mobile-safe-bottom\)/s);
+  assert.match(standaloneCss, /\.mobile-nav::after\s*\{\s*display:\s*none;/);
+  assert.doesNotMatch(standaloneCss, /\.app-shell\s*\{[^}]*bottom:\s*calc\(0px\s*-\s*max\(/s);
 });
