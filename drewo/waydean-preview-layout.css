@@ -242,6 +242,14 @@
   }
 }
 
+@supports (-webkit-touch-callout: none) {
+  @media (display-mode: standalone) and (max-width: 700px) {
+    .app-shell {
+      bottom: calc(0px - max(var(--mobile-safe-bottom), 56px));
+    }
+  }
+}
+
 /* Desktop panels collapse completely so they never reserve empty canvas space. */
 @media (min-width: 701px) {
   .brand-cluster { display: flex; align-items: center; gap: 10px; min-width: 0; }
