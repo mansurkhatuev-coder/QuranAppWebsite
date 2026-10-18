@@ -6,10 +6,12 @@
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@mediabunny/aac-encoder": "1.56.1",
     "@remotion/bundler": "4.0.532",
     "@remotion/cli": "4.0.532",
     "@remotion/player": "4.0.532",
     "@remotion/renderer": "4.0.532",
+    "mediabunny": "1.56.1",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.532"
@@ -18,11 +20,13 @@
     "@remotion/eslint-config-flat": "4.0.532",
     "@types/react": "19.2.7",
     "@types/web": "0.0.166",
+    "esbuild": "0.28.1",
     "eslint": "9.39.5",
     "prettier": "3.8.1",
     "typescript": "5.9.3"
   },
   "scripts": {
+    "build-browser-video-encoder": "esbuild src/browser-local-encoder.entry.mjs --bundle --minify --format=esm --platform=browser --target=es2022 --legal-comments=inline --splitting --entry-names=browser-local-encoder --chunk-names=browser-encoder-[hash] --outdir=../assets/browser-encoder",
     "dev": "remotion studio --no-open",
     "export-studio": "node ./export-studio-server.mjs",
     "build": "remotion bundle",

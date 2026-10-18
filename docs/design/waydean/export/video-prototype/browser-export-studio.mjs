@@ -1,5 +1,6 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, normalizeExportSettings } from "./remotion-preview/src/export-studio-model.mjs";
 import {
+  chooseVideoBitrate,
   getBrowserVideoSupport,
   getRecordedVideoDurationIssue,
   readVideoExportHandoff,
@@ -11,7 +12,7 @@ import {
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
 } from "./remotion-preview/src/browser-canvas-renderer.mjs";
-import { createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261016-whoosh";
+import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261018-timestamped-audio";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
 
@@ -328,7 +329,6 @@ async function startExport() {
   const plan = buildBrowserRenderPlan(preview.story, settings.aspectRatio);
   const drawFrame = createBrowserCanvasFrameRenderer({ canvas, story: preview.story, backgroundImage: background });
   stopPreviewPlayback();
-  const audioPlayer = await createTransitionAudioTrack({ style: transitionSoundStyle });
   const cueFrames = new Set(getTransitionCueFrames(preview.story.timeline.shots, {
     sourceFps: plan.sourceFps,
     fps: plan.fps,
@@ -343,24 +343,51 @@ async function startExport() {
   root.querySelector("#browser-export-scrub").disabled = true;
   showError(""); updateProgress(0, plan.totalFrames);
   let wakeLock = null;
+  let audioPlayer = null;
   try {
     try { wakeLock = await navigator.wakeLock?.request?.("screen"); } catch { wakeLock = null; }
-    if (transitionSoundStyle !== "none" && !audioPlayer) {
-      root.querySelector(".browser-export-sound-status").textContent = "Не удалось загрузить выбранный звук; видео будет без звука.";
-    }
-    await audioPlayer?.resume();
-    const recordedBlob = await recordCanvasVideo({
-      canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: plan.totalFrames / plan.fps, signal: renderController.signal,
-      audioTracks: audioPlayer?.audioTracks,
-      onTimingWait: () => { root.querySelector("#browser-export-start").textContent = "Завершаем запись видео…"; },
-      drawFrame: outputFrame => {
-        drawFrame(getSourceFrameForBrowserExport(outputFrame, plan));
-        if (cueFrames.has(outputFrame)) audioPlayer?.playCue();
-      },
-      onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
-    });
-    const actualDuration = await inspectRecordedDuration(recordedBlob);
+    root.querySelector("#browser-export-start").textContent = "Готовим точный рендер…";
+    const { canEncodeTimestampedMp4, encodeTimestampedMp4 } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261018-timestamped-mp4");
     const expectedDuration = plan.totalFrames / plan.fps;
+    const videoBitrate = chooseVideoBitrate({ durationSeconds: expectedDuration });
+    const timestampedMp4Supported = await canEncodeTimestampedMp4({
+      width: plan.width, height: plan.height, bitrate: videoBitrate, includeAudio: transitionSoundStyle !== "none"
+    });
+    const drawOutputFrame = outputFrame => drawFrame(getSourceFrameForBrowserExport(outputFrame, plan));
+    let recordedBlob;
+    if (timestampedMp4Supported) {
+      const audioBuffer = transitionSoundStyle === "none" ? null : await createTransitionAudioBuffer({
+        style: transitionSoundStyle,
+        cueTimes: [...cueFrames].map(outputFrame => outputFrame / plan.fps),
+        durationSeconds: expectedDuration
+      });
+      if (transitionSoundStyle !== "none" && !audioBuffer) {
+        root.querySelector(".browser-export-sound-status").textContent = "Не удалось подготовить звуковую дорожку; видео будет без звука.";
+      }
+      recordedBlob = await encodeTimestampedMp4({
+        canvas, totalFrames: plan.totalFrames, fps: plan.fps, bitrate: videoBitrate, audioBuffer,
+        signal: renderController.signal,
+        drawFrame: drawOutputFrame,
+        onProgress: (current, total) => { if (current % plan.fps === 0) updateProgress(current, total); }
+      });
+    } else {
+      audioPlayer = await createTransitionAudioTrack({ style: transitionSoundStyle });
+      if (transitionSoundStyle !== "none" && !audioPlayer) {
+        root.querySelector(".browser-export-sound-status").textContent = "Не удалось загрузить выбранный звук; видео будет без звука.";
+      }
+      await audioPlayer?.resume();
+      recordedBlob = await recordCanvasVideo({
+        canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: expectedDuration, signal: renderController.signal,
+        audioTracks: audioPlayer?.audioTracks,
+        onTimingWait: () => { root.querySelector("#browser-export-start").textContent = "Завершаем запись видео…"; },
+        drawFrame: async outputFrame => {
+          drawOutputFrame(outputFrame);
+          if (cueFrames.has(outputFrame)) audioPlayer?.playCue();
+        },
+        onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
+      });
+    }
+    const actualDuration = await inspectRecordedDuration(recordedBlob);
     const durationIssue = getRecordedVideoDurationIssue(actualDuration, expectedDuration);
     if (durationIssue) {
       showError(durationIssue === "unknown"
@@ -509,6 +536,11 @@ async function saveVideo(fileName) {
 
 function showSupport() {
   support = getBrowserVideoSupport({ canvas: root.querySelector("#browser-export-frame") });
+  const timestampedEncoderAvailable = typeof globalThis.VideoEncoder === "function"
+    && typeof globalThis.VideoFrame === "function";
+  if (!support.supported && timestampedEncoderAvailable) {
+    support = { supported: true, mimeType: "video/mp4", reason: "" };
+  }
   if (!support.supported) {
     const note = root.querySelector(".browser-export-unsupported");
     note.textContent = `${support.reason} Попробуйте актуальный Safari или Chrome.`;

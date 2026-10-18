@@ -134,3 +134,35 @@ export async function createTransitionAudioTrack({
     }
   };
 }
+
+export async function createTransitionAudioBuffer({
+  style = "click",
+  cueTimes = [],
+  durationSeconds = 0,
+  OfflineAudioContextCtor = globalThis.OfflineAudioContext ?? globalThis.webkitOfflineAudioContext
+} = {}) {
+  const duration = Number(durationSeconds);
+  if (!SUPPORTED_STYLES.has(style) || !(duration > 0) || typeof OfflineAudioContextCtor !== "function") return null;
+  const times = [...new Set((Array.isArray(cueTimes) ? cueTimes : [])
+    .map(value => Number(value))
+    .filter(value => Number.isFinite(value) && value >= 0 && value < duration))];
+  if (!times.length) return null;
+
+  const sampleRate = 44_100;
+  try {
+    const context = new OfflineAudioContextCtor(1, Math.ceil(duration * sampleRate), sampleRate);
+    const soundBuffer = style === "whoosh" ? buildWhooshBuffer(context) : buildClickBuffer(context);
+    for (const time of times) {
+      const source = context.createBufferSource();
+      const gain = context.createGain();
+      source.buffer = soundBuffer;
+      gain.gain.value = style === "whoosh" ? 0.44 : 0.52;
+      source.connect(gain);
+      gain.connect(context.destination);
+      source.start(time);
+    }
+    return await context.startRendering();
+  } catch {
+    return null;
+  }
+}
