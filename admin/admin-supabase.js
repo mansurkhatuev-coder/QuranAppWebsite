@@ -270,6 +270,8 @@
   async function loadAnalyticsEvents() {
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
+    // Recent-event sample for compatibility when full-history dashboard details
+    // have not been installed yet. Authoritative analytics come from the RPC.
     const EVENT_LIMIT = 5000;
     const result = await client
       .from('analytics_events')
