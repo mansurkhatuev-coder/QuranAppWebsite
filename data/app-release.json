@@ -1,8 +1,8 @@
 {
   "android": {
     "rustore": {
-      "latestVersion": "1.0.19",
-      "versionCode": 23,
+      "latestVersion": "1.0.20",
+      "versionCode": 28,
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {
@@ -16,6 +16,6 @@
     "buildNumber": 26,
     "appStoreUrl": "https://apps.apple.com/app/id6782619598"
   },
-  "messageRu": "Версия 1.0.19: новый курс заучивания сур, переход к нужным правилам таджвида, обновлённый дизайн окна аята и аудио азкаров Мишари Аль-Афаси.",
-  "messageEn": "Version 1.0.19: a new surah memorization course, direct links to Tajweed lessons, a refreshed ayah screen, and Mishari Alafasy azkar audio."
+  "messageRu": "Добавили режим «Печатный мусхаф» — читайте Коран по страницам и перелистывайте их, как в печатном издании. Улучшили стабильность приложения.",
+  "messageEn": "Added a Printed Mushaf mode for page-by-page Quran reading with page turning. Improved app stability."
 }
