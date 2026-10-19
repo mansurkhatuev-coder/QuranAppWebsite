@@ -187,10 +187,20 @@
   }
 
   function courseLabel(courseId) {
+    if (courseId === '__missing__') return 'Без курса';
     if (courseId === 'names99') return '99 имён';
     if (courseId === 'tajweed') return 'Таджвид';
     if (courseId === 'madina') return 'Медина';
     return courseId || '—';
+  }
+
+  function hasFullHistoryDetails(value = dashboard) {
+    const details = value?.details;
+    return Boolean(
+      Array.isArray(details?.azkar_categories) &&
+        Array.isArray(details?.lesson_courses) &&
+        Array.isArray(details?.course_funnel)
+    );
   }
 
   function renderMetricCards(container, rows) {
@@ -258,13 +268,19 @@
         }</p>`
       : '';
 
+    const installationCards = rangeDays
+      ? `
+          ${metricCard('Активны за период', active, { hero: true, prev: previous?.active })}
+          ${metricCard('Новые', newInstalls, { hero: true, prev: previous?.new_installs })}
+          ${metricCard('Всего', allTime)}
+        `
+      : metricCard('Всего устройств', allTime, { hero: true });
+
     container.innerHTML = `
       <section class="admin-analytics-section">
         <div class="admin-analytics-social-head"><h3>Установки · ${escapeHtml(label)}</h3></div>
         <div class="admin-analytics-grid">
-          ${metricCard('Сейчас активны', active, { hero: true, prev: previous?.active })}
-          ${metricCard('Новые', newInstalls, { hero: true, prev: previous?.new_installs })}
-          ${metricCard('Всего', allTime)}
+          ${installationCards}
           ${metricCard('События', events, { prev: previous?.events })}
         </div>
         ${compareBlock}
@@ -299,7 +315,7 @@
     `;
   }
 
-  function renderBreakdown(container, title, pairs, labelFn) {
+  function renderBreakdown(container, title, pairs, labelFn, valueFn = null) {
     const block = document.createElement('div');
     block.className = 'admin-analytics-block';
     const h = document.createElement('h3');
@@ -315,7 +331,11 @@
       list.className = 'admin-analytics-list';
       for (const [key, count] of pairs.slice(0, 12)) {
         const li = document.createElement('li');
-        li.innerHTML = `<span>${labelFn(key)}</span><strong>${count}</strong>`;
+        const label = document.createElement('span');
+        label.textContent = labelFn(key);
+        const value = document.createElement('strong');
+        value.textContent = typeof valueFn === 'function' ? valueFn(key, count) : String(count);
+        li.append(label, value);
         list.appendChild(li);
       }
       block.appendChild(list);
@@ -478,17 +498,26 @@
     container.replaceChildren(cards, list);
   }
 
-  function renderCourseFunnel(container) {
+  function renderCourseFunnel(container, serverFunnel = null) {
     if (!container) return;
     const rows = filteredRows();
-    const funnel = buildCourseFunnel(rows);
+    const funnel = Array.isArray(serverFunnel)
+      ? serverFunnel.map((item) => ({
+          courseId: item.course_id,
+          started: Number(item.started) || 0,
+          finished: Number(item.finished) || 0,
+          abandoned: Number(item.abandoned) || 0,
+          studying: Number(item.studying) || 0,
+          totalLessons: Number(item.total_lessons) || 0,
+        }))
+      : buildCourseFunnel(rows);
 
     const block = document.createElement('div');
     block.className = 'admin-analytics-block admin-analytics-funnel';
     const head = document.createElement('div');
     head.className = 'admin-analytics-social-head';
     head.innerHTML = `
-      <h3>Курсы</h3>
+      <h3>Курсы${serverFunnel == null && eventsWindowLimited ? ' · последние 5 000 событий' : ''}</h3>
     `;
     block.appendChild(head);
 
@@ -511,7 +540,7 @@
       const studyingPct = Math.max(0, 100 - finishPct - abandonPct);
       row.innerHTML = `
         <div class="admin-analytics-funnel-title">
-          <strong>${courseLabel(item.courseId)}</strong>
+          <strong>${escapeHtml(courseLabel(item.courseId))}</strong>
           <span class="admin-muted">начали ${item.started}</span>
         </div>
         <div class="admin-analytics-funnel-metrics">
@@ -973,10 +1002,15 @@
     const stats = document.querySelector('#analytics-stats');
     const rows = filteredRows();
     const period = dashboard?.period;
+    const fullHistoryDetails = hasFullHistoryDetails();
+    const details = dashboard?.details;
 
     if (stats) {
       if (period) {
-        stats.textContent = `${rangeLabel(rangeDays)} · активны ${period.active || 0} · азкары ${period.azkar || 0}`;
+        const activity = rangeDays
+          ? `активны за период ${period.active || 0}`
+          : `всего устройств ${dashboard?.all_time_installs || 0}`;
+        stats.textContent = `${rangeLabel(rangeDays)} · ${activity} · уроков ${period.lessons || 0}`;
       } else {
         stats.textContent = rangeLabel(rangeDays);
       }
@@ -990,28 +1024,61 @@
     if (!breakdown) return;
     breakdown.innerHTML = '';
 
-    const azkarCats = countBy(
-      rows.filter((r) => r.event === 'azkar_item_completed'),
-      (r) => (r.props && r.props.category) || '—'
-    );
-    const courses = countBy(
-      rows.filter((r) => r.event === 'academy_lesson_completed'),
-      (r) => (r.props && r.props.course_id) || '—'
-    );
+    const azkarCats = fullHistoryDetails
+      ? details.azkar_categories.map((item) => [item.category, Number(item.completions) || 0])
+      : countBy(
+          rows.filter((r) => r.event === 'azkar_item_completed'),
+          (r) => (r.props && r.props.category) || '__missing__'
+        );
+    const courses = fullHistoryDetails
+      ? details.lesson_courses.map((item) => [item.course_id, item])
+      : countBy(
+          rows.filter((r) => r.event === 'academy_lesson_completed'),
+          (r) => (r.props && r.props.course_id) || '__missing__'
+        );
+    const detailSampleSuffix = !fullHistoryDetails && eventsWindowLimited
+      ? ' · последние 5 000 событий'
+      : '';
 
-    if (azkarCats.length || courses.length) {
+    if (fullHistoryDetails || azkarCats.length || courses.length) {
       const head = document.createElement('div');
       head.className = 'admin-analytics-social-head';
       head.innerHTML = '<h3>Подробнее</h3>';
       breakdown.appendChild(head);
     }
-    if (azkarCats.length) {
-      renderBreakdown(breakdown, 'Азкары по темам', azkarCats, (key) => String(key));
+    if (fullHistoryDetails || azkarCats.length) {
+      renderBreakdown(
+        breakdown,
+        `Азкары по темам${detailSampleSuffix}`,
+        azkarCats,
+        (key) => (key === '__missing__' ? 'Без темы' : String(key))
+      );
     }
-    if (courses.length) {
-      renderBreakdown(breakdown, 'Уроки по курсам', courses, (key) => courseLabel(key));
+    if (fullHistoryDetails || courses.length) {
+      const lessonTotal = fullHistoryDetails
+        ? Number(period?.lessons) || 0
+        : courses.reduce((sum, [, count]) => sum + (Number(count) || 0), 0);
+      const courseTotal = courses.reduce(
+        (sum, [, item]) => sum + (Number(fullHistoryDetails ? item.completions : item) || 0),
+        0
+      );
+      renderBreakdown(
+        breakdown,
+        `Уроки по курсам${detailSampleSuffix}`,
+        courses,
+        (key) => courseLabel(key),
+        (key, item) => fullHistoryDetails
+          ? `${Number(item.completions) || 0} · ${Number(item.learners) || 0} чел.`
+          : String(Number(item) || 0)
+      );
+      const reconciliation = document.createElement('p');
+      reconciliation.className = 'admin-muted';
+      reconciliation.textContent = fullHistoryDetails
+        ? `По курсам и «Без курса»: ${courseTotal} завершений · всего уроков: ${lessonTotal}.`
+        : `В выборке: ${courseTotal} завершений.`;
+      breakdown.appendChild(reconciliation);
     }
-    renderCourseFunnel(breakdown);
+    renderCourseFunnel(breakdown, fullHistoryDetails ? details.course_funnel : null);
   }
 
   async function loadDashboardForRange() {
@@ -1034,7 +1101,10 @@
     const metrics = document.querySelector('#analytics-metrics');
     const breakdown = document.querySelector('#analytics-breakdown');
     const stats = document.querySelector('#analytics-stats');
-    if (!metrics || !global.AdminSupabase?.loadAnalyticsEvents) return;
+    if (
+      !metrics ||
+      (!global.AdminSupabase?.loadAnalyticsEvents && !global.AdminSupabase?.loadAnalyticsDashboard)
+    ) return;
 
     metrics.innerHTML = '<p class="admin-muted">Загрузка…</p>';
     const social = document.querySelector('#analytics-social');
@@ -1049,14 +1119,20 @@
     try {
       await loadDashboardForRange();
 
-      const eventsPayload = await global.AdminSupabase.loadAnalyticsEvents();
-      allRows = Array.isArray(eventsPayload) ? eventsPayload : (eventsPayload?.rows || []);
-      eventsWindowLimited = Boolean(eventsPayload && !Array.isArray(eventsPayload) && eventsPayload.truncated);
+      const serverHasFullDetails = hasFullHistoryDetails();
+      if (!serverHasFullDetails && typeof global.AdminSupabase.loadAnalyticsEvents === 'function') {
+        const eventsPayload = await global.AdminSupabase.loadAnalyticsEvents();
+        allRows = Array.isArray(eventsPayload) ? eventsPayload : (eventsPayload?.rows || []);
+        eventsWindowLimited = Boolean(eventsPayload && !Array.isArray(eventsPayload) && eventsPayload.truncated);
+      } else {
+        allRows = [];
+        eventsWindowLimited = false;
+      }
       installations = [];
       installationsTotal = null;
       if (allTimeInstallCount == null) allTimeInstallCount = null;
       installationsAvailable = false;
-      if (typeof global.AdminSupabase.loadAnalyticsInstallations === 'function') {
+      if (!dashboard && typeof global.AdminSupabase.loadAnalyticsInstallations === 'function') {
         try {
           const installPayload = await global.AdminSupabase.loadAnalyticsInstallations();
           if (Array.isArray(installPayload)) {
