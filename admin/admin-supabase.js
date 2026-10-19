@@ -408,8 +408,10 @@
     const url = config.storeDownloadsUrl;
     if (!url) throw new Error('Не задан storeDownloadsUrl в supabase-config.js');
 
-    const timeoutMs = Number(opts.timeoutMs) || (payload?.action === 'refresh-apple' ? 90000 : 45000);
-    const attempts = payload?.action === 'refresh-apple' ? 2 : 1;
+    const isAppleRefresh = payload?.action === 'refresh-apple';
+    const isGooglePlayRefresh = payload?.action === 'refresh-google-play';
+    const timeoutMs = Number(opts.timeoutMs) || (isAppleRefresh || isGooglePlayRefresh ? 90000 : 45000);
+    const attempts = isAppleRefresh ? 2 : 1;
     let lastError = null;
 
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -438,9 +440,11 @@
         const aborted = error && (error.name === 'AbortError' || /abort/i.test(String(error.message || '')));
         lastError = aborted
           ? new Error(
-              payload?.action === 'refresh-apple'
+              isAppleRefresh
                 ? 'Apple не ответил вовремя. На iPhone так бывает — нажмите «Обновить» ещё раз, не уходя со страницы.'
-                : 'Сервер не ответил вовремя. Попробуйте ещё раз.'
+                : isGooglePlayRefresh
+                  ? 'Google Play не ответил вовремя. Попробуйте обновить данные ещё раз.'
+                  : 'Сервер не ответил вовремя. Попробуйте ещё раз.'
             )
           : error;
         // One retry only for flaky mobile networks on Apple refresh.
@@ -463,6 +467,10 @@
 
   async function refreshAppleDownloads() {
     return callStoreDownloads({ action: 'refresh-apple' });
+  }
+
+  async function refreshGooglePlayDownloads() {
+    return callStoreDownloads({ action: 'refresh-google-play' });
   }
 
   async function publishContent(payload) {
@@ -596,6 +604,7 @@
     loadStoreDownloads,
     uploadRustoreCsv,
     refreshAppleDownloads,
+    refreshGooglePlayDownloads,
     loadCeLocaleDraft,
     saveCeLocaleDraft,
     loadAzkarTajweedDraft,

@@ -110,6 +110,8 @@ on conflict (user_id) do update
 1. **SQL Editor** → выполните `website/admin/supabase-migration-store-downloads.sql`
 2. Задеплойте Edge Function: `supabase functions deploy store-downloads --no-verify-jwt`
 3. Секреты App Store Connect: `APP_STORE_ISSUER_ID`, `APP_STORE_KEY_ID`, `APP_STORE_PRIVATE_KEY` (текст `.p8`). RuStore CSV работает и без них.
+4. Для Google Play добавьте JSON сервисного аккаунта в Edge Function Secrets под именем `GOOGLE_PLAY_SERVICE_ACCOUNT_JSON`. Сервисному аккаунту нужен доступ к массовым отчётам приложения в Play Console.
+5. В админке → **Аналитика** → **Обновить Google Play**. Будут показаны новые установки, удаления, обновления, текущие установки пользователей и установки на активных устройствах. Отчёты Google Play поступают с задержкой.
 
 Если «Всего за всё время» занижено / падает:
 

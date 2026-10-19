@@ -4,10 +4,13 @@ const PROJECT_REF = 'rivjkiksknnesahrvamf';
 
 const CREATE_SQL = `
 create table if not exists public.store_download_days (
-  store text not null check (store in ('rustore', 'appstore')),
+  store text not null check (store in ('rustore', 'appstore', 'googleplay')),
   day date not null,
   downloads integer not null default 0 check (downloads >= 0),
   updates integer not null default 0 check (updates >= 0),
+  uninstalls integer not null default 0 check (uninstalls >= 0),
+  current_user_installs integer check (current_user_installs is null or current_user_installs >= 0),
+  active_device_installs integer check (active_device_installs is null or active_device_installs >= 0),
   source text not null default 'csv',
   fetched_at timestamptz not null default now(),
   primary key (store, day)

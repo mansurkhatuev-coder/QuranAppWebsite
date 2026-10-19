@@ -2,6 +2,9 @@ export type StoreDownloadDay = {
   day: string;
   downloads: number;
   updates: number;
+  uninstalls?: number;
+  currentUserInstalls?: number | null;
+  activeDeviceInstalls?: number | null;
 };
 
 export type ParseStoreTableResult =

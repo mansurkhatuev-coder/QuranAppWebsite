@@ -103,7 +103,8 @@
     const deltaDays = storeDeltaDays();
     const rustore = storeSnapshot.rustore?.rows || [];
     const apple = storeSnapshot.apple?.rows || [];
-    return sumStoreRows(rustore, deltaDays) + sumStoreRows(apple, deltaDays);
+    const googlePlay = storeSnapshot.googleplay?.rows || [];
+    return sumStoreRows(rustore, deltaDays) + sumStoreRows(apple, deltaDays) + sumStoreRows(googlePlay, deltaDays);
   }
 
   function renderSparkline(series, key) {
@@ -798,17 +799,74 @@
       </p>`;
   }
 
+  function sumStoreField(rows, field, withinDays) {
+    const list = Array.isArray(rows) ? rows : [];
+    const cutoff = withinDays ? Date.now() - withinDays * 24 * 60 * 60 * 1000 : 0;
+    return list.reduce((sum, row) => {
+      const time = Date.parse(`${row.day}T00:00:00.000Z`);
+      if (withinDays && (!Number.isFinite(time) || time < cutoff)) return sum;
+      return sum + (Number(row[field]) || 0);
+    }, 0);
+  }
+
+  function latestStoreField(rows, field) {
+    const list = Array.isArray(rows) ? rows : [];
+    for (let index = list.length - 1; index >= 0; index -= 1) {
+      const value = list[index][field];
+      if (value != null && Number.isFinite(Number(value))) return Number(value);
+    }
+    return null;
+  }
+
+  function renderGooglePlayProgress(googlePlay) {
+    const googleBusy = storeBusyKind === 'googleplay';
+    const status = String(googlePlay?.status || '');
+    const days = Number(googlePlay?.days) || 0;
+    const lastDay = googlePlay?.lastDay || '—';
+    const statusLine = googleBusy
+      ? `<p class="admin-store-status">${escapeHtml(storeBusyHint || 'Загружаю отчёты Google Play…')}</p>`
+      : status === 'needs_secrets'
+        ? '<p class="admin-store-status admin-error">Добавьте сервисный аккаунт Google Play в секреты Supabase.</p>'
+        : status === 'waiting'
+          ? '<p class="admin-store-status">Google Play пока не подготовил отчёт. Попробуйте позже.</p>'
+          : status === 'error' && googlePlay?.message
+            ? `<p class="admin-store-status admin-error">${escapeHtml(googlePlay.message)}</p>`
+            : days > 0
+              ? `<p class="admin-store-status">В базе ${days} дн. · данные по ${escapeHtml(lastDay)}</p>`
+              : `<p class="admin-store-status">${escapeHtml(googlePlay?.message || 'Нажмите кнопку, чтобы загрузить отчёты из Play Console.')}</p>`;
+    return `
+      <div class="admin-store-progress ${googleBusy ? 'is-busy' : ''}" aria-live="polite">
+        <div class="admin-store-progress-head">
+          <strong>Google Play</strong>
+          <span>${googleBusy ? 'обновляю…' : days > 0 ? 'данные загружены' : 'официальный отчёт'}</span>
+        </div>
+        ${statusLine}
+        <button type="button" id="analytics-google-play-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+          ${googleBusy ? 'Обновляю…' : 'Обновить Google Play'}
+        </button>
+      </div>
+    `;
+  }
+
   function renderStoreDownloads(container) {
     if (!container) return;
     const rustore = storeSnapshot?.rustore || { rows: [], total: 0 };
     const apple = storeSnapshot?.apple || { rows: [], total: 0 };
+    const googlePlay = storeSnapshot?.googleplay || { rows: [], total: 0 };
     const deltaDays = storeDeltaDays();
     const rustoreAll = sumStoreRows(rustore.rows, 0);
     const appleAll = sumStoreRows(apple.rows, 0);
+    const googlePlayAll = sumStoreRows(googlePlay.rows, 0);
     const rustoreDelta = sumStoreRows(rustore.rows, deltaDays);
     const appleDelta = sumStoreRows(apple.rows, deltaDays);
-    const storesAll = rustoreAll + appleAll;
-    const storesDelta = rustoreDelta + appleDelta;
+    const googlePlayDelta = sumStoreRows(googlePlay.rows, deltaDays);
+    const storesAll = rustoreAll + appleAll + googlePlayAll;
+    const storesDelta = rustoreDelta + appleDelta + googlePlayDelta;
+    const periodLabel = rangeDays ? rangeLabel(rangeDays) : 'за всё время';
+    const googlePlayUninstalls = sumStoreField(googlePlay.rows, 'uninstalls', rangeDays);
+    const googlePlayUpdates = sumStoreField(googlePlay.rows, 'updates', rangeDays);
+    const currentUserInstalls = googlePlay.currentUserInstalls ?? latestStoreField(googlePlay.rows, 'currentUserInstalls');
+    const activeDeviceInstalls = googlePlay.activeDeviceInstalls ?? latestStoreField(googlePlay.rows, 'activeDeviceInstalls');
     const errorLine = storeError
       ? `<p class="admin-error">${escapeHtml(storeError)}</p>`
       : '';
@@ -835,9 +893,33 @@
           <p class="admin-muted">Вместе</p>
           ${renderStoreValue(storesAll, storesDelta)}
         </article>
+        <article class="admin-analytics-card admin-analytics-card--hero">
+          <p class="admin-muted">Google Play · новые установки</p>
+          ${renderStoreValue(googlePlayAll, googlePlayDelta)}
+        </article>
+      </div>
+      <div class="admin-analytics-grid" id="analytics-google-play-details">
+        <article class="admin-analytics-card">
+          <p class="admin-muted">Google Play · удаления ${escapeHtml(periodLabel)}</p>
+          <p class="admin-analytics-value">${googlePlayUninstalls}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">Google Play · обновления ${escapeHtml(periodLabel)}</p>
+          <p class="admin-analytics-value">${googlePlayUpdates}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">Google Play · текущие установки пользователей</p>
+          <p class="admin-analytics-value">${currentUserInstalls == null ? '—' : Number(currentUserInstalls) || 0}</p>
+        </article>
+        <article class="admin-analytics-card">
+          <p class="admin-muted">Google Play · установки на активных устройствах</p>
+          <p class="admin-analytics-value">${activeDeviceInstalls == null ? '—' : Number(activeDeviceInstalls) || 0}</p>
+        </article>
       </div>
       ${renderRustoreUpload(rustore)}
       ${renderAppleProgress(apple)}
+      ${renderGooglePlayProgress(googlePlay)}
+      <p class="admin-muted admin-analytics-note">Google Play публикует статистику с задержкой; значения обновляются после появления отчётов в Play Console.</p>
     `;
   }
 
@@ -1089,26 +1171,55 @@
           return;
         }
 
-        if (!target.closest('#analytics-apple-refresh')) return;
-        if (typeof global.AdminSupabase.refreshAppleDownloads !== 'function') return;
-        storeBusyHint = 'Спрашиваю Apple… на iPhone может занять до минуты. Не уходите со страницы.';
-        void runStoreAction('apple', async () => {
-          const beforeDays = Number(storeSnapshot?.apple?.days) || 0;
-          const beforeTotal = sumStoreRows(storeSnapshot?.apple?.rows || [], 0);
-          const snap = await global.AdminSupabase.refreshAppleDownloads();
-          const afterDays = Number(snap?.apple?.days) || 0;
-          const afterTotal = sumStoreRows(snap?.apple?.rows || [], 0);
-          const sync = snap?.appleSync || {};
-          const status = String(snap?.apple?.status || sync.status || '');
+        const appleButton = target.closest('#analytics-apple-refresh');
+        const googlePlayButton = target.closest('#analytics-google-play-refresh');
+        if (!appleButton && !googlePlayButton) return;
+        if (appleButton) {
+          if (typeof global.AdminSupabase.refreshAppleDownloads !== 'function') return;
+          storeBusyHint = 'Спрашиваю Apple… на iPhone может занять до минуты. Не уходите со страницы.';
+          void runStoreAction('apple', async () => {
+            const beforeDays = Number(storeSnapshot?.apple?.days) || 0;
+            const beforeTotal = sumStoreRows(storeSnapshot?.apple?.rows || [], 0);
+            const snap = await global.AdminSupabase.refreshAppleDownloads();
+            const afterDays = Number(snap?.apple?.days) || 0;
+            const afterTotal = sumStoreRows(snap?.apple?.rows || [], 0);
+            const sync = snap?.appleSync || {};
+            const status = String(snap?.apple?.status || sync.status || '');
+            let ok = '';
+            if (status === 'waiting') {
+              ok = 'Запрос ушёл. Apple ещё готовит файлы — цифры обновятся позже.';
+            } else if (afterTotal > beforeTotal || afterDays > beforeDays) {
+              ok = `App Store обновлён: ${afterTotal} скачиваний · ${afterDays} дн.`;
+            } else if (afterDays > 0) {
+              ok = 'App Store проверен — цифры те же (новых файлов нет).';
+            } else {
+              ok = String(sync.message || snap?.apple?.message || 'App Store проверен.');
+            }
+            await applyStoreSnapshot(snap, ok);
+          });
+          return;
+        }
+
+        if (typeof global.AdminSupabase.refreshGooglePlayDownloads !== 'function') return;
+        storeBusyHint = 'Загружаю отчёты Google Play…';
+        void runStoreAction('googleplay', async () => {
+          const beforeDays = Number(storeSnapshot?.googleplay?.days) || 0;
+          const beforeTotal = sumStoreRows(storeSnapshot?.googleplay?.rows || [], 0);
+          const snap = await global.AdminSupabase.refreshGooglePlayDownloads();
+          const googlePlay = snap?.googleplay || {};
+          const afterDays = Number(googlePlay.days) || 0;
+          const afterTotal = sumStoreRows(googlePlay.rows || [], 0);
+          const sync = snap?.googlePlaySync || {};
+          const status = String(googlePlay.status || sync.status || '');
           let ok = '';
           if (status === 'waiting') {
-            ok = 'Запрос ушёл. Apple ещё готовит файлы — цифры обновятся позже.';
+            ok = 'Google Play пока не подготовил отчёт. Новые данные появятся позже.';
           } else if (afterTotal > beforeTotal || afterDays > beforeDays) {
-            ok = `App Store обновлён: ${afterTotal} скачиваний · ${afterDays} дн.`;
+            ok = `Google Play обновлён: ${afterTotal} новых установок · ${afterDays} дн.`;
           } else if (afterDays > 0) {
-            ok = 'App Store проверен — цифры те же (новых файлов нет).';
+            ok = 'Google Play проверен — новых данных пока нет.';
           } else {
-            ok = String(sync.message || snap?.apple?.message || 'App Store проверен.');
+            ok = String(sync.message || googlePlay.message || 'Google Play проверен.');
           }
           await applyStoreSnapshot(snap, ok);
         });

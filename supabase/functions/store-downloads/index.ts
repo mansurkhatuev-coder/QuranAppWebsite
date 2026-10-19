@@ -1,6 +1,7 @@
 /**
  * Store download stats for Waydean admin analytics.
- * Secrets: APP_STORE_ISSUER_ID, APP_STORE_KEY_ID, APP_STORE_PRIVATE_KEY, optional APP_STORE_APP_ID.
+ * Secrets: APP_STORE_ISSUER_ID, APP_STORE_KEY_ID, APP_STORE_PRIVATE_KEY, optional APP_STORE_APP_ID,
+ * GOOGLE_PLAY_SERVICE_ACCOUNT_JSON.
  * Requires authenticated Supabase user.
  */
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
@@ -9,6 +10,10 @@ import { buildAppleProgress } from './apple-progress.ts';
 import { syncAppleDownloads } from './apple-reports.ts';
 import { ensureStoreDownloadSchema } from './ensure-schema.ts';
 import { formatParseError, parseStoreDownloadTable, type StoreDownloadDay } from './parse-store-days.ts';
+import { syncGooglePlayInstalls } from './google-play-reports.ts';
+
+const GOOGLE_PLAY_REPORT_BUCKET = 'pubsite_prod_5997333154759014155';
+const GOOGLE_PLAY_PACKAGE_NAME = 'com.sheyhmansur.quranapp';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -62,24 +67,27 @@ function serviceClient() {
   return createClient(supabaseUrl, serviceKey);
 }
 
-async function readDays(store: 'rustore' | 'appstore'): Promise<StoreDownloadDay[]> {
+async function readDays(store: 'rustore' | 'appstore' | 'googleplay'): Promise<StoreDownloadDay[]> {
   const client = serviceClient();
   const { data, error } = await client
     .from('store_download_days')
-    .select('day,downloads,updates')
+    .select('day,downloads,updates,uninstalls,current_user_installs,active_device_installs')
     .eq('store', store)
     .order('day', { ascending: true })
-    .limit(4000);
+    .limit(10000);
   if (error) throw error;
   return (data ?? []).map((row) => ({
     day: String(row.day),
     downloads: Number(row.downloads) || 0,
     updates: Number(row.updates) || 0,
+    uninstalls: Number(row.uninstalls) || 0,
+    currentUserInstalls: row.current_user_installs == null ? null : Number(row.current_user_installs) || 0,
+    activeDeviceInstalls: row.active_device_installs == null ? null : Number(row.active_device_installs) || 0,
   }));
 }
 
 async function upsertDays(
-  store: 'rustore' | 'appstore',
+  store: 'rustore' | 'appstore' | 'googleplay',
   rows: StoreDownloadDay[],
   source: string
 ) {
@@ -90,6 +98,9 @@ async function upsertDays(
     day: row.day,
     downloads: row.downloads,
     updates: row.updates,
+    uninstalls: row.uninstalls ?? 0,
+    current_user_installs: row.currentUserInstalls ?? null,
+    active_device_installs: row.activeDeviceInstalls ?? null,
     source,
     fetched_at: new Date().toISOString(),
   }));
@@ -113,10 +124,11 @@ async function writeMeta(key: string, payload: Json) {
   if (error) throw error;
 }
 
-function storeSummary(rows: StoreDownloadDay[], meta: Json, store: 'rustore' | 'appstore') {
+function storeSummary(rows: StoreDownloadDay[], meta: Json, store: 'rustore' | 'appstore' | 'googleplay') {
   const firstDay = rows.length ? rows[0].day : null;
   const lastDay = rows.length ? rows[rows.length - 1].day : null;
   const total = rows.reduce((sum, row) => sum + row.downloads, 0);
+  const latest = [...rows].reverse().find((row) => row.currentUserInstalls != null || row.activeDeviceInstalls != null);
   const status = String(meta.status || (rows.length ? 'ok' : 'empty'));
   const base = {
     days: rows.length,
@@ -127,6 +139,8 @@ function storeSummary(rows: StoreDownloadDay[], meta: Json, store: 'rustore' | '
     message: String(meta.message || ''),
     fetchedAt: meta.fetchedAt || null,
     requestedAt: meta.requestedAt || null,
+    currentUserInstalls: latest?.currentUserInstalls ?? null,
+    activeDeviceInstalls: latest?.activeDeviceInstalls ?? null,
   };
   if (store !== 'appstore') return base;
   return {
@@ -144,12 +158,15 @@ function storeSummary(rows: StoreDownloadDay[], meta: Json, store: 'rustore' | '
 async function snapshot() {
   const rustoreRows = await readDays('rustore');
   const appleRows = await readDays('appstore');
+  const googlePlayRows = await readDays('googleplay');
   const rustoreMeta = await readMeta('rustore');
   const appleMeta = await readMeta('apple');
+  const googlePlayMeta = await readMeta('googleplay');
   return {
     ok: true,
     rustore: { ...storeSummary(rustoreRows, rustoreMeta, 'rustore'), rows: rustoreRows },
     apple: { ...storeSummary(appleRows, appleMeta, 'appstore'), rows: appleRows },
+    googleplay: { ...storeSummary(googlePlayRows, googlePlayMeta, 'googleplay'), rows: googlePlayRows },
   };
 }
 
@@ -175,6 +192,24 @@ async function refreshApple() {
   });
   if (result.rows.length) {
     await upsertDays('appstore', result.rows, 'apple_report');
+  }
+  return result;
+}
+
+async function refreshGooglePlay() {
+  const result = await syncGooglePlayInstalls({
+    serviceAccountJson: Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON') || undefined,
+    bucket: GOOGLE_PLAY_REPORT_BUCKET,
+    packageName: GOOGLE_PLAY_PACKAGE_NAME,
+  });
+  await writeMeta('googleplay', {
+    status: result.status,
+    message: result.message,
+    fetchedAt: new Date().toISOString(),
+    requested: result.requested,
+  });
+  if (result.rows.length) {
+    await upsertDays('googleplay', result.rows, 'google_play_statistics');
   }
   return result;
 }
@@ -205,6 +240,12 @@ Deno.serve(async (request) => {
       return jsonResponse({ ...snap, appleSync: apple });
     }
 
+    if (action === 'refresh-google-play') {
+      const googlePlay = await refreshGooglePlay();
+      const snap = await snapshot();
+      return jsonResponse({ ...snap, googlePlaySync: googlePlay });
+    }
+
     if (action === 'upload-rustore') {
       const csv = String(body.csv || '');
       const parsed = parseStoreDownloadTable(csv);
@@ -228,6 +269,9 @@ Deno.serve(async (request) => {
     const message = error instanceof Error ? error.message : 'Unknown store-downloads error';
     if (/store_download/i.test(message) && /does not exist|relation/i.test(message)) {
       return jsonResponse({ error: 'Таблица store_download_days ещё не создана. Выполните SQL миграцию.' }, 503);
+    }
+    if (/column .* does not exist/i.test(message) && /current_user_installs|active_device_installs|uninstalls/i.test(message)) {
+      return jsonResponse({ error: 'Сначала обновите таблицу store_download_days: выполните SQL миграцию Google Play.' }, 503);
     }
     return jsonResponse({ error: message }, status);
   }
