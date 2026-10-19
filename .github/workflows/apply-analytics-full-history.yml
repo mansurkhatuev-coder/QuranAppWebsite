@@ -1,0 +1,64 @@
+name: Apply analytics full-history migration
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+      - master
+    paths:
+      - admin/supabase-migration-analytics-full-history.sql
+      - .github/workflows/apply-analytics-full-history.yml
+      - scripts/apply-academy-live-migration.sh
+
+permissions:
+  contents: read
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Apply full-history analytics migration
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          chmod +x scripts/apply-academy-live-migration.sh
+          scripts/apply-academy-live-migration.sh admin/supabase-migration-analytics-full-history.sql
+
+      - name: Verify analytics function has full-history breakdowns
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: rivjkiksknnesahrvamf
+        run: |
+          BODY=$(mktemp)
+          RESP=$(mktemp)
+          trap 'rm -f "$BODY" "$RESP"' EXIT
+          python3 - <<'PY' > "$BODY"
+          import json
+          print(json.dumps({"query": """
+          select
+            position('lesson_courses' in pg_get_functiondef('public.analytics_dashboard(integer)'::regprocedure)) > 0 as has_lesson_courses,
+            position('course_funnel' in pg_get_functiondef('public.analytics_dashboard(integer)'::regprocedure)) > 0 as has_course_funnel,
+            position('azkar_categories' in pg_get_functiondef('public.analytics_dashboard(integer)'::regprocedure)) > 0 as has_azkar_categories;
+          """}))
+          PY
+          CODE=$(curl -sS -o "$RESP" -w "%{http_code}" \
+            -X POST "https://api.supabase.com/v1/projects/${SUPABASE_PROJECT_REF}/database/query" \
+            -H "Authorization: Bearer ${SUPABASE_ACCESS_TOKEN}" \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "User-Agent: Mozilla/5.0 (compatible; WaydeanMigrate/1.0; +https://waydean.ru)" \
+            --data-binary @"$BODY")
+          echo "HTTP $CODE"
+          if [ "$CODE" != "201" ] && [ "$CODE" != "200" ]; then cat "$RESP"; exit 1; fi
+          python3 - "$RESP" <<'PY'
+          import json, sys
+          rows = json.load(open(sys.argv[1], encoding='utf-8'))
+          expected = ('has_lesson_courses', 'has_course_funnel', 'has_azkar_categories')
+          if not isinstance(rows, list) or len(rows) != 1 or not all(rows[0].get(key) for key in expected):
+              raise SystemExit('Full-history analytics function verification failed')
+          print('OK: course, funnel, and azkar full-history aggregates are installed')
+          PY
