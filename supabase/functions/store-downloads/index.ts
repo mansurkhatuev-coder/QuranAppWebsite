@@ -10,7 +10,7 @@ import { buildAppleProgress } from './apple-progress.ts';
 import { syncAppleDownloads } from './apple-reports.ts';
 import { ensureStoreDownloadSchema } from './ensure-schema.ts';
 import { formatParseError, parseStoreDownloadTable, type StoreDownloadDay } from './parse-store-days.ts';
-import { syncGooglePlayInstalls } from './google-play-reports.ts';
+import { parseGooglePlayInstallReport, syncGooglePlayInstalls } from './google-play-reports.ts';
 
 const GOOGLE_PLAY_REPORT_BUCKET = 'pubsite_prod_5997333154759014155';
 const GOOGLE_PLAY_PACKAGE_NAME = 'com.sheyhmansur.quranapp';
@@ -259,6 +259,31 @@ Deno.serve(async (request) => {
         fetchedAt: new Date().toISOString(),
       });
       return jsonResponse(await snapshot());
+    }
+
+    if (action === 'upload-google-play') {
+      const csv = String(body.csv || '');
+      const rows = parseGooglePlayInstallReport(csv);
+      if (!rows.length) {
+        return jsonResponse({
+          error: 'Не удалось распознать CSV Google Play: нужны колонки «Date» и «Daily User Installs».',
+        }, 400);
+      }
+
+      const firstDay = rows[0].day;
+      const lastDay = rows[rows.length - 1].day;
+      const fetchedAt = new Date().toISOString();
+      await upsertDays('googleplay', rows, 'google_play_manual_csv');
+      await writeMeta('googleplay', {
+        status: 'ok',
+        message: `CSV Google Play загружен: ${rows.length} дн. · ${firstDay} — ${lastDay}`,
+        fetchedAt,
+      });
+      const currentSnapshot = await snapshot();
+      return jsonResponse({
+        ...currentSnapshot,
+        googlePlayCsvImport: { rows: rows.length, firstDay, lastDay },
+      });
     }
 
     return jsonResponse({ error: 'Unknown action' }, 400);

@@ -237,7 +237,7 @@ function parseCount(raw: string | undefined): number {
   return Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
 }
 
-function parseInstallReport(text: string): GooglePlayReportDay[] {
+export function parseGooglePlayInstallReport(text: string): GooglePlayReportDay[] {
   const rows = parseCsv(text);
   if (rows.length < 2) return [];
   const headers = rows[0];
@@ -313,7 +313,7 @@ export async function syncGooglePlayInstalls(config: {
     }
 
     const rows = await mapConcurrent(reports, async (report) =>
-      parseInstallReport(await downloadReport(config.bucket, report.name, token)));
+      parseGooglePlayInstallReport(await downloadReport(config.bucket, report.name, token)));
     const merged = new Map<string, GooglePlayReportDay>();
     for (const reportRows of rows) {
       for (const row of reportRows) merged.set(row.day, row);

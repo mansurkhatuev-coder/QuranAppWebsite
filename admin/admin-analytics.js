@@ -35,6 +35,7 @@
   let storeBusyKind = '';
   let storeBusyHint = '';
   let rustoreFileInput = null;
+  let googlePlayFileInput = null;
 
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
@@ -770,6 +771,22 @@
     if (bytes.length >= 2 && bytes[0] === 0xfe && bytes[1] === 0xff) {
       return new TextDecoder('utf-16be').decode(bytes);
     }
+    const sampleLength = Math.min(bytes.length, 2000);
+    if (sampleLength >= 8) {
+      let oddNulls = 0;
+      let evenNulls = 0;
+      for (let index = 0; index < sampleLength; index += 1) {
+        if (bytes[index] !== 0) continue;
+        if (index % 2) oddNulls += 1;
+        else evenNulls += 1;
+      }
+      if (oddNulls > sampleLength / 8 && oddNulls > evenNulls * 3) {
+        return new TextDecoder('utf-16le').decode(bytes);
+      }
+      if (evenNulls > sampleLength / 8 && evenNulls > oddNulls * 3) {
+        return new TextDecoder('utf-16be').decode(bytes);
+      }
+    }
     const utf8 = new TextDecoder('utf-8').decode(bytes);
     if (looksLikeStoreTable(utf8)) return utf8;
     try {
@@ -848,30 +865,35 @@
   }
 
   function renderGooglePlayProgress(googlePlay) {
-    const googleBusy = storeBusyKind === 'googleplay';
+    const googleRefreshBusy = storeBusyKind === 'googleplay';
+    const googleUploadBusy = storeBusyKind === 'googleplay-upload';
+    const googleBusy = googleRefreshBusy || googleUploadBusy;
     const status = String(googlePlay?.status || '');
     const days = Number(googlePlay?.days) || 0;
     const lastDay = googlePlay?.lastDay || '—';
     const statusLine = googleBusy
       ? `<p class="admin-store-status">${escapeHtml(storeBusyHint || 'Загружаю отчёты Google Play…')}</p>`
       : status === 'needs_secrets'
-        ? '<p class="admin-store-status admin-error">Добавьте сервисный аккаунт Google Play в секреты Supabase.</p>'
+        ? '<p class="admin-store-status admin-error">Для автообновления добавьте сервисный аккаунт в секреты Supabase. CSV можно загрузить вручную.</p>'
         : status === 'waiting'
           ? '<p class="admin-store-status">Google Play пока не подготовил отчёт. Попробуйте позже.</p>'
           : status === 'error' && googlePlay?.message
             ? `<p class="admin-store-status admin-error">${escapeHtml(googlePlay.message)}</p>`
             : days > 0
               ? `<p class="admin-store-status">В базе ${days} дн. · данные по ${escapeHtml(lastDay)}</p>`
-              : `<p class="admin-store-status">${escapeHtml(googlePlay?.message || 'Нажмите кнопку, чтобы загрузить отчёты из Play Console.')}</p>`;
+              : `<p class="admin-store-status">${escapeHtml(googlePlay?.message || 'Для ручной загрузки выберите CSV отчёта установок из Play Console; для автообновления нажмите «Обновить Google Play».')}</p>`;
     return `
       <div class="admin-store-progress ${googleBusy ? 'is-busy' : ''}" aria-live="polite">
         <div class="admin-store-progress-head">
           <strong>Google Play</strong>
-          <span>${googleBusy ? 'обновляю…' : days > 0 ? 'данные загружены' : 'официальный отчёт'}</span>
+          <span>${googleUploadBusy ? 'загружаю CSV…' : googleRefreshBusy ? 'обновляю…' : days > 0 ? 'данные загружены' : 'нужен отчёт'}</span>
         </div>
         ${statusLine}
         <button type="button" id="analytics-google-play-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
-          ${googleBusy ? 'Обновляю…' : 'Обновить Google Play'}
+          ${googleRefreshBusy ? 'Обновляю…' : 'Обновить Google Play'}
+        </button>
+        <button type="button" id="analytics-google-play-upload" class="admin-button" ${storeBusy ? 'disabled' : ''}>
+          ${googleUploadBusy ? 'Загружаю CSV…' : 'Загрузить CSV Google Play'}
         </button>
       </div>
     `;
@@ -971,6 +993,21 @@
     // Keep outside #analytics-stores so re-renders do not destroy the picker (iOS Safari).
     stores.parentElement.appendChild(input);
     rustoreFileInput = input;
+    return input;
+  }
+
+  function ensureGooglePlayFileInput(stores) {
+    if (googlePlayFileInput && document.body.contains(googlePlayFileInput)) return googlePlayFileInput;
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.id = 'analytics-google-play-csv-persistent';
+    input.accept = '.csv,text/csv,text/plain';
+    input.setAttribute('aria-hidden', 'true');
+    input.tabIndex = -1;
+    input.style.cssText = 'position:fixed;left:-9999px;width:1px;height:1px;opacity:0;';
+    // Keep outside #analytics-stores so re-renders do not destroy the picker (iOS Safari).
+    stores.parentElement.appendChild(input);
+    googlePlayFileInput = input;
     return input;
   }
 
@@ -1202,6 +1239,7 @@
     if (stores && !stores.dataset.bound) {
       stores.dataset.bound = '1';
       const fileInput = ensureRustoreFileInput(stores);
+      const googlePlayInput = ensureGooglePlayFileInput(stores);
 
       const uploadRustoreFile = (file) => {
         if (!file || typeof global.AdminSupabase.uploadRustoreCsv !== 'function') return;
@@ -1236,6 +1274,45 @@
         if (file) uploadRustoreFile(file);
       });
 
+      const uploadGooglePlayFile = (file) => {
+        if (!file) return;
+        if (typeof global.AdminSupabase.uploadGooglePlayCsv !== 'function') {
+          storeError = 'Ручная загрузка Google Play недоступна. Обновите страницу админки.';
+          renderStoreDownloads(document.querySelector('#analytics-stores'));
+          return;
+        }
+        storeBusyHint = 'Читаю CSV Google Play и отправляю на сервер…';
+        void runStoreAction('googleplay-upload', async () => {
+          const buffer = await file.arrayBuffer();
+          const csv = decodeStoreCsv(buffer);
+          if (!String(csv || '').trim()) {
+            throw new Error('Файл пустой или не читается. Выберите CSV отчёта установок из Google Play Console.');
+          }
+          storeBusyHint = 'Проверяю отчёт и обновляю данные Google Play…';
+          renderStoreDownloads(document.querySelector('#analytics-stores'));
+          const snap = await global.AdminSupabase.uploadGooglePlayCsv(csv);
+          const imported = snap?.googlePlayCsvImport || {};
+          const importedRows = Number(imported.rows) || 0;
+          if (!importedRows) {
+            throw new Error('Сервер не вернул количество импортированных дат. Обновите функцию store-downloads.');
+          }
+          const firstDay = String(imported.firstDay || '');
+          const lastDay = String(imported.lastDay || '');
+          await applyStoreSnapshot(
+            snap,
+            `Google Play CSV загружен: ${importedRows} дн. · ${firstDay} — ${lastDay}`
+          );
+        }).finally(() => {
+          // Allow selecting the same file again on iOS.
+          googlePlayInput.value = '';
+        });
+      };
+
+      googlePlayInput.addEventListener('change', () => {
+        const file = googlePlayInput.files && googlePlayInput.files[0];
+        if (file) uploadGooglePlayFile(file);
+      });
+
       stores.addEventListener('click', (event) => {
         const target = event.target;
         if (!(target instanceof HTMLElement)) return;
@@ -1244,6 +1321,13 @@
           if (storeBusy) return;
           fileInput.value = '';
           fileInput.click();
+          return;
+        }
+
+        if (target.closest('#analytics-google-play-upload')) {
+          if (storeBusy) return;
+          googlePlayInput.value = '';
+          googlePlayInput.click();
           return;
         }
 

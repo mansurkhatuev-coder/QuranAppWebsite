@@ -467,6 +467,10 @@
     return callStoreDownloads({ action: 'upload-rustore', csv });
   }
 
+  async function uploadGooglePlayCsv(csv) {
+    return callStoreDownloads({ action: 'upload-google-play', csv });
+  }
+
   async function refreshAppleDownloads() {
     return callStoreDownloads({ action: 'refresh-apple' });
   }
@@ -605,6 +609,7 @@
     syncAppRelease,
     loadStoreDownloads,
     uploadRustoreCsv,
+    uploadGooglePlayCsv,
     refreshAppleDownloads,
     refreshGooglePlayDownloads,
     loadCeLocaleDraft,
