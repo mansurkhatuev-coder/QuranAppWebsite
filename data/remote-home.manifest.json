@@ -1,19 +1,19 @@
 {
-  "version": 2,
-  "publishedAt": "2026-10-07T17:16:42.257Z",
+  "version": 3,
+  "publishedAt": "2026-10-21T18:08:15.390Z",
   "packs": {
     "announcements": {
-      "version": 2,
+      "version": 3,
       "url": "/data/home-announcements.json",
-      "itemCount": 0
+      "itemCount": 1
     },
     "daily_ayah_pool": {
-      "version": 2,
+      "version": 3,
       "url": "/data/daily-ayah-pool.json",
       "itemCount": 0
     },
     "daily_dua_pool": {
-      "version": 2,
+      "version": 3,
       "url": "/data/daily-dua-pool.json",
       "itemCount": 0
     }
