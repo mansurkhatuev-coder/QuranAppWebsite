@@ -5,21 +5,22 @@
     "navTitle": "Дуа о достатке дозволенным",
     "text": "اللَّهُمَّ اكْفِنِي بِحَلَالِكَ عَنْ حَرَامِكَ، وَأَغْنِنِي بِفَضْلِكَ عَمَّنْ سِوَاكَ.",
     "translation": "О Аллах, сделай так, чтобы дозволенное Тобой избавило меня от необходимости обращаться к запрещённому Тобой, и по милости Своей избавь меня от нужды в ком бы то ни было, кроме Тебя.",
-    "transliteration": "АллóхIуммакфини́ би-хьалáлика Iан хьарóмика, ва агIнини́ бифадзлика Iамман сивáка.",
+    "extraTranslations": [],
+    "transliteration": "АллóхIуммакфини́ би-хьалáлика Iан хьарóмика, ва агIнини́ бифадзлика Iамман сивáк.",
     "targetCount": 3,
     "audio": [],
     "group": "Общие дуа",
     "category": "general_dua",
     "authenticity": "hasan",
     "source": {
-      "type": "dua",
+      "url": "https://sunnah.com/tirmidhi:3563",
       "book": "Jami` at-Tirmidhi",
-      "url": "https://sunnah.com/tirmidhi:3563"
+      "type": "dua"
     },
     "benefitHadith": {
-      "summary": "Дуа о достаточности дозволенного вместо запретного и независимости от созданий; передано как средство при долге.",
+      "url": "https://sunnah.com/tirmidhi:3563",
       "source": "Jami` at-Tirmidhi 3563",
-      "url": "https://sunnah.com/tirmidhi:3563"
+      "summary": "Дуа о достаточности дозволенного вместо запретного и независимости от созданий; передано как средство при долге."
     },
     "tags": [
       "rizq",
@@ -27,7 +28,8 @@
       "general_dua"
     ],
     "importance": "recommended",
-    "placementFit": "general"
+    "placementFit": "general",
+    "status": "published"
   },
   {
     "id": "general-dua-anxiety-debt",
