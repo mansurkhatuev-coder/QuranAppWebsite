@@ -394,4 +394,3 @@ export async function syncGooglePlayInstalls(config: {
     return { status: 'error', message, rows: [], requested: 0 };
   }
 }
-
