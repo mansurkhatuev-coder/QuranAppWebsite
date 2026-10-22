@@ -12,7 +12,7 @@ import { ensureStoreDownloadSchema } from './ensure-schema.ts';
 import { formatParseError, parseStoreDownloadTable, type StoreDownloadDay } from './parse-store-days.ts';
 import { parseGooglePlayInstallReport, syncGooglePlayInstalls } from './google-play-reports.ts';
 
-const GOOGLE_PLAY_REPORT_BUCKET = 'pubsite_prod_5997333154759014155';
+const GOOGLE_PLAY_REPORT_BUCKET = 'pubsite_prod_rev_5997333154759014155';
 const GOOGLE_PLAY_PACKAGE_NAME = 'com.sheyhmansur.quranapp';
 
 const corsHeaders = {
