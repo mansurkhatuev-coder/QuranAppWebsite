@@ -199,7 +199,7 @@ async function refreshApple() {
 async function refreshGooglePlay() {
   const result = await syncGooglePlayInstalls({
     serviceAccountJson: Deno.env.get('GOOGLE_PLAY_SERVICE_ACCOUNT_JSON') || undefined,
-    bucket: GOOGLE_PLAY_REPORT_BUCKET,
+    bucket: Deno.env.get('GOOGLE_PLAY_REPORT_BUCKET') || GOOGLE_PLAY_REPORT_BUCKET,
     packageName: GOOGLE_PLAY_PACKAGE_NAME,
   });
   await writeMeta('googleplay', {
