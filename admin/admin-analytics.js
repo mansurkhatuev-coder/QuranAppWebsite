@@ -18,6 +18,7 @@
   const ABANDON_IDLE_DAYS = 14;
   const RUSTORE_APP_URL = 'https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp';
   const RUSTORE_CONSOLE_URL = 'https://console.rustore.ru/apps/2063710429/statistics';
+  const GOOGLE_PLAY_CONSOLE_URL = 'https://play.google.com/console';
 
   let allRows = [];
   let installations = [];
@@ -886,7 +887,7 @@
       <div class="admin-store-progress ${googleBusy ? 'is-busy' : ''}" aria-live="polite">
         <div class="admin-store-progress-head">
           <strong>Google Play</strong>
-          <span>${googleUploadBusy ? 'загружаю CSV…' : googleRefreshBusy ? 'обновляю…' : days > 0 ? 'данные загружены' : 'нужен отчёт'}</span>
+          <a class="admin-store-link" href="${GOOGLE_PLAY_CONSOLE_URL}" target="_blank" rel="noopener noreferrer" title="Открыть Google Play Console">Консоль</a>
         </div>
         ${statusLine}
         <button type="button" id="analytics-google-play-refresh" class="admin-button" ${storeBusy ? 'disabled' : ''}>
