@@ -5,6 +5,8 @@ const GOOGLE_STORAGE_SCOPE = 'https://www.googleapis.com/auth/devstorage.read_on
 const GOOGLE_STORAGE_API = 'https://storage.googleapis.com/storage/v1';
 const MAX_LIST_PAGES = 20;
 const DOWNLOAD_BATCH_SIZE = 8;
+const MAX_DIRECT_LOOKBACK_MONTHS = 180;
+const DIRECT_LOOKBACK_MISSING_MONTH_LIMIT = 12;
 
 type GooglePlayReportDay = StoreDownloadDay & {
   uninstalls: number;
@@ -218,6 +220,47 @@ async function downloadReport(bucket: string, name: string, token: string): Prom
   return new TextDecoder(encoding).decode(bytes.subarray(offset));
 }
 
+function monthAtOffset(offset: number, now = new Date()): string {
+  const date = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - offset, 1));
+  return `${date.getUTCFullYear()}${String(date.getUTCMonth() + 1).padStart(2, '0')}`;
+}
+
+async function readReportsByKnownNames(
+  bucket: string,
+  prefix: string,
+  token: string,
+): Promise<{ reports: GooglePlayObject[]; contents: Map<string, string> }> {
+  const reports: GooglePlayObject[] = [];
+  const contents = new Map<string, string>();
+  let missingMonths = 0;
+
+  for (let offset = 0; offset < MAX_DIRECT_LOOKBACK_MONTHS; offset += 1) {
+    const month = monthAtOffset(offset);
+    let found = false;
+
+    for (const kind of ['overview', 'country'] as const) {
+      const name = `${prefix}${month}_${kind}.csv`;
+      try {
+        contents.set(name, await downloadReport(bucket, name, token));
+        reports.push({ name });
+        found = true;
+        break;
+      } catch (error) {
+        if (!(error instanceof GoogleRequestError) || error.status !== 404) throw error;
+      }
+    }
+
+    if (found) {
+      missingMonths = 0;
+    } else {
+      missingMonths += 1;
+      if (missingMonths >= DIRECT_LOOKBACK_MISSING_MONTH_LIMIT) break;
+    }
+  }
+
+  return { reports: reports.sort((a, b) => a.name.localeCompare(b.name)), contents };
+}
+
 function parseCsv(text: string): string[][] {
   const rows: string[][] = [];
   let row: string[] = [];
@@ -339,8 +382,23 @@ export async function syncGooglePlayInstalls(config: {
     const token = await createAccessToken(parsedAccount);
     const prefix = `stats/installs/installs_${config.packageName}_`;
     stage = 'listing';
-    const listed = await listReportObjects(config.bucket, prefix, token);
-    const reports = chooseMonthlyInstallReports(listed);
+    let listed: GooglePlayObject[];
+    let reportContents = new Map<string, string>();
+    try {
+      listed = await listReportObjects(config.bucket, prefix, token);
+    } catch (error) {
+      if (!(error instanceof GoogleRequestError) || error.status !== 403) throw error;
+      stage = 'download';
+      const direct = await readReportsByKnownNames(config.bucket, prefix, token);
+      if (!direct.reports.length) {
+        stage = 'listing';
+        throw error;
+      }
+      listed = direct.reports;
+      reportContents = direct.contents;
+    }
+
+    const reports = reportContents.size ? listed : chooseMonthlyInstallReports(listed);
     if (!reports.length) {
       return {
         status: 'waiting',
@@ -351,8 +409,12 @@ export async function syncGooglePlayInstalls(config: {
     }
 
     stage = 'download';
-    const rows = await mapConcurrent(reports, async (report) =>
-      parseGooglePlayInstallReport(await downloadReport(config.bucket, report.name, token)));
+    const rows = await mapConcurrent(
+      reports,
+      async (report) => parseGooglePlayInstallReport(
+        reportContents.get(report.name) ?? await downloadReport(config.bucket, report.name, token),
+      ),
+    );
     const merged = new Map<string, GooglePlayReportDay>();
     for (const reportRows of rows) {
       for (const row of reportRows) merged.set(row.day, row);
