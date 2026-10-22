@@ -23,6 +23,17 @@ type GooglePlayServiceAccount = {
   token_uri?: string;
 };
 
+type GooglePlaySyncStage = 'service_account' | 'token' | 'listing' | 'download';
+
+class GoogleRequestError extends Error {
+  constructor(
+    readonly status: number,
+    readonly reason: string | null,
+  ) {
+    super(`Google request failed (${status})`);
+  }
+}
+
 export type GooglePlaySyncResult = {
   status: 'ok' | 'needs_secrets' | 'waiting' | 'error';
   message: string;
@@ -48,6 +59,30 @@ function decodePrivateKey(pem: string): Uint8Array {
   if (!body) throw new Error('Google Play service account key is invalid');
   const binary = atob(body);
   return Uint8Array.from(binary, (character) => character.charCodeAt(0));
+}
+
+function safeGoogleErrorCode(payload: unknown): string | null {
+  if (!payload || typeof payload !== 'object') return null;
+  const root = payload as Record<string, unknown>;
+  const error = root.error;
+  if (typeof error === 'string') {
+    return /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(error) ? error : null;
+  }
+  if (!error || typeof error !== 'object') return null;
+
+  const errorBody = error as Record<string, unknown>;
+  const errors = Array.isArray(errorBody.errors) ? errorBody.errors : [];
+  const firstError = errors.find((item) => item && typeof item === 'object') as Record<string, unknown> | undefined;
+  const candidates = [firstError?.reason, errorBody.status, errorBody.code];
+  for (const candidate of candidates) {
+    if (typeof candidate === 'string' && /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(candidate)) return candidate;
+  }
+  return null;
+}
+
+async function googleRequestError(response: Response): Promise<GoogleRequestError> {
+  const payload = await response.clone().json().catch(() => null);
+  return new GoogleRequestError(response.status, safeGoogleErrorCode(payload));
 }
 
 async function createAccessToken(serviceAccount: GooglePlayServiceAccount): Promise<string> {
@@ -89,7 +124,7 @@ async function createAccessToken(serviceAccount: GooglePlayServiceAccount): Prom
       assertion,
     }),
   });
-  if (!tokenResponse.ok) throw new Error(`Google token request failed (${tokenResponse.status})`);
+  if (!tokenResponse.ok) throw await googleRequestError(tokenResponse);
 
   const tokenBody = await tokenResponse.json().catch(() => ({})) as { access_token?: unknown };
   if (typeof tokenBody.access_token !== 'string' || !tokenBody.access_token) {
@@ -130,7 +165,7 @@ async function listReportObjects(bucket: string, prefix: string, token: string):
     if (pageToken) url.searchParams.set('pageToken', pageToken);
 
     const response = await fetch(url, { headers: { Authorization: `Bearer ${token}` } });
-    if (!response.ok) throw new Error(`Google Play report listing failed (${response.status})`);
+    if (!response.ok) throw await googleRequestError(response);
     const body = await response.json().catch(() => ({})) as {
       items?: unknown;
       nextPageToken?: unknown;
@@ -158,7 +193,7 @@ async function downloadReport(bucket: string, name: string, token: string): Prom
   const response = await fetch(`${GOOGLE_STORAGE_API}/b/${encodeURIComponent(bucket)}/o/${objectName}?alt=media`, {
     headers: { Authorization: `Bearer ${token}` },
   });
-  if (!response.ok) throw new Error(`Google Play report download failed (${response.status})`);
+  if (!response.ok) throw await googleRequestError(response);
   const bytes = new Uint8Array(await response.arrayBuffer());
   let offset = 0;
   let encoding = 'utf-8';
@@ -237,7 +272,7 @@ function parseCount(raw: string | undefined): number {
   return Number.isFinite(value) && value > 0 ? Math.round(value) : 0;
 }
 
-function parseInstallReport(text: string): GooglePlayReportDay[] {
+export function parseGooglePlayInstallReport(text: string): GooglePlayReportDay[] {
   const rows = parseCsv(text);
   if (rows.length < 2) return [];
   const headers = rows[0];
@@ -297,10 +332,13 @@ export async function syncGooglePlayInstalls(config: {
     };
   }
 
+  let stage: GooglePlaySyncStage = 'service_account';
   try {
     const parsedAccount = JSON.parse(config.serviceAccountJson) as GooglePlayServiceAccount;
+    stage = 'token';
     const token = await createAccessToken(parsedAccount);
     const prefix = `stats/installs/installs_${config.packageName}_`;
+    stage = 'listing';
     const listed = await listReportObjects(config.bucket, prefix, token);
     const reports = chooseMonthlyInstallReports(listed);
     if (!reports.length) {
@@ -312,8 +350,9 @@ export async function syncGooglePlayInstalls(config: {
       };
     }
 
+    stage = 'download';
     const rows = await mapConcurrent(reports, async (report) =>
-      parseInstallReport(await downloadReport(config.bucket, report.name, token)));
+      parseGooglePlayInstallReport(await downloadReport(config.bucket, report.name, token)));
     const merged = new Map<string, GooglePlayReportDay>();
     for (const reportRows of rows) {
       for (const row of reportRows) merged.set(row.day, row);
@@ -334,12 +373,24 @@ export async function syncGooglePlayInstalls(config: {
       requested: reports.length,
     };
   } catch (error) {
-    const statusCode = /\((\d{3})\)/.exec(error instanceof Error ? error.message : '')?.[1];
-    const message = statusCode === '403'
-      ? 'Google Play не открыл отчёты. Проверьте доступ сервисного аккаунта к массовым отчётам Play Console.'
-      : statusCode === '404'
-        ? 'Не найден bucket отчётов Google Play. Проверьте настройки Play Console.'
-        : 'Не удалось получить отчёты Google Play. Проверьте ключ сервисного аккаунта и доступ к отчётам.';
+    const requestError = error instanceof GoogleRequestError ? error : null;
+    const stageNames: Record<GooglePlaySyncStage, string> = {
+      service_account: 'разборе ключа сервисного аккаунта',
+      token: 'получении OAuth-токена Google',
+      listing: 'чтении списка отчётов в Cloud Storage',
+      download: 'скачивании CSV отчёта',
+    };
+    const stageName = stageNames[stage];
+    const httpDetails = requestError
+      ? ` (HTTP ${requestError.status}${requestError.reason ? `, код ${requestError.reason}` : ''})`
+      : '';
+    const message = requestError
+      ? requestError.status === 403
+        ? `Google Play запретил доступ при ${stageName}${httpDetails}. Проверьте настройки этого этапа.`
+        : requestError.status === 404 && stage === 'listing'
+          ? `Не найден bucket отчётов Google Play при ${stageName}${httpDetails}.`
+          : `Ошибка Google Play при ${stageName}${httpDetails}.`
+      : `Не удалось обработать ключ или получить отчёты Google Play при ${stageName}.`;
     return { status: 'error', message, rows: [], requested: 0 };
   }
 }
