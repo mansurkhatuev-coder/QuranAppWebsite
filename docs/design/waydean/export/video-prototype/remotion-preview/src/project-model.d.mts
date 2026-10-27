@@ -153,6 +153,20 @@ export function getContextCardEdgeOpacity(
   activeCardReveal?: number | boolean
 ): number;
 
+export function getTreeViewportOpacity(
+  scopeType: "all" | "path" | "branch",
+  alpha: number,
+  bounds: { left: number; top: number; right: number; bottom: number },
+  viewport: { width: number; height: number },
+  aspectRatio?: number,
+  activeCardReveal?: number | boolean,
+  neighboringBounds?: Array<{
+    offset: number;
+    bounds: { left: number; top: number; right: number; bottom: number };
+    activeCardReveal?: number | boolean;
+  }>
+): number;
+
 export function getCinematicFraming(
   frameWidth: number,
   frameHeight: number,

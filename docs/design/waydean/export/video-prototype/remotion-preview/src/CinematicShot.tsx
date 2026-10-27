@@ -21,7 +21,6 @@ import {
   getGenerationDateExcerpt,
   splitPersonName,
   getBackgroundScale,
-  getContextCardEdgeOpacity,
   getCinematicFramingForFrame,
   getCinematicTitleFontSize,
   getCinematicTitleSafeZone,
@@ -32,6 +31,7 @@ import {
   getSelectedCardReveal,
   getSceneTransitionProgress,
   getScenePresentation,
+  getTreeViewportOpacity,
   sampleRemotionFrame
 } from "./project-model.mjs";
 import { REMOTION_COMPOSITION } from "./composition-config.mjs";
@@ -56,6 +56,7 @@ function edgePath(parent: TreeNode, child: TreeNode, overview: boolean, markerRa
 }
 
 function getEdgeEndpointVisibility(
+  scopeType: StoryModel["scopeType"],
   parent: TreeNode,
   child: TreeNode,
   framing: { scale: number; translateX: number; translateY: number; viewWidth: number; viewHeight: number },
@@ -69,8 +70,8 @@ function getEdgeEndpointVisibility(
   });
   const viewport = { width: framing.viewWidth, height: framing.viewHeight };
   return Math.min(
-    getContextCardEdgeOpacity(boundsFor(parent), viewport, aspectRatio),
-    getContextCardEdgeOpacity(boundsFor(child), viewport, aspectRatio)
+    getTreeViewportOpacity(scopeType, 1, boundsFor(parent), viewport, aspectRatio),
+    getTreeViewportOpacity(scopeType, 1, boundsFor(child), viewport, aspectRatio)
   );
 }
 
@@ -299,18 +300,20 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
   const presentation = getScenePresentation(shot.type);
   const framing = getCinematicFramingForFrame(story, frameWidth, frameHeight, globalFrame);
   if (!framing) return null;
-  const edgeFadeFramings = Array.from(
-    { length: CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES * 2 + 1 },
-    (_, index) => {
-      const offset = index - CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES;
-      return {
-        offset,
-        framing: offset === 0
-          ? framing
-          : getCinematicFramingForFrame(story, frameWidth, frameHeight, globalFrame + offset)
-      };
-    }
-  );
+  const edgeFadeFramings = story.scopeType === "all"
+    ? []
+    : Array.from(
+      { length: CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES * 2 + 1 },
+      (_, index) => {
+        const offset = index - CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES;
+        return {
+          offset,
+          framing: offset === 0
+            ? framing
+            : getCinematicFramingForFrame(story, frameWidth, frameHeight, globalFrame + offset)
+        };
+      }
+    );
   const overview = camera.zoom < 0.5 || framing.scale < 0.5;
   const markerRadius = overview ? clamp(5 / framing.scale, 8, 64) : 8;
   const transitionProgress = getSceneTransitionProgress(story, shotIndex, localFrame);
@@ -441,10 +444,12 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
               ? clamp(sample.lineProgress - pathIndex, 0, 1)
               : 1;
             const branchEmphasis = getSceneEdgeEmphasis(story, shotIndex, localFrame, edge.key);
-            const contextLineOpacity =
-              shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
+            const contextLineOpacity = story.scopeType === "all"
+              ? 0.22
+              : shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
             const pathLead = isLineage && progress < 1;
             const edgeVisibility = getEdgeEndpointVisibility(
+              story.scopeType,
               parent,
               child,
               framing,
@@ -498,18 +503,20 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
               right: (node.x + node.width / 2) * frameFraming.scale + frameFraming.translateX,
               bottom: (node.y + node.height / 2) * frameFraming.scale + frameFraming.translateY
             });
-            const edgeOpacity = getContextCardEdgeOpacity(
+            const edgeOpacity = getTreeViewportOpacity(
+              story.scopeType,
+              1,
               getNodeBounds(framing),
               { width: framing.viewWidth, height: framing.viewHeight },
               frameWidth / frameHeight,
+              activeCardReveal,
               edgeFadeFramings
                 .filter(sampleFrame => sampleFrame.offset !== 0 && sampleFrame.framing)
                 .map(sampleFrame => ({
                   offset: sampleFrame.offset,
                   bounds: getNodeBounds(sampleFrame.framing!),
                   activeCardReveal: activeCardRevealAtFrame(story, globalFrame + sampleFrame.offset, node.id)
-                })),
-              activeCardReveal
+                }))
             );
 
             return overview ? (
@@ -519,7 +526,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
                 node={node}
                 emphasis={emphasis}
                 isTarget={isTarget}
-                contextOpacity={presentation.contextCardOpacity}
+                contextOpacity={story.scopeType === "all" ? 1 : presentation.contextCardOpacity}
                 markerRadius={markerRadius}
                 edgeOpacity={edgeOpacity}
               />
@@ -531,7 +538,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
                 emphasis={emphasis}
                 isTarget={isTarget}
                 includeDates={story.includeDates}
-                contextCardOpacity={presentation.contextCardOpacity}
+                contextCardOpacity={story.scopeType === "all" ? 1 : presentation.contextCardOpacity}
                 edgeOpacity={edgeOpacity}
               />
             );

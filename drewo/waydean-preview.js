@@ -9,6 +9,9 @@ import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-
 import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admin-save-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
+import {
+  clearWhoAmIPromptDismissal, dismissWhoAmIPrompt, hasDismissedWhoAmIPrompt, shouldPromptWhoAmI
+} from './waydean-preview-whoami.mjs?v=2';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -51,6 +54,7 @@ let childrenById = new Map();
 let selectedId = null;
 let contextAnchorId = null;
 let myPersonId = null;
+let whoAmIPromptShown = false;
 let mode = 'all';
 let zoom = 1;
 let filters = { min: 1, max: Infinity, photosOnly: false };
@@ -368,6 +372,25 @@ function myPersonStorageKey() {
   return `${myPersonStoragePrefix}${syntheticFixture ? 'demo' : 'hoti'}`;
 }
 
+function browserStorage() {
+  try { return window.localStorage; } catch { return null; }
+}
+
+function maybePromptWhoAmI() {
+  if (whoAmIPromptShown) return;
+  const dialog = $('#whoAmIPrompt');
+  const treeKey = syntheticFixture ? 'demo' : 'hoti';
+  const dismissed = hasDismissedWhoAmIPrompt(browserStorage(), treeKey);
+  if (!dialog || !shouldPromptWhoAmI({ hasSelf: Boolean(myPersonId && byId.has(myPersonId)), dismissed, isDemo: syntheticFixture })) return;
+  if (document.visibilityState === 'hidden') return;
+  whoAmIPromptShown = true;
+  if (typeof dialog.showModal === 'function') dialog.showModal();
+  else {
+    openPopover(ui.search);
+    $('#searchInput')?.focus({ preventScroll: true });
+  }
+}
+
 function loadMyPersonPreference() {
   try {
     const stored = localStorage.getItem(myPersonStorageKey());
@@ -394,6 +417,7 @@ function setSelfPerson(id) {
   let persisted = false;
   try {
     localStorage.setItem(myPersonStorageKey(), myPersonId);
+    clearWhoAmIPromptDismissal(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
     persisted = true;
   } catch {
     // Keep the mark for this page session if browser storage is unavailable.
@@ -2302,6 +2326,25 @@ function bindControls() {
     $('#searchInput').focus({ preventScroll: true });
     announce('Выберите человека, откройте его карточку и нажмите «Отметить как меня».');
   });
+  const whoAmIPrompt = $('#whoAmIPrompt');
+  $('#whoAmIPromptChoose').addEventListener('click', () => {
+    if (whoAmIPrompt?.open) whoAmIPrompt.close();
+    openPopover(ui.search);
+    $('#searchInput').focus({ preventScroll: true });
+    announce('Найдите себя, откройте карточку и нажмите «Отметить как меня».');
+  });
+  $('#whoAmIPromptLater').addEventListener('click', () => {
+    const persisted = dismissWhoAmIPrompt(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
+    if (whoAmIPrompt?.open) whoAmIPrompt.close();
+    if (!persisted) announce('Выбор «Позже» запомнится только до закрытия этой страницы.');
+  });
+  $('#whoAmIPromptClose').addEventListener('click', () => {
+    if (whoAmIPrompt?.open) whoAmIPrompt.close();
+  });
+  whoAmIPrompt?.addEventListener('click', event => {
+    if (event.target === whoAmIPrompt) whoAmIPrompt.close();
+  });
+  document.addEventListener('visibilitychange', maybePromptWhoAmI);
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     if (ui.app.classList.contains('profile-open')) {
@@ -2795,6 +2838,9 @@ async function initialize() {
     if (requestedState === 'filtersEmpty') { filters.photosOnly = true; $('#photosOnly').checked = true; drawTree(); openPopover(ui.filters); }
     if (requestedState === 'search') { openPopover(ui.search); updateSearch(''); }
     if (requestedState === 'stats') openPopover(ui.stats);
+    if (!params.has('person') && !['search', 'stats', 'filtersEmpty'].includes(requestedState)) {
+      window.setTimeout(maybePromptWhoAmI, 700);
+    }
     window.waydeanPreview = { records, drawTree, selectPerson, get initialRenderMs() { return renderDuration; } };
     scheduleMiniViewportUpdate();
     if (loading) {

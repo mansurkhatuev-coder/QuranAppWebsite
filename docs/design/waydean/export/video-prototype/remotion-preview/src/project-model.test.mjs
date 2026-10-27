@@ -23,6 +23,15 @@ test("full-tree video keeps context cards visible until the frame clips them", (
   assert.equal(getTreeViewportOpacity("path", 0.26, cardAtFrameEdge, viewport, 1), 0);
 });
 
+test("full-tree cards leave with the camera while other scopes smooth their edge fade", () => {
+  const viewport = { width: 100, height: 100 };
+  const centeredCard = { left: 35, top: 35, right: 65, bottom: 65 };
+  const nextFrameAtEdge = { offset: 1, bounds: { left: -2, top: 35, right: 28, bottom: 65 } };
+
+  assert.equal(getTreeViewportOpacity("all", 1, centeredCard, viewport, 1, 0, [nextFrameAtEdge]), 1);
+  assert.equal(getTreeViewportOpacity("path", 1, centeredCard, viewport, 1, 0, [nextFrameAtEdge]), 0.12);
+});
+
 test("full-tree video keeps revealed cards solid while the camera moves to later generations", () => {
   const people = [
     { id: "root", name: "Предок", generation: 1, parent: null, born: 1880, died: null },
