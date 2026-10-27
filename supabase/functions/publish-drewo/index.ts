@@ -1,5 +1,6 @@
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
 import { authorizeWaydeanAdmin } from './waydean-admin-access.ts';
+import { waydeanAdminPublishHasConflict } from './waydean-admin-publish.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -1097,10 +1098,23 @@ Deno.serve(async (request) => {
 
   try {
     const body = await request.json();
-    const action =
+    const requestedAction =
       typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
+    let action = requestedAction;
+    const isWaydeanAdminAction = [
+      'waydean-admin-auth',
+      'waydean-admin-load',
+      'waydean-admin-publish',
+    ].includes(requestedAction);
+    const waydeanAdminPublish = requestedAction === 'waydean-admin-publish';
+    const waydeanAdminLoad = requestedAction === 'waydean-admin-load';
+    let waydeanAdminTreeDir: string | null = null;
 
-    if (action === 'waydean-admin-auth') {
+    if (requestedAction.startsWith('waydean-admin-') && !isWaydeanAdminAction) {
+      return jsonResponse({ ok: false, error: 'Unknown Waydean admin action' }, 400);
+    }
+
+    if (isWaydeanAdminAction) {
       let user: Awaited<ReturnType<typeof requireHubUser>>;
       try {
         user = await requireHubUser(request);
@@ -1134,8 +1148,11 @@ Deno.serve(async (request) => {
           decision.status
         );
       }
-
-      return jsonResponse({ ok: true, treeDir: decision.treeDir });
+      waydeanAdminTreeDir = decision.treeDir;
+      if (requestedAction === 'waydean-admin-auth') {
+        return jsonResponse({ ok: true, treeDir: decision.treeDir });
+      }
+      if (waydeanAdminPublish) action = 'publish';
     }
 
     const githubToken = Deno.env.get('GITHUB_TOKEN');
@@ -1697,6 +1714,35 @@ Deno.serve(async (request) => {
     const backupsDir = `${treeDir}/backups`;
     const backupPrefix = backupNamePrefix(treeDir);
 
+    if (isWaydeanAdminAction && treeDir !== waydeanAdminTreeDir) {
+      return jsonResponse({ ok: false, error: 'Waydean account access is limited to drewo' }, 403);
+    }
+
+    if (waydeanAdminLoad) {
+      const [jsonFile, indexFile] = await Promise.all([
+        githubGetFile(githubToken, githubRepo, jsonPath),
+        githubGetFile(githubToken, githubRepo, indexPath),
+      ]);
+      const treeJson = jsonFile?.content?.trim()
+        || extractScriptJson(indexFile?.content || '', 'tree-data')
+        || '';
+      if (!treeJson) return jsonResponse({ ok: false, error: 'Сервер не вернул данные дерева.' }, 404);
+
+      let fingerprint: string;
+      try {
+        fingerprint = await fingerprintText(normalizeTreeJson(treeJson));
+      } catch {
+        return jsonResponse({ ok: false, error: 'На сервере сохранён некорректный JSON дерева.' }, 500);
+      }
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        treeJson,
+        activityJson: extractScriptJson(indexFile?.content || '', 'activity-log') || '[]',
+        fingerprint,
+      });
+    }
+
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
       githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
@@ -1728,7 +1774,9 @@ Deno.serve(async (request) => {
     // A valid session token from `login-tree` replaces the password for this tree.
     // Anything else (missing, expired, wrong tree, password changed since) falls
     // back to the password check.
-    const rawSessionToken = typeof body.sessionToken === 'string' ? body.sessionToken.trim() : '';
+    const rawSessionToken = waydeanAdminPublish
+      ? ''
+      : typeof body.sessionToken === 'string' ? body.sessionToken.trim() : '';
     const sessionPayload = rawSessionToken
       ? await verifyNekSession(
           rawSessionToken,
@@ -1736,8 +1784,9 @@ Deno.serve(async (request) => {
           passwordFingerprint(access.passwordHash)
         )
       : null;
-    let role: AuthRole | null =
-      sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
+    let role: AuthRole | null = waydeanAdminPublish
+      ? 'super'
+      : sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
 
     if (!role) {
       const attemptState = getAuthAttempt(attemptKey);
@@ -2295,7 +2344,7 @@ Deno.serve(async (request) => {
       typeof body.activityJson === 'string' && body.activityJson.trim()
         ? body.activityJson.trim()
         : '[]';
-    const force = body.force === true;
+    const force = !waydeanAdminPublish && body.force === true;
     const baseFingerprint =
       typeof body.baseFingerprint === 'string' ? body.baseFingerprint.trim() : '';
     const baseTreeJson =
@@ -2318,6 +2367,29 @@ Deno.serve(async (request) => {
     let publishTreeJson = treeJson;
     let publishActivityJson = activityJson;
     let publishNormalized = normalizedTree;
+
+    const serverActivityJson = extractScriptJson(current?.content || '', 'activity-log') || '[]';
+    const baseActivityJson = typeof body.baseActivityJson === 'string' ? body.baseActivityJson : '[]';
+
+    if (waydeanAdminPublish && waydeanAdminPublishHasConflict({
+      baseFingerprint,
+      serverFingerprint,
+      baseActivityJson,
+      serverActivityJson,
+    })) {
+      return jsonResponse(
+        {
+          ok: false,
+          conflict: true,
+          error: 'На сайте уже другая версия дерева. Черновик оставлен в этом браузере; загрузите актуальную версию перед публикацией.',
+          serverFingerprint,
+          baseFingerprint,
+          serverTreeJson: serverTreeRaw,
+          serverActivityJson,
+        },
+        409
+      );
+    }
 
     if (serverFingerprint && baseFingerprint && serverFingerprint !== baseFingerprint && !force) {
       try {
@@ -2409,6 +2481,7 @@ Deno.serve(async (request) => {
     if (!indexWillChange && !jsonWillChange && !photoGitChanges.length) {
       return jsonResponse({
         ok: true,
+        treeDir,
         unchanged: true,
         merged,
         mergeStats,

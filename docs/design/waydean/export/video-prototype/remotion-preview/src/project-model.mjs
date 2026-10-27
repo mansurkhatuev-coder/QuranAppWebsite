@@ -135,6 +135,13 @@ export function getScenePersonEmphasis(story, shotIndex, localFrame, personId) {
   const current = shots[shotIndex];
   if (!current) return 0;
   const isCurrent = current.personIds.includes(personId);
+  if (story.scopeType === "all" && !isCurrent) {
+    // Full-tree shots move the camera across one continuous canvas. Once a
+    // card has entered the story, keep it at full context strength; the frame
+    // edge, not a scene boundary, should be what carries it out of view.
+    const alreadyRevealed = shots.slice(0, shotIndex).some(shot => shot.personIds.includes(personId));
+    if (alreadyRevealed) return 1;
+  }
   if (shotIndex <= 0) return isCurrent ? 1 : 0;
   const previous = shots[shotIndex - 1];
   const wasPrevious = previous.personIds.includes(personId);

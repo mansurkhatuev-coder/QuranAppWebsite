@@ -48,11 +48,14 @@ test('verifies the existing admin session with a bearer token before the tree lo
     },
   });
 
-  await assert.doesNotReject(requireWaydeanAdminAccess('drewo'));
+  const access = await requireWaydeanAdminAccess('drewo');
   assert.equal(request.url, 'https://example.supabase.co/functions/v1/publish-drewo');
   assert.equal(request.options.headers.Authorization, 'Bearer supabase-access-token');
   assert.equal(request.options.headers.apikey, 'public-anon-key');
   assert.deepEqual(JSON.parse(request.options.body), { action: 'waydean-admin-auth', treeDir: 'drewo' });
+  assert.equal(access.endpoint, request.url);
+  assert.equal(access.accessToken, 'supabase-access-token');
+  assert.equal(access.anonKey, 'public-anon-key');
 });
 
 test('offers login again when the server rejects an expired session', async () => {

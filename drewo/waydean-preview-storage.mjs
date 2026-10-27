@@ -60,14 +60,14 @@ export async function loadLocalTreeDraft(key) {
     const request = transaction.objectStore(STORE_NAME).get(String(key));
     request.onsuccess = () => {
       const row = request.result;
-      resolve(row ? { tree: row.tree, revision: row.revision, updatedAt: row.updatedAt } : null);
+      resolve(row ? { tree: row.tree, revision: row.revision, updatedAt: row.updatedAt, metadata: row.metadata ?? null } : null);
     };
     request.onerror = () => reject(request.error || new Error('Не удалось прочитать локальный черновик.'));
     transaction.onabort = () => reject(transaction.error || new Error('Чтение локального черновика прервано.'));
   });
 }
 
-export async function saveLocalTreeDraft(key, tree, expectedRevision = 0, photoChanges = {}) {
+export async function saveLocalTreeDraft(key, tree, expectedRevision = 0, photoChanges = {}, metadata = null) {
   const database = await openDatabase();
   return new Promise((resolve, reject) => {
     const transaction = database.transaction([STORE_NAME, 'person-photos', BACKUP_STORE, HISTORY_STORE], 'readwrite');
@@ -101,7 +101,8 @@ export async function saveLocalTreeDraft(key, tree, expectedRevision = 0, photoC
         key: String(key),
         tree: structuredClone(tree),
         revision: currentRevision + 1,
-        updatedAt: now
+        updatedAt: now,
+        metadata: metadata ?? current?.metadata ?? null
       };
       store.put(result);
       history.put(makeHistory(key, 'save', 'Локальный черновик сохранён', tree, result.revision, now));
