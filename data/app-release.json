@@ -1,14 +1,14 @@
 {
   "android": {
     "rustore": {
-      "latestVersion": "1.0.20",
-      "versionCode": 28,
+      "latestVersion": "1.0.21",
+      "versionCode": 31,
       "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
     },
     "apk": {
       "latestVersion": "1.0.20",
       "versionCode": 28,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.20/QuranApp-1.0.20-Android-APK-28.apk"
+      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.21/koran-i-azkary-1.0.21.apk"
     }
   },
   "ios": {
@@ -16,6 +16,6 @@
     "buildNumber": 26,
     "appStoreUrl": "https://apps.apple.com/app/id6782619598"
   },
-  "messageRu": "Добавили режим «Печатный мусхаф» — читайте Коран по страницам и перелистывайте их, как в печатном издании. Улучшили стабильность приложения.",
-  "messageEn": "Added a Printed Mushaf mode for page-by-page Quran reading with page turning. Improved app stability."
+  "messageRu": "Доработали отображение прогресса чтения Корана, улучшили светлую тему и исправили небольшие ошибки. Ваши отзывы очень важны для нас и помогают делать приложение лучше. Будем рады вашим предложениям и замечаниям!",
+  "messageEn": "We improved Quran reading progress, refined the light theme, and fixed minor issues. Your feedback helps us make the app better, and we welcome your suggestions."
 }
