@@ -90,7 +90,14 @@
                       "id": "added-1793087849537-d4qz4r",
                       "name": "Тозуркъа",
                       "gender": "male",
-                      "sons": []
+                      "sons": [
+                        {
+                          "id": "added-1793088840084-gmrwzz",
+                          "name": "Исрапил",
+                          "gender": "male",
+                          "sons": []
+                        }
+                      ]
                     }
                   ],
                   "born": 1844,
