@@ -9,7 +9,9 @@ import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
-import { compactRouteClass, nextLodLevel } from './waydean-preview-lod.mjs?v=lod-8';
+import {
+  compactRouteClass, getOverviewLineWorldWidth, getOverviewMarkerWorldSize, nextLodLevel
+} from './waydean-preview-lod.mjs?v=lod-9';
 import { accountPreviewUrl, canLoadPreviewTree, initialPreviewView, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode } from './waydean-preview-route.mjs?v=account-route-20261016-1';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=child-id-1';
 import {
@@ -154,6 +156,14 @@ function syncCameraLayout(dimensions = null) {
   if (ui.extent.style.height !== extentHeight) ui.extent.style.height = extentHeight;
   const transform = `translate(${layout.offsetX}px, ${layout.offsetY}px) scale(${zoom})`;
   if (ui.graph.style.transform !== transform) ui.graph.style.transform = transform;
+  const overviewDotSize = `${getOverviewMarkerWorldSize(zoom)}px`;
+  const overviewLineWidth = `${getOverviewLineWorldWidth(zoom)}px`;
+  if (ui.graph.style.getPropertyValue('--overview-dot-size') !== overviewDotSize) {
+    ui.graph.style.setProperty('--overview-dot-size', overviewDotSize);
+  }
+  if (ui.graph.style.getPropertyValue('--overview-line-width') !== overviewLineWidth) {
+    ui.graph.style.setProperty('--overview-line-width', overviewLineWidth);
+  }
   const isMobile = window.matchMedia('(max-width: 700px)').matches;
   const nextLevel = isMobile
     ? 'detail'

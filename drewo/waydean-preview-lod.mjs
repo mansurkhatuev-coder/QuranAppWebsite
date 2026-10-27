@@ -3,6 +3,20 @@ const COMPACT_TO_DETAIL = 64;
 const COMPACT_TO_OVERVIEW = 34;
 const OVERVIEW_TO_COMPACT = 40;
 
+export function getOverviewMarkerWorldSize(zoom) {
+  const scale = Number(zoom);
+  if (!Number.isFinite(scale) || scale <= 0) return 8;
+  const desiredSize = Math.min(8, Math.max(3, scale * 100));
+  return desiredSize / scale;
+}
+
+export function getOverviewLineWorldWidth(zoom, screenWidth = 1.2) {
+  const scale = Number(zoom);
+  const desiredWidth = Number(screenWidth);
+  if (!Number.isFinite(scale) || scale <= 0 || !Number.isFinite(desiredWidth) || desiredWidth <= 0) return 1.2;
+  return desiredWidth / scale;
+}
+
 export function compactRouteClass(personId, routePeople) {
   return routePeople?.has(personId) ? ' route' : '';
 }
