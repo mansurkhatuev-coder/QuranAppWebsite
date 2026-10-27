@@ -60,6 +60,53 @@ function edgeCurve(parent, child, overview, markerRadius) {
   return [parent.x, startY, parent.x, startY + bend, child.x, endY - bend, child.x, endY];
 }
 
+function edgePolyline(parent, child, overview, markerRadius) {
+  const startY = parent.y + (overview ? markerRadius : parent.height / 2);
+  const endY = child.y - (overview ? markerRadius : child.height / 2);
+  const junctionY = startY + (endY - startY) * 0.5;
+  return [parent.x, startY, parent.x, junctionY, child.x, junctionY, child.x, endY];
+}
+
+function drawPartialPolyline(context, points, progress) {
+  context.beginPath();
+  context.moveTo(points[0], points[1]);
+  if (progress >= 0.999) {
+    for (let index = 2; index < points.length; index += 2) {
+      context.lineTo(points[index], points[index + 1]);
+    }
+    return null;
+  }
+
+  const segments = [];
+  let totalLength = 0;
+  for (let index = 0; index < points.length - 2; index += 2) {
+    const from = { x: points[index], y: points[index + 1] };
+    const to = { x: points[index + 2], y: points[index + 3] };
+    const length = Math.hypot(to.x - from.x, to.y - from.y);
+    segments.push({ from, to, length });
+    totalLength += length;
+  }
+
+  let remaining = totalLength * clamp(progress, 0, 1);
+  let endpoint = { x: points[0], y: points[1] };
+  for (const segment of segments) {
+    if (remaining >= segment.length) {
+      endpoint = segment.to;
+      remaining -= segment.length;
+      context.lineTo(endpoint.x, endpoint.y);
+      continue;
+    }
+    const amount = segment.length ? remaining / segment.length : 1;
+    endpoint = {
+      x: segment.from.x + (segment.to.x - segment.from.x) * amount,
+      y: segment.from.y + (segment.to.y - segment.from.y) * amount
+    };
+    context.lineTo(endpoint.x, endpoint.y);
+    break;
+  }
+  return endpoint;
+}
+
 function drawPartialCurve(context, p, progress) {
   context.beginPath(); context.moveTo(p[0], p[1]);
   if (progress >= 0.999) { context.bezierCurveTo(...p.slice(2)); return null; }
@@ -99,6 +146,68 @@ function peopleCountLabel(count) {
     if (remainder10 >= 2 && remainder10 <= 4) word = "человека";
   }
   return `${count} ${word}`;
+}
+
+function edgeBoundsInView(node, framing) {
+  return {
+    left: (node.x - node.width / 2) * framing.scale + framing.translateX,
+    top: (node.y - node.height / 2) * framing.scale + framing.translateY,
+    right: (node.x + node.width / 2) * framing.scale + framing.translateX,
+    bottom: (node.y + node.height / 2) * framing.scale + framing.translateY
+  };
+}
+
+function drawFamilyTreeConnectors(context, edges) {
+  const groups = new Map();
+  for (const edge of edges) {
+    if (edge.visible <= 0) continue;
+    const key = `${edge.parent.id}:${Math.round(edge.child.y)}`;
+    let group = groups.get(key);
+    if (!group) {
+      group = {
+        parent: edge.parent,
+        startY: edge.points[1],
+        junctionY: edge.points[3],
+        leftX: edge.parent.x,
+        rightX: edge.parent.x,
+        alpha: edge.alpha,
+        lineWidth: edge.lineWidth,
+        edges: []
+      };
+      groups.set(key, group);
+    }
+    group.leftX = Math.min(group.leftX, edge.child.x);
+    group.rightX = Math.max(group.rightX, edge.child.x);
+    group.alpha = Math.max(group.alpha, edge.alpha);
+    group.lineWidth = Math.max(group.lineWidth, edge.lineWidth);
+    group.edges.push(edge);
+  }
+
+  context.save();
+  context.lineCap = "round";
+  context.lineJoin = "round";
+  context.strokeStyle = "#e3c982";
+  for (const group of groups.values()) {
+    const { parent, startY, junctionY, leftX, rightX, alpha, lineWidth, edges: connections } = group;
+    context.globalAlpha = alpha;
+    context.lineWidth = lineWidth;
+    context.beginPath();
+    context.moveTo(parent.x, startY);
+    context.lineTo(parent.x, junctionY);
+    context.moveTo(leftX, junctionY);
+    context.lineTo(rightX, junctionY);
+    context.stroke();
+
+    for (const edge of connections) {
+      context.globalAlpha = edge.alpha;
+      context.lineWidth = edge.lineWidth;
+      context.beginPath();
+      context.moveTo(edge.child.x, junctionY);
+      context.lineTo(edge.child.x, edge.points[7]);
+      context.stroke();
+    }
+  }
+  context.restore();
 }
 
 function drawBackground(context, image, width, height, scale) {
@@ -188,16 +297,56 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     const presentation = getScenePresentation(shot.type); const scale = Math.min(canvas.width / framing.viewWidth, canvas.height / framing.viewHeight);
     const offsetX = (canvas.width - framing.viewWidth * scale) / 2; const offsetY = (canvas.height - framing.viewHeight * scale) / 2;
     context.save(); context.translate(offsetX + framing.translateX * scale, offsetY + framing.translateY * scale); context.scale(framing.scale * scale, framing.scale * scale);
-    for (const edge of story.timeline.layout.edges) {
-      const parent = nodes.get(edge.parentId); const child = nodes.get(edge.childId); if (!parent || !child) continue;
-      const index = pathIndex.get(edge.key); const isPath = index != null; const progress = isPath ? clamp(sample.lineProgress - index, 0, 1) : 1;
-      const emphasis = getSceneEdgeEmphasis(story, shotIndex, local, edge.key); const base = shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
-      const bounds = node => ({ left: (node.x - node.width / 2) * framing.scale + framing.translateX, top: (node.y - node.height / 2) * framing.scale + framing.translateY, right: (node.x + node.width / 2) * framing.scale + framing.translateX, bottom: (node.y + node.height / 2) * framing.scale + framing.translateY });
-      const visible = Math.min(getContextCardEdgeOpacity(bounds(parent), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height), getContextCardEdgeOpacity(bounds(child), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height));
-      const points = edgeCurve(parent, child, overview, markerRadius); context.globalAlpha = (base + emphasis * (0.9 - base)) * visible; context.strokeStyle = "#e3c982"; context.lineWidth = (1.8 + emphasis * 2.4) / (framing.scale * scale);
-      context.beginPath(); context.moveTo(points[0], points[1]); context.bezierCurveTo(...points.slice(2)); context.stroke();
+    const orthogonalTree = story.scopeType === "all";
+    const edgeStates = story.timeline.layout.edges.flatMap(edge => {
+      const parent = nodes.get(edge.parentId); const child = nodes.get(edge.childId);
+      if (!parent || !child) return [];
+      const index = pathIndex.get(edge.key);
+      const isPath = index != null;
+      const progress = isPath ? clamp(sample.lineProgress - index, 0, 1) : 1;
+      const emphasis = getSceneEdgeEmphasis(story, shotIndex, local, edge.key);
+      const base = shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
+      const visible = Math.min(
+        getContextCardEdgeOpacity(edgeBoundsInView(parent, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height),
+        getContextCardEdgeOpacity(edgeBoundsInView(child, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height)
+      );
+      return [{
+        key: edge.key,
+        parent,
+        child,
+        isPath,
+        progress,
+        emphasis,
+        visible,
+        alpha: (base + emphasis * (0.9 - base)) * visible,
+        lineWidth: (1.8 + emphasis * 2.4) / (framing.scale * scale),
+        points: orthogonalTree
+          ? edgePolyline(parent, child, overview, markerRadius)
+          : edgeCurve(parent, child, overview, markerRadius)
+      }];
+    });
+
+    if (orthogonalTree) {
+      drawFamilyTreeConnectors(context, edgeStates);
+    } else {
+      for (const edge of edgeStates) {
+        context.globalAlpha = edge.alpha;
+        context.strokeStyle = "#e3c982";
+        context.lineWidth = edge.lineWidth;
+        context.beginPath();
+        context.moveTo(edge.points[0], edge.points[1]);
+        context.bezierCurveTo(...edge.points.slice(2));
+        context.stroke();
+      }
+    }
+
+    for (const edge of edgeStates) {
+      const { parent, child, isPath, progress, visible, points } = edge;
       if (isPath && progress > 0) {
-        const endpoint = drawPartialCurve(context, points, progress); const gold = context.createLinearGradient(parent.x, parent.y, child.x, child.y);
+        const endpoint = orthogonalTree
+          ? drawPartialPolyline(context, points, progress)
+          : drawPartialCurve(context, points, progress);
+        const gold = context.createLinearGradient(parent.x, parent.y, child.x, child.y);
         gold.addColorStop(0, "#fff0c7"); gold.addColorStop(0.44, "#e2bd70"); gold.addColorStop(1, "#a97636");
         context.globalAlpha = (progress < 1 ? 0.9 : 0.12) * visible; context.strokeStyle = gold; context.lineWidth = (progress < 1 ? 4.2 : 1.8) / (framing.scale * scale);
         context.shadowColor = progress < 1 ? "rgba(226,189,112,0.84)" : "transparent"; context.shadowBlur = progress < 1 ? 11 / (framing.scale * scale) : 0; context.stroke(); context.shadowBlur = 0;
