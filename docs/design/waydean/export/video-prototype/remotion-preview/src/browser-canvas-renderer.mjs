@@ -260,6 +260,12 @@ function drawMarker(context, node, alpha, isTarget, radius) {
   context.beginPath(); context.arc(node.x, node.y, Math.max(2, radius * 0.34), 0, Math.PI * 2); context.fillStyle = "#f0d797"; context.fill(); context.restore();
 }
 
+export function getOverviewMarkerRadius(framingScale, outputScale) {
+  const totalScale = Number(framingScale) * Number(outputScale);
+  if (!Number.isFinite(totalScale) || totalScale <= 0) return 4;
+  return 4 / totalScale;
+}
+
 function drawCopy(context, story, shot, shotIndex, frame, width, height) {
   const local = Math.max(0, frame - shot.startFrame); const copyStart = getChapterCopyStartFrame(shot);
   const intro = shotIndex === 0 ? easeCinematic(clamp(local / Math.max(1, Math.min(24, shot.durationFrames - 1)), 0, 1)) : 1;
@@ -293,8 +299,9 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     const shotIndex = sample.shotIndex; const shot = story.timeline.shots[shotIndex]; const local = Math.max(0, globalFrame - shot.startFrame);
     const framing = getCinematicFramingForFrame(story, canvas.width, canvas.height, globalFrame); if (!framing) return;
     drawBackground(context, backgroundImage, canvas.width, canvas.height, getBackgroundScale(sample.frame, story.timeline.totalFrames));
-    const overview = sample.camera.zoom < 0.5 || framing.scale < 0.5; const markerRadius = overview ? clamp(5 / framing.scale, 8, 64) : 8;
+    const overview = sample.camera.zoom < 0.5 || framing.scale < 0.5;
     const presentation = getScenePresentation(shot.type); const scale = Math.min(canvas.width / framing.viewWidth, canvas.height / framing.viewHeight);
+    const markerRadius = overview ? getOverviewMarkerRadius(framing.scale, scale) : 8;
     const offsetX = (canvas.width - framing.viewWidth * scale) / 2; const offsetY = (canvas.height - framing.viewHeight * scale) / 2;
     context.save(); context.translate(offsetX + framing.translateX * scale, offsetY + framing.translateY * scale); context.scale(framing.scale * scale, framing.scale * scale);
     const orthogonalTree = story.scopeType === "all";

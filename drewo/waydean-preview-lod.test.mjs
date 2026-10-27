@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { compactRouteClass, nextLodLevel } from './waydean-preview-lod.mjs';
+import * as lod from './waydean-preview-lod.mjs';
+
+test('overview markers keep a readable screen size at every supported zoom', () => {
+  for (const [zoom, expectedScreenSize] of [[0.01, 3], [0.02, 3], [0.08, 8], [0.19, 8], [0.34, 8]]) {
+    assert.ok(Math.abs(lod.getOverviewMarkerWorldSize(zoom) * zoom - expectedScreenSize) < 1e-9);
+  }
+});
 
 test('detail switches down to compact by rendered card width', () => {
   assert.equal(nextLodLevel('detail', 58), 'detail');

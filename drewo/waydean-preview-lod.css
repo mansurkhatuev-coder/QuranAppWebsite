@@ -46,7 +46,7 @@
 }
 
 .graph[data-lod="compact"] .person-node:not(.route) .node-copy { display: none; }
-.graph[data-lod="compact"] .person-node:not(.route)::after { width: 14px; height: 14px; opacity: .78; transform: translate(-50%, -50%) scale(1); }
+.graph[data-lod="compact"] .person-node:not(.route)::after { width: var(--overview-dot-size, 20px); height: var(--overview-dot-size, 20px); opacity: .78; transform: translate(-50%, -50%) scale(1); }
 
 .graph[data-lod="overview"] .person-node {
   width: var(--person-card-width, var(--tree-card-width)) !important;

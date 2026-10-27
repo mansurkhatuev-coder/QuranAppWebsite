@@ -10,6 +10,7 @@ import {
   getSourceFrameForBrowserExport,
   createBrowserCanvasFrameRenderer
 } from "./browser-canvas-renderer.mjs";
+import * as browserCanvasRenderer from "./browser-canvas-renderer.mjs";
 
 const people = [
   { id: "root", name: "Куди", generation: 1, parent: null, born: 1000, died: null },
@@ -66,6 +67,41 @@ test("browser output frame maps back to the shared 30 fps story timeline", () =>
   assert.equal(getSourceFrameForBrowserExport(1, plan), 1);
   assert.equal(getSourceFrameForBrowserExport(2, plan), 2);
   assert.equal(getSourceFrameForBrowserExport(plan.totalFrames - 1, plan), plan.sourceFrames - 1);
+});
+
+test("overview markers keep a readable radius in exported pixels at very small camera zoom", () => {
+  for (const [framingScale, outputScale] of [[0.01, 0.75], [0.08, 1], [0.2, 1.2]]) {
+    const radius = browserCanvasRenderer.getOverviewMarkerRadius(framingScale, outputScale);
+    assert.ok(Math.abs(radius * framingScale * outputScale - 4) < 1e-9);
+  }
+});
+
+test("full-tree overview video draws a visible marker for every generation", () => {
+  const multigenerationalPeople = Array.from({ length: 14 }, (_, index) => ({
+    id: `generation-${index + 1}`,
+    name: `Поколение ${index + 1}`,
+    generation: index + 1,
+    parent: index ? `generation-${index}` : null
+  }));
+  const story = buildRemotionStory({
+    people: multigenerationalPeople,
+    selectedPersonId: "generation-14",
+    scopeType: "all"
+  });
+  const shot = story.timeline.shots[0];
+  const frame = shot.startFrame;
+  const sample = sampleRemotionFrame(story, frame);
+  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+  const expectedRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
+  const context = fakeCanvasContext();
+  const canvas = { width: 1280, height: 720, getContext: () => context };
+
+  assert.ok(sample.camera.zoom < 0.5 || framing.scale < 0.5, "the opening shot should use overview markers");
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  const markerRadii = context.calls.filter(call => call[0] === "arc").map(call => call[3]);
+  assert.ok(markerRadii.some(radius => Math.abs(radius - expectedRadius) < 1e-9));
 });
 
 test("canvas frame renderer paints the supplied local background, tree cards, and text", () => {
