@@ -19,6 +19,27 @@ export function createFrameCoalescer(requestFrame, callback) {
   };
 }
 
+export function createLatestFrameCoalescer(requestFrame, callback) {
+  let scheduled = false;
+  let latestArgs = null;
+  const flush = () => {
+    if (!scheduled) return;
+    scheduled = false;
+    const args = latestArgs;
+    latestArgs = null;
+    callback(...args);
+  };
+  return {
+    schedule(...args) {
+      latestArgs = args;
+      if (scheduled) return;
+      scheduled = true;
+      requestFrame(flush);
+    },
+    flush
+  };
+}
+
 export function wheelZoomFactor(deltaY) {
   if (deltaY === 0) return 1;
   return deltaY < 0 ? 1.1 : 1 / 1.1;

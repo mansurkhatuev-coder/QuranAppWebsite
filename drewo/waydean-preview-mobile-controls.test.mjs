@@ -28,7 +28,7 @@ function rule(css, selector) {
 
 test('mobile tree stays in full-card mode at every zoom level', () => {
   const appJs = readFileSync(new URL('waydean-preview.js', here), 'utf8');
-  assert.match(appJs, /const nextLevel = isMobile \? 'detail' : nextLodLevel\(lodLevel, renderedCardWidth\)/);
+  assert.match(appJs, /const nextLevel = isMobile\s*\?\s*'detail'\s*:\s*nextLodLevel\(lodLevel,/);
 });
 
 test('mobile minimap removes captions and gives the diagram their space', () => {
@@ -69,6 +69,6 @@ test('installed PWA receives the updated mobile layout stylesheet', () => {
   const html = readFileSync(new URL('waydean-preview.html', here), 'utf8');
   const worker = readFileSync(new URL('waydean-preview-sw.js', here), 'utf8');
   assert.match(html, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
-  assert.match(worker, /waydean-preview-shell-v12/);
+  assert.match(worker, /waydean-preview-shell-v14/);
   assert.match(worker, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
 });

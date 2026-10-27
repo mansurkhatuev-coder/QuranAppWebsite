@@ -1,9 +1,9 @@
 import { flattenTree, getCardWidthForName } from './waydean-preview-model.mjs?v=person-card-width-2';
 import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
-  clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
+  createLatestFrameCoalescer, clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
-} from './waydean-preview-camera.mjs?v=ios-pinch-stable-1';
+} from './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
@@ -139,23 +139,27 @@ function measurePersonCardWidths(people, metrics) {
   return widths;
 }
 
-function syncCameraLayout() {
+function syncCameraLayout(dimensions = null) {
+  const viewWidth = dimensions?.viewWidth ?? ui.viewport.clientWidth;
+  const viewHeight = dimensions?.viewHeight ?? ui.viewport.clientHeight;
+  const graphWidth = dimensions?.graphWidth ?? ui.graph.offsetWidth;
+  const graphHeight = dimensions?.graphHeight ?? ui.graph.offsetHeight;
   const layout = cameraLayout(
-    ui.viewport.clientWidth, ui.viewport.clientHeight,
-    ui.graph.offsetWidth, ui.graph.offsetHeight, zoom
+    viewWidth, viewHeight, graphWidth, graphHeight, zoom
   );
   currentCameraLayout = layout;
-  ui.extent.style.width = `${currentCameraLayout.extentWidth}px`;
-  ui.extent.style.height = `${currentCameraLayout.extentHeight}px`;
-  ui.graph.style.transform = `translate(${currentCameraLayout.offsetX}px, ${currentCameraLayout.offsetY}px) scale(${zoom})`;
-  const renderedCardWidth = (lastNodeMetrics?.width || nodeMetrics().width) * zoom;
-  // Keep overview marks readable in screen pixels while the graph itself scales.
-  ui.graph.style.setProperty('--overview-dot-size', `${Math.min(30, Math.max(8, 7 / zoom))}px`);
-  ui.graph.style.setProperty('--overview-line-width', `${Math.min(4.5, Math.max(1.6, 1.1 / zoom))}px`);
+  const extentWidth = `${layout.extentWidth}px`;
+  const extentHeight = `${layout.extentHeight}px`;
+  if (ui.extent.style.width !== extentWidth) ui.extent.style.width = extentWidth;
+  if (ui.extent.style.height !== extentHeight) ui.extent.style.height = extentHeight;
+  const transform = `translate(${layout.offsetX}px, ${layout.offsetY}px) scale(${zoom})`;
+  if (ui.graph.style.transform !== transform) ui.graph.style.transform = transform;
   const isMobile = window.matchMedia('(max-width: 700px)').matches;
-  const nextLevel = isMobile ? 'detail' : nextLodLevel(lodLevel, renderedCardWidth);
-  lodLevel = nextLevel;
-  ui.graph.dataset.lod = lodLevel;
+  const nextLevel = isMobile
+    ? 'detail'
+    : nextLodLevel(lodLevel, (lastNodeMetrics?.width || nodeMetrics().width) * zoom);
+  if (lodLevel !== nextLevel) lodLevel = nextLevel;
+  if (ui.graph.dataset.lod !== lodLevel) ui.graph.dataset.lod = lodLevel;
   updateZoomCaption();
 }
 
@@ -186,8 +190,10 @@ function updateZoomCaption() {
     : mode === 'branch' ? 'МОЯ ВЕТВЬ'
       : mode === 'all-tree' ? 'ВСЕ ПОКОЛЕНИЯ' : '';
   const overviewCaption = lodLevel === 'overview' ? 'ОБЗОР · ПРИБЛИЗЬТЕ ДЛЯ ИМЁН' : '';
-  ui.mode.textContent = overviewCaption || modeCaption;
-  ui.mode.classList.toggle('visible', Boolean(ui.mode.textContent));
+  const caption = overviewCaption || modeCaption;
+  if (ui.mode.textContent !== caption) ui.mode.textContent = caption;
+  const visible = Boolean(caption);
+  if (ui.mode.classList.contains('visible') !== visible) ui.mode.classList.toggle('visible', visible);
 }
 
 function preparePreviewRecords(root) {
@@ -1953,6 +1959,17 @@ function bindCameraGestures() {
 
   const pointers = new Map();
   let pinchStart = null;
+  const pinchUpdates = createLatestFrameCoalescer(requestAnimationFrame, update => {
+    const origin = update.origin;
+    setZoom(
+      update.nextZoom,
+      update.anchorX,
+      update.anchorY,
+      origin.anchorX,
+      origin.anchorY,
+      origin
+    );
+  });
   const pair = () => {
     const [a, b] = [...pointers.values()];
     return { x: (a.x + b.x) / 2, y: (a.y + b.y) / 2, distance: Math.hypot(a.x - b.x, a.y - b.y) };
@@ -1968,6 +1985,14 @@ function bindCameraGestures() {
       scrollTop: ui.viewport.scrollTop,
       anchorX: start.x - bounds.left,
       anchorY: start.y - bounds.top,
+      boundsLeft: bounds.left,
+      boundsTop: bounds.top,
+      dimensions: {
+        viewWidth: ui.viewport.clientWidth,
+        viewHeight: ui.viewport.clientHeight,
+        graphWidth: ui.graph.offsetWidth,
+        graphHeight: ui.graph.offsetHeight
+      },
       layout: { ...currentCameraLayout }
     };
   };
@@ -2004,14 +2029,13 @@ function bindCameraGestures() {
       previous.x = event.clientX;
       previous.y = event.clientY;
       const after = pair();
-      const bounds = ui.viewport.getBoundingClientRect();
       if (!pinchStart || after.distance <= 0) return;
-      setZoom(
-        pinchStart.zoom * (after.distance / pinchStart.distance),
-        after.x - bounds.left, after.y - bounds.top,
-        pinchStart.anchorX, pinchStart.anchorY,
-        pinchStart
-      );
+      pinchUpdates.schedule({
+        origin: pinchStart,
+        nextZoom: pinchStart.zoom * (after.distance / pinchStart.distance),
+        anchorX: after.x - pinchStart.boundsLeft,
+        anchorY: after.y - pinchStart.boundsTop
+      });
     }
     event.preventDefault();
   });
@@ -2024,6 +2048,7 @@ function bindCameraGestures() {
       }, 450);
     }
     const wasPinching = pointers.size >= 2;
+    if (wasPinching) pinchUpdates.flush();
     pointers.delete(event.pointerId);
     if (wasPinching && pointers.size >= 2) beginPinch();
     else if (pointers.size < 2) pinchStart = null;
@@ -2055,16 +2080,18 @@ function setZoom(
     ? MIN_MOBILE_ZOOM
     : MIN_DESKTOP_ZOOM;
   zoom = clampZoom(next, { minimum: minimumZoom });
-  syncCameraLayout();
+  syncCameraLayout(gestureOrigin?.dimensions ?? null);
   const target = zoomAroundAnchor({
     previousZoom, nextZoom: zoom, scrollLeft, scrollTop, anchorX, anchorY, previousAnchorX, previousAnchorY,
     previousOffsetX: previousLayout.offsetX, previousOffsetY: previousLayout.offsetY,
     nextOffsetX: currentCameraLayout.offsetX, nextOffsetY: currentCameraLayout.offsetY,
-    maxScrollLeft: currentCameraLayout.extentWidth - ui.viewport.clientWidth,
-    maxScrollTop: currentCameraLayout.extentHeight - ui.viewport.clientHeight
+    maxScrollLeft: currentCameraLayout.extentWidth - (gestureOrigin?.dimensions?.viewWidth ?? ui.viewport.clientWidth),
+    maxScrollTop: currentCameraLayout.extentHeight - (gestureOrigin?.dimensions?.viewHeight ?? ui.viewport.clientHeight)
   });
   ui.viewport.scrollTo({ left: target.left, top: target.top, behavior: 'instant' });
-  $('#zoomValue').textContent = `${Math.round(zoom * 100)}%`;
+  const zoomLabel = `${Math.round(zoom * 100)}%`;
+  const zoomValue = $('#zoomValue');
+  if (zoomValue.textContent !== zoomLabel) zoomValue.textContent = zoomLabel;
   scheduleMiniViewportUpdate();
 }
 

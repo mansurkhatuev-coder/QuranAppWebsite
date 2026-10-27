@@ -31,13 +31,17 @@ test('production preview URLs enter the admin-account flow and keep the selected
 
 test('the local offline cache precaches the current preview entry modules', () => {
   const html = readFileSync(new URL('./waydean-preview.html', import.meta.url), 'utf8');
+  const script = readFileSync(new URL('./waydean-preview.js', import.meta.url), 'utf8');
   const worker = readFileSync(new URL('./waydean-preview-sw.js', import.meta.url), 'utf8');
-  const entryScript = html.match(/src="(waydean-preview\.js\?v=[^"]+)"/)?.[1];
+  const entryScript = html.match(/import\('\.\/(waydean-preview\.js\?v=[^']+)'\)/)?.[1];
+  const cameraModule = script.match(/from '\.\/(waydean-preview-camera\.mjs\?v=[^']+)'/)?.[1];
 
   assert.ok(entryScript, 'preview HTML should use a versioned app script');
+  assert.ok(cameraModule, 'preview app should use a versioned camera module');
   assert.ok(worker.includes(`'./${entryScript}'`), 'offline cache should precache the current app script');
+  assert.ok(worker.includes(`'./${cameraModule}'`), 'offline cache should precache the current camera module');
   assert.ok(worker.includes("'./waydean-preview-route.mjs?v=account-route-20261016-1'"));
-  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v8'/);
+  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v14'/);
 });
 
 test('the offline cache contains every versioned preview stylesheet referenced by the page', () => {
