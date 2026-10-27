@@ -81,3 +81,32 @@
 .load-error-actions button[hidden] {
   display: none;
 }
+
+.account-admin-tools {
+  display: grid;
+  gap: 9px;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(212, 177, 95, .42);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgba(21, 29, 27, .94), rgba(7, 15, 18, .96));
+}
+
+.account-admin-tools[hidden] { display: none !important; }
+.account-admin-tools-heading { display: grid; gap: 3px; }
+.account-admin-tools-heading small { color: #c7a557; font-size: 8px; letter-spacing: .14em; }
+.account-admin-tools-heading strong,
+.account-admin-tools form > strong { color: #f2dfac; font: 600 13px var(--sans, Arial), sans-serif; }
+.account-admin-lock-state { display: grid; gap: 4px; padding: 9px 10px; border: 1px solid rgba(211, 192, 149, .16); border-radius: 8px; background: rgba(4, 11, 13, .62); }
+.account-admin-lock-state strong { color: #ead296; font: 600 11px var(--sans, Arial), sans-serif; }
+.account-admin-lock-state small,
+.account-admin-warning { color: #aaa491; font: 10px/1.45 var(--sans, Arial), sans-serif; }
+.account-admin-tools button { width: 100%; min-height: 36px; }
+.account-admin-tools form { display: grid; gap: 7px; padding-top: 9px; border-top: 1px solid rgba(211, 192, 149, .14); }
+.account-admin-tools form > strong { font-size: 11px; }
+.account-admin-tools label { color: #bdb49e; font: 10px var(--sans, Arial), sans-serif; }
+.account-admin-tools input { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid rgba(211, 192, 149, .28); border-radius: 7px; background: #071013; color: #f4ead1; font: 12px var(--sans, Arial), sans-serif; }
+.account-admin-tools input:focus { outline: 2px solid rgba(223, 190, 112, .58); outline-offset: 1px; }
+.account-admin-message { min-height: 0; margin: 0; color: #c9b681; font: 10px/1.4 var(--sans, Arial), sans-serif; }
+.account-admin-message:empty { display: none; }
+.account-admin-warning { margin: 0; }

@@ -1,6 +1,12 @@
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
 import { authorizeWaydeanAdmin } from './waydean-admin-access.ts';
-import { waydeanAdminActionTarget, isWaydeanAdminAction, isWaydeanAdminRestoreBaseValid } from './waydean-admin-actions.ts';
+import {
+  waydeanAdminActionTarget,
+  isWaydeanAdminAction,
+  isWaydeanAdminRestoreBaseValid,
+  waydeanAdminLoadAccessState,
+  familyPasswordSessionFields,
+} from './waydean-admin-actions.ts';
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
@@ -1718,9 +1724,10 @@ Deno.serve(async (request) => {
     }
 
     if (waydeanAdminLoad) {
-      const [jsonFile, indexFile] = await Promise.all([
+      const [jsonFile, indexFile, accessFile] = await Promise.all([
         githubGetFile(githubToken, githubRepo, jsonPath),
         githubGetFile(githubToken, githubRepo, indexPath),
+        githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
       ]);
       const treeJson = jsonFile?.content?.trim()
         || extractScriptJson(indexFile?.content || '', 'tree-data')
@@ -1733,12 +1740,16 @@ Deno.serve(async (request) => {
       } catch {
         return jsonResponse({ ok: false, error: 'На сервере сохранён некорректный JSON дерева.' }, 500);
       }
+      const accessState = waydeanAdminLoadAccessState(
+        lockPresentation(parseAccess(accessFile?.content))
+      );
       return jsonResponse({
         ok: true,
         treeDir,
         treeJson,
         activityJson: extractScriptJson(indexFile?.content || '', 'activity-log') || '[]',
         fingerprint,
+        ...accessState,
       });
     }
 
@@ -2053,6 +2064,7 @@ Deno.serve(async (request) => {
         treeDir,
         locked: lock.locked,
         lockedReason: lock.lockedReason,
+        canToggleLock: waydeanAdminLoadAccessState(lock).canToggleLock,
         billing: lock.billing,
       });
     }
@@ -2103,14 +2115,16 @@ Deno.serve(async (request) => {
         passwordChanged: true,
         vaultSaved: vaultChanges.length > 0,
         // Old family sessions stop working: the fingerprint they carry is stale.
-        sessionToken: await signNekSession(
-          {
-            treeDir,
-            role,
-            exp: Date.now() + NEK_SESSION_TTL_MS,
-            pwdFp: passwordFingerprint(next.passwordHash),
-          },
-          sessionSecret()
+        ...await familyPasswordSessionFields(isWaydeanAdminRequest, () =>
+          signNekSession(
+            {
+              treeDir,
+              role,
+              exp: Date.now() + NEK_SESSION_TTL_MS,
+              pwdFp: passwordFingerprint(next.passwordHash),
+            },
+            sessionSecret()
+          )
         ),
       });
     }
