@@ -4,6 +4,7 @@ import {
   buildRemotionStory,
   formatPersonDateLabel,
   getCinematicFramingForFrame,
+  getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getTreeViewportOpacity
 } from "./project-model.mjs";
@@ -16,21 +17,23 @@ test("video person labels show a known birth without an unknown death marker", (
   assert.equal(formatPersonDateLabel({ born: 1999, died: null }, false), "");
 });
 
-test("full-tree video keeps context cards visible until the frame clips them", () => {
+test("video scopes keep context cards visible until the frame clips them", () => {
   const viewport = { width: 100, height: 100 };
   const cardAtFrameEdge = { left: -2, top: 35, right: 28, bottom: 65 };
 
   assert.equal(getTreeViewportOpacity("all", 1, cardAtFrameEdge, viewport, 1), 1);
-  assert.equal(getTreeViewportOpacity("path", 0.26, cardAtFrameEdge, viewport, 1), 0);
+  assert.equal(getTreeViewportOpacity("path", 0.26, cardAtFrameEdge, viewport, 1), 0.26);
+  assert.equal(getTreeViewportOpacity("branch", 0.42, cardAtFrameEdge, viewport, 1), 0.42);
 });
 
-test("full-tree cards leave with the camera while other scopes smooth their edge fade", () => {
+test("cards in every scope leave with the camera instead of fading before the frame edge", () => {
   const viewport = { width: 100, height: 100 };
   const centeredCard = { left: 35, top: 35, right: 65, bottom: 65 };
   const nextFrameAtEdge = { offset: 1, bounds: { left: -2, top: 35, right: 28, bottom: 65 } };
 
   assert.equal(getTreeViewportOpacity("all", 1, centeredCard, viewport, 1, 0, [nextFrameAtEdge]), 1);
-  assert.equal(getTreeViewportOpacity("path", 1, centeredCard, viewport, 1, 0, [nextFrameAtEdge]), 0.12);
+  assert.equal(getTreeViewportOpacity("path", 1, centeredCard, viewport, 1, 0, [nextFrameAtEdge]), 1);
+  assert.equal(getTreeViewportOpacity("branch", 0.42, centeredCard, viewport, 1, 0, [nextFrameAtEdge]), 0.42);
 });
 
 test("full-tree video keeps revealed cards solid while the camera moves to later generations", () => {
@@ -47,6 +50,26 @@ test("full-tree video keeps revealed cards solid while the camera moves to later
 
   assert.equal(getScenePersonEmphasis(story, generationTwoIndex, middleOfGenerationTwo, "root"), 1);
   assert.equal(getScenePersonEmphasis(story, generationThreeIndex, middleOfGenerationThree, "root"), 1);
+});
+
+test("path and branch videos keep previously revealed cards and connectors on the moving canvas", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    { id: "child", name: "Потомок", generation: 2, parent: "root" },
+    { id: "grandchild", name: "Внук", generation: 3, parent: "child" },
+    { id: "sibling", name: "Ветка", generation: 3, parent: "child" },
+    { id: "great-grandchild", name: "Правнук", generation: 4, parent: "grandchild" }
+  ];
+
+  const pathStory = buildRemotionStory({ people, scopeType: "path", selectedPersonId: "great-grandchild" });
+  const pathLaterIndex = pathStory.timeline.shots.findIndex(shot => shot.type === "generation" && shot.generation === 3);
+  assert.equal(getScenePersonEmphasis(pathStory, pathLaterIndex, 90, "root"), 1);
+
+  const branchStory = buildRemotionStory({ people, scopeType: "branch", selectedPersonId: "root" });
+  const branchIndex = branchStory.timeline.shots.findIndex(shot => shot.type === "branching");
+  const laterFocusIndex = branchStory.timeline.shots.findIndex((shot, index) => index > branchIndex && shot.type === "focus");
+  assert.equal(getScenePersonEmphasis(branchStory, laterFocusIndex, 90, "child"), 1);
+  assert.equal(getSceneEdgeEmphasis(branchStory, laterFocusIndex, 90, "child->grandchild"), 1);
 });
 
 test("full-tree finale gives the focused card a gradual camera exit", () => {

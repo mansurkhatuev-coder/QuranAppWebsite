@@ -18,6 +18,9 @@ Deno.test('allows only the account-scoped Waydean actions', () => {
     ['waydean-admin-restore', 'restore'],
     ['waydean-admin-lock', 'set-lock'],
     ['waydean-admin-password', 'set-password'],
+    ['waydean-admin-push-vapid', 'vapid-public'],
+    ['waydean-admin-push-subscribe', 'subscribe'],
+    ['waydean-admin-push-unsubscribe', 'unsubscribe'],
   ] as const;
 
   for (const [action, target] of actions) {
@@ -76,6 +79,18 @@ Deno.test('does not mint a family super-session token for an account-admin passw
   assertEquals(await familyPasswordSessionFields(false, async () => 'family-editor-token'), {
     sessionToken: 'family-editor-token',
   });
+});
+
+Deno.test('maps account-authenticated push actions to the existing push operations', () => {
+  const actions = [
+    ['waydean-admin-push-vapid', 'vapid-public'],
+    ['waydean-admin-push-subscribe', 'subscribe'],
+    ['waydean-admin-push-unsubscribe', 'unsubscribe'],
+  ] as const;
+  for (const [action, target] of actions) {
+    assertEquals(isWaydeanAdminAction(action), true);
+    assertEquals(waydeanAdminActionTarget(action), target);
+  }
 });
 
 Deno.test('requires a SHA-256 tree fingerprint and bounded JSON activity array before account restore', () => {

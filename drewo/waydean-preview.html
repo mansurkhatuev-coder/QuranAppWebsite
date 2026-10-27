@@ -26,7 +26,7 @@
   <link rel="stylesheet" href="waydean-preview-minimap.css?v=4">
   <link rel="stylesheet" href="waydean-preview-editorial.css?v=cards-dock-5-person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-history.css?v=local-history-1">
-  <link rel="stylesheet" href="waydean-preview-pwa.css?v=pwa-1">
+  <link rel="stylesheet" href="waydean-preview-pwa.css?v=account-push-20261028-1">
   <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
   <link rel="stylesheet" href="waydean-preview-self.css?v=self-whoami-prompt-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=thin-glass-1">
@@ -213,7 +213,7 @@
         <div class="pwa-state-row"><span>Push-уведомления древа</span><strong id="pwaServerPushStatus" aria-live="polite">Проверка подписки…</strong></div>
         <button class="secondary-action pwa-notification-action" id="pwaServerPushEnable" type="button">Получать уведомления об изменениях</button>
         <button class="secondary-action pwa-notification-action" id="pwaServerPushDisable" type="button" hidden>Отключить уведомления на этом устройстве</button>
-        <p class="pwa-note">Подписка создаётся только после вашего действия и ввода пароля редактора. Она привязана к этому устройству.</p>
+        <p class="pwa-note" id="pwaServerPushNote">Подписка создаётся после вашего действия и подтверждается администраторской учётной записью. Она привязана к этому устройству.</p>
       </div>
       <div class="pwa-push-note" id="pwaOfflineNote"><strong>Офлайн-данные</strong><span>После первой загрузки кешируются оболочка Waydean и снимок HOTI. Локальные правки остаются в хранилище этого браузера.</span></div>
     </section>
@@ -274,7 +274,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-      import('./waydean-preview.js?v=account-admin-tools-1');
+      import('./waydean-preview.js?v=account-admin-push-20261028-1');
     }
   </script>
 </body>

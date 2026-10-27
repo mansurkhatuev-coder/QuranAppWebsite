@@ -11,7 +11,7 @@ import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
-} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261028-full-tree-camera-exit-1";
+} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261028-continuous-camera-exit-2";
 import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261018-timestamped-audio";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
@@ -353,7 +353,7 @@ async function startExport() {
   try {
     try { wakeLock = await navigator.wakeLock?.request?.("screen"); } catch { wakeLock = null; }
     root.querySelector("#browser-export-start").textContent = "Готовим точный рендер…";
-    const { canEncodeTimestampedMp4, encodeTimestampedMp4 } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261018-timestamped-mp4");
+      const { canEncodeTimestampedMp4, encodeTimestampedMp4 } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261028-continuous-camera-exit-2");
     const expectedDuration = plan.totalFrames / plan.fps;
     const videoBitrate = chooseVideoBitrate({ durationSeconds: expectedDuration });
     const timestampedMp4Supported = await canEncodeTimestampedMp4({

@@ -8,6 +8,9 @@ const ALLOWED_ACTIONS = new Set([
   'waydean-admin-restore',
   'waydean-admin-lock',
   'waydean-admin-password',
+  'waydean-admin-push-vapid',
+  'waydean-admin-push-subscribe',
+  'waydean-admin-push-unsubscribe',
 ]);
 
 function apiError(code, message, details) {

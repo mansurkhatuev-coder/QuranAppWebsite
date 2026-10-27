@@ -16,7 +16,6 @@ import type {
   TreeNode
 } from "./project-model.mjs";
 import {
-  CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES,
   formatPersonDateLabel,
   getGenerationDateExcerpt,
   splitPersonName,
@@ -28,7 +27,6 @@ import {
   getChapterCopyTransitionOpacities,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
-  getSelectedCardReveal,
   getSceneTransitionProgress,
   getScenePresentation,
   getTreeViewportOpacity,
@@ -55,26 +53,6 @@ function edgePath(parent: TreeNode, child: TreeNode, overview: boolean, markerRa
     + ", " + child.x + " " + endY;
 }
 
-function getEdgeEndpointVisibility(
-  scopeType: StoryModel["scopeType"],
-  parent: TreeNode,
-  child: TreeNode,
-  framing: { scale: number; translateX: number; translateY: number; viewWidth: number; viewHeight: number },
-  aspectRatio: number
-) {
-  const boundsFor = (node: TreeNode) => ({
-    left: (node.x - node.width / 2) * framing.scale + framing.translateX,
-    top: (node.y - node.height / 2) * framing.scale + framing.translateY,
-    right: (node.x + node.width / 2) * framing.scale + framing.translateX,
-    bottom: (node.y + node.height / 2) * framing.scale + framing.translateY
-  });
-  const viewport = { width: framing.viewWidth, height: framing.viewHeight };
-  return Math.min(
-    getTreeViewportOpacity(scopeType, 1, boundsFor(parent), viewport, aspectRatio),
-    getTreeViewportOpacity(scopeType, 1, boundsFor(child), viewport, aspectRatio)
-  );
-}
-
 function sceneCaption(shot: StoryShot, story: StoryModel) {
   if (shot.caption) return shot.caption;
   if (shot.type === "generation") {
@@ -90,17 +68,6 @@ function sceneCaption(shot: StoryShot, story: StoryModel) {
   if (shot.type === "focus") return "Линия предков остаётся видимой";
   if (shot.type === "origin") return "История начинается со старшего известного предка";
   return "Родовая память проходит через поколения";
-}
-
-function activeCardRevealAtFrame(story: StoryModel, frame: number, personId: string) {
-  const sample = sampleRemotionFrame(story, frame);
-  if (!sample) return 0;
-  const shotIndex = sample.shotIndex;
-  const shot = story.timeline.shots[shotIndex];
-  const localFrame = sample.frame - shot.startFrame;
-  const emphasis = getScenePersonEmphasis(story, shotIndex, localFrame, personId);
-  const isTarget = personId === story.selectedPersonId && (shot.type === "focus" || shot.type === "finale");
-  return isTarget ? Math.max(emphasis, getSelectedCardReveal(shot.type, localFrame)) : emphasis;
 }
 
 function PersonCard({
@@ -300,20 +267,6 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
   const presentation = getScenePresentation(shot.type);
   const framing = getCinematicFramingForFrame(story, frameWidth, frameHeight, globalFrame);
   if (!framing) return null;
-  const edgeFadeFramings = story.scopeType === "all"
-    ? []
-    : Array.from(
-      { length: CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES * 2 + 1 },
-      (_, index) => {
-        const offset = index - CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES;
-        return {
-          offset,
-          framing: offset === 0
-            ? framing
-            : getCinematicFramingForFrame(story, frameWidth, frameHeight, globalFrame + offset)
-        };
-      }
-    );
   const overview = camera.zoom < 0.5 || framing.scale < 0.5;
   const markerRadius = overview ? clamp(5 / framing.scale, 8, 64) : 8;
   const transitionProgress = getSceneTransitionProgress(story, shotIndex, localFrame);
@@ -448,13 +401,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
               ? 0.22
               : shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
             const pathLead = isLineage && progress < 1;
-            const edgeVisibility = getEdgeEndpointVisibility(
-              story.scopeType,
-              parent,
-              child,
-              framing,
-              frameWidth / frameHeight
-            );
+            const edgeVisibility = getTreeViewportOpacity(story.scopeType, 1);
             const lineOpacity =
               (contextLineOpacity + branchEmphasis * (0.9 - contextLineOpacity)) * edgeVisibility;
 
@@ -496,28 +443,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
             const isTarget =
               person.id === story.selectedPersonId
               && (shot.type === "focus" || shot.type === "finale");
-            const activeCardReveal = isTarget ? Math.max(emphasis, getSelectedCardReveal(shot.type, localFrame)) : emphasis;
-            const getNodeBounds = (frameFraming: NonNullable<typeof framing>) => ({
-              left: (node.x - node.width / 2) * frameFraming.scale + frameFraming.translateX,
-              top: (node.y - node.height / 2) * frameFraming.scale + frameFraming.translateY,
-              right: (node.x + node.width / 2) * frameFraming.scale + frameFraming.translateX,
-              bottom: (node.y + node.height / 2) * frameFraming.scale + frameFraming.translateY
-            });
-            const edgeOpacity = getTreeViewportOpacity(
-              story.scopeType,
-              1,
-              getNodeBounds(framing),
-              { width: framing.viewWidth, height: framing.viewHeight },
-              frameWidth / frameHeight,
-              activeCardReveal,
-              edgeFadeFramings
-                .filter(sampleFrame => sampleFrame.offset !== 0 && sampleFrame.framing)
-                .map(sampleFrame => ({
-                  offset: sampleFrame.offset,
-                  bounds: getNodeBounds(sampleFrame.framing!),
-                  activeCardReveal: activeCardRevealAtFrame(story, globalFrame + sampleFrame.offset, node.id)
-                }))
-            );
+            const edgeOpacity = getTreeViewportOpacity(story.scopeType, 1);
 
             return overview ? (
               <TreeMarker
