@@ -101,6 +101,7 @@ export type FrameSample = {
 };
 
 export const ACTIVE_CARD_REVEAL_FRAMES: number;
+export const FOCUS_CAMERA_ARRIVAL_RATIO: number;
 export const FOCUS_CAMERA_HOLD_RATIO: number;
 
 export function buildRemotionStory(options?: {
@@ -132,6 +133,8 @@ export function getShotIndexAtFrame(story: StoryModel, frame: number): number;
 export function getSceneTransitionProgress(story: StoryModel, shotIndex: number, localFrame: number): number;
 
 export function getScenePersonEmphasis(story: StoryModel, shotIndex: number, localFrame: number, personId: string): number;
+
+export function shouldRenderVideoPersonCard(story: StoryModel, shotIndex: number, personId: string, overview: boolean): boolean;
 
 export function getSceneEdgeEmphasis(story: StoryModel, shotIndex: number, localFrame: number, edgeKey: string): number;
 

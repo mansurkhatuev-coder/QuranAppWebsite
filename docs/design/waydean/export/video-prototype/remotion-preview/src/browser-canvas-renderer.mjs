@@ -13,7 +13,7 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261028-continuous-camera-exit-3";
+} from "./project-model.mjs?v=20261028-scene-aligned-camera-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs";
 

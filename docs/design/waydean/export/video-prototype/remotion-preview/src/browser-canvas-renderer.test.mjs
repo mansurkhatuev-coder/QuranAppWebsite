@@ -117,12 +117,12 @@ test("full-tree branch cards stay as cards when the camera crosses overview scal
   const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
   const shotIndex = story.timeline.shots.findIndex(shot => shot.type === "branching");
   const shot = story.timeline.shots[shotIndex];
-  const frame = shot.startFrame;
-  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const frame = Array.from({ length: shot.durationFrames }, (_, offset) => shot.startFrame + offset)
+    .find(candidate => getCinematicFramingForFrame(story, 1280, 720, candidate).scale < 0.5);
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
 
-  assert.ok(framing.scale < 0.5, "fixture must exercise the scale that previously switched cards to dots");
+  assert.notEqual(frame, undefined, "fixture must cross the overview scale during this scene");
   createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
 
   assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Родоначальник"));

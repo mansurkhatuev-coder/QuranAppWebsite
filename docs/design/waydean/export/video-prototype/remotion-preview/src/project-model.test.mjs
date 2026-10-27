@@ -6,6 +6,7 @@ import {
   getCinematicFramingForFrame,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
+  shouldRenderVideoPersonCard,
   getTreeViewportOpacity
 } from "./project-model.mjs";
 
@@ -50,6 +51,73 @@ test("full-tree video keeps revealed cards solid while the camera moves to later
 
   assert.equal(getScenePersonEmphasis(story, generationTwoIndex, middleOfGenerationTwo, "root"), 1);
   assert.equal(getScenePersonEmphasis(story, generationThreeIndex, middleOfGenerationThree, "root"), 1);
+});
+
+test("overview keeps cards for people already revealed and uses markers only for unrevealed people", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    { id: "child", name: "Потомок", generation: 2, parent: "root" },
+    { id: "grandchild", name: "Внук", generation: 3, parent: "child" }
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "grandchild" });
+  const generationTwoIndex = story.timeline.shots.findIndex(shot => shot.type === "generation" && shot.generation === 2);
+  const generationThreeIndex = story.timeline.shots.findIndex(shot => shot.type === "generation" && shot.generation === 3);
+
+  assert.equal(shouldRenderVideoPersonCard(story, generationTwoIndex, "root", true), true);
+  assert.equal(shouldRenderVideoPersonCard(story, generationTwoIndex, "child", true), true);
+  assert.equal(shouldRenderVideoPersonCard(story, generationTwoIndex, "grandchild", true), false);
+  assert.equal(shouldRenderVideoPersonCard(story, generationThreeIndex, "child", true), true);
+  assert.equal(shouldRenderVideoPersonCard(story, generationThreeIndex, "grandchild", true), true);
+  assert.equal(shouldRenderVideoPersonCard(story, generationThreeIndex, "grandchild", false), true);
+});
+
+test("camera begins each generation move with that scene instead of carrying cards away early", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    { id: "child", name: "Потомок", generation: 2, parent: "root" },
+    { id: "grandchild", name: "Внук", generation: 3, parent: "child" }
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "grandchild" });
+  const opening = story.timeline.shots.find(shot => shot.type === "opening");
+  const origin = story.timeline.shots.find(shot => shot.type === "origin");
+  const generationTwo = story.timeline.shots.find(shot => shot.type === "generation" && shot.generation === 2);
+  const frameAt = frame => getCinematicFramingForFrame(story, 1280, 720, frame);
+  const assertSameFraming = (actual, expected) => {
+    for (const property of ["scale", "translateX", "translateY"]) {
+      assert.ok(Math.abs(actual[property] - expected[property]) < 1e-9, `${property} changed unexpectedly`);
+    }
+  };
+  const openingView = frameAt(opening.startFrame);
+  const originStart = frameAt(origin.startFrame);
+  const originMiddle = frameAt(origin.startFrame + Math.floor(origin.durationFrames / 2));
+  const originEnd = frameAt(origin.startFrame + origin.durationFrames - 1);
+  const generationTwoStart = frameAt(generationTwo.startFrame);
+
+  assertSameFraming(originStart, openingView);
+  assert.notDeepEqual(originMiddle, originStart);
+  assertSameFraming(generationTwoStart, originEnd);
+});
+
+test("cinematic camera framing has no jump at any scene boundary", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    { id: "child", name: "Потомок", generation: 2, parent: "root" },
+    { id: "grandchild", name: "Внук", generation: 3, parent: "child" }
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "grandchild" });
+  const frameAt = frame => getCinematicFramingForFrame(story, 1280, 720, frame);
+
+  for (const shot of story.timeline.shots.slice(1)) {
+    const previous = story.timeline.shots[story.timeline.shots.indexOf(shot) - 1];
+    const previousEnd = frameAt(previous.startFrame + previous.durationFrames - 1);
+    const nextStart = frameAt(shot.startFrame);
+    for (const property of ["scale", "translateX", "translateY"]) {
+      assert.ok(
+        Math.abs(previousEnd[property] - nextStart[property]) < 1e-9,
+        `${property} jumped at the start of ${shot.type}`
+      );
+    }
+  }
 });
 
 test("path and branch videos keep previously revealed cards and connectors on the moving canvas", () => {
