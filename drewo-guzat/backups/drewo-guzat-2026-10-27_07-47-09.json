@@ -1,0 +1,8 @@
+{
+  "treeJson": "{\n  \"id\": \"гiузат\",\n  \"name\": \"ГIузат\",\n  \"gender\": \"male\",\n  \"sons\": [\n    {\n      \"id\": \"added-1793087204949-zn6hts\",\n      \"name\": \"Гана\",\n      \"gender\": \"male\",\n      \"sons\": []\n    },\n    {\n      \"id\": \"added-1793087225818-2p1qla\",\n      \"name\": \"Айдамир\",\n      \"gender\": \"male\",\n      \"sons\": []\n    }\n  ]\n}",
+  "activityJson": "[\n  {\n    \"type\": \"add\",\n    \"at\": \"2026-10-27T07:46:44.950Z\",\n    \"son\": \"Гана\",\n    \"father\": \"ГIузат\",\n    \"sonId\": \"added-1793087204949-zn6hts\",\n    \"fatherId\": \"гiузат\",\n    \"gender\": \"male\"\n  },\n  {\n    \"type\": \"add\",\n    \"at\": \"2026-10-27T07:47:05.818Z\",\n    \"son\": \"Айдамир\",\n    \"father\": \"ГIузат\",\n    \"sonId\": \"added-1793087225818-2p1qla\",\n    \"fatherId\": \"гiузат\",\n    \"gender\": \"male\"\n  }\n]",
+  "savedAt": "2026-10-27T07:47:09.368Z",
+  "personCount": 3,
+  "kind": "auto",
+  "merged": false
+}
