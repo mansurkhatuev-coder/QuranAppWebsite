@@ -41,6 +41,33 @@ test('sends account backup operations through the fixed Waydean tree route', asy
   }
 });
 
+test('sends account lock and password changes through the fixed Waydean tree route', async () => {
+  const requests = [];
+  for (const [action, payload] of [
+    ['waydean-admin-lock', { locked: true, reason: '' }],
+    ['waydean-admin-password', { newPassword: 'new-family-password' }]
+  ]) {
+    await callWaydeanAdminAction(action, payload, access, async (_url, options) => {
+      requests.push({
+        authorization: options.headers.Authorization,
+        body: JSON.parse(options.body)
+      });
+      return new Response(JSON.stringify({ ok: true, treeDir: 'drewo' }));
+    });
+  }
+
+  assert.deepEqual(requests, [
+    {
+      authorization: 'Bearer user-access-token',
+      body: { locked: true, reason: '', treeDir: 'drewo', action: 'waydean-admin-lock' }
+    },
+    {
+      authorization: 'Bearer user-access-token',
+      body: { newPassword: 'new-family-password', treeDir: 'drewo', action: 'waydean-admin-password' }
+    }
+  ]);
+});
+
 test('rejects missing account credentials without making a request', async () => {
   let called = false;
   await assert.rejects(
@@ -66,10 +93,12 @@ test('preserves server conflict snapshots for safe recovery', async () => {
 });
 
 test('fails closed for actions outside the explicit account API allowlist', async () => {
-  let called = false;
-  await assert.rejects(
-    callWaydeanAdminAction('publish', {}, access, async () => { called = true; }),
-    error => error.code === 'WAYDEAN_ACTION_NOT_ALLOWED'
-  );
-  assert.equal(called, false);
+  for (const action of ['publish', 'set-lock', 'set-password', 'waydean-admin-delete-tree']) {
+    let called = false;
+    await assert.rejects(
+      callWaydeanAdminAction(action, {}, access, async () => { called = true; }),
+      error => error.code === 'WAYDEAN_ACTION_NOT_ALLOWED'
+    );
+    assert.equal(called, false, `${action} must not reach the API directly`);
+  }
 });

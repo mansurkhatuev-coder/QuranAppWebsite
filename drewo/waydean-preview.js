@@ -5,7 +5,8 @@ import {
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
-import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-backups-1';
+import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-tools-1';
+import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
 import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admin-save-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
@@ -64,6 +65,11 @@ let fullDataDepth = 1;
 let syntheticFixture = false;
 let accountPreview = false;
 let accountAdminAccess = null;
+let accountTreeLocked = null;
+let accountTreeLockReason = '';
+let accountCanToggleLock = false;
+let accountAdminLockBusy = false;
+let accountAdminPasswordBusy = false;
 let accountServerTreeJson = '';
 let accountServerActivityJson = '[]';
 let accountServerFingerprint = '';
@@ -1824,6 +1830,94 @@ async function renderAccountBackups() {
   }
 }
 
+function renderAccountAdminTools() {
+  const panel = $('#accountAdminPanel');
+  const state = $('#accountAdminLockState');
+  const detail = $('#accountAdminLockDetail');
+  const toggle = $('#accountAdminLockToggle');
+  panel.hidden = !accountPreview || !accountAdminAccess;
+  if (panel.hidden) return;
+
+  if (typeof accountTreeLocked !== 'boolean') {
+    state.textContent = 'Статус правок недоступен';
+    detail.textContent = 'Обновите страницу и повторите попытку.';
+    toggle.textContent = 'Статус не загружен';
+    toggle.disabled = true;
+    $('#accountAdminPasswordSubmit').disabled = accountAdminPasswordBusy;
+    return;
+  }
+
+  const presentation = accountLockPresentation(accountTreeLocked, accountTreeLockReason, accountCanToggleLock);
+  state.textContent = presentation.state;
+  detail.textContent = presentation.detail;
+  toggle.textContent = presentation.buttonLabel;
+  toggle.disabled = accountAdminLockBusy || !presentation.canToggle;
+  $('#accountAdminPasswordSubmit').disabled = accountAdminPasswordBusy;
+}
+
+async function toggleAccountTreeLock() {
+  if (!accountPreview || !accountAdminAccess || typeof accountTreeLocked !== 'boolean' || !accountCanToggleLock || accountAdminLockBusy) return;
+  const nextLocked = !accountTreeLocked;
+  const actionLabel = nextLocked ? 'закрыть' : 'разрешить';
+  if (!window.confirm(`Вы уверены, что хотите ${actionLabel} правки семейного древа?`)) return;
+
+  const message = $('#accountAdminLockMessage');
+  accountAdminLockBusy = true;
+  message.textContent = nextLocked ? 'Закрываю правки…' : 'Открываю правки…';
+  renderAccountAdminTools();
+  try {
+    const result = await callWaydeanAdminAction('waydean-admin-lock', {
+      locked: nextLocked,
+      reason: ''
+    }, accountAdminAccess);
+    if (typeof result.locked !== 'boolean') throw new Error('Сервер не подтвердил новое состояние правок.');
+    accountTreeLocked = result.locked;
+    accountTreeLockReason = typeof result.lockedReason === 'string' ? result.lockedReason : '';
+    accountCanToggleLock = result.canToggleLock === true;
+    message.textContent = result.locked === nextLocked
+      ? (result.locked ? 'Правки закрыты для семейного входа.' : 'Правки снова разрешены.')
+      : 'Правки остаются ограничены тарифом или состоянием дерева.';
+    announce(result.locked ? 'Правки семейного древа закрыты.' : 'Правки семейного древа разрешены.');
+  } catch (error) {
+    message.textContent = error?.message || 'Не удалось изменить доступ к правкам.';
+  } finally {
+    accountAdminLockBusy = false;
+    renderAccountAdminTools();
+  }
+}
+
+async function changeAccountFamilyPassword(event) {
+  event.preventDefault();
+  if (!accountPreview || !accountAdminAccess || accountAdminPasswordBusy) return;
+  const password = $('#accountAdminNewPassword').value;
+  const confirmation = $('#accountAdminPasswordConfirm').value;
+  const message = $('#accountAdminPasswordMessage');
+  const validation = validateFamilyPasswordChange(password, confirmation);
+  if (!validation.ok) {
+    message.textContent = validation.error;
+    return;
+  }
+  if (!window.confirm('Сменить пароль семейного входа? Всем, кто входит в старое древо, понадобится новый пароль.')) return;
+
+  accountAdminPasswordBusy = true;
+  message.textContent = 'Обновляю семейный пароль…';
+  renderAccountAdminTools();
+  try {
+    const result = await callWaydeanAdminAction('waydean-admin-password', {
+      newPassword: validation.normalizedPassword
+    }, accountAdminAccess);
+    if (result.passwordChanged !== true) throw new Error('Сервер не подтвердил смену пароля.');
+    $('#accountAdminPasswordForm').reset();
+    message.textContent = 'Пароль изменён. Передайте его членам семьи, которым нужен вход.';
+    announce('Пароль семейного входа изменён.');
+  } catch (error) {
+    message.textContent = error?.message || 'Не удалось изменить семейный пароль.';
+  } finally {
+    accountAdminPasswordBusy = false;
+    renderAccountAdminTools();
+  }
+}
+
 async function createAccountBackup() {
   if (!accountPreview || hasUncommittedDraft() || hasAccountPublishChanges() || !accountBaseFingerprint || editStatus === 'saving' || editStatus === 'conflict') {
     await renderAccountBackups();
@@ -2263,6 +2357,8 @@ function bindControls() {
   });
   $('#moreHistory').addEventListener('click', () => { openPopover(ui.history); renderLocalHistory(); });
   $('#moreBackups').addEventListener('click', () => { openPopover(ui.backups); renderLocalBackups(); renderAccountBackups(); });
+  $('#accountAdminLockToggle').addEventListener('click', toggleAccountTreeLock);
+  $('#accountAdminPasswordForm').addEventListener('submit', changeAccountFamilyPassword);
   $('#createLocalBackup').addEventListener('click', makeLocalBackup);
   $('#createAccountBackup').addEventListener('click', createAccountBackup);
   $('#openCurrentTree').addEventListener('click', () => window.location.assign('./index.html'));
@@ -2743,6 +2839,10 @@ async function initialize() {
       accountServerTreeJson = serverSnapshot.treeJson;
       accountServerActivityJson = serverSnapshot.activityJson || '[]';
       accountServerFingerprint = serverSnapshot.fingerprint;
+      accountTreeLocked = typeof serverSnapshot.locked === 'boolean' ? serverSnapshot.locked : null;
+      accountTreeLockReason = typeof serverSnapshot.lockedReason === 'string' ? serverSnapshot.lockedReason : '';
+      accountCanToggleLock = serverSnapshot.canToggleLock === true;
+      renderAccountAdminTools();
       root = JSON.parse(accountServerTreeJson);
       accountBaseTree = cloneTree(root);
       accountBaseFingerprint = accountServerFingerprint;
