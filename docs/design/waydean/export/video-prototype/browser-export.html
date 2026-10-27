@@ -22,7 +22,9 @@
       const message = document.createElement("p");
       message.className = "browser-export-error";
       message.setAttribute("role", "alert");
-      message.textContent = "Не удалось открыть видеоэкспорт. Обновите страницу или вернитесь к древу.";
+      message.textContent = error?.name === "WaydeanTreeHandoffMissingError"
+        ? "Не удалось получить данные выбранного дерева. Вернитесь в приложение и откройте экспорт ещё раз."
+        : "Не удалось открыть видеоэкспорт. Обновите страницу или вернитесь к древу.";
       root.replaceChildren(message);
       console.error("Waydean video export failed to load", error);
     });

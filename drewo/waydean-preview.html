@@ -220,9 +220,26 @@
       <div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div>
     </div>
   </main>
+  <script>
+    if (new URLSearchParams(window.location.search).get('view') === 'video-export') {
+      document.title = 'Waydean — видео семейного древа';
+      document.body.replaceChildren();
+      document.body.style.cssText = 'margin:0;padding:0;overflow:hidden;background:#080d0e;';
+      const frame = document.createElement('iframe');
+      frame.title = 'Экспорт семейного древа в видео';
+      frame.allow = 'autoplay';
+      frame.src = '/docs/design/waydean/export/video-prototype/browser-export.html?source=tree';
+      frame.style.cssText = 'position:fixed;inset:0;display:block;width:100vw;height:100vh;height:100dvh;border:0;background:#080d0e;z-index:2147483647;';
+      document.body.append(frame);
+    }
+  </script>
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../admin/supabase-config.js?v=6"></script>
   <script src="../admin/admin-supabase.js?v=16"></script>
-  <script type="module" src="waydean-preview.js?v=ios-touch-safe-20261017-1"></script>
+  <script type="module">
+    if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
+      import('./waydean-preview.js?v=20261027-pwa-video-handoff-1');
+    }
+  </script>
 </body>
 </html>
