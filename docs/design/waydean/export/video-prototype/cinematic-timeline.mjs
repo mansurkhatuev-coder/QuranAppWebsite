@@ -191,7 +191,10 @@ function sceneLineProgress(scene, peopleById, rootGeneration, pathLength, previo
   return previous;
 }
 
-export function buildCinematicTimeline(people, scenes, { fps = CINEMATIC_FPS } = {}) {
+export function buildCinematicTimeline(people, scenes, {
+  fps = CINEMATIC_FPS,
+  focusDurationSeconds = SHOT_SECONDS.focus
+} = {}) {
   const records = Array.isArray(people) ? people : [];
   const storyScenes = Array.isArray(scenes) ? scenes : [];
   const layout = layoutFamilyTree(records);
@@ -217,7 +220,10 @@ export function buildCinematicTimeline(people, scenes, { fps = CINEMATIC_FPS } =
     const cameraTo = cameraForBounds(bounds, scene.type);
     const lineProgressTo = sceneLineProgress(scene, peopleById, rootGeneration, pathLength, previousLineProgress);
     const treeOffsetTo = scene.type === "opening" || scene.type === "finale" ? -100 : 0;
-    const durationFrames = Math.max(1, Math.round((SHOT_SECONDS[scene.type] ?? 2.2) * fps));
+    const shotSeconds = scene.type === "focus"
+      ? Math.max(SHOT_SECONDS.focus, Number(focusDurationSeconds) || SHOT_SECONDS.focus)
+      : SHOT_SECONDS[scene.type] ?? 2.2;
+    const durationFrames = Math.max(1, Math.round(shotSeconds * fps));
     const activeEdgeKeys = (scene.branches ?? []).flatMap(branch =>
       branch.childIds.map(childId => `${branch.parentId}->${childId}`)
     );

@@ -11,7 +11,7 @@ import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
-} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261027-full-tree-cards-leave-frame-2";
+} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261028-full-tree-camera-exit-1";
 import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261018-timestamped-audio";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";

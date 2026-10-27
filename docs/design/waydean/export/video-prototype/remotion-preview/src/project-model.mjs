@@ -12,6 +12,8 @@ export const CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES = 9;
 export const CONTEXT_CARD_EDGE_FADE_MAX_FRAME_DELTA = 0.12;
 export const ACTIVE_CARD_REVEAL_FRAMES = 18;
 export const FOCUS_CAMERA_HOLD_RATIO = 0.72;
+export const FULL_TREE_FOCUS_CAMERA_HOLD_RATIO = 0.4;
+export const FULL_TREE_FOCUS_DURATION_SECONDS = 5;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -49,7 +51,10 @@ export function buildRemotionStory(options = {}) {
   const effectiveSelectedPersonId = people.some(person => person.id === selectedPersonId)
     ? selectedPersonId
     : people.at(-1)?.id ?? "";
-  const timeline = buildCinematicTimeline(people, scenes, { fps: REMOTION_COMPOSITION.fps });
+  const timeline = buildCinematicTimeline(people, scenes, {
+    fps: REMOTION_COMPOSITION.fps,
+    focusDurationSeconds: scopeType === "all" ? FULL_TREE_FOCUS_DURATION_SECONDS : undefined
+  });
 
   return {
     people,
@@ -121,7 +126,10 @@ function getCinematicFramingTransitionProgress(story, shotIndex, localFrame) {
   const shot = shots[shotIndex];
   if (!shot) return 1;
   if (shot.type === "focus") {
-    const holdFrame = Math.floor(Math.max(0, shot.durationFrames - 1) * FOCUS_CAMERA_HOLD_RATIO);
+    const holdRatio = story.scopeType === "all"
+      ? FULL_TREE_FOCUS_CAMERA_HOLD_RATIO
+      : FOCUS_CAMERA_HOLD_RATIO;
+    const holdFrame = Math.floor(Math.max(0, shot.durationFrames - 1) * holdRatio);
     return transitionProgress(shots.length, Math.max(1, shot.durationFrames - holdFrame), localFrame - holdFrame);
   }
   const framingFrames = shot.type === "finale"
