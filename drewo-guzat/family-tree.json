@@ -73,19 +73,94 @@
                                   "id": "added-1793089275994-5pnlzr",
                                   "name": "Билал",
                                   "gender": "male",
-                                  "sons": []
+                                  "sons": [
+                                    {
+                                      "id": "added-1793090190897-z2yx97",
+                                      "name": "Асадуллах1",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090217755-3630tr",
+                                      "name": "Сайфуллах1",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090234463-so9mmf",
+                                      "name": "Умар",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090244511-1hfnq3",
+                                      "name": "Мухьаммад",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090266219-wai84c",
+                                      "name": "Хойруллах1",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090280324-qyi5uc",
+                                      "name": "Юсуф",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090288661-38wice",
+                                      "name": "Дауд",
+                                      "gender": "male",
+                                      "sons": []
+                                    }
+                                  ]
                                 },
                                 {
                                   "id": "added-1793089292445-6sxulo",
                                   "name": "Ахьяд",
                                   "gender": "male",
-                                  "sons": []
+                                  "sons": [
+                                    {
+                                      "id": "added-1793090310886-0iuri8",
+                                      "name": "Му1аз",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090320002-lw20y3",
+                                      "name": "Мансур",
+                                      "gender": "male",
+                                      "sons": []
+                                    }
+                                  ]
                                 },
                                 {
                                   "id": "added-1793089312749-zuu1t9",
                                   "name": "Абдуррохьман",
                                   "gender": "male",
-                                  "sons": []
+                                  "sons": [
+                                    {
+                                      "id": "added-1793090344735-brvj5t",
+                                      "name": "1абдуллах1",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090355584-cenmef",
+                                      "name": "Са1ад",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793090362411-wt9oql",
+                                      "name": "Амир",
+                                      "gender": "male",
+                                      "sons": []
+                                    }
+                                  ]
                                 }
                               ]
                             }
