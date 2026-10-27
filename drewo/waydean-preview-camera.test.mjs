@@ -5,6 +5,7 @@ import {
   readableFitZoom,
   clampZoom,
   MIN_MOBILE_ZOOM,
+  createLatestFrameCoalescer,
   zoomAroundAnchor,
   wheelZoomFactor,
   miniMapViewport,
@@ -15,6 +16,24 @@ test('a large wheel event remains one controlled zoom step', () => {
   assert.ok(wheelZoomFactor(900) > 0.85);
   assert.ok(wheelZoomFactor(-900) < 1.15);
   assert.equal(wheelZoomFactor(0), 1);
+});
+
+test('pinch updates apply only the latest coordinates once per frame and can flush on release', () => {
+  const frames = [];
+  const applied = [];
+  const updates = createLatestFrameCoalescer(callback => frames.push(callback), value => applied.push(value));
+
+  updates.schedule({ zoom: 1.1, x: 100 });
+  updates.schedule({ zoom: 1.2, x: 120 });
+  assert.equal(frames.length, 1);
+  frames.shift()();
+  assert.deepEqual(applied, [{ zoom: 1.2, x: 120 }]);
+
+  updates.schedule({ zoom: 1.3, x: 130 });
+  updates.flush();
+  assert.deepEqual(applied, [{ zoom: 1.2, x: 120 }, { zoom: 1.3, x: 130 }]);
+  frames.shift()();
+  assert.equal(applied.length, 2);
 });
 
 test('camera keeps half a viewport of panning space around the scaled tree', () => {
