@@ -4,7 +4,9 @@ import {
   createLatestFrameCoalescer, clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1';
-import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-1';
+import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
+import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-save-1';
+import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admin-save-1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
@@ -55,6 +57,15 @@ let lastFocus = null;
 let toastTimer = 0;
 let fullDataDepth = 1;
 let syntheticFixture = false;
+let accountPreview = false;
+let accountAdminAccess = null;
+let accountServerTreeJson = '';
+let accountServerActivityJson = '[]';
+let accountServerFingerprint = '';
+let accountBaseTree = null;
+let accountBaseFingerprint = '';
+let accountBaseActivityJson = '[]';
+let accountPublishConflict = null;
 let localTreeDraft = false;
 let masterMobileOverview = false;
 let currentCameraLayout = null;
@@ -215,7 +226,9 @@ function preparePreviewRecords(root) {
 
 function photoSource(person) {
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
-  if (localTreeDraft && localPhotoUrls.has(person.id)) return localPhotoUrls.get(person.id);
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-') && localPhotoUrls.has(person.id)) {
+    return localPhotoUrls.get(person.id);
+  }
   return person.hasPhoto ? `photos/${encodeURIComponent(person.id)}-thumb.jpg` : null;
 }
 
@@ -238,6 +251,41 @@ function editableDraftRoot() {
 
 function canEditDraft() {
   return Boolean(editableDraftRoot());
+}
+
+function accountDraftMetadata() {
+  if (!accountPreview || !accountBaseTree || !accountBaseFingerprint) return null;
+  return {
+    accountBaseTreeJson: JSON.stringify(accountBaseTree),
+    accountBaseFingerprint,
+    accountActivityJson: accountBaseActivityJson,
+  };
+}
+
+function sameJsonSnapshot(left, right) {
+  const normalize = value => {
+    try { return JSON.stringify(JSON.parse(String(value ?? '[]'))); }
+    catch { return String(value ?? '').trim(); }
+  };
+  return normalize(left) === normalize(right);
+}
+
+function hasAccountPublishChanges() {
+  return Boolean(accountPreview && accountBaseTree && editableDraftRoot()
+    && isDirty(accountBaseTree, editableDraftRoot()));
+}
+
+function appendAccountPublishButton(container) {
+  if (!accountPreview) return null;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.textContent = editStatus === 'saving' ? 'Публикуем…' : 'Опубликовать в древо';
+  button.dataset.profileFocus = 'action:publish';
+  button.disabled = editStatus === 'saving' || editStatus === 'conflict'
+    || !accountAdminAccess || !accountBaseFingerprint || !hasAccountPublishChanges();
+  button.addEventListener('click', () => void publishAccountDraft());
+  container.append(button);
+  return button;
 }
 
 function draftSubject() {
@@ -830,7 +878,9 @@ async function stageLocalPersonPhoto(personId, file) {
     pendingLocalPhotoWrites.set(personId, { personId, ...photo });
     pendingLocalPhotoDeletes.delete(personId);
     setPersonPhotoKey(editableDraftRoot(), personId, `local-${Date.now()}`);
-    localMediaStatus = 'Фото подготовлено. Нажмите «Сохранить локально», чтобы оставить его в браузере.';
+    localMediaStatus = accountPreview
+      ? 'Фото подготовлено. Сохраните черновик, затем опубликуйте изменения в древо.'
+      : 'Фото подготовлено. Нажмите «Сохранить локально», чтобы оставить его в браузере.';
     editStatus = 'dirty';
     rawDraftDirty = false;
     refreshEditableModel();
@@ -843,14 +893,16 @@ async function stageLocalPersonPhoto(personId, file) {
 
 function removeLocalPersonPhoto(person) {
   if (!localTreeDraft || !hasDisplayPhoto(person)) return;
-  if (!window.confirm(`Удалить фотографию ${person.name} из локального черновика?`)) return;
+  if (!window.confirm(`Удалить фотографию ${person.name} из ${accountPreview ? 'черновика древа' : 'локального черновика'}?`)) return;
   const oldUrl = localPhotoUrls.get(person.id);
   if (oldUrl) URL.revokeObjectURL(oldUrl);
   localPhotoUrls.delete(person.id);
   pendingLocalPhotoWrites.delete(person.id);
   pendingLocalPhotoDeletes.add(person.id);
   setPersonPhotoKey(editableDraftRoot(), person.id, null);
-  localMediaStatus = 'Фотография будет удалена из локальной копии после сохранения. Прод не меняется.';
+  localMediaStatus = accountPreview
+    ? 'Фотография будет удалена из черновика после сохранения и с сайта после публикации.'
+    : 'Фотография будет удалена из локальной копии после сохранения. Прод не меняется.';
   editStatus = 'dirty';
   rawDraftDirty = false;
   refreshEditableModel();
@@ -861,7 +913,7 @@ function buildLocalPhotoControls(person) {
   const controls = document.createElement('div');
   controls.className = 'mock-editor local-photo-editor';
   const title = document.createElement('strong');
-  title.textContent = 'Фотография в локальной копии';
+  title.textContent = accountPreview ? 'Фотография в черновике древа' : 'Фотография в локальной копии';
   const actions = document.createElement('div');
   actions.className = 'mock-edit-actions';
   const input = document.createElement('input');
@@ -882,7 +934,7 @@ function buildLocalPhotoControls(person) {
   if (editStatus === 'dirty') {
     const save = document.createElement('button');
     save.type = 'button';
-    save.textContent = 'Сохранить локально';
+    save.textContent = accountPreview ? 'Сохранить черновик' : 'Сохранить локально';
     save.addEventListener('click', submitMockSave);
     actions.append(save);
   } else if (editStatus === 'error') {
@@ -894,8 +946,8 @@ function buildLocalPhotoControls(person) {
   } else if (editStatus === 'conflict') {
     const reload = document.createElement('button');
     reload.type = 'button';
-    reload.textContent = 'Загрузить сохранённую версию';
-    reload.addEventListener('click', reloadLocalDraftFromStorage);
+    reload.textContent = accountPreview && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию';
+    reload.addEventListener('click', () => accountPreview && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
     actions.append(reload);
   }
   if (editStatus === 'saving') {
@@ -940,7 +992,8 @@ function buildEditControls(person) {
   section.open = editDisclosureOpen;
   section.addEventListener('toggle', () => { editDisclosureOpen = section.open; });
   const title = document.createElement('summary'); title.className = 'mock-editor-summary';
-  title.textContent = syntheticFixture ? 'Редактировать демо-запись' : 'Редактировать данные в локальном черновике'; section.append(title);
+  title.textContent = syntheticFixture ? 'Редактировать демо-запись'
+    : accountPreview ? 'Редактировать данные древа' : 'Редактировать данные в локальном черновике'; section.append(title);
   const form = document.createElement('form'); form.className = 'mock-edit-form';
   addField(form, 'Имя', 'name', person.name);
   addField(form, 'Тейп', 'teip', person.teip || '');
@@ -955,21 +1008,25 @@ function buildEditControls(person) {
     failureLabel.append(failure, document.createTextNode('Имитировать ошибку следующего сохранения')); form.append(failureLabel);
   }
   const actions = document.createElement('div'); actions.className = 'mock-edit-actions';
-  const save = document.createElement('button'); save.type = 'submit'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : syntheticFixture ? 'Сохранить демо-черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict';
+  const save = document.createElement('button'); save.type = 'submit'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : syntheticFixture ? 'Сохранить демо-черновик' : accountPreview ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict';
   save.dataset.profileFocus = 'action:save';
   const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
-  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', reloadLocalDraftFromStorage);
+  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = accountPreview && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => accountPreview && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Отменить черновик'; cancel.dataset.profileFocus = 'action:cancel'; cancel.addEventListener('click', cancelDraft);
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = syntheticFixture ? 'Сбросить фикстуру' : 'Вернуть исходное древо'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
-  actions.append(save, retry, reloadSaved, cancel, reset); form.append(actions);
+  actions.append(save); appendAccountPublishButton(actions); actions.append(retry, reloadSaved, cancel, reset); form.append(actions);
   const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
   const messages = {
-    clean: `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || 'Это локальная копия; прод не меняется.'}`,
-    dirty: 'Есть несохранённые изменения.',
-    saving: 'Обновляется локальный черновик…',
-    saved: syntheticFixture ? 'Изменения сохранены только в памяти этой страницы.' : 'Локальная копия сохранена в этом браузере. Прод не меняется.',
-    error: 'Не удалось сохранить черновик. Изменения остались на странице; можно повторить.',
-    conflict: 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию, чтобы продолжить.'
+    clean: `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || (accountPreview ? 'Древо загружено с сервера.' : 'Это локальная копия; прод не меняется.')}`,
+    dirty: accountPreview ? 'Есть несохранённые изменения. Сохраните черновик, затем опубликуйте его в древо.' : 'Есть несохранённые изменения.',
+    saving: accountPreview ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…',
+    saved: syntheticFixture ? 'Изменения сохранены только в памяти этой страницы.' : accountPreview
+      ? localDraftPersistenceError || (hasAccountPublishChanges() ? 'Черновик сохранён в этом браузере. В древо он ещё не опубликован.' : localMediaStatus || 'Нет неопубликованных изменений.')
+      : 'Локальная копия сохранена в этом браузере. Прод не меняется.',
+    error: accountPreview ? localDraftPersistenceError || 'Не удалось сохранить. Локальные изменения сохранены, если запись успела завершиться; можно повторить.' : 'Не удалось сохранить черновик. Изменения остались на странице; можно повторить.',
+    conflict: accountPreview && accountPublishConflict
+      ? 'На сайте появилась новая версия. Ваш черновик оставлен в этом браузере; загрузите текущую версию сайта, чтобы продолжить.'
+      : 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию, чтобы продолжить.'
   };
   status.textContent = messages[editStatus];
   form.addEventListener('input', () => {
@@ -980,6 +1037,9 @@ function buildEditControls(person) {
       rawDraftDirty = false;
       editStatus = isDirty(originalFixtureRoot, editableDraftRoot()) ? 'dirty' : 'clean';
       status.textContent = messages[editStatus]; status.className = `mock-edit-status status-${editStatus}`;
+      const publish = section.querySelector('[data-profile-focus="action:publish"]');
+      if (publish) publish.disabled = editStatus === 'saving' || editStatus === 'conflict'
+        || !accountBaseFingerprint || !hasAccountPublishChanges();
     } catch (error) { rawDraftDirty = true; status.textContent = error.message; status.className = 'mock-edit-status status-error'; }
   });
   form.addEventListener('submit', event => {
@@ -993,13 +1053,14 @@ function buildEditControls(person) {
 
 function buildRelationshipControls(person) {
   const section = document.createElement('section'); section.className = 'mock-editor';
-  const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : 'Связи локальной копии'; section.append(title);
+  const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : accountPreview ? 'Связи семейного древа' : 'Связи локальной копии'; section.append(title);
   const addForm = document.createElement('form'); addForm.className = 'mock-edit-form';
   addForm.dataset.addChildForm = 'true';
   const idNote = document.createElement('p'); idNote.className = 'mock-edit-status';
   idNote.textContent = syntheticFixture
     ? 'ID создаётся автоматически; демо-изменение останется только в этой вкладке.'
-    : 'ID создаётся автоматически; исходное дерево не меняется.';
+    : accountPreview ? 'ID создаётся автоматически. Сначала сохраняется черновик; публикация выполняется отдельной кнопкой.'
+      : 'ID создаётся автоматически; исходное дерево не меняется.';
   addForm.append(idNote);
   addField(addForm, 'Имя ребёнка', 'name'); addField(addForm, 'Тейп', 'teip'); addField(addForm, 'Год рождения', 'born', '', 'text');
   const addButton = document.createElement('button'); addButton.type = 'submit'; addButton.textContent = 'Проверить данные'; addButton.dataset.profileFocus = 'action:preview-child'; addForm.append(addButton);
@@ -1078,19 +1139,27 @@ function buildRelationshipControls(person) {
     catch (error) { announce(error.message); }
   });
   deleteForm.append(remove); section.append(deleteForm);
-  const save = document.createElement('button'); save.type = 'button'; save.textContent = syntheticFixture ? 'Сохранить демо-черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict'; save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
+  const save = document.createElement('button'); save.type = 'button'; save.textContent = syntheticFixture ? 'Сохранить демо-черновик' : accountPreview ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict'; save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
   const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
-  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', reloadLocalDraftFromStorage);
+  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = accountPreview && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => accountPreview && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Отменить черновик'; cancel.dataset.profileFocus = 'action:cancel'; cancel.addEventListener('click', cancelDraft);
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = syntheticFixture ? 'Сбросить фикстуру' : 'Вернуть исходное древо'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
   const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
-  status.textContent = editStatus === 'conflict' ? 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию.' : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить; изменения остались на странице.' : editStatus === 'saved' ? syntheticFixture ? 'Сохранено только в памяти этой страницы.' : 'Сохранено в этом браузере. Прод не меняется.' : editStatus === 'saving' ? 'Обновляется локальный черновик…' : editStatus === 'dirty' ? 'Есть несохранённые изменения.' : `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || 'Прод не меняется.'}`;
-  section.append(save, retry, reloadSaved, cancel, reset, status); return section;
+  status.textContent = editStatus === 'conflict'
+    ? accountPreview && accountPublishConflict ? 'На сайте новая версия. Ваш черновик сохранён отдельно; загрузка сайта заменит его в редакторе.' : 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию.'
+    : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить; изменения остались на странице.'
+      : editStatus === 'saved' ? syntheticFixture ? 'Сохранено только в памяти этой страницы.' : accountPreview
+        ? localDraftPersistenceError || (hasAccountPublishChanges() ? 'Черновик в этом браузере; в production ещё не опубликован.' : localMediaStatus || 'Нет неопубликованных изменений.')
+        : 'Сохранено в этом браузере. Прод не меняется.'
+        : editStatus === 'saving' ? accountPreview ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…'
+          : editStatus === 'dirty' ? 'Есть несохранённые изменения.'
+            : `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || (accountPreview ? 'Древо загружено с сервера.' : 'Прод не меняется.')}`;
+  section.append(save); appendAccountPublishButton(section); section.append(retry, reloadSaved, cancel, reset, status); return section;
 }
 
 function markRelationshipDirty() {
   editStatus = 'dirty'; refreshEditableModel(); renderProfile('relatives');
-  announce('Черновик изменён. Сохраните его через вкладку «Информация».');
+  announce(accountPreview ? 'Черновик изменён. Сохраните его, затем опубликуйте кнопкой «Опубликовать в древо».' : 'Черновик изменён. Сохраните его через вкладку «Информация».');
 }
 
 function refreshEditableModel() {
@@ -1115,6 +1184,158 @@ function refreshEditableModel() {
   drawTree(); updateStats();
 }
 
+function blobToDataUrl(blob) {
+  if (!(blob instanceof Blob)) return Promise.reject(new Error('Не найден файл фотографии для публикации.'));
+  if (blob.size > 480_000) return Promise.reject(new Error('Фотография больше лимита 480 КБ. Уменьшите изображение и добавьте его снова.'));
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => typeof reader.result === 'string'
+      ? resolve(reader.result)
+      : reject(new Error('Не удалось прочитать фотографию.'));
+    reader.onerror = () => reject(new Error('Не удалось прочитать фотографию.'));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function collectAccountPhotoChanges() {
+  if (!accountBaseTree || !editableDraftRoot()) throw new Error('Не удалось определить исходную версию фото.');
+  const before = new Map(flattenTree(accountBaseTree).map(person => [person.id, person]));
+  const after = new Map(flattenTree(editableDraftRoot()).map(person => [person.id, person]));
+  const storedPhotos = new Map((await listLocalTreePhotos(localDraftKey)).map(photo => [photo.personId, photo]));
+  const photos = [];
+  const photoDeletes = [];
+
+  for (const [personId, person] of after) {
+    if (!person.photoKey || before.get(personId)?.photoKey === person.photoKey) continue;
+    const stored = storedPhotos.get(personId);
+    if (!stored?.full || !stored?.thumb) {
+      throw new Error(`Не найдены локальные файлы фото для ${person.name}. Добавьте фотографию ещё раз.`);
+    }
+    photos.push({
+      personId,
+      full: await blobToDataUrl(stored.full),
+      thumb: await blobToDataUrl(stored.thumb)
+    });
+  }
+
+  for (const [personId, person] of before) {
+    if (person.photoKey && !after.get(personId)?.photoKey) photoDeletes.push(personId);
+  }
+  if (photos.length > 20) throw new Error('За одну публикацию можно загрузить не больше 20 фотографий.');
+  return { photos, photoDeletes };
+}
+
+async function reloadAccountServerVersion() {
+  if (!accountPublishConflict?.serverTreeJson) {
+    localDraftPersistenceError = 'Сервер не вернул актуальное дерево. Черновик сохранён; обновите страницу или повторите публикацию позже.';
+    editStatus = 'error';
+    renderProfile(currentProfileTab);
+    return;
+  }
+  if (!window.confirm('Загрузить текущую версию сайта в редактор? Черновик с вашими правками останется в локальном снимке этого браузера.')) return;
+  try {
+    const serverTree = JSON.parse(accountPublishConflict.serverTreeJson);
+    flattenTree(serverTree);
+    accountServerTreeJson = accountPublishConflict.serverTreeJson;
+    accountServerActivityJson = accountPublishConflict.serverActivityJson || '[]';
+    accountServerFingerprint = accountPublishConflict.serverFingerprint || '';
+    accountBaseTree = cloneTree(serverTree);
+    accountBaseFingerprint = accountServerFingerprint;
+    accountBaseActivityJson = accountServerActivityJson;
+    sourceFixtureRoot = cloneTree(serverTree);
+    fixtureRoot = cloneTree(serverTree);
+    originalFixtureRoot = cloneTree(serverTree);
+    editStatus = 'saving';
+    accountPublishConflict = null;
+    const saved = await saveLocalTreeDraft(localDraftKey, fixtureRoot, localDraftRevision, {}, accountDraftMetadata());
+    localDraftRevision = saved.revision;
+    localDraftPersistenceError = '';
+    localMediaStatus = 'Загружена текущая версия сайта. Старые правки сохранены в локальном снимке.';
+    editStatus = 'clean';
+    rawDraftDirty = false;
+    pendingLocalPhotoWrites.clear();
+    pendingLocalPhotoDeletes.clear();
+    await restoreLocalPhotoUrls();
+    refreshEditableModel();
+    renderProfile(currentProfileTab);
+  } catch (error) {
+    editStatus = error?.code === 'LOCAL_DRAFT_CONFLICT' ? 'conflict' : 'error';
+    localDraftPersistenceError = error?.message || 'Не удалось загрузить версию сайта.';
+    renderProfile(currentProfileTab);
+  }
+}
+
+async function publishAccountDraft() {
+  if (!accountPreview || !accountAdminAccess || editStatus === 'saving' || editStatus === 'conflict') return;
+  if (!accountBaseTree || !accountBaseFingerprint) {
+    localDraftPersistenceError = 'Нет подтверждённой исходной версии сайта. Перезагрузите древо перед публикацией.';
+    editStatus = 'error';
+    renderProfile(currentProfileTab);
+    return;
+  }
+  if (!hasAccountPublishChanges()) return;
+
+  editStatus = 'saving';
+  localDraftPersistenceError = '';
+  renderProfile(currentProfileTab);
+  try {
+    const savedDraft = await saveLocalTreeDraft(localDraftKey, editableDraftRoot(), localDraftRevision, {
+      puts: [...pendingLocalPhotoWrites.values()],
+      deletes: [...pendingLocalPhotoDeletes]
+    }, accountDraftMetadata());
+    localDraftRevision = savedDraft.revision;
+    pendingLocalPhotoWrites.clear();
+    pendingLocalPhotoDeletes.clear();
+    originalFixtureRoot = cloneTree(editableDraftRoot());
+    rawDraftDirty = false;
+
+    const photoChanges = await collectAccountPhotoChanges();
+    const payload = buildWaydeanPublishPayload({
+      baseTree: accountBaseTree,
+      draftTree: editableDraftRoot(),
+      baseActivityJson: accountBaseActivityJson,
+      baseFingerprint: accountBaseFingerprint,
+      ...photoChanges
+    });
+    const published = await callWaydeanAdminAction('waydean-admin-publish', payload, accountAdminAccess);
+    const nextTree = JSON.parse(published.treeJson);
+    flattenTree(nextTree);
+    accountServerTreeJson = published.treeJson;
+    accountServerActivityJson = published.activityJson || '[]';
+    accountServerFingerprint = published.fingerprint;
+    accountBaseTree = cloneTree(nextTree);
+    accountBaseFingerprint = accountServerFingerprint;
+    accountBaseActivityJson = accountServerActivityJson;
+    fixtureRoot = cloneTree(nextTree);
+    originalFixtureRoot = cloneTree(nextTree);
+    sourceFixtureRoot = cloneTree(nextTree);
+    accountPublishConflict = null;
+    const savedBase = await saveLocalTreeDraft(localDraftKey, fixtureRoot, localDraftRevision, {}, accountDraftMetadata());
+    localDraftRevision = savedBase.revision;
+    localDraftPersistenceError = '';
+    localMediaStatus = published.merged
+      ? 'Изменения опубликованы и объединены с версией сайта.'
+      : 'Изменения опубликованы в семейном древе.';
+    editStatus = 'saved';
+    refreshEditableModel();
+    if (!ui.history.hidden) await renderLocalHistory();
+    if (!ui.backups.hidden) await renderLocalBackups();
+  } catch (error) {
+    if (error?.code === 'WAYDEAN_PUBLISH_CONFLICT') {
+      accountPublishConflict = error.details || null;
+      accountServerTreeJson = error.details?.serverTreeJson || accountServerTreeJson;
+      accountServerActivityJson = error.details?.serverActivityJson || accountServerActivityJson;
+      accountServerFingerprint = error.details?.serverFingerprint || accountServerFingerprint;
+      editStatus = 'conflict';
+      localDraftPersistenceError = 'Версия сайта изменилась. Ваш черновик сохранён отдельно; сначала сравните или загрузите текущую версию сайта.';
+    } else {
+      editStatus = error?.code === 'LOCAL_DRAFT_CONFLICT' ? 'conflict' : 'error';
+      localDraftPersistenceError = error?.message || 'Не удалось опубликовать древо. Черновик сохранён в этом браузере.';
+    }
+  }
+  renderProfile(currentProfileTab);
+}
+
 async function submitMockSave() {
   if (!canEditDraft() || editStatus === 'saving') return;
   editStatus = 'saving'; renderProfile(currentProfileTab);
@@ -1125,12 +1346,14 @@ async function submitMockSave() {
       const result = await saveLocalTreeDraft(localDraftKey, editableDraftRoot(), localDraftRevision, {
         puts: [...pendingLocalPhotoWrites.values()],
         deletes: [...pendingLocalPhotoDeletes]
-      });
+      }, accountDraftMetadata());
       localDraftRevision = result.revision;
       localDraftPersistenceError = '';
       pendingLocalPhotoWrites.clear();
       pendingLocalPhotoDeletes.clear();
-      localMediaStatus = 'Изменения и фотографии сохранены в этом браузере. Прод не меняется.';
+      localMediaStatus = accountPreview
+        ? 'Черновик и фотографии сохранены в этом браузере. Нажмите «Опубликовать в древо», чтобы обновить сайт.'
+        : 'Изменения и фотографии сохранены в этом браузере. Прод не меняется.';
     }
     originalFixtureRoot = cloneTree(editableDraftRoot()); editStatus = 'saved'; rawDraftDirty = false; refreshEditableModel(); renderProfile(currentProfileTab);
     if (localTreeDraft && !ui.history.hidden) await renderLocalHistory();
@@ -1202,6 +1425,11 @@ async function resetFixture() {
     }
   }
   fixtureRoot = cloneTree(sourceFixtureRoot); originalFixtureRoot = cloneTree(sourceFixtureRoot); editStatus = 'clean'; rawDraftDirty = false;
+  if (accountPreview) {
+    accountBaseTree = cloneTree(sourceFixtureRoot);
+    accountBaseFingerprint = accountServerFingerprint;
+    accountBaseActivityJson = accountServerActivityJson;
+  }
   refreshEditableModel(); renderProfile(currentProfileTab);
 }
 
@@ -2223,8 +2451,8 @@ async function initialize() {
     const params = new URLSearchParams(location.search);
     const requestedState = params.get('state');
     syntheticFixture = isMasterFixtureQuery(location.search);
-    const accountPreview = params.get('source') === 'account';
-    localTreeDraft = !syntheticFixture && !accountPreview && isLoopbackHost(location.hostname);
+    accountPreview = params.get('source') === 'account';
+    localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
     $('#moreHistory').hidden = !localTreeDraft;
     $('#moreBackups').hidden = !localTreeDraft;
     $('#moreVideo').hidden = true;
@@ -2237,7 +2465,7 @@ async function initialize() {
     }
     if (accountPreview) {
       setLoadingText('Проверяем доступ к данным');
-      await requireWaydeanAdminAccess('drewo');
+      accountAdminAccess = await requireWaydeanAdminAccess('drewo');
     }
     pwaController = createWaydeanPwaController(renderPwaStatus, { allowServerPush: accountPreview });
     renderPwaStatus();
@@ -2257,16 +2485,29 @@ async function initialize() {
       ? '../docs/design/waydean/fixtures/master-tree.json'
       : './family-tree.json';
     setLoadingText('Загружаем данные рода');
-    const response = await fetch(dataUrl, { cache: 'no-cache' });
-    if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
-    const root = await response.json();
+    let root;
+    if (accountPreview) {
+      const serverSnapshot = await callWaydeanAdminAction('waydean-admin-load', {}, accountAdminAccess);
+      accountServerTreeJson = serverSnapshot.treeJson;
+      accountServerActivityJson = serverSnapshot.activityJson || '[]';
+      accountServerFingerprint = serverSnapshot.fingerprint;
+      root = JSON.parse(accountServerTreeJson);
+      accountBaseTree = cloneTree(root);
+      accountBaseFingerprint = accountServerFingerprint;
+      accountBaseActivityJson = accountServerActivityJson;
+    } else {
+      const response = await fetch(dataUrl, { cache: 'no-cache' });
+      if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
+      root = await response.json();
+    }
     setLoadingText('Собираем поколения и связи');
     if (syntheticFixture) {
       sourceFixtureRoot = cloneTree(root);
       originalFixtureRoot = cloneTree(root);
       fixtureRoot = cloneTree(root);
     } else if (localTreeDraft) {
-      localDraftKey = new URL('./family-tree.json', location.href).pathname;
+      localDraftKey = new URL('./family-tree.json', location.href).pathname
+        + (accountPreview ? '::admin-account' : '');
       sourceFixtureRoot = cloneTree(root);
       let storedDraft = null;
       try {
@@ -2274,10 +2515,40 @@ async function initialize() {
       } catch (error) {
         localDraftPersistenceError = error?.message || 'Локальное сохранение пока недоступно.';
       }
+      if (accountPreview && storedDraft) {
+        const metadata = storedDraft.metadata;
+        if (metadata?.accountBaseTreeJson && metadata.accountBaseFingerprint) {
+          try {
+            const savedBase = JSON.parse(metadata.accountBaseTreeJson);
+            flattenTree(savedBase);
+            accountBaseTree = cloneTree(savedBase);
+            accountBaseFingerprint = String(metadata.accountBaseFingerprint);
+            accountBaseActivityJson = String(metadata.accountActivityJson || '[]');
+          } catch {
+            accountBaseFingerprint = '';
+            localDraftPersistenceError = 'Черновик сохранён, но его исходная версия повреждена. Сначала загрузите версию сайта.';
+          }
+        } else {
+          accountBaseFingerprint = '';
+          localDraftPersistenceError = 'Найден черновик без версии сайта, от которой он был создан. Загрузите версию сайта перед публикацией.';
+        }
+        if (accountBaseFingerprint && accountServerFingerprint
+          && (accountBaseFingerprint !== accountServerFingerprint
+            || !sameJsonSnapshot(accountBaseActivityJson, accountServerActivityJson))) {
+          accountPublishConflict = {
+            serverFingerprint: accountServerFingerprint,
+            serverTreeJson: accountServerTreeJson,
+            serverActivityJson: accountServerActivityJson,
+          };
+          localDraftPersistenceError = 'После сохранения черновика на сайте появилась новая версия. Ваши правки сохранены отдельно; загрузите текущую версию, чтобы продолжить.';
+        }
+      }
       localDraftRevision = storedDraft?.revision || 0;
-      fixtureRoot = cloneTree(storedDraft?.tree || root);
+      fixtureRoot = cloneTree(accountPreview && storedDraft && !storedDraft.metadata?.accountBaseTreeJson
+        ? root
+        : storedDraft?.tree || root);
       originalFixtureRoot = cloneTree(fixtureRoot);
-      editStatus = storedDraft ? 'saved' : 'clean';
+      editStatus = accountPublishConflict ? 'conflict' : storedDraft ? 'saved' : 'clean';
       try {
         await restoreLocalPhotoUrls();
       } catch (error) {

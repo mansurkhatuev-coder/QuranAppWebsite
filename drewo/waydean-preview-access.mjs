@@ -68,4 +68,10 @@ export async function requireWaydeanAdminAccess(treeDir = 'drewo') {
   if (!response.ok) {
     throw accessError('WAYDEAN_AUTH_UNAVAILABLE', 'Не удалось подтвердить доступ. Проверьте соединение и повторите попытку.');
   }
+  return {
+    endpoint: endpoint.href,
+    anonKey,
+    accessToken: session.access_token,
+    treeDir,
+  };
 }
