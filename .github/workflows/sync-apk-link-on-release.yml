@@ -47,4 +47,4 @@ jobs:
             exit 0
           fi
           git commit -m "Sync APK download link for ${{ github.event.release.tag_name }}"
-          git push
+          git push origin HEAD:${{ github.event.repository.default_branch }}
