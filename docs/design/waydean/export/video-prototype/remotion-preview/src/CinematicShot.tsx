@@ -29,6 +29,7 @@ import {
   getScenePersonEmphasis,
   getSceneTransitionProgress,
   getScenePresentation,
+  shouldRenderVideoPersonCard,
   getTreeViewportOpacity,
   sampleRemotionFrame
 } from "./project-model.mjs";
@@ -43,9 +44,15 @@ type Props = {
 const clamp = (value: number, min: number, max: number) =>
   Math.min(Math.max(value, min), max);
 
-function edgePath(parent: TreeNode, child: TreeNode, overview: boolean, markerRadius: number) {
-  const startY = parent.y + (overview ? markerRadius : parent.height / 2 - 2);
-  const endY = child.y - (overview ? markerRadius : child.height / 2 - 2);
+function edgePath(
+  parent: TreeNode,
+  child: TreeNode,
+  parentIsMarker: boolean,
+  childIsMarker: boolean,
+  markerRadius: number
+) {
+  const startY = parent.y + (parentIsMarker ? markerRadius : parent.height / 2 - 2);
+  const endY = child.y - (childIsMarker ? markerRadius : child.height / 2 - 2);
   const bend = Math.max(18, (endY - startY) * 0.56);
   return "M " + parent.x + " " + startY
     + " C " + parent.x + " " + (startY + bend)
@@ -260,6 +267,12 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
     ])),
     [story.timeline.pathIds]
   );
+  const revealedPersonIds = useMemo(
+    () => new Set(story.timeline.layout.nodes
+      .filter(node => shouldRenderVideoPersonCard(story, shotIndex, node.id, true))
+      .map(node => node.id)),
+    [story, shotIndex]
+  );
   const sample = sampleRemotionFrame(story, globalFrame);
   if (!sample) return null;
 
@@ -318,7 +331,6 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
   const titleSize = getCinematicTitleFontSize(titleBaseSize, currentTitle, titleAvailableWidth);
   const outgoingTitleSize = getCinematicTitleFontSize(outgoingTitleBaseSize, outgoingTitle, titleAvailableWidth);
   const titleSafeZone = getCinematicTitleSafeZone(frameHeight, Math.max(currentTitle.length, outgoingTitle.length));
-
   return (
     <AbsoluteFill style={{ backgroundColor: "#070b0c", overflow: "hidden" }}>
       <Img
@@ -404,11 +416,13 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
             const edgeVisibility = getTreeViewportOpacity(story.scopeType, 1);
             const lineOpacity =
               (contextLineOpacity + branchEmphasis * (0.9 - contextLineOpacity)) * edgeVisibility;
+            const parentIsMarker = overview && !revealedPersonIds.has(parent.id);
+            const childIsMarker = overview && !revealedPersonIds.has(child.id);
 
             return (
               <g key={edge.key}>
                 <path
-                  d={edgePath(parent, child, overview, markerRadius)}
+                  d={edgePath(parent, child, parentIsMarker, childIsMarker, markerRadius)}
                   fill="none"
                   stroke="#e3c982"
                   strokeWidth={1.8 + branchEmphasis * 2.4}
@@ -419,7 +433,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
                 />
                 {isLineage ? (
                   <path
-                    d={edgePath(parent, child, overview, markerRadius)}
+                    d={edgePath(parent, child, parentIsMarker, childIsMarker, markerRadius)}
                     pathLength={1}
                     strokeDasharray="1"
                     strokeDashoffset={1 - progress}
@@ -445,7 +459,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
               && (shot.type === "focus" || shot.type === "finale");
             const edgeOpacity = getTreeViewportOpacity(story.scopeType, 1);
 
-            return overview ? (
+            return overview && !revealedPersonIds.has(person.id) ? (
               <TreeMarker
                 key={person.id}
                 person={person}

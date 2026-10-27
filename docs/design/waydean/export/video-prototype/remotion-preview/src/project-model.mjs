@@ -10,8 +10,9 @@ import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./compositio
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
 export const ACTIVE_CARD_REVEAL_FRAMES = 18;
 export const FOCUS_CAMERA_HOLD_RATIO = 0.72;
-export const FULL_TREE_FOCUS_CAMERA_HOLD_RATIO = 0.4;
-export const FULL_TREE_FOCUS_DURATION_SECONDS = 5;
+export const FULL_TREE_FOCUS_CAMERA_HOLD_RATIO = 0.43;
+export const FOCUS_CAMERA_ARRIVAL_RATIO = 0.35;
+export const FULL_TREE_FOCUS_DURATION_SECONDS = 6;
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -152,6 +153,13 @@ export function getScenePersonEmphasis(story, shotIndex, localFrame, personId) {
   if (!isCurrent && !wasPrevious) return 0;
   const progress = getSceneTransitionProgress(story, shotIndex, localFrame);
   return isCurrent ? progress : 1 - progress;
+}
+
+export function shouldRenderVideoPersonCard(story, shotIndex, personId, overview) {
+  if (!overview) return true;
+  const shots = story?.timeline?.shots ?? [];
+  const throughShot = Math.max(0, Math.floor(Number(shotIndex) || 0) + 1);
+  return shots.slice(0, throughShot).some(shot => shot.personIds?.includes(personId));
 }
 
 export function getSceneEdgeEmphasis(story, shotIndex, localFrame, edgeKey) {
@@ -308,9 +316,62 @@ export function blendCinematicFraming(outgoing, incoming, progress) {
 export function getCinematicFramingForFrame(story, frameWidth, frameHeight, frame) {
   const sample = sampleRemotionFrame(story, frame);
   if (!sample) return null;
-  const shot = story.timeline.shots[sample.shotIndex];
+  const shots = story.timeline.shots;
+  const shot = shots[sample.shotIndex];
   if (!shot) return null;
   const currentNodes = getShotNodes(story, shot);
+  const current = getCinematicFraming(
+    frameWidth,
+    frameHeight,
+    shot.cameraTo,
+    currentNodes,
+    shot.treeOffsetTo
+  );
+  const localFrame = Math.max(0, Math.floor(Number(frame) || 0) - shot.startFrame);
+
+  if (shot.type === "opening") return current;
+
+  const previousShot = shots[sample.shotIndex - 1];
+  const previous = previousShot
+    ? getCinematicFraming(
+      frameWidth,
+      frameHeight,
+      previousShot.cameraTo,
+      getShotNodes(story, previousShot),
+      previousShot.treeOffsetTo
+    )
+    : current;
+
+  if (shot.type === "origin" || shot.type === "generation" || shot.type === "branching") {
+    return blendCinematicFraming(previous, current, sample.easedProgress);
+  }
+
+  if (shot.type === "focus") {
+    const nextShot = shots[sample.shotIndex + 1];
+    const finale = getCinematicFraming(
+      frameWidth,
+      frameHeight,
+      nextShot?.cameraTo ?? shot.cameraTo,
+      nextShot ? getShotNodes(story, nextShot) : currentNodes,
+      nextShot?.treeOffsetTo ?? shot.treeOffsetTo
+    );
+    const holdRatio = story.scopeType === "all"
+      ? FULL_TREE_FOCUS_CAMERA_HOLD_RATIO
+      : FOCUS_CAMERA_HOLD_RATIO;
+    const lastFrame = Math.max(1, shot.durationFrames - 1);
+    const arrivalFrame = Math.max(1, Math.floor(lastFrame * FOCUS_CAMERA_ARRIVAL_RATIO));
+    const exitStartFrame = Math.max(arrivalFrame, Math.floor(lastFrame * holdRatio));
+    if (localFrame <= arrivalFrame) {
+      return blendCinematicFraming(previous, current, easeCinematic(localFrame / arrivalFrame));
+    }
+    if (localFrame <= exitStartFrame) return current;
+    const exitDuration = Math.max(1, lastFrame - exitStartFrame);
+    const exitProgress = easeCinematic(clamp((localFrame - exitStartFrame) / exitDuration, 0, 1));
+    return blendCinematicFraming(current, finale, exitProgress);
+  }
+
+  if (shot.type === "finale") return current;
+
   const outgoing = getCinematicFraming(
     frameWidth,
     frameHeight,
@@ -326,7 +387,6 @@ export function getCinematicFramingForFrame(story, frameWidth, frameHeight, fram
     nextShot ? getShotNodes(story, nextShot) : currentNodes,
     shot.treeOffsetTo
   );
-  const localFrame = Math.max(0, Math.floor(Number(frame) || 0) - shot.startFrame);
   const progress = getCinematicFramingTransitionProgress(story, sample.shotIndex, localFrame);
   return blendCinematicFraming(outgoing, incoming, progress);
 }
