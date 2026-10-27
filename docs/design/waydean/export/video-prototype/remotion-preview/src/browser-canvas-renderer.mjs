@@ -6,8 +6,8 @@ import {
   getCinematicTitleSafeZone,
   getChapterCopyStartFrame,
   getChapterCopyTransitionOpacities,
-  getContextCardEdgeOpacity,
   getGenerationDateExcerpt,
+  getTreeViewportOpacity,
   splitPersonName,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
@@ -312,10 +312,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const isPath = index != null;
       const progress = isPath ? clamp(sample.lineProgress - index, 0, 1) : 1;
       const emphasis = getSceneEdgeEmphasis(story, shotIndex, local, edge.key);
-      const base = shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
+      const base = story.scopeType === "all" ? 0.22 : shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
       const visible = Math.min(
-        getContextCardEdgeOpacity(edgeBoundsInView(parent, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height),
-        getContextCardEdgeOpacity(edgeBoundsInView(child, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height)
+        getTreeViewportOpacity(story.scopeType, 1, edgeBoundsInView(parent, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height),
+        getTreeViewportOpacity(story.scopeType, 1, edgeBoundsInView(child, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height)
       );
       return [{
         key: edge.key,
@@ -365,8 +365,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const emphasis = getScenePersonEmphasis(story, shotIndex, local, person.id); const target = person.id === story.selectedPersonId && (shot.type === "focus" || shot.type === "finale");
       const reveal = target ? Math.max(emphasis, getSelectedCardReveal(shot.type, local)) : emphasis;
       const bounds = { left: (node.x - node.width / 2) * framing.scale + framing.translateX, top: (node.y - node.height / 2) * framing.scale + framing.translateY, right: (node.x + node.width / 2) * framing.scale + framing.translateX, bottom: (node.y + node.height / 2) * framing.scale + framing.translateY };
-      const edgeOpacity = getContextCardEdgeOpacity(bounds, { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height, [], reveal);
-      const opacity = (presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis) * edgeOpacity;
+      const cardAlpha = story.scopeType === "all"
+        ? 1
+        : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
+      const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha, bounds, { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height, reveal);
       if (overview) drawMarker(context, node, opacity, target, markerRadius); else drawCard(context, person, node, opacity, target, story.includeDates);
     }
     context.restore(); drawCopy(context, story, shot, shotIndex, globalFrame, canvas.width, canvas.height);
