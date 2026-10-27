@@ -54,6 +54,15 @@
       "ownership": "mine",
       "note": "Алихан Гудермес",
       "createdAt": "2026-09-07T10:48:51.724Z"
+    },
+    {
+      "treeDir": "drewo-guzat",
+      "login": "guzat",
+      "code": "guzat",
+      "title": "ГIузат",
+      "ownership": "mine",
+      "note": "Алихан ИПЛ",
+      "createdAt": "2026-10-27T07:34:27.775Z"
     }
   ]
 }
