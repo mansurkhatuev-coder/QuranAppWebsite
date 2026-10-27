@@ -203,6 +203,13 @@ export function getContextCardEdgeOpacity(bounds, viewport, aspectRatio = 1, nei
       + CONTEXT_CARD_EDGE_FADE_MAX_FRAME_DELTA * Math.abs(Number(sample.offset))));
 }
 
+export function getTreeViewportOpacity(scopeType, alpha, bounds, viewport, aspectRatio = 1, activeCardReveal = 0) {
+  const normalizedAlpha = clamp(Number(alpha) || 0, 0, 1);
+  // In a full-tree shot, let the canvas edge clip context naturally instead of fading cards early.
+  if (scopeType === "all") return normalizedAlpha;
+  return normalizedAlpha * getContextCardEdgeOpacity(bounds, viewport, aspectRatio, [], activeCardReveal);
+}
+
 export function getCinematicFraming(frameWidth, frameHeight, camera, targetNodes, treeOffsetY = 0) {
   const safeWidth = Math.max(1, Number(frameWidth) || REMOTION_COMPOSITION.width);
   const safeHeight = Math.max(1, Number(frameHeight) || REMOTION_COMPOSITION.height);
