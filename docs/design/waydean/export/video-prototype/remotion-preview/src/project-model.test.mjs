@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import {
   buildRemotionStory,
   formatPersonDateLabel,
+  getCinematicFramingForFrame,
   getScenePersonEmphasis,
   getTreeViewportOpacity
 } from "./project-model.mjs";
@@ -46,4 +47,38 @@ test("full-tree video keeps revealed cards solid while the camera moves to later
 
   assert.equal(getScenePersonEmphasis(story, generationTwoIndex, middleOfGenerationTwo, "root"), 1);
   assert.equal(getScenePersonEmphasis(story, generationThreeIndex, middleOfGenerationThree, "root"), 1);
+});
+
+test("full-tree finale gives the focused card a gradual camera exit", () => {
+  const people = Array.from({ length: 14 }, (_, index) => ({
+    id: `generation-${index + 1}`,
+    name: `Поколение ${index + 1}`,
+    generation: index + 1,
+    parent: index ? `generation-${index}` : null
+  }));
+  const story = buildRemotionStory({
+    people,
+    scopeType: "all",
+    selectedPersonId: "generation-14"
+  });
+  const focusShot = story.timeline.shots.find(shot => shot.type === "focus");
+  const selectedNode = story.timeline.layout.nodes.find(node => node.id === "generation-14");
+  const frameWidth = 1280;
+  const frameHeight = 720;
+  const cardWidthAt = frame => {
+    const framing = getCinematicFramingForFrame(story, frameWidth, frameHeight, frame);
+    const outputScale = Math.min(frameWidth / framing.viewWidth, frameHeight / framing.viewHeight);
+    return selectedNode.width * framing.scale * outputScale;
+  };
+
+  let largestSingleFrameChange = 0;
+  for (let frame = focusShot.startFrame + 1; frame < focusShot.startFrame + focusShot.durationFrames; frame += 1) {
+    largestSingleFrameChange = Math.max(
+      largestSingleFrameChange,
+      Math.abs(cardWidthAt(frame) - cardWidthAt(frame - 1))
+    );
+  }
+
+  assert.ok(focusShot.durationFrames >= story.timeline.fps * 5);
+  assert.ok(largestSingleFrameChange <= 32, `largest card-size change was ${largestSingleFrameChange.toFixed(1)} px/frame`);
 });

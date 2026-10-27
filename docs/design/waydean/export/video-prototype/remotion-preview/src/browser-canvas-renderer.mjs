@@ -14,7 +14,7 @@ import {
   getScenePresentation,
   getSelectedCardReveal,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261027-full-tree-cards-leave-frame-2";
+} from "./project-model.mjs?v=20261028-full-tree-camera-exit-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs";
 
