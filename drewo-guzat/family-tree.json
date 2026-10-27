@@ -19,7 +19,14 @@
       "id": "added-1793087249339-3t8rhg",
       "name": "Атаназ",
       "gender": "male",
-      "sons": []
+      "sons": [
+        {
+          "id": "added-1793087302226-p9k7fv",
+          "name": "Мадакх",
+          "gender": "male",
+          "sons": []
+        }
+      ]
     }
   ]
 }
