@@ -12,9 +12,8 @@ import {
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getScenePresentation,
-  getSelectedCardReveal,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261028-full-tree-camera-exit-1";
+} from "./project-model.mjs?v=20261028-continuous-camera-exit-2";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs";
 
@@ -146,15 +145,6 @@ function peopleCountLabel(count) {
     if (remainder10 >= 2 && remainder10 <= 4) word = "человека";
   }
   return `${count} ${word}`;
-}
-
-function edgeBoundsInView(node, framing) {
-  return {
-    left: (node.x - node.width / 2) * framing.scale + framing.translateX,
-    top: (node.y - node.height / 2) * framing.scale + framing.translateY,
-    right: (node.x + node.width / 2) * framing.scale + framing.translateX,
-    bottom: (node.y + node.height / 2) * framing.scale + framing.translateY
-  };
 }
 
 function drawFamilyTreeConnectors(context, edges) {
@@ -313,10 +303,7 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const progress = isPath ? clamp(sample.lineProgress - index, 0, 1) : 1;
       const emphasis = getSceneEdgeEmphasis(story, shotIndex, local, edge.key);
       const base = story.scopeType === "all" ? 0.22 : shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
-      const visible = Math.min(
-        getTreeViewportOpacity(story.scopeType, 1, edgeBoundsInView(parent, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height),
-        getTreeViewportOpacity(story.scopeType, 1, edgeBoundsInView(child, framing), { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height)
-      );
+      const visible = getTreeViewportOpacity(story.scopeType, 1);
       return [{
         key: edge.key,
         parent,
@@ -363,12 +350,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     for (const node of story.timeline.layout.nodes) {
       const person = people.get(node.id); if (!person) continue;
       const emphasis = getScenePersonEmphasis(story, shotIndex, local, person.id); const target = person.id === story.selectedPersonId && (shot.type === "focus" || shot.type === "finale");
-      const reveal = target ? Math.max(emphasis, getSelectedCardReveal(shot.type, local)) : emphasis;
-      const bounds = { left: (node.x - node.width / 2) * framing.scale + framing.translateX, top: (node.y - node.height / 2) * framing.scale + framing.translateY, right: (node.x + node.width / 2) * framing.scale + framing.translateX, bottom: (node.y + node.height / 2) * framing.scale + framing.translateY };
       const cardAlpha = story.scopeType === "all"
         ? 1
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
-      const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha, bounds, { width: framing.viewWidth, height: framing.viewHeight }, canvas.width / canvas.height, reveal);
+      const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
       if (overview) drawMarker(context, node, opacity, target, markerRadius); else drawCard(context, person, node, opacity, target, story.includeDates);
     }
     context.restore(); drawCopy(context, story, shot, shotIndex, globalFrame, canvas.width, canvas.height);

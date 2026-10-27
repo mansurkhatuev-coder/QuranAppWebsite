@@ -8,8 +8,6 @@ import {
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
-export const CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES = 9;
-export const CONTEXT_CARD_EDGE_FADE_MAX_FRAME_DELTA = 0.12;
 export const ACTIVE_CARD_REVEAL_FRAMES = 18;
 export const FOCUS_CAMERA_HOLD_RATIO = 0.72;
 export const FULL_TREE_FOCUS_CAMERA_HOLD_RATIO = 0.4;
@@ -143,13 +141,10 @@ export function getScenePersonEmphasis(story, shotIndex, localFrame, personId) {
   const current = shots[shotIndex];
   if (!current) return 0;
   const isCurrent = current.personIds.includes(personId);
-  if (story.scopeType === "all" && !isCurrent) {
-    // Full-tree shots move the camera across one continuous canvas. Once a
-    // card has entered the story, keep it at full context strength; the frame
-    // edge, not a scene boundary, should be what carries it out of view.
-    const alreadyRevealed = shots.slice(0, shotIndex).some(shot => shot.personIds.includes(personId));
-    if (alreadyRevealed) return 1;
-  }
+  // All scopes use one continuous tree canvas. Once a card has entered the
+  // story, keep it visible; the camera and frame edge should carry it away.
+  const alreadyRevealed = shots.slice(0, shotIndex).some(shot => shot.personIds.includes(personId));
+  if (alreadyRevealed) return 1;
   if (shotIndex <= 0) return isCurrent ? 1 : 0;
   const previous = shots[shotIndex - 1];
   const wasPrevious = previous.personIds.includes(personId);
@@ -164,6 +159,8 @@ export function getSceneEdgeEmphasis(story, shotIndex, localFrame, edgeKey) {
   const current = shots[shotIndex];
   if (!current) return 0;
   const isCurrent = current.activeEdgeKeys.includes(edgeKey);
+  const alreadyRevealed = shots.slice(0, shotIndex).some(shot => shot.activeEdgeKeys.includes(edgeKey));
+  if (alreadyRevealed) return 1;
   if (shotIndex <= 0) return isCurrent ? 1 : 0;
   const wasPrevious = shots[shotIndex - 1].activeEdgeKeys.includes(edgeKey);
   if (isCurrent && wasPrevious) return 1;
@@ -182,47 +179,10 @@ export function getCameraFitScale(zoom) {
   return clamp(0.76 + (Number(zoom) - 1) * 0.32, 0.55, 1);
 }
 
-function getRawContextCardEdgeOpacity(bounds, viewport, aspectRatio) {
-  const values = [bounds?.left, bounds?.top, bounds?.right, bounds?.bottom, viewport?.width, viewport?.height]
-    .map(Number);
-  if (values.some(value => !Number.isFinite(value))) return 0;
-  const [left, top, right, bottom, width, height] = values;
-  if (right <= left || bottom <= top || width <= 0 || height <= 0) return 0;
-
-  const edgeClearance = 8;
-  // Keep the camera-centered core clear while giving fast-moving context cards more fade runway.
-  const focusCoreMargins = Number(aspectRatio) > 1
-    ? [width * 0.1, height * 0.15, width * 0.1, height * 0.48]
-    : [width * 0.4, height * 0.15, width * 0.4, height * 0.48];
-  const clearances = [left, top, width - right, height - bottom];
-  return Math.min(...clearances.map((clearance, index) => {
-    const coreMargin = focusCoreMargins[index];
-    const progress = clamp((clearance - edgeClearance) / (coreMargin - edgeClearance), 0, 1);
-    return progress * progress * (3 - 2 * progress);
-  }));
-}
-
-export function getContextCardEdgeOpacity(bounds, viewport, aspectRatio = 1, neighboringBounds = [], activeCardReveal = 0) {
-  const opacity = getRawContextCardEdgeOpacity(bounds, viewport, aspectRatio);
-  const reveal = activeCardReveal === true ? 1 : clamp(Number(activeCardReveal) || 0, 0, 1);
-  const values = [bounds?.left, bounds?.top, bounds?.right, bounds?.bottom, viewport?.width, viewport?.height].map(Number);
-  if (values.some(value => !Number.isFinite(value))) return 0;
-  const [left, top, right, bottom, width, height] = values;
-  const fullyInside = left >= 0 && top >= 0 && right <= width && bottom <= height;
-  const activeOpacity = fullyInside ? 1 : 0;
-  const currentOpacity = opacity + (activeOpacity - opacity) * reveal;
-
-  return Math.min(currentOpacity, ...neighboringBounds
-    .filter(sample => Number.isFinite(Number(sample?.offset)) && Math.abs(Number(sample.offset)) <= CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES)
-    .map(sample => getContextCardEdgeOpacity(sample.bounds, viewport, aspectRatio, [], sample.activeCardReveal ?? 0)
-      + CONTEXT_CARD_EDGE_FADE_MAX_FRAME_DELTA * Math.abs(Number(sample.offset))));
-}
-
-export function getTreeViewportOpacity(scopeType, alpha, bounds, viewport, aspectRatio = 1, activeCardReveal = 0, neighboringBounds = []) {
+export function getTreeViewportOpacity(scopeType, alpha) {
   const normalizedAlpha = clamp(Number(alpha) || 0, 0, 1);
-  // In a full-tree shot, let the canvas edge clip context naturally instead of fading cards early.
-  if (scopeType === "all") return normalizedAlpha;
-  return normalizedAlpha * getContextCardEdgeOpacity(bounds, viewport, aspectRatio, neighboringBounds, activeCardReveal);
+  // Keep video cards and connectors intact as the camera moves; the exported frame clips them naturally.
+  return normalizedAlpha;
 }
 
 export function getCinematicFraming(frameWidth, frameHeight, camera, targetNodes, treeOffsetY = 0) {

@@ -68,6 +68,27 @@ test('sends account lock and password changes through the fixed Waydean tree rou
   ]);
 });
 
+test('sends push subscription operations through the verified account session without a family password', async () => {
+  const requests = [];
+  for (const [action, payload] of [
+    ['waydean-admin-push-vapid', {}],
+    ['waydean-admin-push-subscribe', { subscription: { endpoint: 'https://push.example/sub', keys: { p256dh: 'p', auth: 'a' } } }],
+    ['waydean-admin-push-unsubscribe', { endpoint: 'https://push.example/sub' }]
+  ]) {
+    await callWaydeanAdminAction(action, payload, access, async (_url, options) => {
+      requests.push(JSON.parse(options.body));
+      return new Response(JSON.stringify({ ok: true, treeDir: 'drewo', publicKey: 'AQID' }));
+    });
+  }
+
+  assert.deepEqual(requests, [
+    { treeDir: 'drewo', action: 'waydean-admin-push-vapid' },
+    { subscription: { endpoint: 'https://push.example/sub', keys: { p256dh: 'p', auth: 'a' } }, treeDir: 'drewo', action: 'waydean-admin-push-subscribe' },
+    { endpoint: 'https://push.example/sub', treeDir: 'drewo', action: 'waydean-admin-push-unsubscribe' }
+  ]);
+  assert.equal(requests.some(request => Object.hasOwn(request, 'password')), false);
+});
+
 test('rejects missing account credentials without making a request', async () => {
   let called = false;
   await assert.rejects(

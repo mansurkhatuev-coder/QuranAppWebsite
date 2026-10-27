@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v19';
+const CACHE_NAME = 'waydean-preview-shell-v20';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -24,26 +24,29 @@ const PRECACHE = [
   './waydean-preview-minimap.css?v=4',
   './waydean-preview-editorial.css?v=cards-dock-5-person-card-width-1',
   './waydean-preview-history.css?v=local-history-1',
-  './waydean-preview-pwa.css?v=pwa-1',
+  './waydean-preview-pwa.css?v=account-push-20261028-1',
   './waydean-preview-video.css?v=video-local-1',
   './waydean-preview-self.css?v=self-whoami-prompt-1',
   './waydean-preview-glass-cards.css?v=thin-glass-1',
   './waydean-preview-auth.css?v=admin-tools-1',
-  './waydean-preview.js?v=account-admin-tools-1',
-  './waydean-preview-admin-api.mjs?v=admin-tools-1',
+  './waydean-preview.js?v=account-admin-push-20261028-1',
+  './waydean-preview-publish.mjs?v=admin-save-1',
+  './waydean-preview-admin-api.mjs?v=admin-push-20261028-1',
   './waydean-preview-admin-controls.mjs?v=account-admin-controls-1',
+  './waydean-admin-identity.mjs?v=1',
   './waydean-preview-whoami.mjs?v=2',
   './waydean-preview-account-history.mjs?v=1',
-  './waydean-preview-pwa.mjs?v=pwa-1',
-  './waydean-preview-model.mjs',
+  './waydean-preview-pwa.mjs?v=account-push-20261028-1',
+  './waydean-preview-video-handoff.mjs?v=browser-export-1',
+  './waydean-preview-model.mjs?v=person-card-width-2',
   './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1',
-  './waydean-preview-access.mjs?v=3',
+  './waydean-preview-access.mjs?v=admin-auth-2',
   './waydean-preview-lines.mjs',
   './waydean-preview-fixture.mjs',
   './waydean-preview-selection.mjs',
   './waydean-preview-lod.mjs?v=lod-9',
   './waydean-preview-route.mjs?v=account-route-20261016-1',
-  './waydean-preview-edit.mjs',
+  './waydean-preview-edit.mjs?v=child-id-1',
   './waydean-preview-storage.mjs?v=3',
   '../docs/design/waydean/assets/references/waydean-mobile-tree-background.png',
   '../docs/design/waydean/assets/demo/waydean-demo-elder-portrait.jpg',

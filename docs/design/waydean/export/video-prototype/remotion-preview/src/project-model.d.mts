@@ -100,8 +100,6 @@ export type FrameSample = {
   lineProgress: number;
 };
 
-export const CONTEXT_CARD_EDGE_FADE_LOOKAHEAD_FRAMES: number;
-export const CONTEXT_CARD_EDGE_FADE_MAX_FRAME_DELTA: number;
 export const ACTIVE_CARD_REVEAL_FRAMES: number;
 export const FOCUS_CAMERA_HOLD_RATIO: number;
 
@@ -141,31 +139,7 @@ export function getSelectedCardReveal(shotType: string, localFrame: number): num
 
 export function getCameraFitScale(zoom: number): number;
 
-export function getContextCardEdgeOpacity(
-  bounds: { left: number; top: number; right: number; bottom: number },
-  viewport: { width: number; height: number },
-  aspectRatio?: number,
-  neighboringBounds?: Array<{
-    offset: number;
-    bounds: { left: number; top: number; right: number; bottom: number };
-    activeCardReveal?: number | boolean;
-  }>,
-  activeCardReveal?: number | boolean
-): number;
-
-export function getTreeViewportOpacity(
-  scopeType: "all" | "path" | "branch",
-  alpha: number,
-  bounds: { left: number; top: number; right: number; bottom: number },
-  viewport: { width: number; height: number },
-  aspectRatio?: number,
-  activeCardReveal?: number | boolean,
-  neighboringBounds?: Array<{
-    offset: number;
-    bounds: { left: number; top: number; right: number; bottom: number };
-    activeCardReveal?: number | boolean;
-  }>
-): number;
+export function getTreeViewportOpacity(scopeType: "all" | "path" | "branch", alpha: number): number;
 
 export function getCinematicFraming(
   frameWidth: number,

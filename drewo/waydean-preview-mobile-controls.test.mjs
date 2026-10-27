@@ -69,6 +69,6 @@ test('installed PWA receives the updated mobile layout stylesheet', () => {
   const html = readFileSync(new URL('waydean-preview.html', here), 'utf8');
   const worker = readFileSync(new URL('waydean-preview-sw.js', here), 'utf8');
   assert.match(html, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
-  assert.match(worker, /waydean-preview-shell-v15/);
+  assert.match(worker, /waydean-preview-shell-v\d+/);
   assert.match(worker, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
 });

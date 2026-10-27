@@ -5,7 +5,7 @@ import {
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
-import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-tools-1';
+import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
 import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
 import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admin-save-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
@@ -26,7 +26,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-push-20261028-1';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
@@ -1646,6 +1646,9 @@ function renderPwaStatus(state = pwaController?.getState()) {
   $('#pwaServerPushStatus').textContent = state.serverPushAvailable
     ? state.serverPushSubscribed ? 'Подключены на этом устройстве' : 'Не подключены на этом устройстве'
     : 'Недоступно';
+  $('#pwaServerPushNote').textContent = state.accountPushAvailable
+    ? 'Подписка создаётся после вашего действия и подтверждается администраторской учётной записью. Она привязана к этому устройству.'
+    : 'Подписка создаётся только после вашего действия и ввода пароля редактора. Она привязана к этому устройству.';
   $('#pwaServerPushEnable').hidden = !state.serverPushAvailable || state.serverPushSubscribed;
   $('#pwaServerPushEnable').disabled = !state.online || !state.serviceWorkerReady;
   $('#pwaServerPushDisable').hidden = !state.serverPushAvailable || !state.serverPushSubscribed;
@@ -1666,16 +1669,25 @@ function openPwaPushDialog(action) {
   pwaPushAction = action;
   const dialog = $('#pwaPushDialog');
   const subscribing = action === 'subscribe';
+  const accountPush = Boolean(pwaController?.getState().accountPushAvailable && accountAdminAccess);
   $('#pwaPushDialogTitle').textContent = subscribing ? 'Включить push-уведомления' : 'Отключить push-уведомления';
-  $('#pwaPushDialogHelp').textContent = subscribing
-    ? 'Введите пароль редактора. Браузер также попросит разрешить уведомления.'
-    : 'Введите пароль редактора, чтобы удалить подписку этого устройства с сервера.';
+  $('#pwaPushDialogHelp').textContent = accountPush
+    ? subscribing
+      ? 'Подписка привяжется к этому устройству. Браузер также попросит разрешить уведомления.'
+      : 'Подписка этого устройства будет удалена с сервера и из браузера.'
+    : subscribing
+      ? 'Введите пароль редактора. Браузер также попросит разрешить уведомления.'
+      : 'Введите пароль редактора, чтобы удалить подписку этого устройства с сервера.';
   $('#pwaPushSubmit').textContent = subscribing ? 'Включить' : 'Отключить';
+  const passwordLabel = $('#pwaPushForm label[for="pwaPushPassword"]');
+  passwordLabel.hidden = accountPush;
+  $('#pwaPushPassword').hidden = accountPush;
+  $('#pwaPushPassword').required = !accountPush;
   $('#pwaPushPassword').value = '';
   $('#pwaPushError').hidden = true;
   if (dialog.showModal) dialog.showModal();
   else announce('Браузер не поддерживает окно подтверждения уведомлений.');
-  $('#pwaPushPassword').focus();
+  (accountPush ? $('#pwaPushSubmit') : $('#pwaPushPassword')).focus();
 }
 
 function formatLocalDate(value) {
@@ -2815,7 +2827,12 @@ async function initialize() {
       setLoadingText('Проверяем доступ к данным');
       accountAdminAccess = await requireWaydeanAdminAccess('drewo');
     }
-    pwaController = createWaydeanPwaController(renderPwaStatus, { allowServerPush: accountPreview });
+    pwaController = createWaydeanPwaController(renderPwaStatus, {
+      allowServerPush: accountPreview,
+      accountAdminAction: accountPreview && accountAdminAccess
+        ? (action, payload) => callWaydeanAdminAction(action, payload, accountAdminAccess)
+        : null
+    });
     renderPwaStatus();
     const initialView = initialPreviewView(requestedState, {
       mobile: window.matchMedia('(max-width: 700px)').matches

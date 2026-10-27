@@ -8,6 +8,9 @@ const WAYDEAN_ADMIN_ACTION_TARGETS: Readonly<Record<string, string | null>> = Ob
   'waydean-admin-restore': 'restore',
   'waydean-admin-lock': 'set-lock',
   'waydean-admin-password': 'set-password',
+  'waydean-admin-push-vapid': 'vapid-public',
+  'waydean-admin-push-subscribe': 'subscribe',
+  'waydean-admin-push-unsubscribe': 'unsubscribe',
 });
 
 export function isWaydeanAdminAction(action: unknown): action is string {
