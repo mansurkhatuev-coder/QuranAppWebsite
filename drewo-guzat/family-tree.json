@@ -29,7 +29,37 @@
               "id": "added-1793087545221-92uv9a",
               "name": "Бойбу",
               "gender": "male",
-              "sons": [],
+              "sons": [
+                {
+                  "id": "added-1793091042388-mfi1oq",
+                  "name": "Мотуг",
+                  "gender": "male",
+                  "sons": [],
+                  "born": 1852,
+                  "died": 1899
+                },
+                {
+                  "id": "added-1793091094801-06651d",
+                  "name": "Чала",
+                  "gender": "male",
+                  "sons": [],
+                  "born": 1853
+                },
+                {
+                  "id": "added-1793091125285-p87m5i",
+                  "name": "Муртаз",
+                  "gender": "male",
+                  "sons": [],
+                  "born": 1857
+                },
+                {
+                  "id": "added-1793091163221-cvq50f",
+                  "name": "Жалаудди",
+                  "gender": "male",
+                  "sons": [],
+                  "born": 1861
+                }
+              ],
               "born": 1820
             },
             {
@@ -178,7 +208,91 @@
                       "id": "added-1793087833796-rp77cr",
                       "name": "Тимиргира",
                       "gender": "male",
-                      "sons": []
+                      "sons": [
+                        {
+                          "id": "added-1793091271451-mjjwfj",
+                          "name": "Эдилгийра",
+                          "gender": "male",
+                          "sons": []
+                        },
+                        {
+                          "id": "added-1793091287873-6jfiub",
+                          "name": "Эласолта",
+                          "gender": "male",
+                          "sons": [
+                            {
+                              "id": "added-1793091313495-dg4djm",
+                              "name": "Адам",
+                              "gender": "male",
+                              "sons": [
+                                {
+                                  "id": "added-1793091354296-nfl6hk",
+                                  "name": "Ваха",
+                                  "gender": "male",
+                                  "sons": [
+                                    {
+                                      "id": "added-1793091459243-sb213v",
+                                      "name": "Халид",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793091472802-spbau4",
+                                      "name": "Тамирлан",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793091493680-1t39we",
+                                      "name": "Жабраил",
+                                      "gender": "male",
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "added-1793091373299-r9ovfv",
+                                  "name": "Шемилхьажи",
+                                  "gender": "male",
+                                  "sons": [
+                                    {
+                                      "id": "added-1793091538781-bd5mnh",
+                                      "name": "1абдуррохьман",
+                                      "gender": "male",
+                                      "sons": []
+                                    },
+                                    {
+                                      "id": "added-1793091567387-3o7nun",
+                                      "name": "1алихан",
+                                      "gender": "male",
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "added-1793091395109-4f5y59",
+                                  "name": "Асхьаб",
+                                  "gender": "male",
+                                  "sons": [
+                                    {
+                                      "id": "added-1793091431939-ol23d2",
+                                      "name": "Рамзан",
+                                      "gender": "male",
+                                      "sons": []
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "added-1793091405795-qe8htj",
+                                  "name": "Хьамзат",
+                                  "gender": "male",
+                                  "sons": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
                     },
                     {
                       "id": "added-1793087849537-d4qz4r",
