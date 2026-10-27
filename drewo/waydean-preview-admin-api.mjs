@@ -2,6 +2,10 @@ const ALLOWED_ACTIONS = new Set([
   'waydean-admin-auth',
   'waydean-admin-load',
   'waydean-admin-publish',
+  'waydean-admin-backups',
+  'waydean-admin-snapshot',
+  'waydean-admin-pin-backup',
+  'waydean-admin-restore',
 ]);
 
 function apiError(code, message, details) {

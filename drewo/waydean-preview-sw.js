@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v15';
+const CACHE_NAME = 'waydean-preview-shell-v16';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -10,7 +10,7 @@ const PRECACHE = [
   './icon-512.png',
   './apple-touch-icon.png',
   './waydean-preview-loading.css?v=1',
-  './waydean-preview.css?v=tree-loader-1',
+  './waydean-preview.css?v=account-history-1',
   './waydean-preview.css',
   './waydean-preview-camera.css?v=ios-pinch-stable-1',
   './waydean-preview-master.css?v=person-card-width-1',
@@ -29,7 +29,8 @@ const PRECACHE = [
   './waydean-preview-self.css?v=self-3',
   './waydean-preview-glass-cards.css?v=thin-glass-1',
   './waydean-preview-auth.css?v=admin-auth-1',
-  './waydean-preview.js?v=20261027-overview-markers-1',
+  './waydean-preview.js?v=20261028-account-history-1',
+  './waydean-preview-account-history.mjs?v=1',
   './waydean-preview-pwa.mjs?v=pwa-1',
   './waydean-preview-model.mjs',
   './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1',

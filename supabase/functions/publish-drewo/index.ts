@@ -1,6 +1,7 @@
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
 import { authorizeWaydeanAdmin } from './waydean-admin-access.ts';
-import { waydeanAdminPublishHasConflict } from './waydean-admin-publish.ts';
+import { waydeanAdminActionTarget, isWaydeanAdminAction, isWaydeanAdminRestoreBaseValid } from './waydean-admin-actions.ts';
+import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -1101,20 +1102,18 @@ Deno.serve(async (request) => {
     const requestedAction =
       typeof body.action === 'string' && body.action.trim() ? body.action.trim() : 'publish';
     let action = requestedAction;
-    const isWaydeanAdminAction = [
-      'waydean-admin-auth',
-      'waydean-admin-load',
-      'waydean-admin-publish',
-    ].includes(requestedAction);
+    const isWaydeanAdminRequest = isWaydeanAdminAction(requestedAction);
+    const adminActionTarget = waydeanAdminActionTarget(requestedAction);
     const waydeanAdminPublish = requestedAction === 'waydean-admin-publish';
     const waydeanAdminLoad = requestedAction === 'waydean-admin-load';
+    const waydeanAdminRestore = requestedAction === 'waydean-admin-restore';
     let waydeanAdminTreeDir: string | null = null;
 
-    if (requestedAction.startsWith('waydean-admin-') && !isWaydeanAdminAction) {
+    if (requestedAction.startsWith('waydean-admin-') && !isWaydeanAdminRequest) {
       return jsonResponse({ ok: false, error: 'Unknown Waydean admin action' }, 400);
     }
 
-    if (isWaydeanAdminAction) {
+    if (isWaydeanAdminRequest) {
       let user: Awaited<ReturnType<typeof requireHubUser>>;
       try {
         user = await requireHubUser(request);
@@ -1152,7 +1151,7 @@ Deno.serve(async (request) => {
       if (requestedAction === 'waydean-admin-auth') {
         return jsonResponse({ ok: true, treeDir: decision.treeDir });
       }
-      if (waydeanAdminPublish) action = 'publish';
+      if (adminActionTarget) action = adminActionTarget;
     }
 
     const githubToken = Deno.env.get('GITHUB_TOKEN');
@@ -1714,7 +1713,7 @@ Deno.serve(async (request) => {
     const backupsDir = `${treeDir}/backups`;
     const backupPrefix = backupNamePrefix(treeDir);
 
-    if (isWaydeanAdminAction && treeDir !== waydeanAdminTreeDir) {
+    if (isWaydeanAdminRequest && treeDir !== waydeanAdminTreeDir) {
       return jsonResponse({ ok: false, error: 'Waydean account access is limited to drewo' }, 403);
     }
 
@@ -1784,7 +1783,7 @@ Deno.serve(async (request) => {
           passwordFingerprint(access.passwordHash)
         )
       : null;
-    let role: AuthRole | null = waydeanAdminPublish
+    let role: AuthRole | null = isWaydeanAdminRequest && !waydeanAdminLoad
       ? 'super'
       : sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
 
@@ -2237,6 +2236,17 @@ Deno.serve(async (request) => {
     if (action === 'restore') {
       const denied = requireSuper('restore', true);
       if (denied) return denied;
+      const expectedFingerprint = typeof body.expectedFingerprint === 'string'
+        ? body.expectedFingerprint.trim()
+        : '';
+      const expectedActivityJson = typeof body.expectedActivityJson === 'string'
+        ? body.expectedActivityJson
+        : '';
+      if (waydeanAdminRestore) {
+        if (!isWaydeanAdminRestoreBaseValid({ expectedFingerprint, expectedActivityJson })) {
+          return jsonResponse({ ok: false, error: 'Перед восстановлением загрузите актуальную версию дерева.' }, 400);
+        }
+      }
       const backupName = typeof body.backup === 'string' ? body.backup.trim() : '';
       if (!isSafeBackupName(backupName, treeDir)) {
         return jsonResponse({ error: 'Некорректное имя бэкапа' }, 400);
@@ -2254,19 +2264,55 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'В бэкапе нет дерева' }, 400);
       }
       const stamp = stampNow();
-      const [current, existingBackups] = await Promise.all([
+      const [current, currentJsonFile, existingBackups] = await Promise.all([
         githubGetFile(githubToken, githubRepo, indexPath),
+        githubGetFile(githubToken, githubRepo, jsonPath),
         listBackupFiles(githubToken, githubRepo, treeDir),
       ]);
       if (!current?.content || current.content.length < 100) {
         return jsonResponse({ error: 'Нет текущей страницы для восстановления' }, 400);
       }
 
+      const currentTreeJson = currentJsonFile?.content?.trim()
+        || extractScriptJson(current.content, 'tree-data')
+        || '';
+      const currentActivityJson = extractScriptJson(current.content, 'activity-log') || '[]';
+      if (!currentTreeJson) {
+        return jsonResponse({ error: 'Не удалось сохранить текущую версию перед восстановлением' }, 400);
+      }
+      if (waydeanAdminRestore) {
+        let currentFingerprint = '';
+        try {
+          if (currentTreeJson) currentFingerprint = await fingerprintText(normalizeTreeJson(currentTreeJson));
+        } catch {
+          currentFingerprint = '';
+        }
+        if (waydeanAdminRestoreHasConflict({
+          expectedFingerprint,
+          currentFingerprint,
+          expectedActivityJson,
+          currentActivityJson,
+        })) {
+          return jsonResponse({
+            ok: false,
+            conflict: true,
+            error: 'Древо или журнал изменились после загрузки. Обновите данные и повторите восстановление.',
+            serverTreeJson: currentTreeJson,
+            serverActivityJson: currentActivityJson,
+            serverFingerprint: currentFingerprint,
+          }, 409);
+        }
+      }
+
       let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', parsed.treeJson);
       htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', parsed.activityJson);
       const jsonBody = parsed.treeJson.endsWith('\n') ? parsed.treeJson : `${parsed.treeJson}\n`;
       const newBackupName = `${backupPrefix}-${stamp}.json`;
-      const record = makeSnapshotRecord(parsed.treeJson, parsed.activityJson, {
+      const safetySnapshot = waydeanAdminRestoreSafetySnapshot({
+        currentTreeJson,
+        currentActivityJson,
+      });
+      const record = makeSnapshotRecord(safetySnapshot.treeJson, safetySnapshot.activityJson, {
         restoredFrom: backupName,
         kind: 'restore-point',
         label: 'До восстановления',

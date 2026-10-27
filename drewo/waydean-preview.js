@@ -5,8 +5,9 @@ import {
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor
 } from './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
-import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-save-1';
+import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-backups-1';
 import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admin-save-1';
+import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
@@ -1657,13 +1658,53 @@ function formatLocalDate(value) {
 async function renderLocalHistory() {
   const list = $('#localHistoryList');
   list.replaceChildren();
+  if (accountPreview) {
+    $('#historyTitle').textContent = 'История сайта и устройства';
+    $('#historyNote').textContent = 'Журнал сайта загружен из текущего древа. Локальная история хранится отдельно в этом браузере.';
+    const serverHeading = document.createElement('h3');
+    serverHeading.className = 'local-history-section-title';
+    serverHeading.textContent = 'Журнал сайта';
+    list.append(serverHeading);
+    const serverEntries = parseWaydeanActivity(accountServerActivityJson);
+    if (!serverEntries.length) {
+      const empty = document.createElement('p');
+      empty.className = 'local-data-empty';
+      empty.textContent = 'В журнале сайта пока нет записей.';
+      list.append(empty);
+    } else {
+      for (const entry of serverEntries) {
+        const row = document.createElement('article'); row.className = 'local-history-row';
+        const title = document.createElement('strong'); title.textContent = describeWaydeanActivity(entry);
+        const date = document.createElement('time');
+        date.dateTime = typeof entry.at === 'string' ? entry.at : '';
+        date.textContent = formatLocalDate(entry.at);
+        const details = [
+          typeof entry.father === 'string' && entry.father ? `Родитель: ${entry.father}` : '',
+          entry.type === 'year' && entry.field === 'born' ? 'Дата рождения' : '',
+          entry.type === 'year' && entry.field === 'died' ? 'Дата смерти' : ''
+        ].filter(Boolean).join(' · ');
+        const meta = document.createElement('small'); meta.textContent = details || 'Изменение опубликовано в семейном древе';
+        row.append(title, date, meta); list.append(row);
+      }
+    }
+    const localHeading = document.createElement('h3');
+    localHeading.className = 'local-history-section-title';
+    localHeading.textContent = 'Черновик этого устройства';
+    list.append(localHeading);
+  } else {
+    $('#historyTitle').textContent = 'История локальных действий';
+    $('#historyNote').textContent = 'Сохранения черновика и операции с локальными снимками в этом браузере.';
+  }
   if (!localTreeDraft) {
     const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'Локальная история доступна только в рабочей копии на этом компьютере.'; list.append(empty); return;
   }
   try {
     const entries = await listLocalTreeHistory(localDraftKey);
     if (!entries.length) {
-      const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'История появится после первого локального сохранения или снимка.'; list.append(empty); return;
+      const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = accountPreview
+        ? 'Локальных действий пока нет.'
+        : 'История появится после первого локального сохранения или снимка.';
+      list.append(empty); return;
     }
     for (const entry of entries) {
       const row = document.createElement('article'); row.className = 'local-history-row';
@@ -1684,7 +1725,7 @@ async function renderLocalBackups() {
   list.replaceChildren();
   const dirty = hasUncommittedDraft();
   create.disabled = !localTreeDraft || dirty || editStatus === 'saving' || editStatus === 'conflict';
-  status.textContent = dirty ? 'Сначала сохраните или отмените несохранённые изменения.' : 'Снимки содержат дерево и отметки фото; сами файлы фото в них не входят.';
+  status.textContent = dirty ? 'Сначала сохраните или отмените несохранённые изменения.' : 'Снимки содержат локальное дерево и отметки фото; сами фотофайлы не входят.';
   if (!localTreeDraft) {
     const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = 'Локальные резервные копии доступны только в рабочей копии на этом компьютере.'; list.append(empty); return;
   }
@@ -1709,6 +1750,158 @@ async function renderLocalBackups() {
     }
   } catch (error) {
     status.textContent = error?.message || 'Не удалось прочитать локальные снимки.';
+  }
+}
+
+async function renderAccountBackups() {
+  const group = $('#accountBackupGroup');
+  const list = $('#accountBackupList');
+  const status = $('#accountBackupStatus');
+  const create = $('#createAccountBackup');
+  if (!group || !list || !status || !create) return;
+  group.hidden = !accountPreview;
+  if (!accountPreview) return;
+  list.replaceChildren();
+  const dirty = hasUncommittedDraft();
+  const unpublished = hasAccountPublishChanges();
+  create.disabled = dirty || unpublished || !accountBaseFingerprint || editStatus === 'saving' || editStatus === 'conflict';
+  status.textContent = dirty
+    ? 'Сначала сохраните черновик и опубликуйте его или отмените изменения.'
+    : editStatus === 'conflict'
+      ? 'Обновите текущую версию сайта, прежде чем создавать или восстанавливать снимок.'
+      : unpublished
+        ? 'Сначала опубликуйте или отмените изменения аккаунтного черновика.'
+        : 'Снимки сайта доступны с этого и других устройств после входа в разрешённый аккаунт.';
+  try {
+    const result = await callWaydeanAdminAction('waydean-admin-backups', {}, accountAdminAccess);
+    const backups = parseWaydeanBackups(result.backups);
+    if (!backups.length) {
+      const empty = document.createElement('p'); empty.className = 'local-data-empty';
+      empty.textContent = 'Серверных снимков пока нет.'; list.append(empty); return;
+    }
+    for (const backup of backups) {
+      const row = document.createElement('article'); row.className = 'local-backup-row';
+      const heading = document.createElement('div'); heading.className = 'local-backup-heading';
+      const title = document.createElement('strong'); title.textContent = backup.label;
+      const date = document.createElement('time'); date.dateTime = backup.savedAt; date.textContent = formatLocalDate(backup.savedAt);
+      heading.append(title, date);
+      const details = document.createElement('small'); details.textContent = `${backup.personCount} человек${backup.pinned ? ' · закреплён на сервере' : ''}`;
+      const actions = document.createElement('div'); actions.className = 'local-backup-actions';
+      const restore = document.createElement('button'); restore.type = 'button'; restore.textContent = 'Восстановить';
+      restore.disabled = dirty || unpublished || !accountBaseFingerprint || editStatus === 'saving' || editStatus === 'conflict';
+      restore.addEventListener('click', () => restoreAccountBackup(backup));
+      const pin = document.createElement('button'); pin.type = 'button'; pin.textContent = backup.pinned ? 'Открепить' : 'Закрепить';
+      pin.disabled = editStatus === 'saving';
+      pin.addEventListener('click', () => toggleAccountBackupPin(backup));
+      actions.append(restore, pin); row.append(heading, details, actions); list.append(row);
+    }
+  } catch (error) {
+    status.textContent = error?.message || 'Не удалось загрузить серверные снимки.';
+  }
+}
+
+async function createAccountBackup() {
+  if (!accountPreview || hasUncommittedDraft() || hasAccountPublishChanges() || !accountBaseFingerprint || editStatus === 'saving' || editStatus === 'conflict') {
+    await renderAccountBackups();
+    return;
+  }
+  const create = $('#createAccountBackup');
+  const status = $('#accountBackupStatus');
+  create.disabled = true;
+  status.textContent = 'Создаю снимок древа на сайте…';
+  try {
+    const label = `Waydean · ${new Date().toLocaleString('ru-RU')}`;
+    await callWaydeanAdminAction('waydean-admin-snapshot', { label }, accountAdminAccess);
+    await Promise.all([renderAccountBackups(), renderLocalHistory()]);
+    status.textContent = 'Серверный снимок создан. Он доступен после входа в аккаунт на другом устройстве.';
+    announce('Снимок древа сохранён на сайте.');
+  } catch (error) {
+    status.textContent = error?.message || 'Не удалось создать серверный снимок.';
+    create.disabled = false;
+  }
+}
+
+async function toggleAccountBackupPin(backup) {
+  const status = $('#accountBackupStatus');
+  status.textContent = backup.pinned ? 'Открепляю снимок на сервере…' : 'Закрепляю снимок на сервере…';
+  try {
+    await callWaydeanAdminAction('waydean-admin-pin-backup', {
+      backup: backup.name,
+      pinned: !backup.pinned
+    }, accountAdminAccess);
+    await renderAccountBackups();
+    status.textContent = backup.pinned ? 'Снимок откреплён на сервере.' : 'Снимок закреплён на сервере.';
+    announce(backup.pinned ? 'Снимок сайта откреплён.' : 'Снимок сайта закреплён.');
+  } catch (error) {
+    status.textContent = error?.message || 'Не удалось изменить закрепление снимка.';
+  }
+}
+
+async function restoreAccountBackup(backup) {
+  if (!accountPreview || hasUncommittedDraft() || hasAccountPublishChanges() || !accountBaseFingerprint || editStatus === 'saving' || editStatus === 'conflict') {
+    await renderAccountBackups();
+    return;
+  }
+  const confirmed = window.confirm(`Восстановить серверное древо из снимка «${backup.label}» от ${formatLocalDate(backup.savedAt)}? Текущая версия будет автоматически сохранена отдельным снимком перед восстановлением.`);
+  if (!confirmed) return;
+  const status = $('#accountBackupStatus');
+  status.textContent = 'Проверяю версию сайта и восстанавливаю снимок…';
+  let serverRestoreCommitted = false;
+  try {
+    const restored = await callWaydeanAdminAction('waydean-admin-restore', {
+      backup: backup.name,
+      expectedFingerprint: accountBaseFingerprint,
+      expectedActivityJson: accountBaseActivityJson
+    }, accountAdminAccess);
+    serverRestoreCommitted = true;
+    const root = JSON.parse(restored.treeJson);
+    flattenTree(root);
+    accountServerTreeJson = restored.treeJson;
+    accountServerActivityJson = restored.activityJson || '[]';
+    accountServerFingerprint = restored.fingerprint;
+    accountBaseTree = cloneTree(root);
+    accountBaseFingerprint = restored.fingerprint;
+    accountBaseActivityJson = accountServerActivityJson;
+    accountPublishConflict = null;
+    sourceFixtureRoot = cloneTree(root);
+    fixtureRoot = cloneTree(root);
+    originalFixtureRoot = cloneTree(root);
+    pendingLocalPhotoWrites.clear(); pendingLocalPhotoDeletes.clear();
+    rawDraftDirty = false; editStatus = 'saved';
+    let localPersistenceError = '';
+    try {
+      const stored = await saveLocalTreeDraft(localDraftKey, fixtureRoot, localDraftRevision, {}, accountDraftMetadata());
+      localDraftRevision = stored.revision;
+      localDraftPersistenceError = '';
+    } catch (error) {
+      editStatus = 'error';
+      localDraftPersistenceError = error?.message || 'Не удалось обновить локальный черновик.';
+      localPersistenceError = localDraftPersistenceError;
+    }
+    await restoreLocalPhotoUrls();
+    for (const id of ['minGeneration', 'maxGeneration']) document.getElementById(id).replaceChildren();
+    populateGenerationFilters(); resetGenerationFilters(); refreshEditableModel();
+    if (!byId.has(selectedId)) selectedId = records[0]?.id ?? null;
+    renderProfile();
+    await Promise.all([renderAccountBackups(), renderLocalBackups(), renderLocalHistory()]);
+    status.textContent = localPersistenceError
+      ? `Снимок восстановлен на сайте, но локальную копию не удалось обновить: ${localPersistenceError}`
+      : 'Снимок восстановлен на сайте. Текущая версия сохранена в отдельном серверном снимке.';
+    announce('Серверная копия восстановлена. Текущая версия сохранена отдельно.');
+  } catch (error) {
+    if (error?.code === 'WAYDEAN_PUBLISH_CONFLICT') {
+      accountPublishConflict = error.details || null;
+      accountServerTreeJson = error.details?.serverTreeJson || accountServerTreeJson;
+      accountServerActivityJson = error.details?.serverActivityJson || accountServerActivityJson;
+      accountServerFingerprint = error.details?.serverFingerprint || accountServerFingerprint;
+      editStatus = 'conflict';
+      localDraftPersistenceError = 'Сайт изменился после загрузки. Ваш локальный черновик сохранён; загрузите текущую версию сайта перед повтором.';
+      renderProfile(currentProfileTab);
+    }
+    status.textContent = serverRestoreCommitted
+      ? `Снимок уже восстановлен на сайте, но локальная копия или экран не обновились: ${error?.message || 'повторите загрузку страницы.'}`
+      : error?.message || 'Не удалось восстановить серверный снимок.';
+    await renderAccountBackups();
   }
 }
 
@@ -2045,8 +2238,9 @@ function bindControls() {
     }
   });
   $('#moreHistory').addEventListener('click', () => { openPopover(ui.history); renderLocalHistory(); });
-  $('#moreBackups').addEventListener('click', () => { openPopover(ui.backups); renderLocalBackups(); });
+  $('#moreBackups').addEventListener('click', () => { openPopover(ui.backups); renderLocalBackups(); renderAccountBackups(); });
   $('#createLocalBackup').addEventListener('click', makeLocalBackup);
+  $('#createAccountBackup').addEventListener('click', createAccountBackup);
   $('#openCurrentTree').addEventListener('click', () => window.location.assign('./index.html'));
   $('#shareOpen').addEventListener('click', shareLocalPreview);
   $('#printOpen').addEventListener('click', openPrintStudio);
@@ -2455,6 +2649,21 @@ async function initialize() {
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
     $('#moreHistory').hidden = !localTreeDraft;
     $('#moreBackups').hidden = !localTreeDraft;
+    $('#accountBackupGroup').hidden = !accountPreview;
+    $('#historyTitle').textContent = accountPreview ? 'История сайта и устройства' : 'История локальных действий';
+    $('#historyNote').textContent = accountPreview
+      ? 'Журнал сайта синхронизирован с древом. История черновика хранится только в этом браузере.'
+      : 'Сохранения черновика и операции с локальными снимками в этом браузере.';
+    $('#moreHistory').querySelector('strong').textContent = accountPreview ? 'История сайта и черновика' : 'История локальных действий';
+    $('#moreHistory').querySelector('small').textContent = accountPreview
+      ? 'Журнал опубликованного древа и локальные правки'
+      : 'Сохранения и восстановление в этом браузере';
+    $('#moreBackups').querySelector('strong').textContent = accountPreview ? 'Резервные копии' : 'Резервные копии · локально';
+    $('#moreBackups').querySelector('small').textContent = accountPreview
+      ? 'Снимки сайта и локального черновика'
+      : 'Создать снимок, закрепить или восстановить';
+    $('#localBackupHeading').textContent = accountPreview ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
+    $('#createLocalBackup').textContent = accountPreview ? 'Создать снимок черновика' : 'Создать снимок сейчас';
     $('#moreVideo').hidden = true;
     if (accountPreview && isLoopbackHost(location.hostname)) {
       throw new Error('Режим аккаунта открывается на сайте. Для локального просмотра выберите обычное древо.');
