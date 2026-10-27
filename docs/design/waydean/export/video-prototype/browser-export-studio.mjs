@@ -18,6 +18,12 @@ import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-previ
 
 const root = document.getElementById("browser-export-root");
 const handoff = readVideoExportHandoff(window.sessionStorage);
+const requiresTreeHandoff = new URLSearchParams(window.location.search).get("source") === "tree";
+if (requiresTreeHandoff && !handoff) {
+  const error = new Error("WAYDEAN_TREE_HANDOFF_MISSING");
+  error.name = "WaydeanTreeHandoffMissingError";
+  throw error;
+}
 const DEMO_PEOPLE = [
   { id: "demo-1", name: "Первое поколение", generation: 1, parent: null, born: 1880, died: null },
   { id: "demo-2", name: "Следующее поколение", generation: 2, parent: "demo-1", born: 1907, died: null },
@@ -146,10 +152,10 @@ function renderShell() {
   root.innerHTML = `
     <div class="browser-export-shell">
       <header class="browser-export-header">
-        <a class="browser-export-brand" href="/drewo/waydean-preview.html?state=all-tree" aria-label="Вернуться к семейному древу">
+        <a class="browser-export-brand" href="/drewo/waydean-preview.html?state=all-tree" target="_top" aria-label="Вернуться к семейному древу">
           <span class="brand-mark" aria-hidden="true">✦</span><span><strong>WAYDEAN</strong><small>СЕМЕЙНОЕ ДРЕВО</small></span>
         </a>
-        <a class="browser-export-back" href="/drewo/waydean-preview.html?state=all-tree"><span aria-hidden="true">←</span> Назад к древу</a>
+        <a class="browser-export-back" href="/drewo/waydean-preview.html?state=all-tree" target="_top"><span aria-hidden="true">←</span> Назад к древу</a>
         <span class="browser-export-badge"><i></i> РЕНДЕР НА УСТРОЙСТВЕ</span>
       </header>
       <section class="browser-export-intro">

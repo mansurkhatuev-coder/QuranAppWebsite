@@ -1286,7 +1286,10 @@ function openVideoStudio() {
     return;
   }
 
-  const videoUrl = new URL('../docs/design/waydean/export/video-prototype/browser-export.html', location.href);
+  // Keep the top-level URL inside the installed PWA scope. The exporter is
+  // embedded by waydean-preview.html, so its same-origin frame can read this
+  // tab's sessionStorage handoff instead of opening outside the PWA in Safari.
+  const videoUrl = new URL('./waydean-preview.html?state=all-tree&view=video-export', location.href);
   closePopovers();
   window.location.assign(videoUrl.href);
 }
