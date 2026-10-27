@@ -28,7 +28,7 @@
   <link rel="stylesheet" href="waydean-preview-history.css?v=local-history-1">
   <link rel="stylesheet" href="waydean-preview-pwa.css?v=pwa-1">
   <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
-  <link rel="stylesheet" href="waydean-preview-self.css?v=self-3">
+  <link rel="stylesheet" href="waydean-preview-self.css?v=self-whoami-prompt-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=thin-glass-1">
   <link rel="stylesheet" href="waydean-preview-auth.css?v=admin-auth-1">
 </head>
@@ -211,6 +211,18 @@
         <div class="pwa-push-dialog-actions"><button class="primary-action" id="pwaPushSubmit" type="submit">Продолжить</button><button class="secondary-action" id="pwaPushCancel" type="button">Отмена</button></div>
       </form>
     </dialog>
+    <dialog class="whoami-onboarding" id="whoAmIPrompt" aria-labelledby="whoAmIPromptTitle" aria-describedby="whoAmIPromptDescription">
+      <div class="whoami-onboarding-card">
+        <button class="whoami-onboarding-close" id="whoAmIPromptClose" type="button" aria-label="Закрыть">×</button>
+        <span class="whoami-onboarding-mark" aria-hidden="true">◎</span>
+        <h2 id="whoAmIPromptTitle">Кто вы в этом древе?</h2>
+        <p id="whoAmIPromptDescription">Отметьте себя, чтобы быстрее находить свой путь и близких. Выбор сохранится в этом браузере.</p>
+        <div class="whoami-onboarding-actions">
+          <button class="primary-action" id="whoAmIPromptChoose" type="button">Выбрать себя</button>
+          <button class="secondary-action" id="whoAmIPromptLater" type="button">Позже</button>
+        </div>
+      </div>
+    </dialog>
     <div class="backdrop" id="popoverBackdrop" hidden></div>
     <div class="load-error" id="loadError" hidden>
       <strong id="loadErrorTitle">Не удалось загрузить дерево</strong>
@@ -246,7 +258,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-      import('./waydean-preview.js?v=20261028-account-history-1');
+      import('./waydean-preview.js?v=20261028-whoami-prompt-2');
     }
   </script>
 </body>
