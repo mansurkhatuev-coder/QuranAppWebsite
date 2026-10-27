@@ -2,5 +2,12 @@
   "id": "гiузат",
   "name": "ГIузат",
   "gender": "male",
-  "sons": []
+  "sons": [
+    {
+      "id": "added-1793087204949-zn6hts",
+      "name": "Гана",
+      "gender": "male",
+      "sons": []
+    }
+  ]
 }
