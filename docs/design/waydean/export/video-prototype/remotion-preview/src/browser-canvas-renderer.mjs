@@ -13,7 +13,7 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261028-continuous-camera-exit-2";
+} from "./project-model.mjs?v=20261028-continuous-camera-exit-3";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs";
 
@@ -52,16 +52,16 @@ function pathRoundRect(context, x, y, width, height, radius) {
   context.lineTo(x, y + r); context.quadraticCurveTo(x, y, x + r, y); context.closePath();
 }
 
-function edgeCurve(parent, child, overview, markerRadius) {
-  const startY = parent.y + (overview ? markerRadius : parent.height / 2 - 2);
-  const endY = child.y - (overview ? markerRadius : child.height / 2 - 2);
+function edgeCurve(parent, child, parentIsMarker, childIsMarker, markerRadius) {
+  const startY = parent.y + (parentIsMarker ? markerRadius : parent.height / 2 - 2);
+  const endY = child.y - (childIsMarker ? markerRadius : child.height / 2 - 2);
   const bend = Math.max(18, (endY - startY) * 0.56);
   return [parent.x, startY, parent.x, startY + bend, child.x, endY - bend, child.x, endY];
 }
 
-function edgePolyline(parent, child, overview, markerRadius) {
-  const startY = parent.y + (overview ? markerRadius : parent.height / 2);
-  const endY = child.y - (overview ? markerRadius : child.height / 2);
+function edgePolyline(parent, child, parentIsMarker, childIsMarker, markerRadius) {
+  const startY = parent.y + (parentIsMarker ? markerRadius : parent.height / 2);
+  const endY = child.y - (childIsMarker ? markerRadius : child.height / 2);
   const junctionY = startY + (endY - startY) * 0.5;
   return [parent.x, startY, parent.x, junctionY, child.x, junctionY, child.x, endY];
 }
@@ -282,6 +282,12 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
   const nodes = new Map(story.timeline.layout.nodes.map(node => [node.id, node]));
   const people = new Map(story.people.map(person => [person.id, person]));
   const pathIndex = new Map(story.timeline.pathIds.slice(1).map((id, index) => [`${story.timeline.pathIds[index]}->${id}`, index]));
+  const firstRevealShotByPerson = new Map();
+  story.timeline.shots.forEach((shot, shotIndex) => {
+    for (const personId of shot.personIds) {
+      if (!firstRevealShotByPerson.has(personId)) firstRevealShotByPerson.set(personId, shotIndex);
+    }
+  });
 
   return frame => {
     const globalFrame = clamp(Math.floor(Number(frame) || 0), 0, story.timeline.totalFrames - 1);
@@ -302,6 +308,8 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const isPath = index != null;
       const progress = isPath ? clamp(sample.lineProgress - index, 0, 1) : 1;
       const emphasis = getSceneEdgeEmphasis(story, shotIndex, local, edge.key);
+      const parentIsMarker = overview && (firstRevealShotByPerson.get(parent.id) ?? Infinity) > shotIndex;
+      const childIsMarker = overview && (firstRevealShotByPerson.get(child.id) ?? Infinity) > shotIndex;
       const base = story.scopeType === "all" ? 0.22 : shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
       const visible = getTreeViewportOpacity(story.scopeType, 1);
       return [{
@@ -315,8 +323,8 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         alpha: (base + emphasis * (0.9 - base)) * visible,
         lineWidth: (1.8 + emphasis * 2.4) / (framing.scale * scale),
         points: orthogonalTree
-          ? edgePolyline(parent, child, overview, markerRadius)
-          : edgeCurve(parent, child, overview, markerRadius)
+          ? edgePolyline(parent, child, parentIsMarker, childIsMarker, markerRadius)
+          : edgeCurve(parent, child, parentIsMarker, childIsMarker, markerRadius)
       }];
     });
 
@@ -350,11 +358,14 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     for (const node of story.timeline.layout.nodes) {
       const person = people.get(node.id); if (!person) continue;
       const emphasis = getScenePersonEmphasis(story, shotIndex, local, person.id); const target = person.id === story.selectedPersonId && (shot.type === "focus" || shot.type === "finale");
+      const isUnrevealedOverviewMarker = overview
+        && (firstRevealShotByPerson.get(person.id) ?? Infinity) > shotIndex;
       const cardAlpha = story.scopeType === "all"
         ? 1
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
       const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
-      if (overview) drawMarker(context, node, opacity, target, markerRadius); else drawCard(context, person, node, opacity, target, story.includeDates);
+      if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);
+      else drawCard(context, person, node, opacity, target, story.includeDates);
     }
     context.restore(); drawCopy(context, story, shot, shotIndex, globalFrame, canvas.width, canvas.height);
   };

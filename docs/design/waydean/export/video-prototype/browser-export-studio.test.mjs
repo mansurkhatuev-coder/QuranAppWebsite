@@ -33,7 +33,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261028-continuous-camera-exit-2"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261028-continuous-camera-exit-3"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);

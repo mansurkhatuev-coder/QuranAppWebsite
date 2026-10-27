@@ -104,6 +104,31 @@ test("full-tree overview video draws a visible marker for every generation", () 
   assert.ok(markerRadii.some(radius => Math.abs(radius - expectedRadius) < 1e-9));
 });
 
+test("full-tree branch cards stay as cards when the camera crosses overview scale", () => {
+  const branchPeople = [
+    { id: "root", name: "Родоначальник", generation: 1, parent: null },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
+  const shotIndex = story.timeline.shots.findIndex(shot => shot.type === "branching");
+  const shot = story.timeline.shots[shotIndex];
+  const frame = shot.startFrame;
+  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const context = fakeCanvasContext();
+  const canvas = { width: 1280, height: 720, getContext: () => context };
+
+  assert.ok(framing.scale < 0.5, "fixture must exercise the scale that previously switched cards to dots");
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Родоначальник"));
+  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"));
+});
+
 test("canvas frame renderer paints the supplied local background, tree cards, and text", () => {
   const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
   const context = fakeCanvasContext();
