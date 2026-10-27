@@ -68,7 +68,26 @@
                               "id": "added-1793087907692-vai257",
                               "name": "Супьян",
                               "gender": "male",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1793089275994-5pnlzr",
+                                  "name": "Билал",
+                                  "gender": "male",
+                                  "sons": []
+                                },
+                                {
+                                  "id": "added-1793089292445-6sxulo",
+                                  "name": "Ахьяд",
+                                  "gender": "male",
+                                  "sons": []
+                                },
+                                {
+                                  "id": "added-1793089312749-zuu1t9",
+                                  "name": "Абдуррохьман",
+                                  "gender": "male",
+                                  "sons": []
+                                }
+                              ]
                             }
                           ]
                         },
@@ -106,7 +125,65 @@
                               "id": "added-1793088907482-wzys66",
                               "name": "Минкаил",
                               "gender": "male",
-                              "sons": []
+                              "sons": [
+                                {
+                                  "id": "added-1793088930206-ikknpw",
+                                  "name": "Лечи",
+                                  "gender": "male",
+                                  "sons": [
+                                    {
+                                      "id": "added-1793088966453-wbgdxh",
+                                      "name": "Асхьаб",
+                                      "gender": "male",
+                                      "sons": [
+                                        {
+                                          "id": "added-1793089007337-t3hq7b",
+                                          "name": "Муса",
+                                          "gender": "male",
+                                          "sons": []
+                                        },
+                                        {
+                                          "id": "added-1793089019127-3aw06v",
+                                          "name": "1иса",
+                                          "gender": "male",
+                                          "sons": []
+                                        }
+                                      ]
+                                    },
+                                    {
+                                      "id": "added-1793088991564-c1fuzy",
+                                      "name": "Мухьаммад-Эми",
+                                      "gender": "male",
+                                      "sons": [
+                                        {
+                                          "id": "added-1793089038546-ift8mq",
+                                          "name": "Абдул-Малик",
+                                          "gender": "male",
+                                          "sons": []
+                                        },
+                                        {
+                                          "id": "added-1793089053650-gryqf8",
+                                          "name": "Абубакар",
+                                          "gender": "male",
+                                          "sons": []
+                                        },
+                                        {
+                                          "id": "added-1793089062799-jdsb9b",
+                                          "name": "Адам",
+                                          "gender": "male",
+                                          "sons": []
+                                        }
+                                      ]
+                                    }
+                                  ]
+                                },
+                                {
+                                  "id": "added-1793088944443-5nfks3",
+                                  "name": "Мех1ди",
+                                  "gender": "male",
+                                  "sons": []
+                                }
+                              ]
                             }
                           ]
                         },
