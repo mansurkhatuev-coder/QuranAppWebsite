@@ -24,7 +24,81 @@
           "id": "added-1793087302226-p9k7fv",
           "name": "Мадакх",
           "gender": "male",
-          "sons": []
+          "sons": [
+            {
+              "id": "added-1793087545221-92uv9a",
+              "name": "Бойбу",
+              "gender": "male",
+              "sons": [],
+              "born": 1820
+            },
+            {
+              "id": "added-1793087581457-09zjkf",
+              "name": "Байтукха",
+              "gender": "male",
+              "sons": [
+                {
+                  "id": "added-1793087659907-c6aw16",
+                  "name": "Тазабай",
+                  "gender": "male",
+                  "sons": [
+                    {
+                      "id": "added-1793087779408-215jtz",
+                      "name": "1ели",
+                      "gender": "male",
+                      "sons": []
+                    },
+                    {
+                      "id": "added-1793087790013-yhfjtv",
+                      "name": "Аьлти",
+                      "gender": "male",
+                      "sons": []
+                    },
+                    {
+                      "id": "added-1793087802694-e7vkfm",
+                      "name": "Тимирай",
+                      "gender": "male",
+                      "sons": [
+                        {
+                          "id": "added-1793087886205-bch04b",
+                          "name": "Мамед",
+                          "gender": "male",
+                          "sons": [
+                            {
+                              "id": "added-1793087907692-vai257",
+                              "name": "Супьян",
+                              "gender": "male",
+                              "sons": []
+                            }
+                          ]
+                        },
+                        {
+                          "id": "added-1793087894384-gh0fep",
+                          "name": "Нада",
+                          "gender": "male",
+                          "sons": []
+                        }
+                      ]
+                    },
+                    {
+                      "id": "added-1793087833796-rp77cr",
+                      "name": "Тимиргира",
+                      "gender": "male",
+                      "sons": []
+                    },
+                    {
+                      "id": "added-1793087849537-d4qz4r",
+                      "name": "Тозуркъа",
+                      "gender": "male",
+                      "sons": []
+                    }
+                  ],
+                  "born": 1844,
+                  "died": 1927
+                }
+              ]
+            }
+          ]
         },
         {
           "id": "added-1793087330972-w86dyg",
@@ -36,7 +110,8 @@
           "id": "added-1793087374807-o63egh",
           "name": "Г1очакхай",
           "gender": "male",
-          "sons": []
+          "sons": [],
+          "died": 1866
         }
       ]
     }
