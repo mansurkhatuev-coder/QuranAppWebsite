@@ -12,7 +12,7 @@
   <title>Waydean — семейное древо</title>
   <link rel="manifest" href="./waydean-preview.webmanifest">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-  <link rel="stylesheet" href="waydean-preview.css?v=tree-loader-1">
+  <link rel="stylesheet" href="waydean-preview.css?v=account-history-1">
   <link rel="stylesheet" href="waydean-preview-loading.css?v=1">
   <link rel="stylesheet" href="waydean-preview-camera.css?v=ios-pinch-stable-1">
   <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
@@ -145,14 +145,22 @@
       <div class="popover-head"><strong>Статистика древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
       <div class="stats-grid" id="statsGrid"></div><p id="statsNote"></p>
     </section>
-    <section class="popover local-history-popover" id="historyPopover" hidden aria-label="История локальных действий">
-      <div class="popover-head"><strong>История локальных действий</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
-      <p class="local-data-note">Только в этом браузере. Здесь видны сохранения черновика и операции с локальными снимками.</p>
+    <section class="popover local-history-popover" id="historyPopover" hidden aria-label="История действий с древом">
+      <div class="popover-head"><strong id="historyTitle">История действий</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <p class="local-data-note" id="historyNote">Сохранения черновика и операции с локальными снимками в этом браузере.</p>
       <div class="local-history-list" id="localHistoryList" aria-live="polite"></div>
     </section>
     <section class="popover local-backups-popover" id="backupsPopover" hidden aria-label="Резервные копии локального дерева">
       <div class="popover-head"><strong>Резервные копии</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
-      <p class="local-data-note">Локальные снимки хранятся только на этом компьютере. Как и серверные копии, они сохраняют данные дерева, но не сами файлы фотографий.</p>
+      <section id="accountBackupGroup" hidden aria-label="Серверные резервные копии">
+        <h3>Копии на сайте</h3>
+        <p class="local-data-note">Серверный снимок сохраняет дерево и журнал. Файлы фотографий хранятся отдельно.</p>
+        <button class="primary-action local-snapshot-create" id="createAccountBackup" type="button">Создать снимок на сайте</button>
+        <p class="local-backup-status" id="accountBackupStatus" aria-live="polite"></p>
+        <div class="local-backup-list" id="accountBackupList" aria-live="polite"></div>
+      </section>
+      <h3 id="localBackupHeading">Копии на этом устройстве</h3>
+      <p class="local-data-note">Локальные снимки хранятся только в этом браузере и не заменяют серверные копии. Фотофайлы в них не входят.</p>
       <button class="primary-action local-snapshot-create" id="createLocalBackup" type="button">Создать снимок сейчас</button>
       <p class="local-backup-status" id="localBackupStatus" aria-live="polite"></p>
       <div class="local-backup-list" id="localBackupList" aria-live="polite"></div>
@@ -238,7 +246,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-      import('./waydean-preview.js?v=20261027-overview-markers-1');
+      import('./waydean-preview.js?v=20261028-account-history-1');
     }
   </script>
 </body>

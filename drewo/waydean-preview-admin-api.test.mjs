@@ -22,6 +22,25 @@ test('calls only Waydean account actions with the verified bearer session', asyn
   assert.equal(result.treeDir, 'drewo');
 });
 
+test('sends account backup operations through the fixed Waydean tree route', async () => {
+  for (const action of [
+    'waydean-admin-backups',
+    'waydean-admin-snapshot',
+    'waydean-admin-pin-backup',
+    'waydean-admin-restore'
+  ]) {
+    let requestBody;
+    const result = await callWaydeanAdminAction(action, { backup: 'drewo-backup.json' }, access, async (_url, options) => {
+      requestBody = JSON.parse(options.body);
+      return new Response(JSON.stringify({ ok: true, treeDir: 'drewo' }));
+    });
+    assert.equal(requestBody.action, action);
+    assert.equal(requestBody.treeDir, 'drewo');
+    assert.equal(requestBody.backup, 'drewo-backup.json');
+    assert.equal(result.ok, true);
+  }
+});
+
 test('rejects missing account credentials without making a request', async () => {
   let called = false;
   await assert.rejects(
