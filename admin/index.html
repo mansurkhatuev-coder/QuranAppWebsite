@@ -14,7 +14,7 @@
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
     <title>Админка — Коран и Азкары</title>
     <link rel="stylesheet" href="../styles.css" />
-    <link rel="stylesheet" href="./admin.css?v=24" />
+    <link rel="stylesheet" href="./admin.css?v=25" />
   </head>
   <body class="admin-body">
     <div id="admin-pwa-banner" class="admin-pwa-banner" hidden>
@@ -88,7 +88,10 @@
           <p class="admin-kicker">Коран и Азкары</p>
           <h1>Центр управления</h1>
         </div>
-        <button id="logout-button" type="button" class="admin-button admin-button-ghost">Выйти</button>
+        <div class="admin-topbar-actions">
+          <a href="../admin-v2/" class="admin-button admin-button-ghost">Новая админка</a>
+          <button id="logout-button" type="button" class="admin-button admin-button-ghost">Выйти</button>
+        </div>
       </header>
       <div id="admin-store-drift" class="admin-store-drift" hidden></div>
 
@@ -480,13 +483,15 @@
 
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="./supabase-config.js?v=6"></script>
-    <script src="./admin-supabase.js?v=18"></script>
+    <script src="./admin-supabase.js?v=analytics-feedback-20261028"></script>
     <script src="./admin-command-center.js?v=7"></script>
     <script src="./admin-home.js?v=3"></script>
-    <script src="./admin-academy-feedback.js?v=4"></script>
-    <script src="./admin-analytics.js?v=22"></script>
+    <script src="./admin-academy-feedback.js?v=5"></script>
+    <script src="./store-analytics-data.js?v=1"></script>
+    <script src="./admin-analytics.js?v=23"></script>
     <script src="./admin-academy-giveaway.js?v=1"></script>
-    <script src="./admin.js?v=25"></script>
+    <script src="./admin-return-routing.js?v=1"></script>
+    <script src="./admin.js?v=26"></script>
     <script src="./admin-pwa.js?v=2"></script>
   </body>
 </html>

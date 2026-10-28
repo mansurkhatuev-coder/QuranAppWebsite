@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="description" content="Редактор разметки таджвида для азкаров и дуа (облако + публикация в приложение)." />
+  <title>Таджвид · азкары и дуа</title>
+  <script>if (new URLSearchParams(location.search).get("workbenchPreview") === "1") document.documentElement.dataset.workbenchPreview = "true";</script>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2315231e'/%3E%3Cpath d='M14 40c8-18 28-18 36 0' stroke='%232f8f74' stroke-width='6' fill='none' stroke-linecap='round'/%3E%3Ccircle cx='32' cy='22' r='6' fill='%23d7b56a'/%3E%3C/svg%3E" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="./editor.css?v=remote-toggle1" />
+  <link id="workbenchPreviewStyles" rel="stylesheet" href="./workbench-preview.css?v=admin-v2-editorial" />
+</head>
+<body>
+  <div class="atmosphere" aria-hidden="true"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <p class="eyebrow"><span class="eyebrow-full">Прод · облако + локальный черновик</span><span class="eyebrow-short">Прод · облако</span></p>
+      <h1><span class="title-full">Таджвид‑разметка азкаров</span><span class="title-short">Таджвид · азкары</span></h1>
+      <span id="saveStatus" class="save-pill" aria-live="polite">Черновик</span>
+    </div>
+    <div class="top-actions">
+      <div class="action-group" role="group" aria-label="История">
+        <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z" aria-label="Отменить">↩</button>
+        <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z" aria-label="Повторить">↪</button>
+      </div>
+      <div class="action-group" role="group" aria-label="Черновик и прод">
+        <button type="button" class="btn ghost compact" id="btnCloudLoad" title="Загрузить локальный черновик с этого устройства"><span class="label-full">Черновик ↓</span><span class="label-short">↓лок.</span></button>
+        <button type="button" class="btn ghost compact" id="btnCloudSave" title="Сохранить черновик только в этом браузере"><span class="label-full">Сохранить черновик</span><span class="label-short">↑лок.</span></button>
+        <button type="button" class="btn ghost compact" id="btnCloudPull" title="Загрузить опубликованный пакет с waydean.ru в тестовую копию"><span class="label-full">Загрузить с прода</span><span class="label-short">Прод ↓</span></button>
+        <button type="button" class="btn primary compact" id="btnCloudPublish" aria-disabled="true" title="Публикация отключена в тестовой копии"><span class="label-full">Публикация · тест</span><span class="label-short">Pub · выкл.</span></button>
+      </div>
+      <div class="action-group" role="group" aria-label="Файл">
+        <button type="button" class="btn ghost compact" id="btnHelp"><span class="label-full">Справка</span><span class="label-short">?</span></button>
+        <button type="button" class="btn ghost compact" id="btnImport"><span class="label-full">Импорт</span><span class="label-short">↓</span></button>
+        <button type="button" class="btn ghost compact" id="btnExport"><span class="label-full">Этот JSON</span><span class="label-short">1 JSON</span></button>
+      </div>
+      <input id="fileInput" type="file" accept="application/json,.json" hidden />
+    </div>
+  </header>
+
+  <section class="availability-panel" aria-labelledby="availabilityTitle" aria-describedby="availabilityHint">
+    <div class="availability-copy">
+      <h2 id="availabilityTitle">Цветная транскрипция в приложении</h2>
+      <p id="availabilityHint">Для всех совместимых версий после проверки обновлений. Офлайн — после подключения. Черновик публикуется отдельно.</p>
+      <p id="availabilityStatus" class="availability-status" role="status" aria-live="polite">Проверяем состояние</p>
+    </div>
+    <div class="availability-actions">
+      <button type="button" id="btnAvailability" class="availability-switch" role="switch" aria-checked="false" aria-label="Цветная транскрипция в приложении" aria-describedby="availabilityStatus" hidden disabled>
+        <span class="switch-track" aria-hidden="true"><span></span></span>
+        <span id="availabilityValue">Выключено</span>
+      </button>
+      <button type="button" id="btnAvailabilityRefresh" class="btn ghost compact">Проверить состояние</button>
+    </div>
+  </section>
+
+  <div class="library-bar">
+    <label class="meta-field library-select-field">
+      <span>Документ</span>
+      <select id="docSelect" aria-label="Выбор документа"></select>
+    </label>
+    <div class="meta-actions library-actions">
+      <button type="button" class="btn ghost compact" id="btnSeedMissing" title="Добавить недостающие эталоны">+ Эталоны</button>
+      <button type="button" class="btn ghost compact" id="btnNew" title="Добавить документ в список">+ Добавить</button>
+      <button type="button" class="btn ghost compact" id="btnDuplicate" title="Копия текущего в список">Копия</button>
+      <button type="button" class="btn ghost compact" id="btnDeleteDoc" title="Удалить текущий">Удалить</button>
+      <button type="button" class="btn primary compact" id="btnExportAll" title="Скачать всю библиотеку"><span class="label-full">Экспорт всего</span><span class="label-short">Все JSON</span></button>
+    </div>
+  </div>
+
+  <div class="meta-bar">
+    <label class="meta-field grow">
+      <span>Название</span>
+      <input id="docTitle" type="text" autocomplete="off" placeholder="Азкар / сура внутри азкара" />
+    </label>
+    <label class="meta-field id-field">
+      <span>ID</span>
+      <input id="docId" type="text" autocomplete="off" placeholder="azkar-ikhlaas" />
+    </label>
+    <div class="meta-actions">
+      <button type="button" class="btn ghost compact" id="btnSuggestMarks" title="Подсказки по орфографии (´ х1 рр нн къ). Повторное нажатие — очистить"><span class="label-full">Предложить цвета</span><span class="label-short">Цвета</span></button>
+      <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Большое окно</span><span class="label-short">Окно</span></button>
+    </div>
+  </div>
+
+  <div class="arabic-bar">
+    <label class="meta-field grow">
+      <span>Арабский оригинал</span>
+      <textarea id="docArabic" rows="2" dir="rtl" lang="ar" placeholder="قُلْ هُوَ ٱللَّهُ أَحَدٌ"></textarea>
+    </label>
+  </div>
+
+  <div class="translit-bar">
+    <label class="meta-field grow">
+      <span>Чеченская транслитерация <em class="field-note">сюда вставляй / правь текст, потом размечай на бумаге ниже</em></span>
+      <textarea
+        id="docTranslit"
+        rows="4"
+        placeholder="Вставь сюда транслитерацию…&#10;Пример: Бисмилльах1иррохьманиррохьим."
+      ></textarea>
+    </label>
+  </div>
+
+  <section class="toolbar" aria-label="Правила таджвида">
+    <div class="toolbar-label">Правило</div>
+    <div class="rule-strip" id="ruleGrid" role="toolbar"></div>
+    <div class="toolbar-sep" aria-hidden="true"></div>
+    <div class="layer-group" role="group" aria-label="Слои">
+      <button type="button" class="chip-btn interdental-chip" id="btnInterdental" title="Клавиша 9 · ث ذ ظ — язык между зубами">
+        <span class="chip-swatch" aria-hidden="true"></span>
+        <span class="label-full">Межзубные ثذظ</span>
+        <span class="label-short">ثذظ</span>
+      </button>
+      <button type="button" class="chip-btn" id="btnAccent" title="A"><span class="label-full">´ Ударение</span><span class="label-short">´</span></button>
+      <button type="button" class="chip-btn" id="btnHidden" title="H"><span class="label-full">⊘ Скрытый</span><span class="label-short">⊘</span></button>
+      <button type="button" class="chip-btn danger" id="btnClearSel"><span class="label-full">Очистить</span><span class="label-short">✕</span></button>
+    </div>
+    <div class="inspector-actions" role="group" aria-label="Дополнительные панели">
+      <button type="button" class="btn ghost compact" id="btnShowMarks" data-inspector-panel="marks-panel" aria-controls="marks-panel" aria-expanded="false">Метки <span id="inspectorMarkCount">0</span></button>
+      <button type="button" class="btn ghost compact" id="btnShowJson" data-inspector-panel="json-panel" aria-controls="json-panel" aria-expanded="false">JSON</button>
+    </div>
+    <div class="sel-pill" id="selMeta">Выделение: нет</div>
+  </section>
+
+  <main class="stage">
+    <section class="paper-panel">
+      <div
+        id="markupCanvas"
+        class="markup-canvas"
+        role="textbox"
+        aria-label="Транслитерация для разметки"
+        tabindex="0"
+      ></div>
+      <p class="paper-hint">Тяни мышью по буквам · двойной клик — слово · Esc — снять выделение · клавиши 1–9 · Межзубные — кнопка ثذظ или 9</p>
+    </section>
+
+    <aside class="side-panels">
+      <details id="marks-panel" class="side-card mark-card">
+        <summary class="side-head">
+          <h2>Метки <span id="markCount" class="count">0</span></h2>
+          <span class="side-reveal">Показать список</span>
+        </summary>
+        <div class="side-card-actions"><button type="button" class="btn ghost compact" id="btnSortMarks">По позиции</button></div>
+        <div id="marksList" class="marks-list"></div>
+      </details>
+      <details id="json-panel" class="side-card json-card">
+        <summary class="side-head">
+          <h2>JSON</h2>
+          <span class="side-reveal">Раскрыть по необходимости</span>
+        </summary>
+        <div class="side-card-actions"><button type="button" class="btn ghost compact" id="btnCopyJson">Копировать</button></div>
+        <pre id="jsonPreview" class="json-preview"></pre>
+      </details>
+    </aside>
+  </main>
+
+
+  <dialog id="addDocDialog" class="modal">
+    <form method="dialog" class="modal-card add-doc-card" id="addDocForm">
+      <h2>Добавить в список</h2>
+      <p class="hint">Схема разметки та же — можно завести любой азкар / суру. Уже заполненные документы не затираются.</p>
+
+      <fieldset class="add-mode">
+        <legend>Что добавить</legend>
+        <label class="radio-row"><input type="radio" name="addMode" value="empty" checked /> Пустой документ</label>
+        <label class="radio-row"><input type="radio" name="addMode" value="duplicate" /> Копия текущего</label>
+        <label class="radio-row"><input type="radio" name="addMode" value="template" /> Из шаблона (арабский готов)</label>
+      </fieldset>
+
+      <label class="meta-field grow">
+        <span>Название</span>
+        <input id="addDocTitle" type="text" autocomplete="off" placeholder="Например: утренний азкар / Аль‑Фатиха" required />
+      </label>
+
+      <label class="meta-field grow" id="addTemplateField" hidden>
+        <span>Шаблон</span>
+        <select id="addDocTemplate" aria-label="Шаблон документа"></select>
+      </label>
+
+      <div class="modal-actions">
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
+        <button type="submit" class="btn primary" value="ok" id="btnConfirmAdd">Добавить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="plainDialog" class="modal">
+    <form method="dialog" class="modal-card">
+      <h2>Правка транслитерации</h2>
+      <p class="hint">Метки за новыми границами обрежутся. Удобнее править текст до плотной разметки.</p>
+      <textarea id="plainText" rows="10"></textarea>
+      <div class="modal-actions">
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
+        <button type="submit" class="btn primary" value="ok">Применить</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="publishDialog" class="modal">
+    <form method="dialog" class="modal-card publish-card" id="publishForm">
+      <h2>Публикация на прод</h2>
+      <p class="hint" id="publishHint">Проверьте изменения по каждому документу. Снятая галочка исключает документ только из этой публикации; live-версия останется в приложении.</p>
+      <div class="publish-toolbar">
+        <button type="button" class="btn ghost compact" id="btnPublishSelectReady">Только с метками</button>
+        <button type="button" class="btn ghost compact" id="btnPublishSelectAll">Все изменения</button>
+        <button type="button" class="btn ghost compact" id="btnPublishSelectNone">Снять все</button>
+      </div>
+      <div id="publishList" class="publish-list" role="group" aria-label="Документы к публикации"></div>
+      <p class="publish-summary" id="publishSummary" aria-live="polite"></p>
+      <div class="modal-actions">
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
+        <button type="submit" class="btn primary" value="ok" id="btnConfirmPublish">Опубликовать отмеченные</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="helpDialog" class="modal">
+    <div class="modal-card">
+      <h2>Как работать</h2>
+      <ul class="help-list">
+        <li><strong>Цвет</strong> — основное правило на фрагменте.</li>
+        <li><strong>Несколько правил</strong> — можно на одном месте; второе видно точкой снизу.</li>
+        <li><strong>Ударение</strong> — черта сверху, отдельный слой.</li>
+        <li><strong>Скрытый</strong> — для элементов вроде сада в «Аллах», которых нет отдельно в транслите.</li>
+        <li><strong>Мадды</strong> — отдельно: 2, 2–4–6, 4–5, 6.</li>
+        <li><strong>Межзубные</strong> — правило <kbd>9</kbd> для ث ذ ظ: пунктир снизу остаётся даже если сверху цвет тафхима/мадда (удобно для ظ).</li>
+        <li><strong>Библиотека</strong> — несколько азкаров в одном браузере; переключай сверху.</li>
+        <li><strong>Добавить</strong> — пустой документ, копия текущего или шаблон (Фатиха, Каусар и др.). Свои черновики не затираются.</li>
+        <li><strong>Транслитерация</strong> — поле под арабским: вставь чеченский текст, затем размечай на «бумаге».</li>
+        <li><strong>Экспорт всего</strong> — скачивает все документы одним JSON, когда будешь готов.</li>
+        <li><strong>Черновик ↑/↓</strong> — сохраняет/грузит локальную копию в этом браузере.</li>
+        <li><strong>Публикация</strong> — отключена в этой тестовой копии; отправка на сайт и в приложение заблокирована.</li>
+        <li><strong>Загрузить с прода</strong> — копирует опубликованный пакет в тестовый редактор. Это действие доступно только для чтения.</li>
+        <li><strong>Предложить цвета</strong> — черновые метки по эталонам + орфографии; правьте вручную, Undo откатывает. Не публикует.</li>
+        <li><strong>Автосейв</strong> — локальный черновик в этом браузере.</li>
+        <li><strong>Привязка к приложению</strong> — по полю <code>azkarIds</code>, не по названию. Title можно менять свободно.</li>
+        <li><strong>Бэкап</strong> — резервная копия хранится в браузере. Если основной черновик повреждён, она откроется автоматически; её также можно скачать и при необходимости импортировать.</li>
+        <li><strong>Экспорт всего</strong> — лучшая страховка: скачай JSON себе на устройство.</li>
+        <li>Горячие клавиши: <kbd>1–9</kbd>, <kbd>A</kbd>, <kbd>H</kbd>, <kbd>Del</kbd>, <kbd>Ctrl+Z</kbd>.</li>
+      </ul>
+      <div class="modal-actions">
+        <button type="button" class="btn ghost" id="btnExportBackup">Скачать резервную копию</button>
+        <button type="button" class="btn primary" id="btnCloseHelp">Понятно</button>
+      </div>
+    </div>
+  </dialog>
+
+  <script src="./cloud.js?v=admin-v2-workbench"></script>
+  <script src="./suggest.js?v=2"></script>
+  <script src="./catalog.js?v=2"></script>
+  <script src="./preview-selection.js?v=admin-v2-workbench"></script>
+  <script src="./normalization.js?v=admin-v2-recovery-20261027"></script>
+  <script src="./editor.js?v=admin-v2-recovery-20261027"></script>
+</body>
+</html>

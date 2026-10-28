@@ -22,6 +22,8 @@
 
   let allRows = [];
   let installations = [];
+  let installationCounts = null;
+  let installationRowsTruncated = false;
   let rangeDays = 7;
   let installationsAvailable = false;
   let installationsTotal = null;
@@ -41,7 +43,7 @@
   function formatError(error) {
     const message = error instanceof Error ? error.message : String(error ?? 'Ошибка загрузки');
     if (/analytics_dashboard/i.test(message) && /function|schema|does not exist/i.test(message)) {
-      return 'Нужна SQL-миграция analytics-dashboard на сервере. Пока показаны приблизительные цифры.';
+      return 'Серверная сводка analytics_dashboard недоступна. Точные итоги не подставляются из выборки событий.';
     }
     if (/analytics_events/i.test(message) && /does not exist|relation/i.test(message)) {
       return 'Раздел аналитики ещё не подключён на сервере. Обратитесь к разработчику.';
@@ -76,37 +78,63 @@
     return `<span class="admin-store-delta ${cls}" title="к прошлому периоду">${text}</span>`;
   }
 
+  function formatMetricValue(value) {
+    if (value == null || value === '') return '—';
+    const number = Number(value);
+    return Number.isFinite(number) ? String(number) : '—';
+  }
+
+  function resolveFallbackMetrics({ rows = [], installationCounts: counts = null, eventSampleLimit = 5000 } = {}) {
+    const safeRows = Array.isArray(rows) ? rows : [];
+    const byEvent = Object.create(null);
+    for (const row of safeRows) {
+      const event = String(row?.event || '');
+      if (event) byEvent[event] = (byEvent[event] || 0) + 1;
+    }
+    const exactCount = (value) => {
+      if (value == null || value === '') return null;
+      const number = Number(value);
+      return Number.isSafeInteger(number) && number >= 0 ? number : null;
+    };
+    return {
+      source: 'recent_event_sample',
+      sampleCount: safeRows.length,
+      sampleLimit: eventSampleLimit,
+      active: exactCount(counts?.active),
+      newInstalls: exactCount(counts?.newInstalls),
+      allTime: exactCount(counts?.allTime),
+      events: safeRows.length,
+      azkar: byEvent.azkar_item_completed || 0,
+      lessons: byEvent.academy_lesson_completed || 0,
+      appOpen: byEvent.app_open || 0,
+      tasbih: byEvent.tasbih_milestone || 0,
+      // Unique users from a bounded event sample are lower bounds, not totals.
+      azkarUsers: null,
+      lessonUsers: null,
+    };
+  }
+
   function metricCard(label, value, opts = {}) {
     const hero = opts.hero ? ' admin-analytics-card--hero' : '';
-    const delta = opts.prev != null ? formatDelta(value, opts.prev) : '';
+    const numericValue = value == null || value === '' ? null : Number(value);
+    const delta = numericValue != null && Number.isFinite(numericValue) && opts.prev != null
+      ? formatDelta(numericValue, opts.prev)
+      : '';
     const sub = opts.sub ? `<span class="admin-analytics-sub">${escapeHtml(opts.sub)}</span>` : '';
     return `
       <article class="admin-analytics-card${hero}">
         <p class="admin-muted">${escapeHtml(label)}</p>
         <p class="admin-analytics-value admin-store-value">
-          <span>${Number(value) || 0}</span>
+          <span>${formatMetricValue(value)}</span>
           ${sub}
           ${delta}
         </p>
       </article>`;
   }
 
-  function countEventUsers(rows, event) {
-    const ids = new Set();
-    for (const row of rows) {
-      if (row.event !== event || !row.installation_id) continue;
-      ids.add(row.installation_id);
-    }
-    return ids.size;
-  }
-
   function storePeriodDownloads() {
     if (!storeSnapshot) return null;
-    const deltaDays = storeDeltaDays();
-    const rustore = storeSnapshot.rustore?.rows || [];
-    const apple = storeSnapshot.apple?.rows || [];
-    const googlePlay = storeSnapshot.googleplay?.rows || [];
-    return sumStoreRows(rustore, deltaDays) + sumStoreRows(apple, deltaDays) + sumStoreRows(googlePlay, deltaDays);
+    return global.AdminStoreAnalyticsData?.resolveStoreMetrics(storeSnapshot, storeDeltaDays(), sumStoreRows)?.combinedDelta ?? null;
   }
 
   function renderSparkline(series, key) {
@@ -134,48 +162,7 @@
   }
 
   function hasInstallationRegistry() {
-    return installationsAvailable && installations.length > 0;
-  }
-
-  function countUniqueInstallationsFromEvents(withinDays) {
-    if (!withinDays) {
-      return new Set(allRows.map((r) => r.installation_id).filter(Boolean)).size;
-    }
-    const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
-    const ids = new Set();
-    for (const row of allRows) {
-      const t = Date.parse(row.created_at);
-      if (!Number.isFinite(t) || t < cutoff) continue;
-      if (row.installation_id) ids.add(row.installation_id);
-    }
-    return ids.size;
-  }
-
-  function countActiveInstalls(withinDays) {
-    // Prefer the installations registry when it has rows. If the table exists but
-    // is empty (migration without backfill / app not upserting yet), fall back to
-    // unique installation_id from events — otherwise "all time" incorrectly shows 0
-    // while period cards still show event-based counts.
-    if (!withinDays) {
-      if (typeof allTimeInstallCount === 'number' && allTimeInstallCount >= 0) {
-        return allTimeInstallCount;
-      }
-      if (hasInstallationRegistry()) {
-        if (typeof installationsTotal === 'number' && installationsTotal >= installations.length) {
-          return installationsTotal;
-        }
-        return installations.length;
-      }
-      return countUniqueInstallationsFromEvents(0);
-    }
-    if (hasInstallationRegistry()) {
-      const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
-      return installations.filter((row) => {
-        const t = Date.parse(row.last_seen_at);
-        return Number.isFinite(t) && t >= cutoff;
-      }).length;
-    }
-    return countUniqueInstallationsFromEvents(withinDays);
+    return installationsAvailable && (installations.length > 0 || installationCounts != null);
   }
 
   function countBy(rows, keyFn) {
@@ -212,20 +199,20 @@
     const series = dashboard?.series || [];
     const platforms = dashboard?.platforms || [];
     const reliable = Boolean(period);
-    const byEvent = Object.fromEntries(countBy(rows, (r) => r.event));
+    const fallback = resolveFallbackMetrics({ rows, installationCounts, eventSampleLimit: 5000 });
 
-    const active = reliable ? period.active : countActiveInstalls(rangeDays);
-    const allTime = reliable
-      ? Number(dashboard.all_time_installs) || 0
-      : countActiveInstalls(0);
-    const events = reliable ? period.events : rows.length;
-    const azkar = reliable ? period.azkar : byEvent.azkar_item_completed || 0;
-    const lessons = reliable ? period.lessons : byEvent.academy_lesson_completed || 0;
-    const opens = reliable ? period.app_open : byEvent.app_open || 0;
-    const tasbih = reliable ? period.tasbih : byEvent.tasbih_milestone || 0;
-    const newInstalls = reliable ? period.new_installs : 0;
-    const azkarUsers = reliable ? period.azkar_users : countEventUsers(rows, 'azkar_item_completed');
-    const lessonUsers = reliable ? period.lesson_users : countEventUsers(rows, 'academy_lesson_completed');
+    const active = reliable ? period.active : fallback.active;
+    const allTime = reliable && dashboard.all_time_installs != null
+      ? dashboard.all_time_installs
+      : fallback.allTime;
+    const events = reliable ? period.events : fallback.events;
+    const azkar = reliable ? period.azkar : fallback.azkar;
+    const lessons = reliable ? period.lessons : fallback.lessons;
+    const opens = reliable ? period.app_open : fallback.appOpen;
+    const tasbih = reliable ? period.tasbih : fallback.tasbih;
+    const newInstalls = reliable ? period.new_installs : fallback.newInstalls;
+    const azkarUsers = reliable ? period.azkar_users : fallback.azkarUsers;
+    const lessonUsers = reliable ? period.lesson_users : fallback.lessonUsers;
     const label = rangeLabel(rangeDays);
     const storeNew = storePeriodDownloads();
 
@@ -243,8 +230,8 @@
       : '';
 
     const compareBlock =
-      rangeDays > 0 && (newInstalls > 0 || (storeNew != null && storeNew > 0))
-        ? `<p class="admin-analytics-compare">За период: в приложении <strong>${newInstalls}</strong> новых${
+      rangeDays > 0 && ((newInstalls != null && Number(newInstalls) > 0) || (storeNew != null && storeNew > 0))
+        ? `<p class="admin-analytics-compare">За период: в приложении <strong>${formatMetricValue(newInstalls)}</strong> новых${
             storeNew != null ? ` · в сторах <strong>${storeNew}</strong>` : ''
           }</p>`
         : '';
@@ -283,26 +270,27 @@
         <div class="admin-analytics-social-head"><h3>Установки · ${escapeHtml(label)}</h3></div>
         <div class="admin-analytics-grid">
           ${installationCards}
-          ${metricCard('События', events, { prev: previous?.events })}
+          ${metricCard(reliable ? 'События' : 'События · выборка', events, { prev: previous?.events })}
         </div>
         ${compareBlock}
       </section>
 
       <section class="admin-analytics-section">
-        <div class="admin-analytics-social-head"><h3>В приложении · ${escapeHtml(label)}</h3></div>
+        <div class="admin-analytics-social-head"><h3>В приложении · ${escapeHtml(label)}${reliable ? '' : ' · выборка'}</h3></div>
+        ${reliable ? '' : `<p class="admin-analytics-compare">${dashboardError ? `${escapeHtml(dashboardError)} ` : 'Серверная сводка недоступна. '}События ниже — выборка последних до ${fallback.sampleLimit} записей, её полнота не подтверждена. Неизвестные итоги показаны как «—».</p>`}
         <div class="admin-analytics-grid">
-          ${metricCard('Азкары', azkar, {
+          ${metricCard(reliable ? 'Азкары' : 'Азкары · выборка', azkar, {
             hero: true,
             prev: previous?.azkar,
             sub: azkarUsers ? `${azkarUsers} чел.` : '',
           })}
-          ${metricCard('Уроки', lessons, {
+          ${metricCard(reliable ? 'Уроки' : 'Уроки · выборка', lessons, {
             hero: true,
             prev: previous?.lessons,
             sub: lessonUsers ? `${lessonUsers} чел.` : '',
           })}
-          ${metricCard('Открытия', opens, { prev: previous?.app_open })}
-          ${metricCard('Тасбих', tasbih, { prev: previous?.tasbih })}
+          ${metricCard(reliable ? 'Открытия' : 'Открытия · выборка', opens, { prev: previous?.app_open })}
+          ${metricCard(reliable ? 'Тасбих' : 'Тасбих · выборка', tasbih, { prev: previous?.tasbih })}
         </div>
       </section>
 
@@ -519,7 +507,7 @@
     const head = document.createElement('div');
     head.className = 'admin-analytics-social-head';
     head.innerHTML = `
-      <h3>Курсы${serverFunnel == null && eventsWindowLimited ? ' · последние 5 000 событий' : ''}</h3>
+      <h3>Курсы${serverFunnel == null ? ' · выборка последних событий' : ''}</h3>
     `;
     block.appendChild(head);
 
@@ -583,21 +571,27 @@
   function renderPlatformBreakdown(container) {
     if (hasInstallationRegistry()) {
       const pairs = countBy(installations, (r) => r.platform || '—');
-      renderBreakdown(container, 'Платформы (ОС)', pairs, (key) => String(key));
+      const suffix = installationRowsTruncated === true
+        ? ` · первые ${installations.length.toLocaleString('ru-RU')} из ${Number(installationsTotal).toLocaleString('ru-RU')}`
+        : installationRowsTruncated == null ? ' · выборка реестра' : '';
+      renderBreakdown(container, `Платформы (ОС)${suffix}`, pairs, (key) => String(key));
       return;
     }
     const pairs = countUniqueInstallsBy(allRows, (r) => r.platform || '—');
-    renderBreakdown(container, 'Платформы (ОС)', pairs, (key) => String(key));
+    renderBreakdown(container, 'Платформы (ОС) · выборка событий', pairs, (key) => String(key));
   }
 
   function renderVersionBreakdown(container) {
     if (hasInstallationRegistry()) {
       const pairs = countBy(installations, (r) => r.app_version || '—');
-      renderBreakdown(container, 'Версии приложения', pairs, (key) => (key === '—' ? '—' : `v${key}`));
+      const suffix = installationRowsTruncated === true
+        ? ` · первые ${installations.length.toLocaleString('ru-RU')} из ${Number(installationsTotal).toLocaleString('ru-RU')}`
+        : installationRowsTruncated == null ? ' · выборка реестра' : '';
+      renderBreakdown(container, `Версии приложения${suffix}`, pairs, (key) => (key === '—' ? '—' : `v${key}`));
       return;
     }
     const pairs = countUniqueInstallsBy(allRows, (r) => r.app_version || '—');
-    renderBreakdown(container, 'Версии приложения', pairs, (key) => (key === '—' ? '—' : `v${key}`));
+    renderBreakdown(container, 'Версии приложения · выборка событий', pairs, (key) => (key === '—' ? '—' : `v${key}`));
   }
 
   function sumStoreRows(rows, withinDays) {
@@ -606,11 +600,12 @@
       return list.reduce((sum, row) => sum + (Number(row.downloads) || 0), 0);
     }
     const cutoff = Date.now() - withinDays * 24 * 60 * 60 * 1000;
-    return list.reduce((sum, row) => {
+    const matchingRows = list.filter((row) => {
       const t = Date.parse(`${row.day}T00:00:00.000Z`);
-      if (!Number.isFinite(t) || t < cutoff) return sum;
-      return sum + (Number(row.downloads) || 0);
-    }, 0);
+      return Number.isFinite(t) && t >= cutoff;
+    });
+    if (!matchingRows.length) return null;
+    return matchingRows.reduce((sum, row) => sum + (Number(row.downloads) || 0), 0);
   }
 
   function defaultAppleSteps() {
@@ -834,8 +829,11 @@
   }
 
   function renderStoreValue(total, delta) {
+    if (total == null) {
+      return '<p class="admin-analytics-value admin-store-value"><span title="Нет загруженных данных">—</span></p>';
+    }
     const n = Number(delta) || 0;
-    if (!n) {
+    if (delta == null || !n) {
       return `<p class="admin-analytics-value admin-store-value"><span>${total}</span></p>`;
     }
     const deltaClass = n > 0 ? 'is-up' : 'is-down';
@@ -848,12 +846,14 @@
 
   function sumStoreField(rows, field, withinDays) {
     const list = Array.isArray(rows) ? rows : [];
+    if (!list.length) return null;
     const cutoff = withinDays ? Date.now() - withinDays * 24 * 60 * 60 * 1000 : 0;
-    return list.reduce((sum, row) => {
+    const matchingRows = list.filter((row) => {
       const time = Date.parse(`${row.day}T00:00:00.000Z`);
-      if (withinDays && (!Number.isFinite(time) || time < cutoff)) return sum;
-      return sum + (Number(row[field]) || 0);
-    }, 0);
+      return !withinDays || (Number.isFinite(time) && time >= cutoff);
+    });
+    if (!matchingRows.length) return null;
+    return matchingRows.reduce((sum, row) => sum + (Number(row[field]) || 0), 0);
   }
 
   function latestStoreField(rows, field) {
@@ -906,14 +906,12 @@
     const apple = storeSnapshot?.apple || { rows: [], total: 0 };
     const googlePlay = storeSnapshot?.googleplay || { rows: [], total: 0 };
     const deltaDays = storeDeltaDays();
-    const rustoreAll = sumStoreRows(rustore.rows, 0);
-    const appleAll = sumStoreRows(apple.rows, 0);
-    const googlePlayAll = sumStoreRows(googlePlay.rows, 0);
-    const rustoreDelta = sumStoreRows(rustore.rows, deltaDays);
-    const appleDelta = sumStoreRows(apple.rows, deltaDays);
-    const googlePlayDelta = sumStoreRows(googlePlay.rows, deltaDays);
-    const storesAll = rustoreAll + appleAll + googlePlayAll;
-    const storesDelta = rustoreDelta + appleDelta + googlePlayDelta;
+    const storeMetrics = global.AdminStoreAnalyticsData?.resolveStoreMetrics(storeSnapshot, deltaDays, sumStoreRows)
+      || { rustore: { total: null, delta: null }, apple: { total: null, delta: null }, googleplay: { total: null, delta: null }, combinedTotal: null, combinedDelta: null };
+    const { total: rustoreAll, delta: rustoreDelta } = storeMetrics.rustore;
+    const { total: appleAll, delta: appleDelta } = storeMetrics.apple;
+    const { total: googlePlayAll, delta: googlePlayDelta } = storeMetrics.googleplay;
+    const { combinedTotal: storesAll, combinedDelta: storesDelta } = storeMetrics;
     const periodLabel = rangeDays ? rangeLabel(rangeDays) : 'за всё время';
     const googlePlayUninstalls = sumStoreField(googlePlay.rows, 'uninstalls', rangeDays);
     const googlePlayUpdates = sumStoreField(googlePlay.rows, 'updates', rangeDays);
@@ -942,7 +940,7 @@
           ${renderStoreValue(appleAll, appleDelta)}
         </article>
         <article class="admin-analytics-card admin-analytics-card--hero">
-          <p class="admin-muted">Вместе</p>
+          <p class="admin-muted">Сумма отчётов · все 3</p>
           ${renderStoreValue(storesAll, storesDelta)}
         </article>
         <article class="admin-analytics-card admin-analytics-card--hero">
@@ -953,11 +951,11 @@
       <div class="admin-analytics-grid" id="analytics-google-play-details">
         <article class="admin-analytics-card">
           <p class="admin-muted">Google Play · удаления ${escapeHtml(periodLabel)}</p>
-          <p class="admin-analytics-value">${googlePlayUninstalls}</p>
+          <p class="admin-analytics-value">${googlePlayUninstalls == null ? '—' : googlePlayUninstalls}</p>
         </article>
         <article class="admin-analytics-card">
           <p class="admin-muted">Google Play · обновления ${escapeHtml(periodLabel)}</p>
-          <p class="admin-analytics-value">${googlePlayUpdates}</p>
+          <p class="admin-analytics-value">${googlePlayUpdates == null ? '—' : googlePlayUpdates}</p>
         </article>
         <article class="admin-analytics-card">
           <p class="admin-muted">Google Play · текущие установки пользователей</p>
@@ -1047,7 +1045,7 @@
       if (period) {
         const activity = rangeDays
           ? `активны за период ${period.active || 0}`
-          : `всего устройств ${dashboard?.all_time_installs || 0}`;
+          : `всего устройств ${formatMetricValue(dashboard?.all_time_installs)}`;
         stats.textContent = `${rangeLabel(rangeDays)} · ${activity} · уроков ${period.lessons || 0}`;
       } else {
         stats.textContent = rangeLabel(rangeDays);
@@ -1074,8 +1072,8 @@
           rows.filter((r) => r.event === 'academy_lesson_completed'),
           (r) => (r.props && r.props.course_id) || '__missing__'
         );
-    const detailSampleSuffix = !fullHistoryDetails && eventsWindowLimited
-      ? ' · последние 5 000 событий'
+    const detailSampleSuffix = !fullHistoryDetails
+      ? ' · выборка последних событий'
       : '';
 
     if (fullHistoryDetails || azkarCats.length || courses.length) {
@@ -1122,15 +1120,16 @@
   async function loadDashboardForRange() {
     dashboard = null;
     dashboardError = '';
-    if (typeof global.AdminSupabase.loadAnalyticsDashboard !== 'function') return;
+    if (typeof global.AdminSupabase.loadAnalyticsDashboard !== 'function') {
+      dashboardError = 'Серверная сводка аналитики не подключена.';
+      return;
+    }
     try {
       dashboard = await global.AdminSupabase.loadAnalyticsDashboard(rangeDays);
-      if (dashboard?.all_time_installs != null) {
-        allTimeInstallCount = Number(dashboard.all_time_installs) || 0;
-      }
+      if (dashboard?.all_time_installs != null) allTimeInstallCount = Number(dashboard.all_time_installs);
     } catch (error) {
       dashboard = null;
-      // Keep silent — fallback metrics still render without tech error banners.
+      dashboardError = formatError(error);
       console.warn('analytics dashboard', error);
     }
   }
@@ -1153,6 +1152,12 @@
     if (stats) stats.textContent = 'Загрузка…';
     storeError = '';
     storeOk = '';
+    installationCounts = null;
+    installationRowsTruncated = false;
+    installations = [];
+    installationsTotal = null;
+    allTimeInstallCount = null;
+    eventsWindowLimited = false;
 
     try {
       await loadDashboardForRange();
@@ -1161,25 +1166,33 @@
       if (!serverHasFullDetails && typeof global.AdminSupabase.loadAnalyticsEvents === 'function') {
         const eventsPayload = await global.AdminSupabase.loadAnalyticsEvents();
         allRows = Array.isArray(eventsPayload) ? eventsPayload : (eventsPayload?.rows || []);
-        eventsWindowLimited = Boolean(eventsPayload && !Array.isArray(eventsPayload) && eventsPayload.truncated);
+        // The compatibility endpoint is capped; a short response cannot prove full history.
+        eventsWindowLimited = true;
       } else {
         allRows = [];
         eventsWindowLimited = false;
       }
-      installations = [];
-      installationsTotal = null;
-      if (allTimeInstallCount == null) allTimeInstallCount = null;
       installationsAvailable = false;
       if (!dashboard && typeof global.AdminSupabase.loadAnalyticsInstallations === 'function') {
         try {
-          const installPayload = await global.AdminSupabase.loadAnalyticsInstallations();
+          const installPayload = await global.AdminSupabase.loadAnalyticsInstallations(rangeDays);
           if (Array.isArray(installPayload)) {
             installations = installPayload;
-            installationsTotal = installPayload.length;
+            installationsTotal = null;
+            installationCounts = { allTime: null, active: null, newInstalls: null };
+            installationRowsTruncated = null;
           } else {
             installations = installPayload?.rows || [];
             installationsTotal =
-              typeof installPayload?.total === 'number' ? installPayload.total : installations.length;
+              typeof installPayload?.total === 'number' ? installPayload.total : null;
+            installationCounts = {
+              allTime: installationsTotal,
+              active: typeof installPayload?.active === 'number' ? installPayload.active : null,
+              newInstalls: typeof installPayload?.newInstalls === 'number' ? installPayload.newInstalls : null,
+            };
+            installationRowsTruncated = installPayload?.truncated == null
+              ? null
+              : installPayload.truncated === true || installationsTotal > installations.length;
           }
           installationsAvailable = true;
         } catch (installError) {
@@ -1193,8 +1206,12 @@
 
       if (allTimeInstallCount == null && typeof global.AdminSupabase.loadAnalyticsAllTimeInstallCount === 'function') {
         try {
-          allTimeInstallCount = await global.AdminSupabase.loadAnalyticsAllTimeInstallCount();
-          renderAll();
+          const total = await global.AdminSupabase.loadAnalyticsAllTimeInstallCount();
+          if (typeof total === 'number' && Number.isSafeInteger(total) && total >= 0) {
+            allTimeInstallCount = total;
+            installationCounts = { ...(installationCounts || {}), allTime: total };
+            renderAll();
+          }
         } catch (allTimeError) {
           console.warn('all-time install count failed', allTimeError);
         }
@@ -1214,6 +1231,8 @@
       installations = [];
       installationsTotal = null;
       allTimeInstallCount = null;
+      installationCounts = null;
+      installationRowsTruncated = false;
       installationsAvailable = false;
       eventsWindowLimited = false;
       dashboard = null;
@@ -1227,7 +1246,7 @@
     if (range) {
       range.addEventListener('change', () => {
         rangeDays = Number(range.value) || 0;
-        void loadDashboardForRange().then(() => renderAll());
+        void loadAndRender();
       });
     }
     const refresh = $('#analytics-refresh');
@@ -1391,5 +1410,7 @@
   global.AdminAnalytics = {
     bind,
     loadAndRender,
+    resolveFallbackMetrics,
+    formatMetricValue,
   };
 })(window);

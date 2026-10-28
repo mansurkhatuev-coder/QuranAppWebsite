@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="ru" data-design="studio">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#0b1712" />
+    <title>Админка · тестовая версия — Коран и Азкары</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./admin-v2.css?v=auth-empty-chart-20261028" />
+  </head>
+  <body>
+    <section class="access-gate" id="access-gate" role="status" aria-live="polite">
+      <strong>Админка</strong>
+      <p id="access-gate-message">Проверяем доступ…</p>
+      <div class="access-gate-actions" id="access-gate-actions" hidden>
+        <button type="button" id="access-gate-retry">Проверить ещё раз</button>
+        <a href="../admin/">Открыть старый вариант</a>
+      </div>
+    </section>
+    <div class="app-frame" id="app-frame" hidden>
+      <aside class="sidebar" aria-label="Навигация админки">
+        <a class="brand" href="#overview" data-view-link="overview" aria-label="Обзор админки">
+          <span class="brand-seal" aria-hidden="true"><span>۞</span></span>
+          <span class="brand-copy"><small>QURANAPP</small><strong>Админка</strong></span>
+        </a>
+
+        <div class="sidebar-label">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+        <nav class="primary-nav" aria-label="Основные разделы">
+          <button class="nav-item is-active" type="button" data-view="overview"><span class="nav-icon" aria-hidden="true">◈</span><span>Обзор</span><span class="nav-arrow">↗</span></button>
+          <button class="nav-item" type="button" data-view="content"><span class="nav-icon" aria-hidden="true">✧</span><span>Контент</span><span class="nav-count" id="sidebar-content-count">—</span></button>
+          <button class="nav-item" type="button" data-legacy-tab="analytics"><span class="nav-icon" aria-hidden="true">⌁</span><span>Аналитика</span><span class="nav-status">●</span></button>
+        </nav>
+
+        <div class="sidebar-label sidebar-label-spaced">УПРАВЛЕНИЕ</div>
+        <nav class="secondary-nav" aria-label="Остальные инструменты">
+          <button class="nav-item" type="button" data-legacy-tab="home"><span class="nav-icon" aria-hidden="true">⌂</span><span>Главная и баннеры</span></button>
+          <button class="nav-item" type="button" data-legacy-tab="academy-feedback"><span class="nav-icon" aria-hidden="true">◌</span><span>Отзывы</span></button>
+          <button class="nav-item" type="button" data-legacy-tab="release"><span class="nav-icon" aria-hidden="true">↥</span><span>Обновления приложения</span></button>
+          <button class="nav-item" type="button" data-legacy-tab="academy-giveaway"><span class="nav-icon" aria-hidden="true">✳</span><span>Розыгрыш</span></button>
+          <button class="nav-item" type="button" data-view="locale"><span class="nav-icon" aria-hidden="true">文</span><span>Переводы интерфейса</span></button>
+          <button class="nav-item" type="button" data-legacy-tab="command"><span class="nav-icon" aria-hidden="true">◎</span><span>Состояние сайта</span></button>
+        </nav>
+
+        <div class="sidebar-footer">
+          <span class="connection-mark" aria-hidden="true"></span>
+          <span><strong>Тестовая версия</strong><small>Запись в production заблокирована</small></span>
+        </div>
+      </aside>
+
+      <main class="main-area">
+        <header class="topbar">
+          <div class="breadcrumbs"><span>Админка</span><b>›</b><strong id="view-breadcrumb">Обзор</strong></div>
+          <div class="topbar-actions">
+            <span class="save-state"><i></i><span>Только тестовый режим</span></span>
+            <button type="button" class="density-toggle" id="density-toggle" aria-label="Включить компактный вид">Компактный вид</button>
+            <button type="button" class="old-version-button" id="old-version-button" aria-label="Открыть старый вариант админки"><span aria-hidden="true">↶</span><span class="old-version-label">Старый вариант</span><span class="old-version-label-short" aria-hidden="true">Старый</span></button>
+          </div>
+        </header>
+
+        <section class="view-panel is-active" data-view-panel="overview" aria-labelledby="overview-title">
+          <div class="overview-intro">
+            <div><h1 id="overview-title">Обзор</h1></div>
+            <div class="date-card"><small>СЕГОДНЯ</small><strong id="today-date">—</strong></div>
+          </div>
+
+          <div class="overview-grid" aria-label="Сводка материалов">
+            <article class="metric-card metric-primary"><div class="metric-head"><span>ДУА</span></div><strong class="metric-value" id="dua-total">—</strong><div class="metric-foot"><span>В тестовом каталоге</span></div></article>
+            <article class="metric-card"><div class="metric-head"><span>АЗКАРЫ</span></div><strong class="metric-value" id="azkar-total">—</strong><div class="metric-foot"><span>В тестовом каталоге</span></div></article>
+            <article class="metric-card"><div class="metric-head"><span>ТАДЖВИД</span></div><strong class="metric-value" id="tajweed-total">—</strong><div class="metric-foot"><span>Связанные разметки</span></div></article>
+          </div>
+
+          <div class="overview-analytics">
+            <section class="overview-chart-card" aria-labelledby="overview-chart-title">
+              <div class="overview-section-head"><div><span class="eyebrow">ПРИЛОЖЕНИЕ <i class="chart-mode-badge" id="overview-chart-source">ДЕМО</i></span><h2 id="overview-chart-title">Использование</h2></div><button class="overview-link" type="button" data-legacy-tab="analytics">Вся аналитика <span aria-hidden="true">↗</span></button></div>
+              <div class="overview-legend"><span><i class="legend-active"></i>Активные устройства</span><span><i class="legend-new"></i>Новые установки</span></div>
+              <div class="overview-chart-readout" id="overview-chart-readout" aria-live="polite"><strong>—</strong><span>Выберите точку графика</span></div>
+              <svg id="overview-chart" class="overview-chart-svg" viewBox="0 0 900 260" role="group" aria-label="Использование приложения по доступным датам">
+                <g class="overview-chart-grid" aria-hidden="true"><path d="M54 24H888M54 70H888M54 116H888M54 162H888M54 208H888"/><text x="0" y="28">—</text><text x="0" y="74">—</text><text x="0" y="120">—</text><text x="0" y="166">—</text><text x="26" y="212">0</text></g>
+                <g class="overview-chart-series" id="overview-chart-series"></g>
+                <g class="overview-chart-dates" id="overview-chart-dates"></g>
+              </svg>
+              <p class="overview-chart-note" id="overview-chart-note">Загружаю доступные данные…</p>
+            </section>
+            <section class="overview-store-card" aria-label="Переход к аналитике магазинов">
+              <div><span class="eyebrow">МАГАЗИНЫ</span><h2>Скачивания</h2></div>
+              <p>Отчёты App Store, Google Play и RuStore</p>
+              <button class="overview-link" type="button" data-legacy-tab="analytics">Открыть данные <span aria-hidden="true">↗</span></button>
+            </section>
+          </div>
+
+          <div class="quick-actions-head"><div><span class="eyebrow">БЫСТРЫЙ ДОСТУП</span><h2>Разделы</h2></div></div>
+          <div class="quick-actions">
+            <button class="quick-action quick-action-featured" type="button" data-view="content"><span class="quick-index">01</span><span><strong>Контент</strong><small>Дуа · азкары · таджвид · тексты</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+            <button class="quick-action" type="button" data-legacy-tab="home"><span class="quick-index">02</span><span><strong>Главная и баннеры</strong><small>Управление материалами главной</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+            <button class="quick-action" type="button" data-legacy-tab="release"><span class="quick-index">03</span><span><strong>Обновления</strong><small>Версии приложения и магазины</small></span><span class="quick-arrow" aria-hidden="true">↗</span></button>
+          </div>
+
+          <div class="overview-bottom">
+            <section class="overview-card activity-card"><div class="card-heading"><h2>Последний черновик</h2></div><div id="draft-activity" class="activity-empty"><span><strong>Пока нет сохранённых черновиков</strong></span></div></section>
+            <section class="overview-card source-card"><div class="card-heading"><h2>Режим</h2></div><div class="source-row"><span class="source-dot is-locked"></span><span>Тестовая копия · запись в приложение отключена</span></div></section>
+          </div>
+        </section>
+
+        <section class="view-panel content-view" data-view-panel="content" aria-label="Единый редактор материалов" hidden>
+          <div class="embed-heading"><div><span class="eyebrow">ЕДИНАЯ КОНТЕНТНАЯ СТУДИЯ</span><h1>Материалы</h1></div><span class="readonly-pill"><i></i> Черновики сохраняются локально</span></div>
+          <div class="frame-wrap workbench-wrap"><iframe id="workbench-frame" title="Единый редактор дуа, азкаров и текстов" src="./workbench/index.html?embedded=1" loading="eager"></iframe></div>
+        </section>
+
+        <section class="view-panel legacy-view" data-view-panel="legacy" aria-label="Инструмент админки" hidden>
+          <div class="legacy-frame-wrap"><iframe id="legacy-frame" title="Существующий инструмент админки" src="./legacy.html?embed=1&amp;section=command" loading="eager"></iframe></div>
+        </section>
+
+        <section class="view-panel legacy-view" data-view-panel="locale" aria-label="Переводы интерфейса" hidden>
+          <div class="legacy-frame-wrap"><iframe id="locale-frame" title="Редактор переводов интерфейса · тестовая копия" src="./ce-locale/index.html" loading="lazy"></iframe></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog class="leave-dialog" id="leave-dialog" aria-labelledby="leave-title">
+      <form method="dialog">
+        <div class="dialog-mark">↶</div>
+        <span class="eyebrow">ПЕРЕХОД К СТАРОМУ ИНТЕРФЕЙСУ</span>
+        <h2 id="leave-title">Есть несохранённые правки</h2>
+        <p>Можно сохранить их как локальный черновик, остаться здесь или перейти без этих изменений.</p>
+        <div class="leave-actions"><button type="button" class="button-quiet" value="stay" id="leave-stay">Остаться</button><button type="button" class="button-quiet" value="discard" id="leave-discard">Перейти без изменений</button><button type="button" class="button-gold" value="save" id="leave-save">Сохранить черновик</button></div>
+      </form>
+    </dialog>
+
+    <div class="mobile-nav" aria-label="Основная навигация телефона" hidden>
+      <button type="button" data-view="overview" class="is-active"><span>◈</span>Обзор</button>
+      <button type="button" data-view="content"><span>✧</span>Контент</button>
+      <button type="button" data-legacy-tab="analytics"><span>⌁</span>Аналитика</button>
+      <button type="button" id="mobile-old-version"><span>↶</span>Старый вид</button>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../admin/supabase-config.js?v=6"></script>
+    <script src="../admin/admin-supabase.js?v=analytics-counts-20261028"></script>
+    <script src="../admin/admin-return-routing.js?v=1"></script>
+    <script src="./overview-chart-data.js?v=1"></script>
+    <script src="./admin-v2-access.js?v=1" defer></script>
+    <script src="./admin-v2.js?v=analytics-empty-20261028" defer></script>
+  </body>
+</html>

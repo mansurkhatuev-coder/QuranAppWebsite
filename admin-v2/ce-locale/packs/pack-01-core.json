@@ -1,0 +1,695 @@
+{
+  "generatedAt": "2026-09-01T19:29:18.116Z",
+  "pack": {
+    "id": "pack-01-core",
+    "title": "1 · Ядро UI",
+    "description": "Вкладки, общие кнопки, язык и тема — сделать в первую очередь",
+    "prefixes": [
+      "tabs.",
+      "common.",
+      "settings.sectionGeneral",
+      "settings.interfaceLanguage",
+      "settings.locale",
+      "settings.theme",
+      "settings.language",
+      "navigation."
+    ]
+  },
+  "progress": {
+    "total": 39,
+    "filled": 39,
+    "empty": 0,
+    "sameAsRu": 8,
+    "translated": 31,
+    "reviewed": 39,
+    "filledPct": 100,
+    "translatedPct": 79,
+    "sameAsRuPct": 21,
+    "reviewedPct": 100
+  },
+  "rows": [
+    {
+      "key": "tabs.home",
+      "ru": "Главная",
+      "ce": "Коьрта",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10009,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.azkar",
+      "ru": "Азкары",
+      "ce": "Азкараш",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.namaz",
+      "ru": "Намаз",
+      "ce": "Ламаз",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.names",
+      "ru": "Имена",
+      "ce": "ЦIераш",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.quran",
+      "ru": "Коран",
+      "ce": "Къуран",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10010,
+      "hint": "Нижняя навигация приложения — видно каждый день",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "tabs.settings",
+      "ru": "Настройки",
+      "ce": "ГIирсаш",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "tabs",
+      "groupLabel": "Вкладки",
+      "priority": 10013,
+      "hint": "Нижняя навигация приложения — видно каждый день · Пункт настроек",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.ok",
+      "ru": "ОК",
+      "ce": "ОК",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20009,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.on",
+      "ru": "Вкл",
+      "ce": "Лато",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20009,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.off",
+      "ru": "Выкл",
+      "ce": "ДIайайъа",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20010,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.back",
+      "ru": "Назад",
+      "ce": "Духанехьа",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.copy",
+      "ru": "Копировать",
+      "ce": "Копи яккха",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.done",
+      "ru": "Готово",
+      "ce": "Кийча ду",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.next",
+      "ru": "Далее",
+      "ce": "Кхин дIа",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.skip",
+      "ru": "Пропустить",
+      "ce": "Чекхдалийта",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.sura",
+      "ru": "Сура",
+      "ce": "Сура",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20011,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Сура",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.close",
+      "ru": "Закрыть",
+      "ce": "Дӏакъовла",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20012,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Закрыть окно",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.modal",
+      "ru": "Окно",
+      "ce": "Кор",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20012,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.cancel",
+      "ru": "Отмена",
+      "ce": "Ца оьшу",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Отмена действия",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.copied",
+      "ru": "Скопировано",
+      "ce": "Копи яьккхина",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.finish",
+      "ru": "Завершить",
+      "ce": "Чекхдаккха",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.number",
+      "ru": "Номер",
+      "ce": "Номер",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.source",
+      "ru": "Источник",
+      "ce": "Бух",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.status",
+      "ru": "Статус",
+      "ce": "Хьал",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20013,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.loading",
+      "ru": "Загрузка приложения...",
+      "ce": "Хьалох приложения...",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20014,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Индикатор загрузки",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.suraList",
+      "ru": "Список сур",
+      "ce": "Суранаш",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20015,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах · Сура",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.progressOf",
+      "ru": "{{done}} из {{total}}",
+      "ce": "{{done}} чуьра {{total}}",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20017,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.selectTafsir",
+      "ru": "Выберите тафсир",
+      "ce": "Харжа тафсир",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20019,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "common.selectTranslation",
+      "ru": "Выберите перевод",
+      "ce": "Харжа гоч",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "common",
+      "groupLabel": "Общие кнопки",
+      "priority": 20024,
+      "hint": "ОК, Отмена, Закрыть, Далее — на многих экранах",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.localeCe",
+      "ru": "Нохчийн",
+      "ce": "Нохчийн",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30017,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Язык интерфейса",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.localeEn",
+      "ru": "English",
+      "ce": "English",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30017,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Язык интерфейса",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.localeRu",
+      "ru": "Русский",
+      "ce": "Русский",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30017,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Язык интерфейса",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeDark",
+      "ru": "Тёмная",
+      "ce": "Бода",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30018,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Тема оформления",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeLight",
+      "ru": "Светлая",
+      "ce": "Сирла",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30019,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Тема оформления",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeTitle",
+      "ru": "Тема",
+      "ce": "Тема",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30019,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Заголовок экрана или блока",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.themeSystem",
+      "ru": "Системная",
+      "ce": "Системин",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30020,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты · Тема оформления",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.sectionGeneral",
+      "ru": "Язык и оформление",
+      "ce": "Мотт а, кечдар а",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30023,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.interfaceLanguage",
+      "ru": "Язык интерфейса",
+      "ce": "Интерфейсан мот",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30026,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "settings.sectionGeneralSummary",
+      "ru": "{{locale}} • {{theme}}",
+      "ce": "{{locale}} • {{theme}}",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "settings",
+      "groupLabel": "Настройки",
+      "priority": 30030,
+      "hint": "Экран настроек, язык, тема, офлайн-пакеты",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    },
+    {
+      "key": "navigation.back",
+      "ru": "Назад",
+      "ce": "Духанехьа",
+      "status": "reviewed",
+      "sourceStatus": "reviewed",
+      "note": "Reviewed in translation workbench",
+      "updatedAt": "2026-09-01T19:29:16.078Z",
+      "group": "navigation",
+      "groupLabel": "Навигация",
+      "priority": 55015,
+      "hint": "Переходы между экранами, хлебные крошки",
+      "packs": [
+        "pack-01-core",
+        "pack-all"
+      ]
+    }
+  ]
+}

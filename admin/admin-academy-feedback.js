@@ -5,7 +5,9 @@
   };
 
   let allRows = [];
-  let rawCount = 0;
+  let loadedCount = 0;
+  let sourceTotal = null;
+  let sourceLimit = 200;
   let courseFilter = 'all';
 
   function formatDate(value) {
@@ -91,18 +93,26 @@
     return allRows.filter((row) => row.course_id === courseFilter);
   }
 
-  function renderStats(container, rows, rawCount) {
-    if (!container) return;
+  function buildStatsText(rows, { loadedCount: loaded = rows.length, sourceTotal: total = null, limit = 200 } = {}) {
     if (!rows.length) {
-      container.textContent = 'Отзывов пока нет';
-      return;
+      if (total === 0) return 'Отзывов пока нет';
+      if (Number.isSafeInteger(total) && total > 0) return `В базе есть ${total} строк отзывов, но список не загрузился.`;
+      return 'В выборке нет отзывов; общий итог не подтверждён.';
     }
     const sum = rows.reduce((acc, row) => acc + (Number(row.rating) || 0), 0);
     const avg = (sum / rows.length).toFixed(1);
     const withComment = rows.filter((row) => row.comment?.trim()).length;
-    const hidden = Math.max(0, (Number(rawCount) || rows.length) - rows.length);
+    const hidden = Math.max(0, Number(loaded) - rows.length);
     const dupNote = hidden > 0 ? ` · скрыто дублей: ${hidden}` : '';
-    container.textContent = `${rows.length} отзыв(ов) · средняя ${avg} ★ · с комментарием: ${withComment}${dupNote}`;
+    const coverage = Number.isSafeInteger(total) && total >= loaded
+      ? total > loaded ? `показаны последние ${loaded} из ${total} строк базы` : `загружены все ${total} строк базы`
+      : loaded >= limit ? `показаны последние ${loaded} · общий итог неизвестен` : `загружено ${loaded} · общий итог неизвестен`;
+    return `${rows.length} уникальных отзыв(ов) · ${coverage} · средняя по выборке ${avg} ★ · с комментарием: ${withComment}${dupNote}`;
+  }
+
+  function renderStats(container, rows) {
+    if (!container) return;
+    container.textContent = buildStatsText(rows, { loadedCount, sourceTotal, limit: sourceLimit });
   }
 
   function renderList(container, rows) {
@@ -149,7 +159,7 @@
     const list = document.querySelector('#academy-feedback-list');
     const stats = document.querySelector('#academy-feedback-stats');
     const rows = filteredRows();
-    renderStats(stats, rows, courseFilter === 'all' ? rawCount : undefined);
+    renderStats(stats, rows);
     renderList(list, rows);
   }
 
@@ -162,13 +172,17 @@
     if (stats) stats.textContent = 'Загрузка…';
 
     try {
-      const loaded = await global.AdminSupabase.loadAcademyCourseFeedback();
-      rawCount = loaded.length;
+      const result = await global.AdminSupabase.loadAcademyCourseFeedback(courseFilter === 'all' ? '' : courseFilter);
+      const loaded = Array.isArray(result) ? result : (Array.isArray(result?.rows) ? result.rows : []);
+      loadedCount = loaded.length;
+      sourceTotal = Number.isSafeInteger(result?.total) && result.total >= 0 ? result.total : null;
+      sourceLimit = Number.isSafeInteger(result?.limit) && result.limit > 0 ? result.limit : 200;
       allRows = dedupeFeedbackRows(loaded);
       renderAll();
     } catch (error) {
       allRows = [];
-      rawCount = 0;
+      loadedCount = 0;
+      sourceTotal = null;
       if (stats) stats.textContent = 'Не удалось загрузить';
       container.innerHTML = `<p class="admin-error">${formatError(error)}</p>`;
     }
@@ -179,7 +193,7 @@
     if (filter) {
       filter.addEventListener('change', () => {
         courseFilter = filter.value || 'all';
-        renderAll();
+        void loadAndRender();
       });
     }
 
@@ -194,5 +208,6 @@
   global.AdminAcademyFeedback = {
     bind,
     loadAndRender,
+    buildStatsText,
   };
 })(window);
