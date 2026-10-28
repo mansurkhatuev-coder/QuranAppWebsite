@@ -3,11 +3,12 @@
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%;
-  background: #d3bd86;
-  box-shadow: 0 0 10px #d9ad5877;
+  width: var(--overview-card-width, 12px);
+  height: var(--overview-card-height, 7px);
+  border: var(--overview-card-border-width, 1px) solid #d3bd86;
+  border-radius: 2px;
+  background: linear-gradient(145deg, #17211f, #081113);
+  box-shadow: none;
   content: "";
   opacity: 0;
   pointer-events: none;
@@ -46,7 +47,7 @@
 }
 
 .graph[data-lod="compact"] .person-node:not(.route) .node-copy { display: none; }
-.graph[data-lod="compact"] .person-node:not(.route)::after { width: var(--overview-dot-size, 20px); height: var(--overview-dot-size, 20px); opacity: .78; transform: translate(-50%, -50%) scale(1); }
+.graph[data-lod="compact"] .person-node:not(.route)::after { opacity: .82; transform: translate(-50%, -50%) scale(1); }
 
 .graph[data-lod="overview"] .person-node {
   width: var(--person-card-width, var(--tree-card-width)) !important;
@@ -63,17 +64,14 @@
 
 .graph[data-lod="overview"] .person-node > * { display: none; }
 .graph[data-lod="overview"] .person-node::after {
-  width: var(--overview-dot-size, 20px);
-  height: var(--overview-dot-size, 20px);
   opacity: 1;
   transform: translate(-50%, -50%) scale(1);
 }
 
 .graph[data-lod="overview"] .person-node.selected::after {
-  width: calc(var(--overview-dot-size, 20px) * 1.65);
-  height: calc(var(--overview-dot-size, 20px) * 1.65);
   background: #f3d184;
-  box-shadow: 0 0 0 4px #f1c66e30, 0 0 16px #f3d184aa;
+  border-color: #fff0c7;
+  box-shadow: 0 0 0 var(--overview-card-highlight-width, 2px) #f1c66e30, 0 0 12px #f3d184aa;
 }
 
 .graph[data-lod="overview"] .person-node.dimmed { opacity: .48; }

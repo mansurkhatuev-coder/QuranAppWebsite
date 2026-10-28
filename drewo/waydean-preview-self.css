@@ -84,91 +84,9 @@
   filter: brightness(1.16);
 }
 
-.whoami-onboarding {
-  width: min(420px, calc(100vw - 28px));
-  max-width: none;
-  padding: 0;
-  overflow: visible;
-  border: 1px solid #d9ad5880;
-  border-radius: 16px;
-  background: linear-gradient(150deg, #111e20 0%, #071012 76%);
-  color: var(--text, #eee7d8);
-  box-shadow: 0 24px 80px #000c, inset 0 1px #ffffff12;
-}
-
-.whoami-onboarding::backdrop {
-  background: #020708b8;
-  backdrop-filter: blur(5px);
-}
-
-.whoami-onboarding-card {
-  position: relative;
-  display: grid;
-  justify-items: center;
-  gap: 11px;
-  padding: 30px 26px 24px;
-  text-align: center;
-}
-
-.whoami-onboarding-mark {
-  display: grid;
-  width: 50px;
-  height: 50px;
-  place-items: center;
-  border: 1px solid #e1be6b8a;
-  border-radius: 50%;
-  background: radial-gradient(circle, #d9ad5833, #d9ad5808 72%);
-  color: #f0d58f;
-  font: 30px/1 Georgia, serif;
-  box-shadow: 0 0 28px #d9ad5826;
-}
-
-.whoami-onboarding-card h2 {
-  margin: 2px 0 0;
-  color: #f0d58f;
-  font: 600 22px/1.2 Georgia, "Times New Roman", serif;
-}
-
-.whoami-onboarding-card p {
-  max-width: 340px;
-  margin: 0;
-  color: #b8b09e;
-  font-size: 13px;
-  line-height: 1.55;
-}
-
-.whoami-onboarding-actions {
-  display: grid;
-  width: 100%;
-  grid-template-columns: 1fr auto;
-  gap: 9px;
-  margin-top: 5px;
-}
-
-.whoami-onboarding-actions > button {
-  min-height: 43px;
-  padding: 9px 15px;
-}
-
-.whoami-onboarding-close {
-  position: absolute;
-  top: 8px;
-  right: 9px;
-  width: 32px;
-  height: 32px;
-  border: 1px solid #ffffff1a;
-  border-radius: 9px;
-  background: #ffffff08;
-  color: #c3bba9;
-  font-size: 20px;
-}
-
 @media (max-width: 700px) {
   .self-person-button { min-height: 34px; margin-top: 7px; padding: 7px 9px; font-size: 11px; }
   .self-person-note { margin-top: 4px; font-size: 9px; }
   .profile-add-son { margin: 8px 0 6px; padding: 9px; }
   .profile-add-son-button { min-height: 44px; }
-  .whoami-onboarding-card { gap: 10px; padding: 28px 20px 20px; }
-  .whoami-onboarding-card h2 { font-size: 20px; }
-  .whoami-onboarding-card p { font-size: 12px; }
 }

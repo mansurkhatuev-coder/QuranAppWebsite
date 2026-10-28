@@ -3,16 +3,23 @@ import {
   buildCinematicTimeline,
   CHAPTER_COPY_START_RATIO,
   easeCinematic,
+  layoutFamilyTree,
   sampleCinematicTimeline
-} from "../../cinematic-timeline.mjs";
+} from "../../cinematic-timeline.mjs?v=20261028-slow-tree-exit-1";
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
 export const ACTIVE_CARD_REVEAL_FRAMES = 18;
 export const FOCUS_CAMERA_HOLD_RATIO = 0.72;
-export const FULL_TREE_FOCUS_CAMERA_HOLD_RATIO = 0.43;
+export const FULL_TREE_FOCUS_CAMERA_HOLD_RATIO = 0.6;
 export const FOCUS_CAMERA_ARRIVAL_RATIO = 0.35;
+export const FULL_TREE_FOCUS_CAMERA_ARRIVAL_RATIO = 0.55;
 export const FULL_TREE_FOCUS_DURATION_SECONDS = 6;
+export const FULL_TREE_GENERATION_DURATION_SECONDS = 2.25;
+export const FULL_TREE_GENERATION_GROUP_SIZE = 24;
+export const FULL_TREE_MAX_CARD_TRAVEL_PX_PER_FRAME = 64;
+export const FULL_TREE_CAMERA_SETTLE_FRAMES = 18;
+const VIDEO_PACING_VIEWPORTS = [[1280, 720], [720, 1280], [720, 720]];
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
@@ -21,6 +28,81 @@ function clamp(value, min, max) {
 function transitionProgress(shotCount, transitionFrames, localFrame) {
   if (shotCount <= 1 || transitionFrames <= 1) return 1;
   return easeCinematic(clamp(localFrame / (transitionFrames - 1), 0, 1));
+}
+
+function groupFullTreeGenerationScenes(scenes, people, layout) {
+  const scenePeople = new Map(scenes.flatMap(scene => (scene.people ?? []).map(person => [person.id, person])));
+  const xById = new Map(layout.nodes.map(node => [node.id, node.x]));
+  const result = [];
+
+  for (let index = 0; index < scenes.length;) {
+    const first = scenes[index];
+    if (first.type !== "generation") {
+      result.push(first);
+      index += 1;
+      continue;
+    }
+
+    const generationScenes = [];
+    while (index < scenes.length
+      && scenes[index].type === "generation"
+      && scenes[index].generation === first.generation) {
+      generationScenes.push(scenes[index]);
+      index += 1;
+    }
+
+    const generationIds = generationScenes.flatMap(scene => scene.personIds)
+      .sort((left, right) => (xById.get(left) ?? 0) - (xById.get(right) ?? 0));
+    const groupCount = Math.ceil(generationIds.length / FULL_TREE_GENERATION_GROUP_SIZE);
+    for (let start = 0; start < generationIds.length; start += FULL_TREE_GENERATION_GROUP_SIZE) {
+      const part = generationIds.slice(start, start + FULL_TREE_GENERATION_GROUP_SIZE);
+      const partNumber = Math.floor(start / FULL_TREE_GENERATION_GROUP_SIZE) + 1;
+      const hasParts = groupCount > 1;
+      result.push({
+        ...first,
+        id: hasParts ? `generation-${first.generation}-part-${partNumber}` : `generation-${first.generation}`,
+        label: hasParts ? `Поколение ${first.generation} · часть ${partNumber}` : `Поколение ${first.generation}`,
+        title: `Поколение ${first.generation}`,
+        groupStart: start + 1,
+        groupEnd: start + part.length,
+        groupTotal: generationIds.length,
+        personIds: part,
+        people: part.map(id => scenePeople.get(id) ?? people.find(person => person.id === id)).filter(Boolean)
+      });
+    }
+  }
+
+  return result;
+}
+
+function groupFullTreeBranchScenes(scenes) {
+  const result = [];
+
+  for (let index = 0; index < scenes.length;) {
+    const first = scenes[index];
+    if (first.type !== "branching") {
+      result.push(first);
+      index += 1;
+      continue;
+    }
+
+    const branchScenes = [];
+    while (index < scenes.length && scenes[index].type === "branching") {
+      branchScenes.push(scenes[index]);
+      index += 1;
+    }
+    const personIds = [...new Set(branchScenes.flatMap(scene => scene.personIds))];
+    result.push({
+      ...first,
+      id: "branching-all",
+      label: "Связи поколений",
+      title: "Линии рода",
+      personIds,
+      branches: branchScenes.flatMap(scene => scene.branches ?? [])
+    });
+  }
+
+  return result;
 }
 
 export function buildRemotionStory(options = {}) {
@@ -41,7 +123,7 @@ export function buildRemotionStory(options = {}) {
     : DEFAULT_FAMILY_HISTORY_PROPS.title;
   const includeDates = options.includeDates !== false;
   const people = getStoryPeople(sourcePeople, { scopeType, selectedPersonId });
-  const scenes = buildStoryScenes(sourcePeople, {
+  let scenes = buildStoryScenes(sourcePeople, {
     scopeType,
     selectedPersonId,
     includeDates,
@@ -50,12 +132,19 @@ export function buildRemotionStory(options = {}) {
   const effectiveSelectedPersonId = people.some(person => person.id === selectedPersonId)
     ? selectedPersonId
     : people.at(-1)?.id ?? "";
+  if (scopeType === "all") {
+    const layout = layoutFamilyTree(people);
+    scenes = groupFullTreeBranchScenes(groupFullTreeGenerationScenes(scenes, people, layout));
+  }
   const timeline = buildCinematicTimeline(people, scenes, {
     fps: REMOTION_COMPOSITION.fps,
-    focusDurationSeconds: scopeType === "all" ? FULL_TREE_FOCUS_DURATION_SECONDS : undefined
+    focusDurationSeconds: scopeType === "all" ? FULL_TREE_FOCUS_DURATION_SECONDS : undefined,
+    generationDurationSeconds: scopeType === "all" ? FULL_TREE_GENERATION_DURATION_SECONDS : undefined,
+    branchingDurationSeconds: scopeType === "all" ? 2 : undefined,
+    focusZoomLimit: scopeType === "all" ? 2.8 : undefined
   });
 
-  return {
+  const story = {
     people,
     scenes,
     timeline,
@@ -64,6 +153,8 @@ export function buildRemotionStory(options = {}) {
     title,
     includeDates
   };
+  if (scopeType === "all") paceFullTreeTimeline(story);
+  return story;
 }
 
 export function formatPersonDateLabel(person, includeDates = true) {
@@ -343,7 +434,7 @@ export function getCinematicFramingForFrame(story, frameWidth, frameHeight, fram
     : current;
 
   if (shot.type === "origin" || shot.type === "generation" || shot.type === "branching") {
-    return blendCinematicFraming(previous, current, sample.easedProgress);
+    return blendCinematicFraming(previous, current, sample.cameraProgress);
   }
 
   if (shot.type === "focus") {
@@ -358,8 +449,11 @@ export function getCinematicFramingForFrame(story, frameWidth, frameHeight, fram
     const holdRatio = story.scopeType === "all"
       ? FULL_TREE_FOCUS_CAMERA_HOLD_RATIO
       : FOCUS_CAMERA_HOLD_RATIO;
+    const arrivalRatio = story.scopeType === "all"
+      ? FULL_TREE_FOCUS_CAMERA_ARRIVAL_RATIO
+      : FOCUS_CAMERA_ARRIVAL_RATIO;
     const lastFrame = Math.max(1, shot.durationFrames - 1);
-    const arrivalFrame = Math.max(1, Math.floor(lastFrame * FOCUS_CAMERA_ARRIVAL_RATIO));
+    const arrivalFrame = Math.max(1, Math.floor(lastFrame * arrivalRatio));
     const exitStartFrame = Math.max(arrivalFrame, Math.floor(lastFrame * holdRatio));
     if (localFrame <= arrivalFrame) {
       return blendCinematicFraming(previous, current, easeCinematic(localFrame / arrivalFrame));
@@ -389,4 +483,101 @@ export function getCinematicFramingForFrame(story, frameWidth, frameHeight, fram
   );
   const progress = getCinematicFramingTransitionProgress(story, sample.shotIndex, localFrame);
   return blendCinematicFraming(outgoing, incoming, progress);
+}
+
+function getShotFraming(story, shot, frameWidth, frameHeight) {
+  const nodes = getShotNodes(story, shot);
+  return getCinematicFraming(frameWidth, frameHeight, shot.cameraTo, nodes, shot.treeOffsetTo);
+}
+
+function getRenderedNodeBounds(node, framing, frameWidth, frameHeight) {
+  const outputScale = Math.min(frameWidth / framing.viewWidth, frameHeight / framing.viewHeight);
+  const width = node.width * framing.scale * outputScale;
+  const height = node.height * framing.scale * outputScale;
+  const centerX = (node.x * framing.scale + framing.translateX) * outputScale;
+  const centerY = (node.y * framing.scale + framing.translateY) * outputScale;
+  return {
+    centerX,
+    centerY,
+    width,
+    height,
+    visible: centerX + width / 2 >= 0 && centerX - width / 2 <= frameWidth
+      && centerY + height / 2 >= 0 && centerY - height / 2 <= frameHeight
+  };
+}
+
+function maxCardTravelBetween(from, to, nodes, frameWidth, frameHeight, { fromVisibleOnly = false } = {}) {
+  const outputScale = Math.min(frameWidth / to.viewWidth, frameHeight / to.viewHeight);
+  let maximum = Math.hypot(
+    (to.translateX - from.translateX) * outputScale,
+    (to.translateY - from.translateY) * outputScale
+  );
+
+  for (const node of nodes) {
+    const start = getRenderedNodeBounds(node, from, frameWidth, frameHeight);
+    const end = getRenderedNodeBounds(node, to, frameWidth, frameHeight);
+    const startIsRelevant = start.visible && Math.max(start.width, start.height) >= 12;
+    const endIsRelevant = end.visible && Math.max(end.width, end.height) >= 12;
+    const visuallyRelevant = fromVisibleOnly ? startIsRelevant : startIsRelevant || endIsRelevant;
+    if (!visuallyRelevant) continue;
+    const dx = end.centerX - start.centerX;
+    const dy = end.centerY - start.centerY;
+    const sizeChange = Math.hypot((end.width - start.width) / 2, (end.height - start.height) / 2);
+    maximum = Math.max(maximum, Math.hypot(dx, dy) + sizeChange);
+  }
+  return maximum;
+}
+
+function requiredFramesForTravel(distance) {
+  return Math.max(1, Math.ceil(distance * 3 / FULL_TREE_MAX_CARD_TRAVEL_PX_PER_FRAME));
+}
+
+function paceFullTreeTimeline(story) {
+  const timeline = story.timeline;
+  const nodes = timeline.layout.nodes;
+  const shots = timeline.shots;
+
+  for (let index = 0; index < shots.length; index += 1) {
+    const shot = shots[index];
+    if (!["origin", "generation", "branching", "focus"].includes(shot.type)) continue;
+    const previous = shots[index - 1] ?? shot;
+    const cameraHoldFrames = index > 0 && ["origin", "generation", "branching"].includes(shot.type)
+      ? FULL_TREE_CAMERA_SETTLE_FRAMES
+      : 0;
+    let requiredDuration = shot.durationFrames;
+
+    for (const [frameWidth, frameHeight] of VIDEO_PACING_VIEWPORTS) {
+      const from = getShotFraming(story, previous, frameWidth, frameHeight);
+      const current = getShotFraming(story, shot, frameWidth, frameHeight);
+      if (shot.type === "focus") {
+        const next = shots[index + 1];
+        const finale = next ? getShotFraming(story, next, frameWidth, frameHeight) : current;
+        const arrivalRatio = FULL_TREE_FOCUS_CAMERA_ARRIVAL_RATIO;
+        const holdRatio = FULL_TREE_FOCUS_CAMERA_HOLD_RATIO;
+        const arrivalTravel = requiredFramesForTravel(maxCardTravelBetween(from, current, nodes, frameWidth, frameHeight));
+        const exitTravel = requiredFramesForTravel(maxCardTravelBetween(current, finale, nodes, frameWidth, frameHeight, {
+          fromVisibleOnly: true
+        }));
+        requiredDuration = Math.max(
+          requiredDuration,
+          Math.ceil(arrivalTravel / arrivalRatio) + 1,
+          Math.ceil(exitTravel / (1 - holdRatio)) + 1
+        );
+      } else {
+        const travel = requiredFramesForTravel(maxCardTravelBetween(from, current, nodes, frameWidth, frameHeight));
+        requiredDuration = Math.max(requiredDuration, cameraHoldFrames + travel + 1);
+      }
+    }
+
+    shot.durationFrames = requiredDuration;
+    shot.cameraHoldFrames = cameraHoldFrames;
+  }
+
+  let nextStartFrame = 0;
+  for (const shot of shots) {
+    shot.startFrame = nextStartFrame;
+    nextStartFrame += shot.durationFrames;
+  }
+  timeline.contentFrames = nextStartFrame;
+  timeline.totalFrames = nextStartFrame;
 }

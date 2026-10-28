@@ -148,7 +148,7 @@ function boundsForNodes(layout, ids) {
   };
 }
 
-function cameraForBounds(bounds, shotType) {
+function cameraForBounds(bounds, shotType, focusZoomLimit = 4.8) {
   if (shotType === "opening" || shotType === "finale") {
     const boundsWidth = Math.max(1, bounds.right - bounds.left);
     const boundsHeight = Math.max(1, bounds.bottom - bounds.top);
@@ -158,7 +158,7 @@ function cameraForBounds(bounds, shotType) {
   const padding = shotType === "focus" ? 40 : 124;
   const boxWidth = Math.max(1, bounds.right - bounds.left + padding * 2);
   const boxHeight = Math.max(1, bounds.bottom - bounds.top + padding * 2);
-  const zoomLimit = shotType === "focus" ? 4.8 : 1.62;
+  const zoomLimit = shotType === "focus" ? Math.max(1, Number(focusZoomLimit) || 4.8) : 1.62;
   const minimumZoom = shotType === "branching" ? 0.18 : 1;
   const zoom = clamp(Math.min(TREE_WIDTH / boxWidth, TREE_HEIGHT / boxHeight, zoomLimit), minimumZoom, zoomLimit);
   return {
@@ -193,7 +193,10 @@ function sceneLineProgress(scene, peopleById, rootGeneration, pathLength, previo
 
 export function buildCinematicTimeline(people, scenes, {
   fps = CINEMATIC_FPS,
-  focusDurationSeconds = SHOT_SECONDS.focus
+  focusDurationSeconds = SHOT_SECONDS.focus,
+  focusZoomLimit = 4.8,
+  generationDurationSeconds = SHOT_SECONDS.generation,
+  branchingDurationSeconds = SHOT_SECONDS.branching
 } = {}) {
   const records = Array.isArray(people) ? people : [];
   const storyScenes = Array.isArray(scenes) ? scenes : [];
@@ -217,11 +220,15 @@ export function buildCinematicTimeline(people, scenes, {
       ? fullIds
       : [...(scene.personIds ?? [])];
     const bounds = boundsForNodes(layout, ids);
-    const cameraTo = cameraForBounds(bounds, scene.type);
+    const cameraTo = cameraForBounds(bounds, scene.type, focusZoomLimit);
     const lineProgressTo = sceneLineProgress(scene, peopleById, rootGeneration, pathLength, previousLineProgress);
     const treeOffsetTo = scene.type === "opening" || scene.type === "finale" ? -100 : 0;
     const shotSeconds = scene.type === "focus"
       ? Math.max(SHOT_SECONDS.focus, Number(focusDurationSeconds) || SHOT_SECONDS.focus)
+      : scene.type === "generation"
+        ? Math.max(SHOT_SECONDS.generation, Number(generationDurationSeconds) || SHOT_SECONDS.generation)
+        : scene.type === "branching"
+          ? Math.max(SHOT_SECONDS.branching, Number(branchingDurationSeconds) || SHOT_SECONDS.branching)
       : SHOT_SECONDS[scene.type] ?? 2.2;
     const durationFrames = Math.max(1, Math.round(shotSeconds * fps));
     const activeEdgeKeys = (scene.branches ?? []).flatMap(branch =>
@@ -293,6 +300,16 @@ export function sampleCinematicTimeline(timeline, frame) {
   const eased = easeCinematic(
     shot.type === "focus" || shot.type === "finale" ? Math.min(1, progress / 0.62) : progress
   );
+  const cameraMoveProgress = shot.cameraHoldFrames > 0
+    ? clamp(
+      (localFrame - shot.cameraHoldFrames) / Math.max(1, shot.durationFrames - 1 - shot.cameraHoldFrames),
+      0,
+      1
+    )
+    : shot.type === "focus" || shot.type === "finale"
+      ? Math.min(1, progress / 0.62)
+      : progress;
+  const cameraProgress = easeCinematic(cameraMoveProgress);
   return {
     frame: sampleFrame,
     shotIndex,
@@ -305,7 +322,8 @@ export function sampleCinematicTimeline(timeline, frame) {
     activeEdgeKeys: shot.activeEdgeKeys,
     progress,
     easedProgress: eased,
-    camera: sampleCamera(timeline, shotIndex, eased),
+    cameraProgress,
+    camera: sampleCamera(timeline, shotIndex, cameraMoveProgress),
     treeOffsetY: mix(shot.treeOffsetFrom, shot.treeOffsetTo, eased),
     lineProgress: mix(shot.lineProgressFrom, shot.lineProgressTo, eased)
   };

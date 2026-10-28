@@ -1,5 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import {
   buildRemotionStory,
   getCinematicFramingForFrame,
@@ -29,6 +30,7 @@ function fakeCanvasContext() {
     lineTo: (...args) => calls.push(["line", ...args]),
     bezierCurveTo: (...args) => calls.push(["curve", ...args]),
     quadraticCurveTo: (...args) => calls.push(["quadratic", ...args]),
+    roundRect: (...args) => calls.push(["round-rect", ...args]),
     closePath: () => calls.push(["close"]),
     fill: () => calls.push(["fill"]),
     stroke: () => calls.push(["stroke"]),
@@ -76,7 +78,35 @@ test("overview markers keep a readable radius in exported pixels at very small c
   }
 });
 
-test("full-tree overview video draws a visible marker for every generation", () => {
+test("overview card silhouettes stay rectangular and consistently sized in exported pixels", () => {
+  for (const [framingScale, outputScale] of [[0.01, 0.75], [0.08, 1], [0.2, 1.2]]) {
+    const card = browserCanvasRenderer.getOverviewCardGeometry(browserCanvasRenderer.getOverviewMarkerRadius(framingScale, outputScale));
+    assert.ok(card.width > card.height);
+    assert.ok(card.cornerRadius > 0);
+    assert.ok(card.cornerRadius < card.height / 2);
+    assert.ok(Math.abs(card.width * framingScale * outputScale - 10.4) < 1e-9);
+    assert.ok(Math.abs(card.height * framingScale * outputScale - 5.6) < 1e-9);
+  }
+});
+
+test("overview card outlines keep a visible screen-pixel stroke at every camera scale", () => {
+  for (const [framingScale, outputScale] of [[0.01, 0.75], [0.08, 1], [0.2, 1.2]]) {
+    const totalScale = framingScale * outputScale;
+    const radius = browserCanvasRenderer.getOverviewMarkerRadius(framingScale, outputScale);
+    const worldStrokeWidth = browserCanvasRenderer.getOverviewMarkerWorldStrokeWidth(radius, 1.4);
+    assert.ok(Math.abs(worldStrokeWidth * totalScale - 1.4) < 1e-9,
+      `overview outline should stay 1.4 output pixels at ${totalScale}x`);
+  }
+});
+
+test("overview video connectors end at the rectangular card edge", () => {
+  const rendererSource = readFileSync(new URL("./browser-canvas-renderer.mjs", import.meta.url), "utf8");
+  assert.equal(browserCanvasRenderer.getOverviewCardHalfHeight(4), 2.8);
+  assert.equal((rendererSource.match(/const markerHalfHeight = getOverviewCardHalfHeight\(markerRadius\)/g) ?? []).length, 2,
+    "curved and orthogonal connectors must both use the marker card half-height, not its round radius");
+});
+
+test("full-tree overview video draws a visible mini-card for every generation", () => {
   const multigenerationalPeople = Array.from({ length: 14 }, (_, index) => ({
     id: `generation-${index + 1}`,
     name: `Поколение ${index + 1}`,
@@ -93,15 +123,17 @@ test("full-tree overview video draws a visible marker for every generation", () 
   const sample = sampleRemotionFrame(story, frame);
   const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
   const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
-  const expectedRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
+  const expectedCard = browserCanvasRenderer.getOverviewCardGeometry(browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale));
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
 
-  assert.ok(sample.camera.zoom < 0.5 || framing.scale < 0.5, "the opening shot should use overview markers");
+  assert.ok(sample.camera.zoom < 0.5 || framing.scale < 0.5, "the opening shot should use overview cards");
   createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
 
-  const markerRadii = context.calls.filter(call => call[0] === "arc").map(call => call[3]);
-  assert.ok(markerRadii.some(radius => Math.abs(radius - expectedRadius) < 1e-9));
+  const miniCards = context.calls.filter(call => call[0] === "round-rect"
+    && Math.abs(call[3] - expectedCard.width) < 1e-9
+    && Math.abs(call[4] - expectedCard.height) < 1e-9);
+  assert.ok(miniCards.length >= multigenerationalPeople.length - 1);
 });
 
 test("full-tree branch cards stay as cards when the camera crosses overview scale", () => {

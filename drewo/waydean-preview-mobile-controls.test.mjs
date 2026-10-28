@@ -26,9 +26,12 @@ function rule(css, selector) {
   return css.slice(openAt + 1, closeAt);
 }
 
-test('mobile tree stays in full-card mode at every zoom level', () => {
+test('mobile tree switches to outlined overview cards at far zoom instead of shrinking detail cards away', () => {
   const appJs = readFileSync(new URL('waydean-preview.js', here), 'utf8');
-  assert.match(appJs, /const nextLevel = isMobile\s*\?\s*'detail'\s*:\s*nextLodLevel\(lodLevel,/);
+  const lodCss = readFileSync(new URL('waydean-preview-lod.css', here), 'utf8');
+  assert.match(appJs, /const nextLevel = nextLodLevel\(lodLevel,/);
+  assert.ok(!/const nextLevel = isMobile\s*\?/.test(appJs));
+  assert.ok(lodCss.includes('.graph[data-lod="overview"] .person-node::after {'));
 });
 
 test('mobile minimap removes captions and gives the diagram their space', () => {

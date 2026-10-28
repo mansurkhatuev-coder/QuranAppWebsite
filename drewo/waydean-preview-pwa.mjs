@@ -1,4 +1,4 @@
-const CACHE_NAME = 'waydean-preview-shell-v2';
+const CACHE_NAME = 'waydean-preview-shell-v37';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');
@@ -22,7 +22,8 @@ function installInstructions() {
 
 export function createWaydeanPwaController(onChange = () => {}, {
   allowServerPush = false,
-  accountAdminAction = null
+  accountAdminAction = null,
+  familySessionAction = null
 } = {}) {
   const state = {
     localPreview: isLoopbackHost(location.hostname),
@@ -36,6 +37,7 @@ export function createWaydeanPwaController(onChange = () => {}, {
     serviceWorkerError: false,
     offlineReady: false,
     accountPushAvailable: Boolean(allowServerPush && typeof accountAdminAction === 'function'),
+    familyPushAvailable: Boolean(allowServerPush && typeof familySessionAction === 'function'),
     serverPushSubscribed: false,
     notificationPermission: 'Notification' in window ? Notification.permission : 'unsupported'
   };
@@ -155,9 +157,10 @@ export function createWaydeanPwaController(onChange = () => {}, {
     registrationPromise = navigator.serviceWorker.getRegistration().then(existingRegistration => {
       if (existingRegistration) return existingRegistration;
       return navigator.serviceWorker.register('./sw.js');
-    }).then(async readyRegistration => {
+    }).then(() => navigator.serviceWorker.ready).then(async readyRegistration => {
       registration = readyRegistration;
       state.serviceWorkerReady = Boolean(readyRegistration.active);
+      if (!state.serviceWorkerReady) throw new Error('Сервис уведомлений ещё активируется. Повторите попытку через несколько секунд.');
       emit();
       await refreshServerPushState();
       return readyRegistration;
@@ -214,7 +217,8 @@ export function createWaydeanPwaController(onChange = () => {}, {
     async subscribeServerPush(password, treeDir = 'drewo') {
       if (!state.serverPushAvailable) throw new Error('Серверные уведомления доступны только после подтверждённого входа в дерево.');
       const useAccountSession = state.accountPushAvailable;
-      if (!useAccountSession && !password) throw new Error('Введите пароль редактора.');
+      const useFamilySession = !useAccountSession && state.familyPushAvailable;
+      if (!useAccountSession && !useFamilySession && !password) throw new Error('Введите пароль редактора.');
       const permissionRequest = Notification.permission === 'default'
         ? Notification.requestPermission()
         : Promise.resolve(Notification.permission);
@@ -229,7 +233,9 @@ export function createWaydeanPwaController(onChange = () => {}, {
       if (!readyRegistration?.pushManager) throw new Error('Push-уведомления не поддерживаются этим браузером.');
       const keyResult = useAccountSession
         ? await accountAdminAction('waydean-admin-push-vapid', {})
-        : await callPublishApi({ action: 'vapid-public', password, treeDir });
+        : useFamilySession
+          ? await familySessionAction('vapid-public', {})
+          : await callPublishApi({ action: 'vapid-public', password, treeDir });
       if (!keyResult.publicKey) throw new Error('Сервер не вернул публичный ключ уведомлений.');
       let subscription = await readyRegistration.pushManager.getSubscription();
       let createdHere = false;
@@ -245,6 +251,8 @@ export function createWaydeanPwaController(onChange = () => {}, {
         const payload = { subscription: { endpoint: json.endpoint, keys: json.keys } };
         if (useAccountSession) {
           await accountAdminAction('waydean-admin-push-subscribe', payload);
+        } else if (useFamilySession) {
+          await familySessionAction('subscribe', payload);
         } else {
           await callPublishApi({ action: 'subscribe', password, treeDir, ...payload });
         }
@@ -259,7 +267,8 @@ export function createWaydeanPwaController(onChange = () => {}, {
     async unsubscribeServerPush(password, treeDir = 'drewo') {
       if (!state.serverPushAvailable) throw new Error('Серверные уведомления доступны только после подтверждённого входа в дерево.');
       const useAccountSession = state.accountPushAvailable;
-      if (!useAccountSession && !password) throw new Error('Введите пароль редактора.');
+      const useFamilySession = !useAccountSession && state.familyPushAvailable;
+      if (!useAccountSession && !useFamilySession && !password) throw new Error('Введите пароль редактора.');
       const readyRegistration = registration || await registrationPromise;
       const subscription = await readyRegistration?.pushManager?.getSubscription();
       if (!subscription) {
@@ -270,7 +279,9 @@ export function createWaydeanPwaController(onChange = () => {}, {
       const payload = { endpoint: subscription.endpoint };
       const result = useAccountSession
         ? await accountAdminAction('waydean-admin-push-unsubscribe', payload)
-        : await callPublishApi({ action: 'unsubscribe', password, treeDir, ...payload });
+        : useFamilySession
+          ? await familySessionAction('unsubscribe', payload)
+          : await callPublishApi({ action: 'unsubscribe', password, treeDir, ...payload });
       if (result.ok !== true) throw new Error(result.error || 'Сервер не подтвердил отключение уведомлений.');
       await subscription.unsubscribe();
       state.serverPushSubscribed = false;

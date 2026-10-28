@@ -13,9 +13,9 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261028-scene-aligned-camera-1";
+} from "./project-model.mjs?v=20261028-slow-tree-exit-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
-import { easeCinematic } from "../../cinematic-timeline.mjs";
+import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261028-slow-tree-exit-1";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -53,15 +53,17 @@ function pathRoundRect(context, x, y, width, height, radius) {
 }
 
 function edgeCurve(parent, child, parentIsMarker, childIsMarker, markerRadius) {
-  const startY = parent.y + (parentIsMarker ? markerRadius : parent.height / 2 - 2);
-  const endY = child.y - (childIsMarker ? markerRadius : child.height / 2 - 2);
+  const markerHalfHeight = getOverviewCardHalfHeight(markerRadius);
+  const startY = parent.y + (parentIsMarker ? markerHalfHeight : parent.height / 2 - 2);
+  const endY = child.y - (childIsMarker ? markerHalfHeight : child.height / 2 - 2);
   const bend = Math.max(18, (endY - startY) * 0.56);
   return [parent.x, startY, parent.x, startY + bend, child.x, endY - bend, child.x, endY];
 }
 
 function edgePolyline(parent, child, parentIsMarker, childIsMarker, markerRadius) {
-  const startY = parent.y + (parentIsMarker ? markerRadius : parent.height / 2);
-  const endY = child.y - (childIsMarker ? markerRadius : child.height / 2);
+  const markerHalfHeight = getOverviewCardHalfHeight(markerRadius);
+  const startY = parent.y + (parentIsMarker ? markerHalfHeight : parent.height / 2);
+  const endY = child.y - (childIsMarker ? markerHalfHeight : child.height / 2);
   const junctionY = startY + (endY - startY) * 0.5;
   return [parent.x, startY, parent.x, junctionY, child.x, junctionY, child.x, endY];
 }
@@ -244,16 +246,46 @@ function drawCard(context, person, node, alpha, isTarget, includeDates) {
 }
 
 function drawMarker(context, node, alpha, isTarget, radius) {
+  const { width, height, cornerRadius } = getOverviewCardGeometry(radius);
+  const left = node.x - width / 2;
+  const top = node.y - height / 2;
+  const worldPixel = radius / 4;
   context.save(); context.globalAlpha = clamp(alpha, 0, 1);
-  if (isTarget) { context.beginPath(); context.arc(node.x, node.y, radius + 6, 0, Math.PI * 2); context.strokeStyle = "#fff0c7"; context.lineWidth = 2; context.shadowColor = "rgba(255,222,147,0.8)"; context.shadowBlur = 10; context.stroke(); context.shadowBlur = 0; }
-  context.beginPath(); context.arc(node.x, node.y, radius, 0, Math.PI * 2); context.fillStyle = "#101817"; context.strokeStyle = isTarget ? "#f0d797" : "#d7c18c"; context.lineWidth = 1.8; context.fill(); context.stroke();
-  context.beginPath(); context.arc(node.x, node.y, Math.max(2, radius * 0.34), 0, Math.PI * 2); context.fillStyle = "#f0d797"; context.fill(); context.restore();
+  if (isTarget) {
+    const padding = worldPixel * 2.5;
+    context.shadowColor = "rgba(255,222,147,0.8)"; context.shadowBlur = 10; context.strokeStyle = "#fff0c7";
+    context.lineWidth = getOverviewMarkerWorldStrokeWidth(radius, 1.6);
+    pathRoundRect(context, left - padding, top - padding, width + padding * 2, height + padding * 2, cornerRadius + padding);
+    context.stroke(); context.shadowBlur = 0;
+  }
+  context.fillStyle = "#101817"; context.strokeStyle = isTarget ? "#f0d797" : "#d7c18c";
+  context.lineWidth = getOverviewMarkerWorldStrokeWidth(radius, 1.4);
+  pathRoundRect(context, left, top, width, height, cornerRadius); context.fill(); context.stroke();
+  context.restore();
 }
 
 export function getOverviewMarkerRadius(framingScale, outputScale) {
   const totalScale = Number(framingScale) * Number(outputScale);
   if (!Number.isFinite(totalScale) || totalScale <= 0) return 4;
   return 4 / totalScale;
+}
+
+export function getOverviewMarkerWorldStrokeWidth(radius, screenWidth = 1.4) {
+  const markerRadius = Number(radius);
+  const desiredWidth = Number(screenWidth);
+  if (!Number.isFinite(markerRadius) || markerRadius <= 0 || !Number.isFinite(desiredWidth) || desiredWidth <= 0) return 1.4;
+  const totalScale = 4 / markerRadius;
+  return desiredWidth / totalScale;
+}
+
+export function getOverviewCardGeometry(markerRadius) {
+  const radius = Number.isFinite(Number(markerRadius)) && Number(markerRadius) > 0 ? Number(markerRadius) : 4;
+  const height = radius * 1.4;
+  return { width: radius * 2.6, height, cornerRadius: height * 0.22 };
+}
+
+export function getOverviewCardHalfHeight(markerRadius) {
+  return getOverviewCardGeometry(markerRadius).height / 2;
 }
 
 function drawCopy(context, story, shot, shotIndex, frame, width, height) {

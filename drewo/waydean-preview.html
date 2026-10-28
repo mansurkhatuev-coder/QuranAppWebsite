@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="waydean-local-build" content="release-candidate-2026-10-12-video-local-1">
+  <meta name="waydean-local-build" content="release-candidate-2026-10-28-family-lock-video-pacing-4">
   <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -16,7 +16,7 @@
   <link rel="stylesheet" href="waydean-preview-loading.css?v=1">
   <link rel="stylesheet" href="waydean-preview-camera.css?v=ios-pinch-stable-1">
   <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
-  <link rel="stylesheet" href="waydean-preview-lod.css?v=overview-markers-20261027">
+  <link rel="stylesheet" href="waydean-preview-lod.css?v=overview-lines-20261028-1">
   <link rel="stylesheet" href="waydean-preview-edit.css">
   <link rel="stylesheet" href="waydean-preview-readiness.css">
   <link rel="stylesheet" href="waydean-preview-main-polish.css?v=6">
@@ -28,9 +28,10 @@
   <link rel="stylesheet" href="waydean-preview-history.css?v=local-history-1">
   <link rel="stylesheet" href="waydean-preview-pwa.css?v=account-push-20261028-1">
   <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
-  <link rel="stylesheet" href="waydean-preview-self.css?v=self-whoami-prompt-1">
+  <link rel="stylesheet" href="waydean-preview-self.css?v=self-person-20261028-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=thin-glass-1">
-  <link rel="stylesheet" href="waydean-preview-auth.css?v=admin-tools-1">
+  <link rel="stylesheet" href="waydean-preview-auth.css?v=family-auth-1">
+  <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
 </head>
 <body>
   <main class="app-shell">
@@ -49,10 +50,10 @@
         <button class="nav-item" id="statsOpen">▥ <span>Статистика</span></button>
       </nav>
       <div class="top-actions">
-        <button class="top-action" id="shareOpen" type="button" title="Скопировать ссылку на локальный просмотр">Поделиться</button>
+        <button class="top-action" id="shareOpen" type="button" title="Поделиться семейным древом">Поделиться</button>
         <button class="top-action" id="printOpen" type="button" title="Экспортировать дерево в SVG или PDF">Экспорт</button>
         <button class="top-action" id="moreOpen">··· Ещё</button>
-        <span class="premium" aria-label="Текущее оформление: Премиум">♛ Стиль: Премиум</span>
+        <span class="premium" id="appearanceBadge" aria-label="Текущее оформление: Премиум">♛ Стиль: Премиум</span>
       </div>
     </header>
 
@@ -167,16 +168,37 @@
     </section>
     <section class="popover more-popover" id="morePopover" hidden aria-label="Дополнительные действия">
       <div class="popover-head"><strong>Ещё</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <section class="appearance-controls" aria-labelledby="appearanceHeading">
+        <div class="appearance-heading"><strong id="appearanceHeading">Оформление</strong><small id="appearanceSummary" aria-live="polite">Настройки сохраняются на этом устройстве</small></div>
+        <label for="appearanceTheme">Стиль</label>
+        <select id="appearanceTheme" aria-label="Стиль оформления">
+          <option value="classic">Классика</option>
+          <option value="premium">Премиум</option>
+        </select>
+        <label for="appearanceSky">День и ночь</label>
+        <select id="appearanceSky" aria-label="Режим дня и ночи">
+          <option value="auto">Авто · по времени устройства</option>
+          <option value="day">День</option>
+          <option value="night">Ночь</option>
+        </select>
+      </section>
+      <button class="more-item weather-action" id="weatherAction" type="button" aria-label="Погода рядом. Нажмите, чтобы обновить">
+        <strong id="weatherActionTitle">Погода рядом</strong>
+        <small id="weatherActionDetail" aria-live="polite">Нажмите, чтобы узнать погоду по геолокации</small>
+      </button>
       <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
       <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Выбранный человек и его родные</small></button>
       <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
       <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
       <button class="more-item" id="moreExport"><strong>Экспорт дерева</strong><small>Скачать SVG или подготовить PDF и печать</small></button>
+      <button class="more-item" id="moreRefresh" type="button"><strong>Обновить страницу</strong><small>Загрузить свежую версию дерева</small></button>
       <button class="more-item local-data-action" id="moreHistory" type="button" hidden><strong>История локальных действий</strong><small>Сохранения и восстановление в этом браузере</small></button>
       <button class="more-item local-data-action" id="moreBackups" type="button" hidden><strong>Резервные копии · локально</strong><small>Создать снимок, закрепить или восстановить</small></button>
       <button class="more-item" id="morePwa" type="button"><strong>Приложение и уведомления</strong><small>Установка на устройство, офлайн и проверка уведомлений</small></button>
       <button class="more-item" id="moreVideo" type="button" hidden><strong>Создать видео</strong><small>Соберите ролик и скачайте его на этом устройстве</small></button>
+      <button class="more-item" id="moreTreesCabinet" type="button"><strong>Кабинет деревьев</strong><small>Управление семьями, доступом и аккаунтом</small></button>
       <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Текущее древо</strong><small>Открыть привычную версию</small></button>
+      <button class="more-item family-logout-action" id="familyLogout" type="button" hidden><strong>Выйти из семейного входа</strong><small>Завершить сессию в этой вкладке</small></button>
       <section class="account-admin-tools" id="accountAdminPanel" hidden aria-label="Управление доступом к древу">
         <div class="account-admin-tools-heading"><small>АДМИНИСТРИРОВАНИЕ</small><strong>Доступ к древу</strong></div>
         <div class="account-admin-lock-state" aria-live="polite"><strong id="accountAdminLockState">Загружаем состояние…</strong><small id="accountAdminLockDetail">Проверяем доступ по администраторской учётной записи.</small></div>
@@ -227,18 +249,6 @@
         <div class="pwa-push-dialog-actions"><button class="primary-action" id="pwaPushSubmit" type="submit">Продолжить</button><button class="secondary-action" id="pwaPushCancel" type="button">Отмена</button></div>
       </form>
     </dialog>
-    <dialog class="whoami-onboarding" id="whoAmIPrompt" aria-labelledby="whoAmIPromptTitle" aria-describedby="whoAmIPromptDescription">
-      <div class="whoami-onboarding-card">
-        <button class="whoami-onboarding-close" id="whoAmIPromptClose" type="button" aria-label="Закрыть">×</button>
-        <span class="whoami-onboarding-mark" aria-hidden="true">◎</span>
-        <h2 id="whoAmIPromptTitle">Кто вы в этом древе?</h2>
-        <p id="whoAmIPromptDescription">Отметьте себя, чтобы быстрее находить свой путь и близких. Выбор сохранится в этом браузере.</p>
-        <div class="whoami-onboarding-actions">
-          <button class="primary-action" id="whoAmIPromptChoose" type="button">Выбрать себя</button>
-          <button class="secondary-action" id="whoAmIPromptLater" type="button">Позже</button>
-        </div>
-      </div>
-    </dialog>
     <div class="backdrop" id="popoverBackdrop" hidden></div>
     <div class="load-error" id="loadError" hidden>
       <strong id="loadErrorTitle">Не удалось загрузить дерево</strong>
@@ -252,6 +262,17 @@
         <input id="waydeanAdminPassword" name="password" type="password" autocomplete="current-password" required>
         <p class="waydean-admin-login-error" id="waydeanAdminLoginError" role="alert" hidden></p>
         <button id="waydeanAdminLoginSubmit" type="submit">Войти и открыть древо</button>
+        <a class="waydean-login-switch" href="waydean-preview.html?source=family&amp;state=all-tree">Войти логином семьи</a>
+      </form>
+      <form id="waydeanFamilyLoginForm" class="waydean-admin-login" hidden>
+        <p>Вход по семейному логину и паролю. Сессия действует только в этой вкладке.</p>
+        <label for="waydeanFamilyLogin">Логин семьи</label>
+        <input id="waydeanFamilyLogin" name="login" type="text" autocomplete="username" required>
+        <label for="waydeanFamilyPassword">Пароль семьи</label>
+        <input id="waydeanFamilyPassword" name="password" type="password" autocomplete="current-password" required>
+        <p class="waydean-admin-login-error" id="waydeanFamilyLoginError" role="alert" hidden></p>
+        <button id="waydeanFamilyLoginSubmit" type="submit">Войти и открыть древо</button>
+        <a class="waydean-login-switch" href="waydean-preview.html?source=account&amp;state=all-tree">Войти администратором Waydean</a>
       </form>
       <div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div>
     </div>
@@ -274,7 +295,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-      import('./waydean-preview.js?v=account-admin-push-20261028-1');
+          import('./waydean-preview.js?v=family-lock-4');
     }
   </script>
 </body>

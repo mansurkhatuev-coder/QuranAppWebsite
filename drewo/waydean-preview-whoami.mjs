@@ -1,32 +1,39 @@
-export function shouldPromptWhoAmI({ hasSelf, dismissed, isDemo }) {
-  return !hasSelf && !dismissed && !isDemo;
+export function whoAmIPersonStorageKey(treeKey) {
+  return `waydean-preview:my-person:v1:${treeKey === 'demo' ? 'demo' : 'hoti'}`;
 }
 
-export function whoAmISkipStorageKey(treeKey) {
-  return `waydean-preview:whoami-skip:v1:${treeKey === 'demo' ? 'demo' : 'hoti'}`;
-}
-
-export function hasDismissedWhoAmIPrompt(storage, treeKey) {
+export function readWhoAmIPerson(storage, treeKey, validPersonIds) {
+  const key = whoAmIPersonStorageKey(treeKey);
   try {
-    return storage?.getItem(whoAmISkipStorageKey(treeKey)) === '1';
+    const personId = storage?.getItem(key);
+    if (!personId) return null;
+    const validIds = validPersonIds instanceof Set
+      ? validPersonIds
+      : new Set(Array.isArray(validPersonIds) ? validPersonIds : []);
+    if (validIds.has(personId)) return personId;
+    storage?.removeItem(key);
+  } catch {
+    return null;
+  }
+  return null;
+}
+
+export function saveWhoAmIPerson(storage, treeKey, personId) {
+  if (typeof personId !== 'string' || !personId.trim()) return false;
+  try {
+    if (!storage) return false;
+    storage.setItem(whoAmIPersonStorageKey(treeKey), personId);
+    return true;
   } catch {
     return false;
   }
 }
 
-export function dismissWhoAmIPrompt(storage, treeKey) {
+export function clearWhoAmIPerson(storage, treeKey) {
   try {
-    storage?.setItem(whoAmISkipStorageKey(treeKey), '1');
-    return Boolean(storage);
-  } catch {
-    return false;
-  }
-}
-
-export function clearWhoAmIPromptDismissal(storage, treeKey) {
-  try {
-    storage?.removeItem(whoAmISkipStorageKey(treeKey));
-    return Boolean(storage);
+    if (!storage) return false;
+    storage.removeItem(whoAmIPersonStorageKey(treeKey));
+    return true;
   } catch {
     return false;
   }

@@ -10,11 +10,26 @@ export function getOverviewMarkerWorldSize(zoom) {
   return desiredSize / scale;
 }
 
+export function getOverviewCardWorldSize(zoom) {
+  const scale = Number(zoom);
+  if (!Number.isFinite(scale) || scale <= 0) return { width: 8, height: 5.6 };
+  const screenSize = getOverviewMarkerWorldSize(scale);
+  return { width: screenSize * 1.5, height: screenSize * 0.7 };
+}
+
 export function getOverviewLineWorldWidth(zoom, screenWidth = 1.2) {
   const scale = Number(zoom);
   const desiredWidth = Number(screenWidth);
   if (!Number.isFinite(scale) || scale <= 0 || !Number.isFinite(desiredWidth) || desiredWidth <= 0) return 1.2;
   return desiredWidth / scale;
+}
+
+export function getConnectorCardHeight(level, cardHeight) {
+  const height = Number(cardHeight);
+  if (!Number.isFinite(height) || height < 0) return 0;
+  // Overview silhouettes are painted over the connector layer. Extend each
+  // connector to the node center so its visible end meets the small silhouette.
+  return level === 'overview' ? 0 : height;
 }
 
 export function compactRouteClass(personId, routePeople) {
