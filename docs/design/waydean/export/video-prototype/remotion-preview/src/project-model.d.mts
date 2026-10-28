@@ -51,6 +51,7 @@ export type StoryShot = {
   treeOffsetTo: number;
   cameraFrom: { x: number; y: number; zoom: number };
   cameraTo: { x: number; y: number; zoom: number };
+  cameraHoldFrames?: number;
   lineProgressFrom: number;
   lineProgressTo: number;
   activeEdgeKeys: string[];
@@ -95,6 +96,7 @@ export type FrameSample = {
   activeEdgeKeys: string[];
   progress: number;
   easedProgress: number;
+  cameraProgress: number;
   camera: { x: number; y: number; zoom: number };
   treeOffsetY: number;
   lineProgress: number;

@@ -2,6 +2,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import {
   buildRemotionStory,
+  FULL_TREE_GENERATION_GROUP_SIZE,
   formatPersonDateLabel,
   getCinematicFramingForFrame,
   getSceneEdgeEmphasis,
@@ -120,6 +121,31 @@ test("cinematic camera framing has no jump at any scene boundary", () => {
   }
 });
 
+test("full-tree camera holds the previous frame briefly before carrying earlier cards out of view", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    { id: "child", name: "Потомок", generation: 2, parent: "root" },
+    { id: "grandchild", name: "Внук", generation: 3, parent: "child" }
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "grandchild" });
+  const shotIndex = story.timeline.shots.findIndex(shot => shot.type === "generation" && shot.generation === 2);
+  const shot = story.timeline.shots[shotIndex];
+  const previous = story.timeline.shots[shotIndex - 1];
+  const at = frame => getCinematicFramingForFrame(story, 1280, 720, frame);
+  const previousEnd = at(previous.startFrame + previous.durationFrames - 1);
+  const held = at(shot.startFrame + 10);
+  const moving = at(shot.startFrame + 60);
+
+  for (const property of ["scale", "translateX", "translateY"]) {
+    assert.ok(Math.abs(held[property] - previousEnd[property]) < 1e-9,
+      `${property} should hold the previous frame before the camera starts moving`);
+  }
+  assert.ok(Math.abs(moving.translateY - held.translateY) > 1,
+    "the camera should then move smoothly toward the next generation");
+  assert.equal(getScenePersonEmphasis(story, shotIndex, 20, "root"), 1,
+    "previous cards stay fully visible while the camera carries them out of frame");
+});
+
 test("path and branch videos keep previously revealed cards and connectors on the moving canvas", () => {
   const people = [
     { id: "root", name: "Предок", generation: 1, parent: null },
@@ -163,7 +189,15 @@ test("full-tree finale gives the focused card a gradual camera exit", () => {
   };
 
   let largestSingleFrameChange = 0;
+  let largestCameraMove = 0;
   for (let frame = focusShot.startFrame + 1; frame < focusShot.startFrame + focusShot.durationFrames; frame += 1) {
+    const previousFraming = getCinematicFramingForFrame(story, frameWidth, frameHeight, frame - 1);
+    const currentFraming = getCinematicFramingForFrame(story, frameWidth, frameHeight, frame);
+    largestCameraMove = Math.max(
+      largestCameraMove,
+      Math.abs(currentFraming.translateX - previousFraming.translateX),
+      Math.abs(currentFraming.translateY - previousFraming.translateY)
+    );
     largestSingleFrameChange = Math.max(
       largestSingleFrameChange,
       Math.abs(cardWidthAt(frame) - cardWidthAt(frame - 1))
@@ -171,5 +205,147 @@ test("full-tree finale gives the focused card a gradual camera exit", () => {
   }
 
   assert.ok(focusShot.durationFrames >= story.timeline.fps * 5);
+  assert.ok(largestCameraMove <= 64, `largest camera move was ${largestCameraMove.toFixed(1)} px/frame`);
   assert.ok(largestSingleFrameChange <= 32, `largest card-size change was ${largestSingleFrameChange.toFixed(1)} px/frame`);
+});
+
+test("a 14-generation full-tree story stays within a watchable production duration", () => {
+  const people = Array.from({ length: 14 }, (_, index) => ({
+    id: `generation-${index + 1}`,
+    name: `Поколение ${index + 1}`,
+    generation: index + 1,
+    parent: index ? `generation-${index}` : null
+  }));
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "generation-14" });
+  const durationSeconds = story.timeline.totalFrames / story.timeline.fps;
+
+  assert.ok(durationSeconds >= 30, `the story should leave time to read its generations, got ${durationSeconds.toFixed(1)}s`);
+  assert.ok(durationSeconds <= 75, `the story should stay near the 41-second preview, got ${durationSeconds.toFixed(1)}s`);
+});
+
+test("a 13-generation My Path export matches the 41-second preview duration", () => {
+  const people = Array.from({ length: 13 }, (_, index) => ({
+    id: `path-generation-${index + 1}`,
+    name: `Поколение ${index + 1}`,
+    generation: index + 1,
+    parent: index ? `path-generation-${index}` : null
+  }));
+  const story = buildRemotionStory({
+    people,
+    scopeType: "path",
+    selectedPersonId: "path-generation-13"
+  });
+
+  assert.equal(story.people.length, 13);
+  assert.equal(story.timeline.shots.length, 16);
+  assert.ok(Math.abs(story.timeline.totalFrames / story.timeline.fps - 41) <= 1);
+});
+
+test("full-tree generations move through spatially adjacent groups instead of isolated cards", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    ...Array.from({ length: 30 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "child-18" });
+  const scenes = story.timeline.shots.filter(shot => shot.type === "generation" && shot.generation === 2);
+  const nodeX = new Map(story.timeline.layout.nodes.map(node => [node.id, node.x]));
+  const shownIds = scenes.flatMap(scene => scene.personIds);
+
+  assert.equal(scenes.length, 2);
+  assert.ok(scenes.every(scene => scene.personIds.length <= FULL_TREE_GENERATION_GROUP_SIZE));
+  assert.deepEqual(new Set(shownIds), new Set(people.slice(1).map(person => person.id)));
+  for (const scene of scenes) {
+    const positions = scene.personIds.map(id => nodeX.get(id));
+    assert.deepEqual(positions, [...positions].sort((left, right) => left - right));
+  }
+});
+
+test("full-tree branch scene reveals all family lines together without dropping connectors", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    ...Array.from({ length: 3 }, (_, parentIndex) => ({
+      id: `child-${parentIndex + 1}`,
+      name: `Потомок ${parentIndex + 1}`,
+      generation: 2,
+      parent: "root"
+    })),
+    ...Array.from({ length: 3 }, (_, parentIndex) => [
+      { id: `grandchild-${parentIndex + 1}-a`, name: "Внук А", generation: 3, parent: `child-${parentIndex + 1}` },
+      { id: `grandchild-${parentIndex + 1}-b`, name: "Внук Б", generation: 3, parent: `child-${parentIndex + 1}` }
+    ]).flat()
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "grandchild-3-b" });
+  const branchShots = story.timeline.shots.filter(shot => shot.type === "branching");
+  const actualEdges = branchShots.flatMap(shot => shot.activeEdgeKeys).sort();
+  const expectedEdges = people.filter(person => person.parent).map(person => `${person.parent}->${person.id}`).sort();
+
+  assert.equal(branchShots.length, 1);
+  assert.ok(branchShots.every(shot => shot.activeEdgeKeys.length > 0));
+  assert.deepEqual(actualEdges, expectedEdges);
+});
+
+test("full-tree focus keeps the previous branch in frame during the camera approach", () => {
+  const people = Array.from({ length: 13 }, (_, index) => ({
+    id: `ancestor-${index + 1}`,
+    name: `Предок ${index + 1}`,
+    generation: index + 1,
+    parent: index ? `ancestor-${index}` : null
+  }));
+  people.push(
+    { id: "selected", name: "Выбранный человек", generation: 14, parent: "ancestor-13" },
+    ...Array.from({ length: 7 }, (_, index) => ({
+      id: `sibling-${index + 1}`,
+      name: `Брат ${index + 1}`,
+      generation: 14,
+      parent: "ancestor-13"
+    }))
+  );
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "selected" });
+  const focusIndex = story.timeline.shots.findIndex(shot => shot.type === "focus");
+  const focus = story.timeline.shots[focusIndex];
+  const sibling = story.timeline.layout.nodes.find(node => node.id === "sibling-3");
+  const frame = focus.startFrame + Math.floor(focus.durationFrames * 0.2);
+  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const left = sibling.x * framing.scale + framing.translateX - sibling.width * framing.scale / 2;
+  const right = sibling.x * framing.scale + framing.translateX + sibling.width * framing.scale / 2;
+  const top = sibling.y * framing.scale + framing.translateY - sibling.height * framing.scale / 2;
+  const bottom = sibling.y * framing.scale + framing.translateY + sibling.height * framing.scale / 2;
+
+  assert.ok(right > 0 && left < 1280 && bottom > 0 && top < 720, "the previous branch card should leave through the frame edge, not vanish during the approach");
+});
+
+test("full-tree video stretches only long camera moves to keep prior cards moving smoothly", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    ...Array.from({ length: 36 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "child-36" });
+  const pathStory = buildRemotionStory({ people, scopeType: "path", selectedPersonId: "child-36" });
+  let maximumMove = 0;
+
+  for (const [width, height] of [[1280, 720], [720, 1280], [720, 720]]) {
+    for (let frame = 1; frame < story.timeline.totalFrames; frame += 1) {
+      const previous = getCinematicFramingForFrame(story, width, height, frame - 1);
+      const current = getCinematicFramingForFrame(story, width, height, frame);
+      const outputScale = Math.min(width / current.viewWidth, height / current.viewHeight);
+      for (const node of story.timeline.layout.nodes) {
+        const dx = (node.x * current.scale + current.translateX - node.x * previous.scale - previous.translateX) * outputScale;
+        const dy = (node.y * current.scale + current.translateY - node.y * previous.scale - previous.translateY) * outputScale;
+        maximumMove = Math.max(maximumMove, Math.hypot(dx, dy));
+      }
+    }
+  }
+
+  assert.ok(maximumMove <= 64, `largest revealed-card movement was ${maximumMove.toFixed(1)} px/frame`);
+  assert.equal(pathStory.timeline.shots.find(shot => shot.type === "focus").durationFrames, pathStory.timeline.fps * 3);
 });

@@ -16,6 +16,13 @@ test('one child connects at the card edges for both card heights', () => {
   }
 });
 
+test('overview connector reaches marker centers so the marker silhouette masks its inner line', () => {
+  const positions = new Map([['p', point(100, 100)], ['c', point(100, 290)]]);
+  const children = new Map([['p', [{ id: 'c' }]]]);
+  const [line] = connectorPaths(positions, children, null, 0);
+  assert.equal(line.d, 'M100 100 V290');
+});
+
 test('siblings share one stem and one bus with separate drops', () => {
   const positions = new Map([
     ['p', point(100, 100)],

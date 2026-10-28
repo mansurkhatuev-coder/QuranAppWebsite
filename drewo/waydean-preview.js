@@ -11,23 +11,32 @@ import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admi
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import {
-  clearWhoAmIPromptDismissal, dismissWhoAmIPrompt, hasDismissedWhoAmIPrompt, shouldPromptWhoAmI
-} from './waydean-preview-whoami.mjs?v=2';
+  clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
+} from './waydean-preview-whoami.mjs?v=identity-storage-20261028-1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
 import {
-  compactRouteClass, getOverviewLineWorldWidth, getOverviewMarkerWorldSize, nextLodLevel
-} from './waydean-preview-lod.mjs?v=lod-9';
-import { accountPreviewUrl, canLoadPreviewTree, initialPreviewView, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode } from './waydean-preview-route.mjs?v=account-route-20261016-1';
+  compactRouteClass, getConnectorCardHeight, getOverviewCardWorldSize, getOverviewLineWorldWidth, getOverviewMarkerWorldSize, nextLodLevel
+} from './waydean-preview-lod.mjs?v=lod-12-overview-lines';
+import {
+  accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
+  isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
+} from './waydean-preview-route.mjs?v=family-route-5';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=child-id-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-push-20261028-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261028-3-cache';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
+import {
+  createWeatherController, normalizeAppearance, readAppearance, resolveSkyPeriod, writeAppearance
+} from './waydean-preview-appearance.mjs?v=weather-parity-20261028-1';
+import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, storeFamilySession, verifyFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-1';
+import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
+import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
 const FIXTURE_PHOTOS = new Map([
@@ -37,7 +46,6 @@ const FIXTURE_PHOTOS = new Map([
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const railPreferenceKey = 'waydean-preview:tree-actions:v2';
-const myPersonStoragePrefix = 'waydean-preview:my-person:v1:';
 const ui = {
   app: $('.app-shell'), mobileSelected: $('#mobileSelected'), mobileSearch: $('#mobileSearchTrigger'),
   railToggle: $('#railToggle'), profileReopen: $('#profileReopen'),
@@ -55,7 +63,9 @@ let childrenById = new Map();
 let selectedId = null;
 let contextAnchorId = null;
 let myPersonId = null;
-let whoAmIPromptShown = false;
+let weatherSunTimes = null;
+let applyAppearancePreferences = null;
+let allowUnsavedExit = false;
 let mode = 'all';
 let zoom = 1;
 let filters = { min: 1, max: Infinity, photosOnly: false };
@@ -64,6 +74,11 @@ let toastTimer = 0;
 let fullDataDepth = 1;
 let syntheticFixture = false;
 let accountPreview = false;
+let familyPreview = false;
+let familySessionTokenMemory = '';
+let familySessionRole = '';
+let familySessionLocked = false;
+let familySessionLockReason = '';
 let accountAdminAccess = null;
 let accountTreeLocked = null;
 let accountTreeLockReason = '';
@@ -81,6 +96,7 @@ let localTreeDraft = false;
 let masterMobileOverview = false;
 let currentCameraLayout = null;
 let lastNodeMetrics = null;
+let currentConnectorLayout = null;
 let lodLevel = 'detail';
 let fixtureRoot = null;
 let originalFixtureRoot = null;
@@ -101,6 +117,25 @@ const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
 const scheduleMiniViewportUpdate = createFrameCoalescer(requestAnimationFrame, updateMiniViewport);
+
+function renderTreeConnectors() {
+  if (!currentConnectorLayout) return;
+  const { positions, visibleChildren, related, selectedRoute, cardHeight, includeSelectedRoute } = currentConnectorLayout;
+  const connectorCardHeight = getConnectorCardHeight(lodLevel, cardHeight);
+  const treeLines = connectorPaths(positions, visibleChildren, related, connectorCardHeight);
+  if (includeSelectedRoute) {
+    treeLines.push(...connectorPaths(positions, visibleChildren, selectedRoute, connectorCardHeight)
+      .filter(line => line.className.includes('active'))
+      .map(line => ({ ...line, className: `${line.className} lod-route` })));
+  }
+  const lineParts = treeLines.map(line => {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', line.d);
+    path.setAttribute('class', line.className);
+    return path;
+  });
+  ui.lines.replaceChildren(...lineParts);
+}
 
 function nodeMetrics() {
   const style = getComputedStyle(ui.graph);
@@ -178,43 +213,45 @@ function syncCameraLayout(dimensions = null) {
   if (ui.extent.style.height !== extentHeight) ui.extent.style.height = extentHeight;
   const transform = `translate(${layout.offsetX}px, ${layout.offsetY}px) scale(${zoom})`;
   if (ui.graph.style.transform !== transform) ui.graph.style.transform = transform;
-  const overviewDotSize = `${getOverviewMarkerWorldSize(zoom)}px`;
+  const overviewCardSize = getOverviewCardWorldSize(zoom);
+  const overviewMarkerSize = `${getOverviewMarkerWorldSize(zoom)}px`;
   const overviewLineWidth = `${getOverviewLineWorldWidth(zoom)}px`;
-  if (ui.graph.style.getPropertyValue('--overview-dot-size') !== overviewDotSize) {
-    ui.graph.style.setProperty('--overview-dot-size', overviewDotSize);
+  const overviewCardBorderWidth = `${getOverviewLineWorldWidth(zoom, 1.2)}px`;
+  const overviewCardHighlightWidth = `${getOverviewLineWorldWidth(zoom, 1.8)}px`;
+  const overviewCardWidth = `${overviewCardSize.width}px`;
+  const overviewCardHeight = `${overviewCardSize.height}px`;
+  if (ui.graph.style.getPropertyValue('--overview-card-width') !== overviewCardWidth) {
+    ui.graph.style.setProperty('--overview-card-width', overviewCardWidth);
+  }
+  if (ui.graph.style.getPropertyValue('--overview-card-height') !== overviewCardHeight) {
+    ui.graph.style.setProperty('--overview-card-height', overviewCardHeight);
+  }
+  if (ui.graph.style.getPropertyValue('--overview-dot-size') !== overviewMarkerSize) {
+    ui.graph.style.setProperty('--overview-dot-size', overviewMarkerSize);
   }
   if (ui.graph.style.getPropertyValue('--overview-line-width') !== overviewLineWidth) {
     ui.graph.style.setProperty('--overview-line-width', overviewLineWidth);
   }
-  const isMobile = window.matchMedia('(max-width: 700px)').matches;
-  const nextLevel = isMobile
-    ? 'detail'
-    : nextLodLevel(lodLevel, (lastNodeMetrics?.width || nodeMetrics().width) * zoom);
-  if (lodLevel !== nextLevel) lodLevel = nextLevel;
+  if (ui.graph.style.getPropertyValue('--overview-card-border-width') !== overviewCardBorderWidth) {
+    ui.graph.style.setProperty('--overview-card-border-width', overviewCardBorderWidth);
+  }
+  if (ui.graph.style.getPropertyValue('--overview-card-highlight-width') !== overviewCardHighlightWidth) {
+    ui.graph.style.setProperty('--overview-card-highlight-width', overviewCardHighlightWidth);
+  }
+  const nextLevel = nextLodLevel(lodLevel, (lastNodeMetrics?.width || nodeMetrics().width) * zoom);
+  const levelChanged = lodLevel !== nextLevel;
+  if (levelChanged) lodLevel = nextLevel;
   if (ui.graph.dataset.lod !== lodLevel) ui.graph.dataset.lod = lodLevel;
+  if (levelChanged) renderTreeConnectors();
   updateZoomCaption();
 }
 
 function formatYears(person) {
-  if (person.born == null && person.died == null) return 'Даты неизвестны';
-  if (person.born == null) return `до ${person.died}`;
-  if (person.died == null) return `с ${person.born}`;
-  return `${person.born}–${person.died}`;
-}
-
-function gregorianYearToHijri(year) {
-  const value = Number(year);
-  if (!Number.isFinite(value)) return null;
-  return Math.max(1, Math.round((value - 622) * 33 / 32));
+  return formatPersonLifeYears(person, 'g') || 'Даты неизвестны';
 }
 
 function formatHijriYears(person) {
-  const born = person.born == null ? null : gregorianYearToHijri(person.born);
-  const died = person.died == null ? null : gregorianYearToHijri(person.died);
-  if (born != null && died != null) return `${born} — ${died} هـ`;
-  if (born != null) return `${born} هـ`;
-  if (died != null) return `ум. ${died} هـ`;
-  return '';
+  return formatPersonLifeYears(person, 'h');
 }
 
 function updateZoomCaption() {
@@ -260,12 +297,29 @@ function editableDraftRoot() {
   return syntheticFixture || localTreeDraft ? fixtureRoot : null;
 }
 
+function hasRemoteTreeWriteAccess() {
+  if (accountPreview) return Boolean(accountAdminAccess);
+  return Boolean(familyPreview && canPublishFamilyTreeSession({
+    token: familySessionTokenMemory,
+    role: familySessionRole,
+    locked: familySessionLocked
+  }));
+}
+
+function familyWriteRestrictionMessage() {
+  if (!familyPreview || !familySessionLocked || !canEditFamilyTreeRole(familySessionRole)) return '';
+  const reason = String(familySessionLockReason || '').trim();
+  return reason
+    ? `Правки в семейном древе сейчас закрыты: ${reason}. Изменения сохраняются только в этом браузере.`
+    : 'Правки в семейном древе сейчас закрыты. Изменения сохраняются только в этом браузере.';
+}
+
 function canEditDraft() {
   return Boolean(editableDraftRoot());
 }
 
 function accountDraftMetadata() {
-  if (!accountPreview || !accountBaseTree || !accountBaseFingerprint) return null;
+  if (!hasRemoteTreeWriteAccess() || !accountBaseTree || !accountBaseFingerprint) return null;
   return {
     accountBaseTreeJson: JSON.stringify(accountBaseTree),
     accountBaseFingerprint,
@@ -282,25 +336,25 @@ function sameJsonSnapshot(left, right) {
 }
 
 function hasAccountPublishChanges() {
-  return Boolean(accountPreview && accountBaseTree && editableDraftRoot()
+  return Boolean(hasRemoteTreeWriteAccess() && accountBaseTree && editableDraftRoot()
     && isDirty(accountBaseTree, editableDraftRoot()));
 }
 
 function appendAccountPublishButton(container) {
-  if (!accountPreview) return null;
+  if (!hasRemoteTreeWriteAccess()) return null;
   const button = document.createElement('button');
   button.type = 'button';
   button.textContent = editStatus === 'saving' ? 'Публикуем…' : 'Опубликовать в древо';
   button.dataset.profileFocus = 'action:publish';
   button.disabled = editStatus === 'saving' || editStatus === 'conflict'
-    || !accountAdminAccess || !accountBaseFingerprint || !hasAccountPublishChanges();
+    || !hasRemoteTreeWriteAccess() || !accountBaseFingerprint || !hasAccountPublishChanges();
   button.addEventListener('click', () => void publishAccountDraft());
   container.append(button);
   return button;
 }
 
 function draftSubject() {
-  return syntheticFixture ? 'синтетическое дерево' : 'локальную копию древа';
+  return syntheticFixture ? 'синтетическое дерево' : hasRemoteTreeWriteAccess() ? 'семейное древо' : 'локальную копию древа';
 }
 
 function russianPlural(value, one, few, many) {
@@ -374,37 +428,12 @@ function currentRecords() {
   return candidates.filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photosOnly || hasDisplayPhoto(person)));
 }
 
-function myPersonStorageKey() {
-  return `${myPersonStoragePrefix}${syntheticFixture ? 'demo' : 'hoti'}`;
-}
-
 function browserStorage() {
   try { return window.localStorage; } catch { return null; }
 }
 
-function maybePromptWhoAmI() {
-  if (whoAmIPromptShown) return;
-  const dialog = $('#whoAmIPrompt');
-  const treeKey = syntheticFixture ? 'demo' : 'hoti';
-  const dismissed = hasDismissedWhoAmIPrompt(browserStorage(), treeKey);
-  if (!dialog || !shouldPromptWhoAmI({ hasSelf: Boolean(myPersonId && byId.has(myPersonId)), dismissed, isDemo: syntheticFixture })) return;
-  if (document.visibilityState === 'hidden') return;
-  whoAmIPromptShown = true;
-  if (typeof dialog.showModal === 'function') dialog.showModal();
-  else {
-    openPopover(ui.search);
-    $('#searchInput')?.focus({ preventScroll: true });
-  }
-}
-
 function loadMyPersonPreference() {
-  try {
-    const stored = localStorage.getItem(myPersonStorageKey());
-    myPersonId = stored && byId.has(stored) ? stored : null;
-    if (stored && !myPersonId) localStorage.removeItem(myPersonStorageKey());
-  } catch {
-    myPersonId = null;
-  }
+  myPersonId = readWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti', new Set(byId.keys()));
 }
 
 function syncWhoAmIButton() {
@@ -420,14 +449,7 @@ function syncWhoAmIButton() {
 function setSelfPerson(id) {
   if (!byId.has(id)) return;
   myPersonId = String(id);
-  let persisted = false;
-  try {
-    localStorage.setItem(myPersonStorageKey(), myPersonId);
-    clearWhoAmIPromptDismissal(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
-    persisted = true;
-  } catch {
-    // Keep the mark for this page session if browser storage is unavailable.
-  }
+  const persisted = saveWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti', myPersonId);
   selectPerson(myPersonId);
   syncWhoAmIButton();
   announce(persisted ? 'Отметка «Это я» сохранена в этом браузере.' : 'Отметка действует до закрытия этой страницы: браузер не разрешил сохранение.');
@@ -436,11 +458,7 @@ function setSelfPerson(id) {
 function clearSelfPerson() {
   const previous = myPersonId;
   myPersonId = null;
-  try {
-    localStorage.removeItem(myPersonStorageKey());
-  } catch {
-    // Clearing the in-memory mark is still useful for this page session.
-  }
+  clearWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
   if (mode === 'path') {
     mode = 'all-tree';
     resetGenerationFilters();
@@ -501,6 +519,7 @@ function drawTree() {
   lastNodeMetrics = metrics;
   ui.nodes.replaceChildren();
   ui.lines.replaceChildren();
+  currentConnectorLayout = null;
   const matches = new Set(visible.map(person => person.id));
   const selected = byId.get(selectedId);
   ui.empty.hidden = visible.length > 0;
@@ -587,19 +606,15 @@ function drawTree() {
       : null;
   const selectedRoute = new Set(ancestors(selectedId));
   const labelRoute = related || selectedRoute;
-  const treeLines = connectorPaths(positions, visibleChildren, related, metrics.height);
-  if (mode !== 'path' && mode !== 'branch') {
-    treeLines.push(...connectorPaths(positions, visibleChildren, selectedRoute, metrics.height)
-      .filter(line => line.className.includes('active'))
-      .map(line => ({ ...line, className: `${line.className} lod-route` })));
-  }
-  const lineParts = treeLines.map(line => {
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', line.d);
-    path.setAttribute('class', line.className);
-    return path;
-  });
-  ui.lines.append(...lineParts);
+  currentConnectorLayout = {
+    positions,
+    visibleChildren,
+    related,
+    selectedRoute,
+    cardHeight: metrics.height,
+    includeSelectedRoute: mode !== 'path' && mode !== 'branch'
+  };
+  renderTreeConnectors();
 
   for (const person of visible) {
     const point = positions.get(person.id);
@@ -909,7 +924,7 @@ async function stageLocalPersonPhoto(personId, file) {
     pendingLocalPhotoWrites.set(personId, { personId, ...photo });
     pendingLocalPhotoDeletes.delete(personId);
     setPersonPhotoKey(editableDraftRoot(), personId, `local-${Date.now()}`);
-    localMediaStatus = accountPreview
+    localMediaStatus = hasRemoteTreeWriteAccess()
       ? 'Фото подготовлено. Сохраните черновик, затем опубликуйте изменения в древо.'
       : 'Фото подготовлено. Нажмите «Сохранить локально», чтобы оставить его в браузере.';
     editStatus = 'dirty';
@@ -924,14 +939,14 @@ async function stageLocalPersonPhoto(personId, file) {
 
 function removeLocalPersonPhoto(person) {
   if (!localTreeDraft || !hasDisplayPhoto(person)) return;
-  if (!window.confirm(`Удалить фотографию ${person.name} из ${accountPreview ? 'черновика древа' : 'локального черновика'}?`)) return;
+  if (!window.confirm(`Удалить фотографию ${person.name} из ${hasRemoteTreeWriteAccess() ? 'черновика древа' : 'локального черновика'}?`)) return;
   const oldUrl = localPhotoUrls.get(person.id);
   if (oldUrl) URL.revokeObjectURL(oldUrl);
   localPhotoUrls.delete(person.id);
   pendingLocalPhotoWrites.delete(person.id);
   pendingLocalPhotoDeletes.add(person.id);
   setPersonPhotoKey(editableDraftRoot(), person.id, null);
-  localMediaStatus = accountPreview
+  localMediaStatus = hasRemoteTreeWriteAccess()
     ? 'Фотография будет удалена из черновика после сохранения и с сайта после публикации.'
     : 'Фотография будет удалена из локальной копии после сохранения. Прод не меняется.';
   editStatus = 'dirty';
@@ -944,7 +959,7 @@ function buildLocalPhotoControls(person) {
   const controls = document.createElement('div');
   controls.className = 'mock-editor local-photo-editor';
   const title = document.createElement('strong');
-  title.textContent = accountPreview ? 'Фотография в черновике древа' : 'Фотография в локальной копии';
+  title.textContent = hasRemoteTreeWriteAccess() ? 'Фотография в черновике древа' : 'Фотография в локальной копии';
   const actions = document.createElement('div');
   actions.className = 'mock-edit-actions';
   const input = document.createElement('input');
@@ -965,7 +980,7 @@ function buildLocalPhotoControls(person) {
   if (editStatus === 'dirty') {
     const save = document.createElement('button');
     save.type = 'button';
-    save.textContent = accountPreview ? 'Сохранить черновик' : 'Сохранить локально';
+    save.textContent = hasRemoteTreeWriteAccess() ? 'Сохранить черновик' : 'Сохранить локально';
     save.addEventListener('click', submitMockSave);
     actions.append(save);
   } else if (editStatus === 'error') {
@@ -977,8 +992,8 @@ function buildLocalPhotoControls(person) {
   } else if (editStatus === 'conflict') {
     const reload = document.createElement('button');
     reload.type = 'button';
-    reload.textContent = accountPreview && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию';
-    reload.addEventListener('click', () => accountPreview && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
+    reload.textContent = hasRemoteTreeWriteAccess() && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию';
+    reload.addEventListener('click', () => hasRemoteTreeWriteAccess() && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
     actions.append(reload);
   }
   if (editStatus === 'saving') {
@@ -1024,7 +1039,7 @@ function buildEditControls(person) {
   section.addEventListener('toggle', () => { editDisclosureOpen = section.open; });
   const title = document.createElement('summary'); title.className = 'mock-editor-summary';
   title.textContent = syntheticFixture ? 'Редактировать демо-запись'
-    : accountPreview ? 'Редактировать данные древа' : 'Редактировать данные в локальном черновике'; section.append(title);
+    : hasRemoteTreeWriteAccess() ? 'Редактировать данные древа' : 'Редактировать данные в локальном черновике'; section.append(title);
   const form = document.createElement('form'); form.className = 'mock-edit-form';
   addField(form, 'Имя', 'name', person.name);
   addField(form, 'Тейп', 'teip', person.teip || '');
@@ -1039,23 +1054,23 @@ function buildEditControls(person) {
     failureLabel.append(failure, document.createTextNode('Имитировать ошибку следующего сохранения')); form.append(failureLabel);
   }
   const actions = document.createElement('div'); actions.className = 'mock-edit-actions';
-  const save = document.createElement('button'); save.type = 'submit'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : syntheticFixture ? 'Сохранить демо-черновик' : accountPreview ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict';
+  const save = document.createElement('button'); save.type = 'submit'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : syntheticFixture ? 'Сохранить демо-черновик' : hasRemoteTreeWriteAccess() ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict';
   save.dataset.profileFocus = 'action:save';
   const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
-  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = accountPreview && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => accountPreview && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
+  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = hasRemoteTreeWriteAccess() && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => hasRemoteTreeWriteAccess() && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Отменить черновик'; cancel.dataset.profileFocus = 'action:cancel'; cancel.addEventListener('click', cancelDraft);
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = syntheticFixture ? 'Сбросить фикстуру' : 'Вернуть исходное древо'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
   actions.append(save); appendAccountPublishButton(actions); actions.append(retry, reloadSaved, cancel, reset); form.append(actions);
   const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
   const messages = {
-    clean: `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || (accountPreview ? 'Древо загружено с сервера.' : 'Это локальная копия; прод не меняется.')}`,
-    dirty: accountPreview ? 'Есть несохранённые изменения. Сохраните черновик, затем опубликуйте его в древо.' : 'Есть несохранённые изменения.',
-    saving: accountPreview ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…',
-    saved: syntheticFixture ? 'Изменения сохранены только в памяти этой страницы.' : accountPreview
+    clean: `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || familyWriteRestrictionMessage() || (hasRemoteTreeWriteAccess() ? 'Древо загружено с сервера.' : 'Это локальная копия; прод не меняется.')}`,
+    dirty: hasRemoteTreeWriteAccess() ? 'Есть несохранённые изменения. Сохраните черновик, затем опубликуйте его в древо.' : familyWriteRestrictionMessage() || 'Есть несохранённые изменения.',
+    saving: hasRemoteTreeWriteAccess() ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…',
+    saved: syntheticFixture ? 'Изменения сохранены только в памяти этой страницы.' : hasRemoteTreeWriteAccess()
       ? localDraftPersistenceError || (hasAccountPublishChanges() ? 'Черновик сохранён в этом браузере. В древо он ещё не опубликован.' : localMediaStatus || 'Нет неопубликованных изменений.')
-      : 'Локальная копия сохранена в этом браузере. Прод не меняется.',
-    error: accountPreview ? localDraftPersistenceError || 'Не удалось сохранить. Локальные изменения сохранены, если запись успела завершиться; можно повторить.' : 'Не удалось сохранить черновик. Изменения остались на странице; можно повторить.',
-    conflict: accountPreview && accountPublishConflict
+      : familyWriteRestrictionMessage() || 'Локальная копия сохранена в этом браузере. Прод не меняется.',
+    error: hasRemoteTreeWriteAccess() ? localDraftPersistenceError || 'Не удалось сохранить. Локальные изменения сохранены, если запись успела завершиться; можно повторить.' : 'Не удалось сохранить черновик. Изменения остались на странице; можно повторить.',
+    conflict: hasRemoteTreeWriteAccess() && accountPublishConflict
       ? 'На сайте появилась новая версия. Ваш черновик оставлен в этом браузере; загрузите текущую версию сайта, чтобы продолжить.'
       : 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию, чтобы продолжить.'
   };
@@ -1084,13 +1099,13 @@ function buildEditControls(person) {
 
 function buildRelationshipControls(person) {
   const section = document.createElement('section'); section.className = 'mock-editor';
-  const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : accountPreview ? 'Связи семейного древа' : 'Связи локальной копии'; section.append(title);
+  const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : hasRemoteTreeWriteAccess() ? 'Связи семейного древа' : 'Связи локальной копии'; section.append(title);
   const addForm = document.createElement('form'); addForm.className = 'mock-edit-form';
   addForm.dataset.addChildForm = 'true';
   const idNote = document.createElement('p'); idNote.className = 'mock-edit-status';
   idNote.textContent = syntheticFixture
     ? 'ID создаётся автоматически; демо-изменение останется только в этой вкладке.'
-    : accountPreview ? 'ID создаётся автоматически. Сначала сохраняется черновик; публикация выполняется отдельной кнопкой.'
+    : hasRemoteTreeWriteAccess() ? 'ID создаётся автоматически. Сначала сохраняется черновик; публикация выполняется отдельной кнопкой.'
       : 'ID создаётся автоматически; исходное дерево не меняется.';
   addForm.append(idNote);
   addField(addForm, 'Имя ребёнка', 'name'); addField(addForm, 'Тейп', 'teip'); addField(addForm, 'Год рождения', 'born', '', 'text');
@@ -1170,27 +1185,27 @@ function buildRelationshipControls(person) {
     catch (error) { announce(error.message); }
   });
   deleteForm.append(remove); section.append(deleteForm);
-  const save = document.createElement('button'); save.type = 'button'; save.textContent = syntheticFixture ? 'Сохранить демо-черновик' : accountPreview ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict'; save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
+  const save = document.createElement('button'); save.type = 'button'; save.textContent = syntheticFixture ? 'Сохранить демо-черновик' : hasRemoteTreeWriteAccess() ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict'; save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
   const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
-  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = accountPreview && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => accountPreview && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
+  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = hasRemoteTreeWriteAccess() && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => hasRemoteTreeWriteAccess() && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
   const cancel = document.createElement('button'); cancel.type = 'button'; cancel.textContent = 'Отменить черновик'; cancel.dataset.profileFocus = 'action:cancel'; cancel.addEventListener('click', cancelDraft);
   const reset = document.createElement('button'); reset.type = 'button'; reset.textContent = syntheticFixture ? 'Сбросить фикстуру' : 'Вернуть исходное древо'; reset.dataset.profileFocus = 'action:reset'; reset.addEventListener('click', resetFixture);
   const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
   status.textContent = editStatus === 'conflict'
-    ? accountPreview && accountPublishConflict ? 'На сайте новая версия. Ваш черновик сохранён отдельно; загрузка сайта заменит его в редакторе.' : 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию.'
+    ? hasRemoteTreeWriteAccess() && accountPublishConflict ? 'На сайте новая версия. Ваш черновик сохранён отдельно; загрузка сайта заменит его в редакторе.' : 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию.'
     : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить; изменения остались на странице.'
-      : editStatus === 'saved' ? syntheticFixture ? 'Сохранено только в памяти этой страницы.' : accountPreview
+      : editStatus === 'saved' ? syntheticFixture ? 'Сохранено только в памяти этой страницы.' : hasRemoteTreeWriteAccess()
         ? localDraftPersistenceError || (hasAccountPublishChanges() ? 'Черновик в этом браузере; в production ещё не опубликован.' : localMediaStatus || 'Нет неопубликованных изменений.')
         : 'Сохранено в этом браузере. Прод не меняется.'
-        : editStatus === 'saving' ? accountPreview ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…'
+        : editStatus === 'saving' ? hasRemoteTreeWriteAccess() ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…'
           : editStatus === 'dirty' ? 'Есть несохранённые изменения.'
-            : `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || (accountPreview ? 'Древо загружено с сервера.' : 'Прод не меняется.')}`;
+            : `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : localDraftPersistenceError || (hasRemoteTreeWriteAccess() ? 'Древо загружено с сервера.' : 'Прод не меняется.')}`;
   section.append(save); appendAccountPublishButton(section); section.append(retry, reloadSaved, cancel, reset, status); return section;
 }
 
 function markRelationshipDirty() {
   editStatus = 'dirty'; refreshEditableModel(); renderProfile('relatives');
-  announce(accountPreview ? 'Черновик изменён. Сохраните его, затем опубликуйте кнопкой «Опубликовать в древо».' : 'Черновик изменён. Сохраните его через вкладку «Информация».');
+  announce(hasRemoteTreeWriteAccess() ? 'Черновик изменён. Сохраните его, затем опубликуйте кнопкой «Опубликовать в древо».' : 'Черновик изменён. Сохраните его через вкладку «Информация».');
 }
 
 function refreshEditableModel() {
@@ -1199,7 +1214,7 @@ function refreshEditableModel() {
   const lostSelf = Boolean(myPersonId && !byId.has(myPersonId));
   if (lostSelf) {
     myPersonId = null;
-    try { localStorage.removeItem(myPersonStorageKey()); } catch { /* Keep the page usable without browser storage. */ }
+    clearWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
   }
   if (!byId.has(selectedId) && records.length) selectedId = records[0].id;
   childrenById = new Map(records.map(person => [person.id, []]));
@@ -1257,6 +1272,7 @@ async function collectAccountPhotoChanges() {
 }
 
 async function reloadAccountServerVersion() {
+  if (!hasRemoteTreeWriteAccess()) return;
   if (!accountPublishConflict?.serverTreeJson) {
     localDraftPersistenceError = 'Сервер не вернул актуальное дерево. Черновик сохранён; обновите страницу или повторите публикацию позже.';
     editStatus = 'error';
@@ -1297,7 +1313,7 @@ async function reloadAccountServerVersion() {
 }
 
 async function publishAccountDraft() {
-  if (!accountPreview || !accountAdminAccess || editStatus === 'saving' || editStatus === 'conflict') return;
+  if (!hasRemoteTreeWriteAccess() || editStatus === 'saving' || editStatus === 'conflict') return;
   if (!accountBaseTree || !accountBaseFingerprint) {
     localDraftPersistenceError = 'Нет подтверждённой исходной версии сайта. Перезагрузите древо перед публикацией.';
     editStatus = 'error';
@@ -1328,7 +1344,11 @@ async function publishAccountDraft() {
       baseFingerprint: accountBaseFingerprint,
       ...photoChanges
     });
-    const published = await callWaydeanAdminAction('waydean-admin-publish', payload, accountAdminAccess);
+    const published = accountPreview
+      ? await callWaydeanAdminAction('waydean-admin-publish', payload, accountAdminAccess)
+      : await callFamilyTreeAction('publish', payload, {
+        endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
+      });
     const nextTree = JSON.parse(published.treeJson);
     flattenTree(nextTree);
     accountServerTreeJson = published.treeJson;
@@ -1382,7 +1402,7 @@ async function submitMockSave() {
       localDraftPersistenceError = '';
       pendingLocalPhotoWrites.clear();
       pendingLocalPhotoDeletes.clear();
-      localMediaStatus = accountPreview
+      localMediaStatus = hasRemoteTreeWriteAccess()
         ? 'Черновик и фотографии сохранены в этом браузере. Нажмите «Опубликовать в древо», чтобы обновить сайт.'
         : 'Изменения и фотографии сохранены в этом браузере. Прод не меняется.';
     }
@@ -1456,7 +1476,7 @@ async function resetFixture() {
     }
   }
   fixtureRoot = cloneTree(sourceFixtureRoot); originalFixtureRoot = cloneTree(sourceFixtureRoot); editStatus = 'clean'; rawDraftDirty = false;
-  if (accountPreview) {
+  if (hasRemoteTreeWriteAccess()) {
     accountBaseTree = cloneTree(sourceFixtureRoot);
     accountBaseFingerprint = accountServerFingerprint;
     accountBaseActivityJson = accountServerActivityJson;
@@ -1465,7 +1485,7 @@ async function resetFixture() {
 }
 
 window.addEventListener('beforeunload', event => {
-  if (canEditDraft() && (rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))) { event.preventDefault(); event.returnValue = ''; }
+  if (!allowUnsavedExit && canEditDraft() && (rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))) { event.preventDefault(); event.returnValue = ''; }
 });
 
 function centerPerson(id) {
@@ -1648,7 +1668,9 @@ function renderPwaStatus(state = pwaController?.getState()) {
     : 'Недоступно';
   $('#pwaServerPushNote').textContent = state.accountPushAvailable
     ? 'Подписка создаётся после вашего действия и подтверждается администраторской учётной записью. Она привязана к этому устройству.'
-    : 'Подписка создаётся только после вашего действия и ввода пароля редактора. Она привязана к этому устройству.';
+    : state.familyPushAvailable
+      ? 'Семейный вход уже подтверждён. Подписка привяжется к этому устройству после вашего действия.'
+      : 'Подписка создаётся только после вашего действия и ввода пароля редактора. Она привязана к этому устройству.';
   $('#pwaServerPushEnable').hidden = !state.serverPushAvailable || state.serverPushSubscribed;
   $('#pwaServerPushEnable').disabled = !state.online || !state.serviceWorkerReady;
   $('#pwaServerPushDisable').hidden = !state.serverPushAvailable || !state.serverPushSubscribed;
@@ -1669,25 +1691,28 @@ function openPwaPushDialog(action) {
   pwaPushAction = action;
   const dialog = $('#pwaPushDialog');
   const subscribing = action === 'subscribe';
-  const accountPush = Boolean(pwaController?.getState().accountPushAvailable && accountAdminAccess);
+  const pushState = pwaController?.getState() || {};
+  const accountPush = Boolean(pushState.accountPushAvailable && accountAdminAccess);
+  const familyPush = Boolean(pushState.familyPushAvailable && familyPreview && familySessionTokenMemory);
+  const sessionPush = accountPush || familyPush;
   $('#pwaPushDialogTitle').textContent = subscribing ? 'Включить push-уведомления' : 'Отключить push-уведомления';
-  $('#pwaPushDialogHelp').textContent = accountPush
+  $('#pwaPushDialogHelp').textContent = sessionPush
     ? subscribing
-      ? 'Подписка привяжется к этому устройству. Браузер также попросит разрешить уведомления.'
+      ? `${familyPush ? 'Семейный вход подтверждён. ' : ''}Подписка привяжется к этому устройству. Браузер также попросит разрешить уведомления.`
       : 'Подписка этого устройства будет удалена с сервера и из браузера.'
     : subscribing
       ? 'Введите пароль редактора. Браузер также попросит разрешить уведомления.'
       : 'Введите пароль редактора, чтобы удалить подписку этого устройства с сервера.';
   $('#pwaPushSubmit').textContent = subscribing ? 'Включить' : 'Отключить';
   const passwordLabel = $('#pwaPushForm label[for="pwaPushPassword"]');
-  passwordLabel.hidden = accountPush;
-  $('#pwaPushPassword').hidden = accountPush;
-  $('#pwaPushPassword').required = !accountPush;
+  passwordLabel.hidden = sessionPush;
+  $('#pwaPushPassword').hidden = sessionPush;
+  $('#pwaPushPassword').required = !sessionPush;
   $('#pwaPushPassword').value = '';
   $('#pwaPushError').hidden = true;
   if (dialog.showModal) dialog.showModal();
   else announce('Браузер не поддерживает окно подтверждения уведомлений.');
-  (accountPush ? $('#pwaPushSubmit') : $('#pwaPushPassword')).focus();
+  (sessionPush ? $('#pwaPushSubmit') : $('#pwaPushPassword')).focus();
 }
 
 function formatLocalDate(value) {
@@ -1700,7 +1725,7 @@ function formatLocalDate(value) {
 async function renderLocalHistory() {
   const list = $('#localHistoryList');
   list.replaceChildren();
-  if (accountPreview) {
+  if (hasRemoteTreeWriteAccess()) {
     $('#historyTitle').textContent = 'История сайта и устройства';
     $('#historyNote').textContent = 'Журнал сайта загружен из текущего древа. Локальная история хранится отдельно в этом браузере.';
     const serverHeading = document.createElement('h3');
@@ -1743,7 +1768,7 @@ async function renderLocalHistory() {
   try {
     const entries = await listLocalTreeHistory(localDraftKey);
     if (!entries.length) {
-      const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = accountPreview
+      const empty = document.createElement('p'); empty.className = 'local-data-empty'; empty.textContent = hasRemoteTreeWriteAccess()
         ? 'Локальных действий пока нет.'
         : 'История появится после первого локального сохранения или снимка.';
       list.append(empty); return;
@@ -2104,16 +2129,23 @@ function startHijriYearPulse() {
 }
 
 async function shareLocalPreview() {
-  const url = new URL(location.href);
-  url.hash = '';
-  url.searchParams.delete('refresh');
-  const shareText = `Waydean — локальный просмотр семейного древа\n${url.href}`;
+  const localPreview = isLoopbackHost(location.hostname);
+  const payload = buildTreeSharePayload({
+    href: location.href,
+    title: $('.brand strong')?.textContent || 'WAYDEAN',
+    localPreview
+  });
   try {
-    if (navigator.clipboard?.writeText) {
-      await navigator.clipboard.writeText(shareText);
-    } else {
-      const field = document.createElement('textarea');
-      field.value = shareText;
+    const result = await shareTreeLink({
+      payload,
+      share: typeof navigator.share === 'function' ? navigator.share.bind(navigator) : null,
+      copy: async text => {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(text);
+          return;
+        }
+        const field = document.createElement('textarea');
+        field.value = text;
       field.setAttribute('readonly', '');
       field.style.position = 'fixed';
       field.style.opacity = '0';
@@ -2123,11 +2155,29 @@ async function shareLocalPreview() {
       try { copied = document.execCommand('copy'); }
       finally { field.remove(); }
       if (!copied) throw new Error('Clipboard copy was rejected.');
+      }
+    });
+    if (result === 'copied') {
+      announce(localPreview
+        ? 'Скопирована ссылка на локальный просмотр. Она работает только там, где доступен этот компьютер.'
+        : 'Ссылка на семейное древо скопирована.');
     }
-    announce('Скопирована ссылка на локальный просмотр. Она открывается только на компьютере с запущенным сервером.');
   } catch {
-    window.prompt('Скопируйте ссылку на локальный просмотр. Она доступна только на этом компьютере:', url.href);
+    window.prompt(
+      localPreview ? 'Скопируйте ссылку на локальный просмотр:' : 'Скопируйте ссылку на семейное древо:',
+      `${payload.text}\n${payload.url}`
+    );
   }
+}
+
+function reloadPreviewPage() {
+  if (editStatus === 'saving') {
+    announce('Идёт сохранение. Дождитесь его завершения и обновите страницу ещё раз.');
+    return;
+  }
+  if (hasUncommittedDraft() && !window.confirm('Есть несохранённые изменения. Обновить страницу и потерять их?')) return;
+  allowUnsavedExit = true;
+  window.location.replace(buildPreviewReloadUrl(location.href, Date.now()));
 }
 
 function syncModeButtons(activeMode = mode) {
@@ -2367,12 +2417,14 @@ function bindControls() {
       $('#pwaPushCancel').disabled = false;
     }
   });
+  $('#moreRefresh').addEventListener('click', reloadPreviewPage);
   $('#moreHistory').addEventListener('click', () => { openPopover(ui.history); renderLocalHistory(); });
   $('#moreBackups').addEventListener('click', () => { openPopover(ui.backups); renderLocalBackups(); renderAccountBackups(); });
   $('#accountAdminLockToggle').addEventListener('click', toggleAccountTreeLock);
   $('#accountAdminPasswordForm').addEventListener('submit', changeAccountFamilyPassword);
   $('#createLocalBackup').addEventListener('click', makeLocalBackup);
   $('#createAccountBackup').addEventListener('click', createAccountBackup);
+  $('#moreTreesCabinet').addEventListener('click', () => window.location.assign(new URL('../trees/', location.href)));
   $('#openCurrentTree').addEventListener('click', () => window.location.assign('./index.html'));
   $('#shareOpen').addEventListener('click', shareLocalPreview);
   $('#printOpen').addEventListener('click', openPrintStudio);
@@ -2434,25 +2486,6 @@ function bindControls() {
     $('#searchInput').focus({ preventScroll: true });
     announce('Выберите человека, откройте его карточку и нажмите «Отметить как меня».');
   });
-  const whoAmIPrompt = $('#whoAmIPrompt');
-  $('#whoAmIPromptChoose').addEventListener('click', () => {
-    if (whoAmIPrompt?.open) whoAmIPrompt.close();
-    openPopover(ui.search);
-    $('#searchInput').focus({ preventScroll: true });
-    announce('Найдите себя, откройте карточку и нажмите «Отметить как меня».');
-  });
-  $('#whoAmIPromptLater').addEventListener('click', () => {
-    const persisted = dismissWhoAmIPrompt(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
-    if (whoAmIPrompt?.open) whoAmIPrompt.close();
-    if (!persisted) announce('Выбор «Позже» запомнится только до закрытия этой страницы.');
-  });
-  $('#whoAmIPromptClose').addEventListener('click', () => {
-    if (whoAmIPrompt?.open) whoAmIPrompt.close();
-  });
-  whoAmIPrompt?.addEventListener('click', event => {
-    if (event.target === whoAmIPrompt) whoAmIPrompt.close();
-  });
-  document.addEventListener('visibilitychange', maybePromptWhoAmI);
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
     if (ui.app.classList.contains('profile-open')) {
@@ -2704,9 +2737,11 @@ function showError(error) {
   ui.error.hidden = false;
   const title = $('#loadErrorTitle');
   const loginForm = $('#waydeanAdminLoginForm');
+  const familyLoginForm = $('#waydeanFamilyLoginForm');
   const retryButton = $('#retryTreeLoad');
   const loginRequired = error?.code === 'WAYDEAN_AUTH_REQUIRED';
   const accessDenied = error?.code === 'WAYDEAN_ACCESS_DENIED';
+  const familyAuthError = familyPreview && String(error?.code || '').startsWith('WAYDEAN_FAMILY_AUTH_');
   const accountHint = $('#waydeanAccountHint');
   if (accountHint) {
     accountHint.hidden = true;
@@ -2719,18 +2754,30 @@ function showError(error) {
       });
     }
   }
-  const showLogin = loginRequired || accessDenied;
+  const showLogin = !familyPreview && (loginRequired || accessDenied);
   if (title) {
     title.textContent = error?.code === 'WAYDEAN_PREVIEW_LOCAL_ONLY'
       ? 'Полное древо доступно на этом компьютере'
+      : familyAuthError
+      ? 'Вход в семейное древо'
       : loginRequired
       ? 'Вход в Waydean'
       : accessDenied ? 'Нет доступа к этому аккаунту' : 'Не удалось загрузить дерево';
   }
   if (loginForm) loginForm.hidden = !showLogin;
-  if (retryButton) retryButton.hidden = showLogin;
+  if (familyLoginForm) familyLoginForm.hidden = !familyAuthError;
+  const familyLoginError = $('#waydeanFamilyLoginError');
+  if (familyLoginError && familyAuthError && error?.code !== 'WAYDEAN_FAMILY_AUTH_REQUIRED') {
+    familyLoginError.textContent = error?.message || 'Не удалось подтвердить семейную сессию.';
+    familyLoginError.hidden = false;
+  }
+  if (retryButton) retryButton.hidden = showLogin || familyAuthError;
   if (error?.code === 'WAYDEAN_PREVIEW_LOCAL_ONLY') {
     $('#loadErrorText').textContent = 'Откройте локальную версию проекта на компьютере, где хранятся данные древа.';
+  } else if (familyAuthError) {
+    $('#loadErrorText').textContent = error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED'
+      ? 'Семейный вход действует только в текущей вкладке. Войдите заново, если сессия завершилась.'
+      : error?.message || 'Не удалось проверить семейный вход.';
   } else if (loginRequired) {
     $('#loadErrorText').textContent = 'Полное дерево откроется после входа в разрешённую администраторскую учётную запись.';
   } else if (accessDenied) {
@@ -2785,18 +2832,151 @@ function bindWaydeanAdminLogin() {
   });
 }
 
+function familyEndpoint() {
+  const value = document.querySelector('meta[name="waydean-publish-api"]')?.content?.trim() || '';
+  if (!value) throw new Error('Семейный вход Waydean не настроен.');
+  return new URL(value, window.location.origin).href;
+}
+
+function familySessionStorage() {
+  try { return window.sessionStorage; } catch { return null; }
+}
+
+function bindWaydeanFamilyLogin() {
+  const form = $('#waydeanFamilyLoginForm');
+  if (form && form.dataset.bound !== 'true') {
+    form.dataset.bound = 'true';
+    const loginInput = $('#waydeanFamilyLogin');
+    const passwordInput = $('#waydeanFamilyPassword');
+    const errorMessage = $('#waydeanFamilyLoginError');
+    const submitButton = $('#waydeanFamilyLoginSubmit');
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (errorMessage) errorMessage.hidden = true;
+      if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Проверяем вход…';
+      }
+      try {
+        const result = await loginFamilySession({
+          endpoint: familyEndpoint(),
+          login: loginInput.value,
+          password: passwordInput.value,
+          treeDir: 'drewo',
+          origin: window.location.origin,
+          storage: familySessionStorage()
+        });
+        passwordInput.value = '';
+        if (result.redirect) {
+          window.location.assign(result.redirectUrl);
+          return;
+        }
+        if (!result.stored) {
+          const handoff = new URL(window.location.href);
+          handoff.searchParams.set('nek', result.sessionToken);
+          window.location.replace(`${handoff.pathname}${handoff.search}${handoff.hash}`);
+          return;
+        }
+        window.location.reload();
+      } catch (error) {
+        passwordInput.value = '';
+        if (errorMessage) {
+          errorMessage.textContent = error?.message || 'Не удалось войти. Проверьте логин семьи и пароль.';
+          errorMessage.hidden = false;
+        }
+        passwordInput.focus();
+      } finally {
+        if (submitButton) {
+          submitButton.disabled = false;
+          submitButton.textContent = 'Войти и открыть древо';
+        }
+      }
+    });
+  }
+
+  const logout = $('#familyLogout');
+  if (logout && logout.dataset.bound !== 'true') {
+    logout.dataset.bound = 'true';
+    logout.addEventListener('click', () => {
+      familySessionTokenMemory = '';
+      familySessionRole = '';
+      familySessionLocked = false;
+      familySessionLockReason = '';
+      storeFamilySession(familySessionStorage(), 'drewo', '');
+      try {
+        clearWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
+        localStorage.removeItem('drewo-view-session');
+      } catch { /* Session logout must still complete if local preferences are unavailable. */ }
+      const url = new URL(window.location.href);
+      url.searchParams.set('source', 'family');
+      url.searchParams.set('state', 'all-tree');
+      url.searchParams.delete('nek');
+      url.searchParams.delete('invite');
+      window.location.assign(`${url.pathname}${url.search}`);
+    });
+  }
+}
+
+async function requireFamilyPreviewSession(params, setLoadingText) {
+  if (params.has('invite')) {
+    setLoadingText('Проверяем приглашение');
+    const invite = await resolveFamilyInvite({ endpoint: familyEndpoint(), code: params.get('invite') });
+    const target = new URL(invite.invitePath, window.location.origin);
+    window.location.replace(`${target.pathname}${target.search}${target.hash}`);
+    return false;
+  }
+
+  const fromUrl = consumeFamilyTokenFromUrl(window.location.href);
+  if (fromUrl.token) {
+    window.history.replaceState(window.history.state, '', fromUrl.cleanUrl);
+    familySessionTokenMemory = fromUrl.token;
+    storeFamilySession(familySessionStorage(), 'drewo', fromUrl.token);
+  }
+  let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), 'drewo');
+  if (!token) {
+    const error = new Error('Войдите по семейному логину и паролю, чтобы открыть это древо.');
+    error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
+    throw error;
+  }
+
+  setLoadingText('Проверяем семейный доступ');
+  try {
+    const session = await verifyFamilySession({ endpoint: familyEndpoint(), treeDir: 'drewo', token });
+    familySessionTokenMemory = session.sessionToken;
+    familySessionRole = String(session.role || '').trim();
+    storeFamilySession(familySessionStorage(), 'drewo', session.sessionToken);
+    return true;
+  } catch (error) {
+    if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED') {
+      familySessionTokenMemory = '';
+      storeFamilySession(familySessionStorage(), 'drewo', '');
+      familySessionRole = '';
+    }
+    throw error;
+  }
+}
+
 async function initialize() {
   bindWaydeanAdminLogin();
+  bindWaydeanFamilyLogin();
+  initializeAppearanceControls();
+  initializeWeatherControls();
   try {
     const loading = $('#treeLoading');
     const loadingText = $('#treeLoadingText');
     const setLoadingText = (message) => { if (loadingText) loadingText.textContent = message; };
     setRailCollapsed(initialRailCollapsed());
     setMiniMapCollapsed(false);
-    const params = new URLSearchParams(location.search);
+    const familyRoute = resolveFamilyPreviewRoute(location.href, location.hostname);
+    if (familyRoute.href !== location.href) window.history.replaceState(window.history.state, '', familyRoute.href);
+    const params = new URL(familyRoute.href).searchParams;
     const requestedState = params.get('state');
     syntheticFixture = isMasterFixtureQuery(location.search);
     accountPreview = params.get('source') === 'account';
+    familyPreview = familyRoute.enabled;
+    familySessionLocked = familyPreview;
+    familySessionLockReason = '';
+    $('#familyLogout').hidden = true;
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
     $('#moreHistory').hidden = !localTreeDraft;
     $('#moreBackups').hidden = !localTreeDraft;
@@ -2819,7 +2999,7 @@ async function initialize() {
     if (accountPreview && isLoopbackHost(location.hostname)) {
       throw new Error('Режим аккаунта открывается на сайте. Для локального просмотра выберите обычное древо.');
     }
-    if (!canLoadPreviewTree(location.hostname, syntheticFixture) && !accountPreview) {
+    if (!canLoadPreviewTree(location.hostname, syntheticFixture) && !accountPreview && !familyPreview) {
       window.location.replace(accountPreviewUrl(window.location.href));
       return;
     }
@@ -2827,10 +3007,37 @@ async function initialize() {
       setLoadingText('Проверяем доступ к данным');
       accountAdminAccess = await requireWaydeanAdminAccess('drewo');
     }
+    if (familyPreview && !(await requireFamilyPreviewSession(params, setLoadingText))) return;
+    localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname)
+      || (familyPreview && canEditFamilyTreeRole(familySessionRole)));
+    $('#moreHistory').hidden = !localTreeDraft;
+    $('#moreBackups').hidden = !localTreeDraft;
+    const remoteEditor = hasRemoteTreeWriteAccess();
+    $('#historyTitle').textContent = remoteEditor ? 'История сайта и устройства' : 'История локальных действий';
+    $('#historyNote').textContent = remoteEditor
+      ? 'Журнал сайта синхронизирован с древом. История черновика хранится только в этом браузере.'
+      : 'Сохранения черновика и операции с локальными снимками в этом браузере.';
+    $('#moreHistory').querySelector('strong').textContent = remoteEditor ? 'История сайта и черновика' : 'История локальных действий';
+    $('#moreHistory').querySelector('small').textContent = remoteEditor
+      ? 'Журнал опубликованного древа и локальные правки'
+      : 'Сохранения и восстановление в этом браузере';
+    $('#moreBackups').querySelector('strong').textContent = accountPreview ? 'Резервные копии' : 'Резервные копии · локально';
+    $('#moreBackups').querySelector('small').textContent = accountPreview
+      ? 'Снимки сайта и локального черновика'
+      : 'Создать снимок, закрепить или восстановить';
+    $('#localBackupHeading').textContent = remoteEditor ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
+    $('#createLocalBackup').textContent = remoteEditor ? 'Создать снимок черновика' : 'Создать снимок сейчас';
+    document.body.classList.toggle('local-tree-draft', localTreeDraft);
+    $('#familyLogout').hidden = !familyPreview;
     pwaController = createWaydeanPwaController(renderPwaStatus, {
-      allowServerPush: accountPreview,
+      allowServerPush: accountPreview || familyPreview,
       accountAdminAction: accountPreview && accountAdminAccess
         ? (action, payload) => callWaydeanAdminAction(action, payload, accountAdminAccess)
+        : null,
+      familySessionAction: familyPreview && familySessionTokenMemory
+        ? (action, payload) => callFamilyTreeAction(action, payload, {
+          endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
+        })
         : null
     });
     renderPwaStatus();
@@ -2864,6 +3071,33 @@ async function initialize() {
       accountBaseTree = cloneTree(root);
       accountBaseFingerprint = accountServerFingerprint;
       accountBaseActivityJson = accountServerActivityJson;
+    } else if (familyPreview) {
+      const serverSnapshot = await callFamilyTreeAction('family-load', {}, {
+        endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
+      });
+      accountServerTreeJson = serverSnapshot.treeJson;
+      accountServerActivityJson = serverSnapshot.activityJson || '[]';
+      accountServerFingerprint = serverSnapshot.fingerprint;
+      familySessionRole = String(serverSnapshot.role || familySessionRole).trim();
+      familySessionLocked = serverSnapshot.locked !== false;
+      familySessionLockReason = typeof serverSnapshot.lockedReason === 'string' ? serverSnapshot.lockedReason : '';
+      const familyRemoteEditor = hasRemoteTreeWriteAccess();
+      $('#historyTitle').textContent = familyRemoteEditor ? 'История сайта и устройства' : 'История локальных действий';
+      $('#historyNote').textContent = familyRemoteEditor
+        ? 'Журнал сайта синхронизирован с древом. История черновика хранится только в этом браузере.'
+        : 'Сохранения черновика и операции с локальными снимками в этом браузере.';
+      $('#moreHistory').querySelector('strong').textContent = familyRemoteEditor ? 'История сайта и черновика' : 'История локальных действий';
+      $('#moreHistory').querySelector('small').textContent = familyRemoteEditor
+        ? 'Журнал опубликованного древа и локальные правки'
+        : 'Сохранения и восстановление в этом браузере';
+      $('#localBackupHeading').textContent = familyRemoteEditor ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
+      $('#createLocalBackup').textContent = familyRemoteEditor ? 'Создать снимок черновика' : 'Создать снимок сейчас';
+      root = JSON.parse(accountServerTreeJson);
+      if (hasRemoteTreeWriteAccess()) {
+        accountBaseTree = cloneTree(root);
+        accountBaseFingerprint = accountServerFingerprint;
+        accountBaseActivityJson = accountServerActivityJson;
+      }
     } else {
       const response = await fetch(dataUrl, { cache: 'no-cache' });
       if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
@@ -2876,7 +3110,7 @@ async function initialize() {
       fixtureRoot = cloneTree(root);
     } else if (localTreeDraft) {
       localDraftKey = new URL('./family-tree.json', location.href).pathname
-        + (accountPreview ? '::admin-account' : '');
+        + (accountPreview ? '::admin-account' : familyPreview ? '::family-session' : '');
       sourceFixtureRoot = cloneTree(root);
       let storedDraft = null;
       try {
@@ -2884,7 +3118,7 @@ async function initialize() {
       } catch (error) {
         localDraftPersistenceError = error?.message || 'Локальное сохранение пока недоступно.';
       }
-      if (accountPreview && storedDraft) {
+      if (hasRemoteTreeWriteAccess() && storedDraft) {
         const metadata = storedDraft.metadata;
         if (metadata?.accountBaseTreeJson && metadata.accountBaseFingerprint) {
           try {
@@ -2913,7 +3147,7 @@ async function initialize() {
         }
       }
       localDraftRevision = storedDraft?.revision || 0;
-      fixtureRoot = cloneTree(accountPreview && storedDraft && !storedDraft.metadata?.accountBaseTreeJson
+      fixtureRoot = cloneTree(hasRemoteTreeWriteAccess() && storedDraft && !storedDraft.metadata?.accountBaseTreeJson
         ? root
         : storedDraft?.tree || root);
       originalFixtureRoot = cloneTree(fixtureRoot);
@@ -2955,9 +3189,6 @@ async function initialize() {
     if (requestedState === 'filtersEmpty') { filters.photosOnly = true; $('#photosOnly').checked = true; drawTree(); openPopover(ui.filters); }
     if (requestedState === 'search') { openPopover(ui.search); updateSearch(''); }
     if (requestedState === 'stats') openPopover(ui.stats);
-    if (!params.has('person') && !['search', 'stats', 'filtersEmpty'].includes(requestedState)) {
-      window.setTimeout(maybePromptWhoAmI, 700);
-    }
     window.waydeanPreview = { records, drawTree, selectPerson, get initialRenderMs() { return renderDuration; } };
     scheduleMiniViewportUpdate();
     if (loading) {
@@ -2967,6 +3198,91 @@ async function initialize() {
   } catch (error) {
     showError(error);
   }
+}
+
+function initializeAppearanceControls() {
+  const themeSelect = $('#appearanceTheme');
+  const skySelect = $('#appearanceSky');
+  if (!themeSelect || !skySelect) return;
+
+  let storage = null;
+  try { storage = window.localStorage; } catch { /* private browsing can deny storage access */ }
+  const initial = readAppearance(storage);
+  themeSelect.value = initial.theme;
+  skySelect.value = initial.skyMode;
+
+  const apply = ({ persist = false } = {}) => {
+    const selected = normalizeAppearance({ theme: themeSelect.value, skyMode: skySelect.value });
+    const persisted = persist ? writeAppearance(storage, selected).persisted : null;
+    const appearance = selected;
+    const period = resolveSkyPeriod(appearance.skyMode, new Date(), weatherSunTimes);
+    document.body.dataset.theme = appearance.theme;
+    document.body.dataset.sky = period;
+    const styleName = appearance.theme === 'premium' ? 'Премиум' : 'Классика';
+    const skyName = appearance.skyMode === 'auto' ? 'автоматически' : period === 'day' ? 'днём' : 'ночью';
+    const badge = $('#appearanceBadge');
+    if (badge) {
+      badge.textContent = `♛ Стиль: ${styleName}`;
+      badge.setAttribute('aria-label', `Текущее оформление: ${styleName}`);
+    }
+    const summary = $('#appearanceSummary');
+    if (summary) {
+      summary.textContent = persisted === false
+        ? `Выбор применён, но браузер не сохранил его · ${skyName}`
+        : `Выбор действует на этом устройстве · ${skyName}`;
+    }
+    const themeColor = appearance.theme === 'classic'
+      ? period === 'day' ? '#172326' : '#081114'
+      : period === 'day' ? '#17201d' : '#071014';
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => meta.setAttribute('content', themeColor));
+  };
+
+  applyAppearancePreferences = apply;
+
+  themeSelect.addEventListener('change', () => apply({ persist: true }));
+  skySelect.addEventListener('change', () => apply({ persist: true }));
+  document.addEventListener('visibilitychange', () => {
+    if (!document.hidden && skySelect.value === 'auto') apply();
+  });
+  window.setInterval(() => {
+    if (skySelect.value === 'auto') apply();
+  }, 60_000);
+  apply();
+}
+
+function initializeWeatherControls() {
+  const action = $('#weatherAction');
+  if (!action) return;
+  const title = $('#weatherActionTitle');
+  const detail = $('#weatherActionDetail');
+  let storage = null;
+  try { storage = window.localStorage; } catch { /* Weather stays available without a cache. */ }
+
+  const renderWeather = state => {
+    weatherSunTimes = state.fresh ? state.sunTimes : null;
+    action.dataset.weatherStatus = state.status;
+    if (state.status === 'loading') {
+      title.textContent = 'Ищем погоду рядом…';
+      detail.textContent = 'Определяем местоположение для погоды';
+    } else if (state.tempText) {
+      title.textContent = `${state.tempText} · ${state.place || 'Погода рядом'}`;
+      detail.textContent = state.message || `${state.subText || 'погода'} · Нажмите, чтобы обновить`;
+    } else {
+      title.textContent = 'Погода рядом';
+      detail.textContent = state.message || 'Нажмите, чтобы узнать погоду по геолокации';
+    }
+    action.setAttribute('aria-label', `${title.textContent}. ${detail.textContent}`);
+    if (state.sunTimes && $('#appearanceSky')?.value === 'auto') applyAppearancePreferences?.();
+  };
+
+  const weatherController = createWeatherController({
+    storage,
+    geolocation: globalThis.navigator?.geolocation,
+    onChange: renderWeather
+  });
+  renderWeather(weatherController.getState());
+  if (weatherSunTimes && $('#appearanceSky')?.value === 'auto') applyAppearancePreferences?.();
+  action.addEventListener('click', () => weatherController.load({ force: true }));
 }
 
 initialize();

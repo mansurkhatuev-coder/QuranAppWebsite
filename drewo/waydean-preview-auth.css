@@ -73,6 +73,17 @@
   opacity: .65;
 }
 
+.waydean-login-switch {
+  justify-self: center;
+  padding: 3px 8px;
+  color: var(--gold-bright);
+  font-size: 12px;
+  text-decoration-color: rgba(255, 215, 125, .45);
+  text-underline-offset: 3px;
+}
+
+.waydean-login-switch:hover { color: #fff1cb; }
+
 .waydean-admin-login .waydean-admin-login-error {
   color: #ffbdad;
   font-size: 12px;

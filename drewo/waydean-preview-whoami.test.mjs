@@ -1,45 +1,53 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {
-  clearWhoAmIPromptDismissal, dismissWhoAmIPrompt, hasDismissedWhoAmIPrompt,
-  shouldPromptWhoAmI, whoAmISkipStorageKey
-} from './waydean-preview-whoami.mjs';
+import { readFileSync } from 'node:fs';
+import * as whoami from './waydean-preview-whoami.mjs';
 
-test('asks for identity only when there is no saved person, no dismissal, and this is not the demo tree', () => {
-  assert.equal(shouldPromptWhoAmI({ hasSelf: false, dismissed: false, isDemo: false }), true);
-  assert.equal(shouldPromptWhoAmI({ hasSelf: true, dismissed: false, isDemo: false }), false);
-  assert.equal(shouldPromptWhoAmI({ hasSelf: false, dismissed: true, isDemo: false }), false);
-  assert.equal(shouldPromptWhoAmI({ hasSelf: false, dismissed: false, isDemo: true }), false);
-});
+const html = readFileSync(new URL('./waydean-preview.html', import.meta.url), 'utf8');
+const appSource = readFileSync(new URL('./waydean-preview.js', import.meta.url), 'utf8');
 
-test('keeps the dismissal preference separate for the demo and family tree', () => {
-  assert.equal(whoAmISkipStorageKey('hoti'), 'waydean-preview:whoami-skip:v1:hoti');
-  assert.equal(whoAmISkipStorageKey('demo'), 'waydean-preview:whoami-skip:v1:demo');
-});
-
-test('persists Later for this tree and clears it when a person is selected', () => {
+function memoryStorage() {
   const values = new Map();
-  const storage = {
+  return {
+    values,
     getItem: key => values.get(key) ?? null,
-    setItem: (key, value) => values.set(key, value),
-    removeItem: key => values.delete(key),
+    setItem: (key, value) => values.set(key, String(value)),
+    removeItem: key => values.delete(key)
   };
+}
 
-  assert.equal(hasDismissedWhoAmIPrompt(storage, 'hoti'), false);
-  assert.equal(dismissWhoAmIPrompt(storage, 'hoti'), true);
-  assert.equal(hasDismissedWhoAmIPrompt(storage, 'hoti'), true);
-  assert.equal(hasDismissedWhoAmIPrompt(storage, 'demo'), false);
-  assert.equal(clearWhoAmIPromptDismissal(storage, 'hoti'), true);
-  assert.equal(hasDismissedWhoAmIPrompt(storage, 'hoti'), false);
+test('keeps the saved identity key separate for the demo and family tree', () => {
+  assert.equal(whoami.whoAmIPersonStorageKey('hoti'), 'waydean-preview:my-person:v1:hoti');
+  assert.equal(whoami.whoAmIPersonStorageKey('demo'), 'waydean-preview:my-person:v1:demo');
 });
 
-test('treats unavailable browser storage as a per-visit preference', () => {
-  const storage = {
-    getItem() { throw new Error('blocked'); },
-    setItem() { throw new Error('blocked'); },
-    removeItem() { throw new Error('blocked'); },
-  };
-  assert.equal(hasDismissedWhoAmIPrompt(storage, 'hoti'), false);
-  assert.equal(dismissWhoAmIPrompt(storage, 'hoti'), false);
-  assert.equal(clearWhoAmIPromptDismissal(storage, 'hoti'), false);
+test('persists the chosen person and rejects a saved id missing from the loaded tree', () => {
+  const storage = memoryStorage();
+  const validIds = new Set(['person-a', 'person-b']);
+
+  assert.equal(whoami.saveWhoAmIPerson(storage, 'hoti', 'person-b'), true);
+  assert.equal(whoami.readWhoAmIPerson(storage, 'hoti', validIds), 'person-b');
+  assert.equal(whoami.readWhoAmIPerson(storage, 'demo', validIds), null);
+  storage.setItem(whoami.whoAmIPersonStorageKey('hoti'), 'deleted-person');
+  assert.equal(whoami.readWhoAmIPerson(storage, 'hoti', validIds), null);
+  assert.equal(storage.getItem(whoami.whoAmIPersonStorageKey('hoti')), null);
+});
+
+test('clears the saved identity without breaking when browser storage is unavailable', () => {
+  const storage = memoryStorage();
+  whoami.saveWhoAmIPerson(storage, 'hoti', 'person-a');
+  assert.equal(whoami.clearWhoAmIPerson(storage, 'hoti'), true);
+  assert.equal(whoami.readWhoAmIPerson(storage, 'hoti', new Set(['person-a'])), null);
+
+  const blockedStorage = { getItem() { throw Error(); }, setItem() { throw Error(); }, removeItem() { throw Error(); } };
+  assert.equal(whoami.readWhoAmIPerson(blockedStorage, 'hoti', new Set(['person-a'])), null);
+  assert.equal(whoami.saveWhoAmIPerson(blockedStorage, 'hoti', 'person-a'), false);
+  assert.equal(whoami.clearWhoAmIPerson(blockedStorage, 'hoti'), false);
+});
+
+test('does not show a Who are you dialog automatically when the tree opens or a tab returns', () => {
+  assert.doesNotMatch(html, /id="whoAmIPrompt"/);
+  assert.doesNotMatch(appSource, /maybePromptWhoAmI/);
+  assert.match(html, /id="whoAmI"/);
+  assert.match(appSource, /\$\('#whoAmI'\)\.addEventListener\('click'/);
 });

@@ -7,6 +7,7 @@ import { fileURLToPath } from "node:url";
 const studioSource = readFileSync(new URL("./browser-export-studio.mjs", import.meta.url), "utf8");
 const studioHtml = readFileSync(new URL("./browser-export.html", import.meta.url), "utf8");
 const canvasRendererSource = readFileSync(new URL("./remotion-preview/src/browser-canvas-renderer.mjs", import.meta.url), "utf8");
+const projectModelSource = readFileSync(new URL("./remotion-preview/src/project-model.mjs", import.meta.url), "utf8");
 
 function collectPublishedModuleGraph(entryPath, visited = new Set()) {
   const filePath = resolve(entryPath);
@@ -34,7 +35,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261028-scene-aligned-camera-1"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261028-slow-tree-exit-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -47,9 +48,11 @@ test("browser video export lets the user choose and preview transition sounds", 
   assert.match(studioSource, /Завершаем запись видео/);
 });
 
-test("scene-aligned camera code uses fresh cache keys in the published module chain", () => {
-  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261028-scene-aligned-camera-1/);
-  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261028-scene-aligned-camera-1/);
+test("smooth tree camera code uses fresh cache keys in the published module chain", () => {
+  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261028-slow-tree-exit-1/);
+  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261028-slow-tree-exit-1/);
+  assert.match(canvasRendererSource, /cinematic-timeline\.mjs\?v=20261028-slow-tree-exit-1/);
+  assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261028-slow-tree-exit-1/);
 });
 
 test("browser video export auto-uploads finished renders to the private account library", () => {

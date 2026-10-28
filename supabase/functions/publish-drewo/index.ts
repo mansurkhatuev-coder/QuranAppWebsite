@@ -8,6 +8,7 @@ import {
   familyPasswordSessionFields,
 } from './waydean-admin-actions.ts';
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
+import { familyPublishGuardError } from './family-publish-guard.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -1847,6 +1848,38 @@ Deno.serve(async (request) => {
       });
     }
 
+    if (action === 'family-load') {
+      const [jsonFile, indexFile] = await Promise.all([
+        githubGetFile(githubToken, githubRepo, jsonPath),
+        githubGetFile(githubToken, githubRepo, indexPath),
+      ]);
+      const treeJson = jsonFile?.content?.trim()
+        || extractScriptJson(indexFile?.content || '', 'tree-data')
+        || '';
+      if (!treeJson) {
+        return jsonResponse({ ok: false, error: 'Сервер не вернул данные семейного древа.' }, 404);
+      }
+
+      let fingerprint: string;
+      try {
+        fingerprint = await fingerprintText(normalizeTreeJson(treeJson));
+      } catch {
+        return jsonResponse({ ok: false, error: 'На сервере сохранён некорректный JSON дерева.' }, 500);
+      }
+
+      const lock = lockPresentation(access);
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        role,
+        treeJson,
+        activityJson: extractScriptJson(indexFile?.content || '', 'activity-log') || '[]',
+        fingerprint,
+        locked: lock.locked,
+        lockedReason: lock.lockedReason,
+      });
+    }
+
     if (action === 'upload-photo') {
       if (treeDir === DEMO_TREE_DIR) {
         return jsonResponse({ error: demoGuardMessage('photo') }, 403);
@@ -2409,6 +2442,15 @@ Deno.serve(async (request) => {
       typeof body.baseFingerprint === 'string' ? body.baseFingerprint.trim() : '';
     const baseTreeJson =
       typeof body.baseTreeJson === 'string' ? body.baseTreeJson.trim() : '';
+    const familyPublishGuard = familyPublishGuardError({
+      role,
+      signedFamilySession: Boolean(rawSessionToken && sessionPayload?.treeDir === treeDir),
+      force,
+      baseFingerprint,
+    });
+    if (familyPublishGuard?.status === 403) {
+      return jsonResponse({ error: familyPublishGuard.error, code: familyPublishGuard.code }, 403);
+    }
 
     const [jsonFile, current, existingBackups] = await Promise.all([
       githubGetFile(githubToken, githubRepo, jsonPath),
@@ -2421,6 +2463,22 @@ Deno.serve(async (request) => {
     const serverFingerprint = serverTreeRaw
       ? await fingerprintText(normalizeTreeJson(serverTreeRaw))
       : '';
+
+    if (familyPublishGuard?.status === 409) {
+      return jsonResponse(
+        {
+          ok: false,
+          conflict: true,
+          code: familyPublishGuard.code,
+          error: familyPublishGuard.error,
+          serverFingerprint,
+          baseFingerprint,
+          serverTreeJson: serverTreeRaw,
+          serverActivityJson: extractScriptJson(current?.content || '', 'activity-log') || '[]',
+        },
+        409
+      );
+    }
 
     let merged = false;
     let mergeStats: Record<string, unknown> | null = null;
