@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="robots" content="noindex, nofollow" />
+    <title>Чеченский UI — workbench</title>
+    <link rel="stylesheet" href="./workbench.css?v=18" />
+    <link rel="stylesheet" href="./admin-v2.css?v=1" />
+  </head>
+  <body>
+    <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
+      <form id="ce-gate-form" class="ce-gate-card">
+        <p class="ce-gate-kicker">waydean.ru · admin</p>
+        <h1 id="ce-gate-title">Чеченский UI</h1>
+        <p class="ce-gate-hint">Тестовый редактор · изменения останутся в этом браузере</p>
+        <label class="ce-gate-label">
+          Пароль
+          <input id="ce-gate-password" type="password" autocomplete="current-password" required />
+        </label>
+        <p id="ce-gate-error" class="ce-gate-error" hidden></p>
+        <button type="submit" class="ce-gate-submit">Войти</button>
+      </form>
+    </div>
+
+    <div id="ce-app" hidden>
+    <div class="admin-v2-local-note"><span>ТЕСТОВАЯ КОПИЯ</span> · переводы сохраняются только в этом браузере</div>
+    <div class="safe-area-top" aria-hidden="true"></div>
+    <header>
+      <div class="header-sticky">
+        <div class="header-top">
+          <div class="header-brand">
+            <h1>Чеченский UI · workbench</h1>
+            <p id="progress-headline" class="header-progress-line">Загрузка…</p>
+          </div>
+          <div class="top-links">
+            <a href="../index.html">← Админка</a>
+            <a href="./packs/">Пакеты</a>
+          </div>
+        </div>
+
+        <div class="toolbar toolbar-main">
+          <button type="button" class="secondary refresh-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA">↻ Обновить</button>
+          <select id="pack" class="small pack-select"></select>
+          <input id="pack-assignee" class="assignee-input" placeholder="Ответственный" title="Ответственный за пакет" />
+          <input id="q" class="search" placeholder="Поиск…" />
+          <select id="status" class="small">
+            <option value="all">Все строки</option>
+            <option value="needs-review">Нужна проверка</option>
+            <option value="uncertain">Пересмотреть (отмечено)</option>
+            <option value="todo">Не проверено</option>
+            <option value="reviewed">Проверено</option>
+            <option value="translated">Переведено (≠ ru)</option>
+            <option value="same-as-ru">Как в ru</option>
+            <option value="empty">Пусто</option>
+            <option value="filled">Заполнено</option>
+          </select>
+          <select id="group" class="small">
+            <option value="all">Все домены</option>
+          </select>
+          <button type="button" class="ghost" id="reset-filters" title="Сбросить поиск и фильтры">Сброс фильтров</button>
+          <button type="button" class="secondary" id="save">Сохранить</button>
+          <button type="button" class="primary" id="save-reviewed">✓ проверено</button>
+          <button type="button" class="secondary" id="next-unreviewed">Далее →</button>
+          <span id="save-status" class="save-status" aria-live="polite"></span>
+        </div>
+      </div>
+
+      <details class="header-extra">
+        <summary>Прогресс и экспорт</summary>
+        <p class="sub">
+          Список: вкладки → главное → академия в конце. Справа — mockup и глоссарий. «Переведено» ≠ копия ru.
+        </p>
+        <p id="pack-headline" class="hint pack-headline"></p>
+
+        <section class="progress-panel compact" aria-label="Общий прогресс">
+          <div class="progress-grid">
+            <div class="progress-item">
+              <span class="progress-label">Переведено</span>
+              <div class="progress translated"><div id="bar-translated"></div></div>
+            </div>
+            <div class="progress-item">
+              <span class="progress-label">Как в ru</span>
+              <div class="progress same-ru"><div id="bar-same-ru"></div></div>
+            </div>
+            <div class="progress-item">
+              <span class="progress-label">Проверено</span>
+              <div class="progress review"><div id="bar-review"></div></div>
+            </div>
+          </div>
+          <div class="stats">
+            <span>Всего: <b id="total">0</b></span>
+            <span>Перев.: <b id="translated">0</b> (<b id="translated-pct">0</b>%)</span>
+            <span>Как ru: <b id="same-as-ru">0</b> (<b id="same-as-ru-pct">0</b>%)</span>
+            <span>Пусто: <b id="empty">0</b></span>
+            <span>Провер.: <b id="reviewed">0</b> (<b id="reviewed-pct">0</b>%)</span>
+            <span>В пакете: <b id="shown">0</b></span>
+          </div>
+        </section>
+
+        <details class="group-progress-panel">
+          <summary>Прогресс по разделам</summary>
+          <div id="group-progress" class="group-progress-grid"></div>
+        </details>
+
+        <div class="toolbar toolbar-secondary">
+          <button type="button" class="secondary" id="import-json-btn">Импорт JSON</button>
+          <input id="import-json" type="file" accept="application/json,.json" hidden />
+          <button type="button" class="secondary" id="export-pack">Пакет JSON</button>
+          <button type="button" class="secondary" id="export-entries">ce.entries.json</button>
+          <button type="button" class="primary" id="export-ts">ce.ts</button>
+          <button type="button" class="ghost" id="reset">Сброс правок</button>
+        </div>
+      </details>
+    </header>
+
+    <div class="workbench-layout">
+      <main><div id="table" class="table"></div></main>
+
+      <aside class="side-panel" aria-label="Превью, глоссарий и история">
+        <div class="side-tabs" role="tablist" aria-label="Боковая панель">
+          <button type="button" class="side-tab active" data-side-tab="preview" role="tab" aria-selected="true">Превью</button>
+          <button type="button" class="side-tab" data-side-tab="glossary" role="tab" aria-selected="false">Глоссарий</button>
+          <button type="button" class="side-tab" data-side-tab="history" role="tab" aria-selected="false">Последние</button>
+        </div>
+
+        <section class="side-tab-panel preview-panel" data-side-panel="preview">
+          <div class="panel-head">
+            <h2>Превью</h2>
+            <span id="preview-template" class="hint"></span>
+          </div>
+          <div id="preview-host" class="preview-host">
+            <p class="hint preview-placeholder">Выберите строку</p>
+          </div>
+        </section>
+
+        <section class="side-tab-panel glossary-panel" data-side-panel="glossary" hidden>
+          <div class="panel-head">
+            <h2>Глоссарий</h2>
+            <span class="hint">Клик → вставка</span>
+          </div>
+          <input id="glossary-q" class="glossary-search" placeholder="маор, куран…" />
+          <div id="glossary-host" class="glossary-host"></div>
+        </section>
+
+        <section class="side-tab-panel history-panel" data-side-panel="history" hidden>
+          <div class="panel-head">
+            <h2>Последние изменения</h2>
+            <button type="button" class="link-btn inline" id="clear-history">Очистить</button>
+          </div>
+          <p class="hint history-hint">Переводы и отметки «Проверено» — кликните, чтобы вернуться к ключу.</p>
+          <div id="history-host" class="history-host"></div>
+        </section>
+      </aside>
+    </div>
+
+    <div class="footerbar">
+      <span class="hint">Ctrl+S — сохранить · <button type="button" class="link-btn inline" id="refresh-app-footer">↻ Обновить</button> — после обновлений на сайте</span>
+      <div><span id="msg" class="hint"></span></div>
+    </div>
+
+    <div id="paste-dialog" class="paste-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="paste-dialog-title">
+      <form id="paste-dialog-form" class="paste-dialog-card">
+        <h2 id="paste-dialog-title">Вставить перевод</h2>
+        <p class="paste-dialog-hint">
+          Сначала пробуем буфер автоматически. Если перевода нет — скопируйте его в Яндексе и вставьте сюда (Ctrl+V).
+        </p>
+        <textarea id="paste-dialog-input" class="paste-dialog-input" rows="4" placeholder="Нохчийн текст…"></textarea>
+        <p id="paste-dialog-warn" class="paste-dialog-warn" hidden></p>
+        <div class="paste-dialog-actions">
+          <button type="button" class="secondary" id="paste-dialog-cancel">Отмена</button>
+          <button type="submit" class="primary">Применить</button>
+        </div>
+      </form>
+    </div>
+    </div>
+
+    <script src="./gate.js?v=2"></script>
+    <script src="./workbench-mockup.js?v=1"></script>
+    <script src="./workbench.js?v=20"></script>
+    <script src="./admin-v2-local.js?v=1"></script>
+    <script>
+      window.CeWorkbenchGate.mountGate(function () {
+        window.CeWorkbench.boot();
+      });
+    </script>
+  </body>
+</html>

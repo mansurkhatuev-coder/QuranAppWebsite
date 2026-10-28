@@ -1249,6 +1249,11 @@ function showApp() {
   setActiveTab(getInitialTab());
 }
 
+function adminReturnTarget() {
+  const requested = new URLSearchParams(window.location.search).get('returnTo');
+  return window.AdminReturnRouting?.resolveTarget(requested, window.location.origin) || null;
+}
+
 function showLogin() {
   if (window.AdminCommandCenter) {
     window.AdminCommandCenter.stop();
@@ -1379,6 +1384,8 @@ function bindEvents() {
       await loadContent();
       hideBootOverlay();
       setLoginBusy(false);
+      const returnTarget = adminReturnTarget();
+      if (returnTarget) window.location.replace(returnTarget);
     } catch (error) {
       hideBootOverlay();
       setLoginBusy(false);
@@ -1476,6 +1483,8 @@ async function restoreSession() {
     showBootOverlay('Загрузка данных…');
     showApp();
     await loadContent();
+    const returnTarget = adminReturnTarget();
+    if (returnTarget) window.location.replace(returnTarget);
   } catch (error) {
     showInitError(error);
     showLogin();

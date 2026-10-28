@@ -1,0 +1,194 @@
+<!doctype html>
+<html lang="ru">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="robots" content="noindex, nofollow" />
+    <meta name="theme-color" content="#102019" />
+    <title>Контентная студия · тестовый экран</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="./prototype.css?v=admin-v2-workbench" />
+    <link rel="stylesheet" href="./arabic-input.css?v=admin-v2-workbench" />
+  </head>
+  <body>
+    <div class="preview-bar">
+      <span class="preview-badge">ТЕСТОВАЯ СБОРКА</span>
+      <span>Отдельная тестовая копия · черновики сохраняются локально · публикация отключена</span>
+      <a href="../" aria-label="Вернуться в тестовую админку">Назад в тестовую админку <span aria-hidden="true">↗</span></a>
+    </div>
+
+    <header class="topbar">
+      <a class="brand" href="#top" aria-label="Контентная студия">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>
+        <span class="brand-copy">
+          <span class="brand-kicker">QURANAPP · WAYDEAN</span>
+          <span class="brand-title">Контентная студия</span>
+        </span>
+      </a>
+      <div class="topbar-center">
+        <span class="state-indicator"><i></i>Предпросмотр без записи</span>
+        <span class="topbar-divider" aria-hidden="true"></span>
+        <span class="saved-copy">Рабочая версия не затронута</span>
+      </div>
+      <div class="topbar-actions">
+        <button class="icon-action" type="button" id="undo-local" aria-label="Отменить изменение" title="Отменить последнее изменение" disabled>↶</button>
+        <button class="icon-action" type="button" id="redo-local" aria-label="Повторить изменение" title="Повторить изменение" disabled>↷</button>
+      </div>
+    </header>
+
+    <nav class="admin-nav" aria-label="Разделы админки">
+      <a href="../" class="admin-nav-item">Центр</a>
+      <a href="#content" class="admin-nav-item active" aria-current="page">Контент <span class="nav-spark"></span></a>
+      <a href="../#home" class="admin-nav-item">Главная</a>
+      <a href="../#academy-feedback" class="admin-nav-item">Отзывы</a>
+      <a href="../#analytics" class="admin-nav-item">Аналитика</a>
+      <a href="../#release" class="admin-nav-item">Store</a>
+      <span class="nav-spacer"></span>
+      <span class="admin-nav-meta"><span class="mini-avatar">М</span> Администратор</span>
+    </nav>
+
+    <main id="content" class="page-shell">
+      <section class="page-intro">
+        <div>
+          <div class="eyebrow"><span class="eyebrow-line"></span> ЕДИНОЕ РАБОЧЕЕ ПРОСТРАНСТВО</div>
+          <h1>Контент <span>без лишнего шума</span></h1>
+          <p class="intro-copy">Дуа, азкары и таджвид-разметка собраны в одной студии. Выберите тип материала — инструменты перестроятся под текущую задачу.</p>
+        </div>
+        <div class="intro-side">
+          <div class="intro-sigil" aria-hidden="true">۞</div>
+          <div><span class="intro-side-label">ПРИНЦИП</span><strong>Один материал — один контекст</strong><span>Связи и путь обновления всегда видны.</span></div>
+        </div>
+      </section>
+
+      <nav class="content-tabs" aria-label="Тип контента" role="tablist">
+        <button type="button" class="content-tab" data-kind="dua" role="tab" aria-selected="false">
+          <span class="tab-mark arabic-mark" aria-hidden="true">د</span><span class="tab-copy"><strong>Дуа</strong><small>Поддержка и случаи жизни</small></span><span class="tab-count" id="dua-count">—</span>
+        </button>
+        <button type="button" class="content-tab is-active" data-kind="azkar" role="tab" aria-selected="true">
+          <span class="tab-mark arabic-mark" aria-hidden="true">ذ</span><span class="tab-copy"><strong>Азкары</strong><small>Тексты и связи с разметкой</small></span><span class="tab-count" id="azkar-count">—</span>
+        </button>
+        <button type="button" class="content-tab" data-kind="materials" role="tab" aria-selected="false" title="Отдельные тексты: аят, хадис, история, арабский оригинал, письменная транскрипция, переводы и источник">
+          <span class="tab-mark" aria-hidden="true">✳</span><span class="tab-copy"><strong>Тексты</strong><small>Аят, хадис, история</small></span><span class="tab-count" id="materials-count">—</span>
+        </button>
+        <div class="focus-panel-tools" id="focus-panel-tools" hidden aria-label="Панели редактора таджвида">
+          <button type="button" data-focus-panel="library" aria-pressed="false">Список</button>
+          <button type="button" data-focus-panel="inspector" aria-pressed="false">Предпросмотр</button>
+        </div>
+        <span class="tabs-tail"><i></i> Сохранение раздельное</span>
+      </nav>
+
+      <section id="source-note" class="source-note" hidden aria-live="polite">
+        <span class="source-note-icon" aria-hidden="true">i</span>
+        <p><strong>Названия и поля показаны из снимка каталога приложения.</strong> Связи и ID взяты из пакета таджвида и остаются неизменными; правки этого предпросмотра хранятся только в открытой вкладке.</p>
+        <span class="source-note-tag">ТЕСТОВЫЙ СНИМОК</span>
+      </section>
+
+      <section class="workbench" aria-label="Рабочая область редактора">
+        <aside class="library-panel" aria-label="Список материалов">
+          <div class="library-heading">
+            <div><span class="panel-kicker">БИБЛИОТЕКА</span><h2 id="library-title">Азкары</h2></div>
+            <button class="square-button" type="button" id="add-material" aria-label="Добавить материал" title="Добавить локальный образец">＋</button>
+          </div>
+          <label class="search-box">
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="10.8" cy="10.8" r="6.8"/><path d="m16 16 4.5 4.5"/></svg>
+            <input id="library-search" type="search" placeholder="По всей библиотеке: название, текст или ID" autocomplete="off" />
+            <kbd>/</kbd>
+          </label>
+          <div class="filter-strip" id="filter-strip" role="group" aria-label="Фильтр материалов">
+            <button type="button" class="filter-chip is-active" data-filter="all">Все</button>
+            <button type="button" class="filter-chip" data-filter="linked">С разметкой</button>
+            <button type="button" class="filter-chip" data-filter="published">Опубликовано</button>
+          </div>
+          <div class="library-result-line"><span id="library-count">Загрузка…</span><button type="button" class="text-action" id="sort-library" aria-label="Изменить сортировку">Сортировка: А–Я <span aria-hidden="true">⌄</span></button></div>
+          <div id="library-list" class="library-list" role="listbox" aria-label="Материалы"></div>
+          <div class="library-foot">
+            <span class="foot-lock" aria-hidden="true">⌑</span>
+            <span><strong>Безопасный режим</strong><small>Изменения остаются в этой вкладке</small></span>
+          </div>
+        </aside>
+
+        <section class="editor-panel" aria-label="Редактор выбранного материала">
+          <div class="editor-topline">
+            <div class="breadcrumbs" id="breadcrumbs"><span>Контент</span><b>›</b><span>Азкары</span><b>›</b><strong>Загрузка…</strong></div>
+            <div class="editor-actions">
+              <span class="draft-state"><i></i><span id="draft-label">Тестовый просмотр</span></span>
+              <span class="action-divider"></span>
+              <button type="button" class="editor-icon more-trigger" id="more-trigger" aria-expanded="false" aria-controls="more-menu">Ещё <span aria-hidden="true">⌄</span></button>
+              <div id="more-menu" class="more-menu" hidden>
+                <button type="button" data-workbench-action="import">Импорт черновика</button>
+                <button type="button" data-workbench-action="export">Скачать резервную копию</button>
+                <button type="button" data-workbench-action="export-current">Скачать материал</button>
+                <button type="button" data-workbench-action="copy-current">Копировать JSON материала</button>
+                <button type="button" data-workbench-action="help">Справка и горячие клавиши</button>
+              </div>
+              <input id="import-backup-file" type="file" accept="application/json,.json" hidden />
+            </div>
+          </div>
+
+          <div class="document-heading">
+            <div class="document-heading-copy"><span class="document-type" id="document-type">АЗКАР · СВЯЗАННАЯ РАЗМЕТКА</span><h2 id="document-title">Загрузка материала…</h2><div class="document-id-row"><code id="document-id">—</code><span class="id-separator"></span><span id="document-meta">Связи из текущего пакета таджвида</span></div></div>
+            <div class="document-heading-tools">
+              <span class="version-chip"><i></i><span id="version-label">Только чтение</span></span>
+              <button type="button" class="button button-outline" id="duplicate-material" title="Создать локальную копию с новым ID">⧉ Копировать</button>
+              <button type="button" class="button button-outline" id="delete-material" title="Скрыть запись только в тестовой библиотеке">Удалить из теста</button>
+              <button type="button" class="button button-outline" id="open-tajweed" hidden>Разметка таджвида</button>
+            </div>
+          </div>
+
+          <nav class="editor-tabs" role="tablist" aria-label="Инструменты материала">
+            <button type="button" data-editor-tab="content" class="editor-tab is-active" role="tab" aria-selected="true">Содержание</button>
+            <button type="button" data-editor-tab="markup" class="editor-tab" role="tab" aria-selected="false">Разметка таджвида <span id="marks-badge" class="editor-tab-count">—</span></button>
+            <button type="button" data-editor-tab="sources" class="editor-tab" role="tab" aria-selected="false">Связи и источник</button>
+            <span class="editor-tabs-spacer"></span>
+            <span class="shortcut-hint"><kbd>1–9</kbd> правила</span>
+          </nav>
+
+          <div id="editor-body" class="editor-body"></div>
+
+          <footer class="editor-footer">
+            <div class="footer-normalization"><span class="normalization-check">✓</span><span><strong>Нормализация таджвид-схемы сохранена</strong><small>v2 · text → transliteration · rule → rules · символьные смещения ограничены текстом</small></span></div>
+            <div class="footer-actions"><button type="button" class="button button-outline" data-notice="Предпросмотр приложения в тестовой версии не сохраняет данные.">Предпросмотр</button><button type="button" class="button button-primary" id="save-local-draft">Сохранить черновик <span aria-hidden="true">↗</span></button></div>
+          </footer>
+        </section>
+
+        <aside class="inspector-panel" aria-label="Предпросмотр и сведения">
+          <div class="inspector-heading"><div><span class="panel-kicker">КАК УВИДИТ ЧИТАТЕЛЬ</span><h2>Предпросмотр</h2></div><span class="live-eye"><i></i>макет</span></div>
+          <div class="phone-frame"><div class="phone-screen">
+            <div class="phone-status"><span>9:41</span><span class="phone-status-icons"><i></i><i></i><i></i></span></div>
+            <div class="phone-appbar"><span class="phone-back">‹</span><span id="phone-section">АЗКАРЫ УТРА</span><span class="phone-menu">•••</span></div>
+            <div class="phone-content">
+              <span id="phone-category" class="phone-category">ПОМЯНУТЬ АЛЛАХА</span>
+              <h3 id="phone-title">Загрузка…</h3>
+              <div id="phone-arabic" class="phone-arabic" dir="rtl" lang="ar"></div>
+              <div id="phone-translit" class="phone-translit"></div>
+              <div id="phone-translation" class="phone-translation"></div>
+              <div class="phone-counter"><span id="phone-repeat">1 раз</span><span class="counter-ring">1</span></div>
+              <div class="phone-bottom"><span id="phone-source">Источник не указан</span><span>1 / 1　›</span></div>
+            </div>
+          </div></div>
+
+          <section class="inspector-card link-card">
+            <div class="inspector-card-head"><span class="card-icon link-icon" aria-hidden="true">⌁</span><div><span class="panel-kicker">СВЯЗАННЫЕ ДАННЫЕ</span><h3>Связи материала</h3></div></div>
+            <div id="link-summary" class="link-summary"></div>
+          </section>
+          <section class="inspector-card delivery-card">
+            <div class="delivery-heading"><span class="delivery-icon" aria-hidden="true">↗</span><div><span class="panel-kicker">ПУТЬ ОБНОВЛЕНИЯ</span><h3 id="delivery-title">Дуа</h3></div></div>
+            <p id="delivery-copy">Пакет дуа публикуется через текущий контентный процесс.</p>
+            <div class="delivery-state"><i></i><span>Путь сохранён отдельно</span></div>
+          </section>
+          <div class="inspector-foot"><span class="privacy-shield" aria-hidden="true">◈</span><span>Тестовая сборка использует опубликованные JSON как образцы и не меняет их.</span></div>
+        </aside>
+      </section>
+
+      <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+    </main>
+    <script src="./material-drafts.js?v=admin-v2-workbench" defer></script>
+    <script src="./record-identity.js?v=admin-v2-workbench" defer></script>
+    <script src="./tajweed-links.js?v=admin-v2-workbench" defer></script>
+    <script src="./arabic-input.js?v=admin-v2-workbench" defer></script>
+    <script src="./transition-guard.js?v=admin-v2-transition-guard" defer></script>
+    <script src="./prototype.js?v=admin-v2-workbench-recovery-20261027" defer></script>
+  </body>
+</html>

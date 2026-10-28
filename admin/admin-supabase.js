@@ -241,30 +241,36 @@
     if (error) throw error;
   }
 
-  async function loadAcademyCourseFeedback() {
+  async function loadAcademyCourseFeedback(courseId = '') {
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
 
     const fullSelect =
       'id,course_id,lesson_id,rating,comment,display_name,client_id,locale,app_version,platform,created_at,updated_at';
     const legacySelect = 'id,course_id,lesson_id,rating,comment,locale,app_version,platform,created_at';
+    const normalizedCourseId = String(courseId || '').trim();
+    const limit = 200;
+    const loadRows = (selection) => {
+      let query = client
+        .from('academy_course_feedback')
+        .select(selection, { count: 'exact' });
+      if (normalizedCourseId) query = query.eq('course_id', normalizedCourseId);
+      return query.order('created_at', { ascending: false }).limit(limit);
+    };
 
-    let result = await client
-      .from('academy_course_feedback')
-      .select(fullSelect)
-      .order('created_at', { ascending: false })
-      .limit(200);
+    let result = await loadRows(fullSelect);
 
     if (result.error && /column/i.test(result.error.message)) {
-      result = await client
-        .from('academy_course_feedback')
-        .select(legacySelect)
-        .order('created_at', { ascending: false })
-        .limit(200);
+      result = await loadRows(legacySelect);
     }
 
     if (result.error) throw result.error;
-    return result.data ?? [];
+    return {
+      rows: result.data ?? [],
+      total: typeof result.count === 'number' ? result.count : null,
+      limit,
+      courseId: normalizedCourseId || null,
+    };
   }
 
   async function loadAnalyticsEvents() {
@@ -283,25 +289,51 @@
     return { rows, limit: EVENT_LIMIT, truncated: rows.length >= EVENT_LIMIT };
   }
 
-  async function loadAnalyticsInstallations() {
+  async function loadAnalyticsInstallations(days = 0) {
     const client = getClient();
     if (!client) throw new Error('Supabase не настроен');
     const LIST_LIMIT = 20000;
-    const [listResult, countResult] = await Promise.all([
+    const countQueries = [
+      client
+        .from('analytics_installations')
+        .select('installation_id', { count: 'exact', head: true }),
+    ];
+    const normalizedDays = Math.max(0, Math.floor(Number(days) || 0));
+    if (normalizedDays > 0) {
+      const cutoff = new Date(Date.now() - normalizedDays * 24 * 60 * 60 * 1000).toISOString();
+      countQueries.push(
+        client
+          .from('analytics_installations')
+          .select('installation_id', { count: 'exact', head: true })
+          .gte('last_seen_at', cutoff),
+        client
+          .from('analytics_installations')
+          .select('installation_id', { count: 'exact', head: true })
+          .gte('first_seen_at', cutoff),
+      );
+    }
+    const [listResult, ...countResults] = await Promise.all([
       client
         .from('analytics_installations')
         .select('installation_id,first_seen_at,last_seen_at,platform,app_version,locale')
         .order('last_seen_at', { ascending: false })
         .limit(LIST_LIMIT),
-      client
-        .from('analytics_installations')
-        .select('installation_id', { count: 'exact', head: true }),
+      ...countQueries,
     ]);
     if (listResult.error) throw listResult.error;
-    if (countResult.error) throw countResult.error;
+    for (const countResult of countResults) {
+      if (countResult.error) throw countResult.error;
+    }
     const rows = listResult.data ?? [];
-    const total = typeof countResult.count === 'number' ? countResult.count : rows.length;
-    return { rows, total };
+    const total = typeof countResults[0]?.count === 'number' ? countResults[0].count : null;
+    return {
+      rows,
+      total,
+      active: typeof countResults[1]?.count === 'number' ? countResults[1].count : null,
+      newInstalls: typeof countResults[2]?.count === 'number' ? countResults[2].count : null,
+      limit: LIST_LIMIT,
+      truncated: total == null ? null : total > rows.length,
+    };
   }
 
   /**
@@ -328,36 +360,14 @@
       if (Number.isFinite(n) && n >= 0) return Math.round(n);
     }
 
-    let registryCount = 0;
-    try {
-      const counted = await client
-        .from('analytics_installations')
-        .select('installation_id', { count: 'exact', head: true });
-      if (!counted.error && typeof counted.count === 'number') registryCount = counted.count;
-    } catch {
-      // table may be missing
+    const counted = await client
+      .from('analytics_installations')
+      .select('installation_id', { count: 'exact', head: true });
+    if (counted.error) {
+      if (/does not exist|relation/i.test(counted.error.message || '')) return null;
+      throw counted.error;
     }
-
-    const ids = new Set();
-    const page = 1000;
-    for (let from = 0; from < 300000; from += page) {
-      const { data, error } = await client
-        .from('analytics_events')
-        .select('installation_id')
-        .order('created_at', { ascending: true })
-        .range(from, from + page - 1);
-      if (error) {
-        if (/does not exist|relation/i.test(error.message)) break;
-        throw error;
-      }
-      if (!data?.length) break;
-      for (const row of data) {
-        if (row.installation_id) ids.add(row.installation_id);
-      }
-      if (data.length < page) break;
-    }
-
-    return Math.max(registryCount, ids.size);
+    return typeof counted.count === 'number' ? counted.count : null;
   }
 
   async function loadRuStoreVersion() {
