@@ -40,7 +40,7 @@ function fakeCanvasContext() {
     arc: (...args) => calls.push(["arc", ...args]),
     fillRect: (...args) => calls.push(["fill-rect", ...args]),
     drawImage: (...args) => calls.push(["image", ...args]),
-    fillText: (...args) => calls.push(["text", ...args]),
+    fillText: (...args) => calls.push(["text", ...args, context.globalAlpha]),
     save: () => calls.push(["save"]),
     restore: () => calls.push(["restore"]),
     translate: (...args) => calls.push(["translate", ...args]),
@@ -211,7 +211,7 @@ test("full-tree video crossfades overview markers into detailed cards", () => {
   assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"));
 });
 
-test("full-tree video fully opens revealed path cards at medium zoom and keeps side branches compact", () => {
+test("full-tree video keeps revealed path content visible at medium zoom and side branches compact", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -231,7 +231,11 @@ test("full-tree video fully opens revealed path cards at medium zoom and keeps s
       const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
       const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
       const branchProgress = getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale);
-      return branchProgress > 0.2 && branchProgress < 0.8;
+      const pathContentProgress = getVideoCardContentProgress(pathNode.width * framing.scale * outputScale);
+      const pathDetailProgress = getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true);
+      return branchProgress > 0.2 && branchProgress < 0.8
+        && pathDetailProgress === 1
+        && pathContentProgress < 0.2;
     });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
@@ -251,7 +255,9 @@ test("full-tree video fully opens revealed path cards at medium zoom and keeps s
 
   assert.equal(markerAt(pathNode), false, "a revealed selected-path card should have no remaining overview marker");
   assert.equal(markerAt(branchNode), true, "a side branch should retain the gradual compact transition");
-  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 9"));
+  const pathName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 9");
+  assert.ok(pathName, "a revealed path card should render its name");
+  assert.ok(pathName.at(-1) > 0.99, "a revealed path card should keep its name fully visible at medium zoom");
 });
 
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {

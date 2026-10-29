@@ -463,7 +463,9 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale, pathIsRevealed);
         if (detailProgress < 1) drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
         if (detailProgress > 0) {
-          const contentProgress = getVideoCardContentProgress(node.width * framing.scale * scale);
+          const contentProgress = pathIsRevealed
+            ? 1
+            : getVideoCardContentProgress(node.width * framing.scale * scale);
           drawCard(context, person, node, opacity * detailProgress, target, story.includeDates, contentProgress);
         }
         continue;
