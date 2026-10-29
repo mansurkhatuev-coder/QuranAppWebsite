@@ -36,7 +36,7 @@ export async function canEncodeTimestampedMp4({ width, height, bitrate, includeA
   }
 }
 
-export async function openVideoBackgroundReader({ url, signal } = {}) {
+export async function openVideoBackgroundReader({ url, signal, loop = true } = {}) {
   if (typeof globalThis.VideoDecoder !== "function") {
     throw new Error("Этот браузер не поддерживает покадровое декодирование видеофона.");
   }
@@ -61,7 +61,8 @@ export async function openVideoBackgroundReader({ url, signal } = {}) {
     const sink = new VideoSampleSink(track);
     const samples = createLoopingVideoSampleReader({
       durationSeconds,
-      createSamples: () => sink.samples(0, durationSeconds)
+      createSamples: () => sink.samples(0, durationSeconds),
+      loop
     });
     let closed = false;
 
