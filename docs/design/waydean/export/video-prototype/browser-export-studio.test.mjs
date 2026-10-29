@@ -36,7 +36,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261029-lineage-content-medium-2"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261030-flow-reels-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -56,7 +56,7 @@ test("smooth tree camera code uses fresh cache keys in the published module chai
   assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
 });
 
-test("video export exposes the three selectable video background presets and persists the chosen ID", () => {
+test("video export exposes the selectable video background presets and persists the chosen ID", () => {
   assert.match(studioSource, /VIDEO_BACKGROUND_PRESETS/);
   assert.match(studioSource, /data-video-background=/);
   assert.match(studioSource, /backgroundId:/);
@@ -66,6 +66,14 @@ test("video export exposes the three selectable video background presets and per
   assert.match(studioSource, /realtimeVideoBackgroundActive \? backgroundVideoElement : null/);
   assert.match(studioSource, /await backgroundReader\.getSampleAt\(outputFrame \/ plan\.fps \* plan\.speed\)/);
   assert.match(studioSource, /выбранным постером/);
+});
+
+test("combined Flow background reels disclose their duration and play once in preview and export", () => {
+  assert.match(studioSource, /preset\.clipSeconds/);
+  assert.match(studioSource, /без повтора/);
+  assert.match(studioSource, /video\.loop = preset\.loop !== false/);
+  assert.match(studioSource, /loop: video\.loop/);
+  assert.match(studioSource, /loop: preset\.loop !== false/);
 });
 
 test("video export has a persistent 0.25x to 8x speed control that updates preview and final render", () => {

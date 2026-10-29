@@ -1,5 +1,5 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs";
-import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261029-clean-card-speed-1";
+import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-flow-reels-1";
 import {
   chooseVideoBitrate,
   getBrowserVideoSupport,
@@ -105,7 +105,8 @@ function syncPreviewBackgroundToFrame(sourceFrame = frame) {
   const video = backgroundVideoElement;
   if (!video || !Number.isFinite(video.duration) || video.duration <= 0 || !previewPlan) return;
   if (playbackRequestId !== null) return;
-  const targetTime = getVideoBackgroundTimestamp(sourceFrame / previewPlan.sourceFps, video.duration);
+  const timestamp = getVideoBackgroundTimestamp(sourceFrame / previewPlan.sourceFps, video.duration, { loop: video.loop });
+  const targetTime = video.loop ? timestamp : Math.min(timestamp, Math.max(0, video.duration - 1 / 24));
   if (video.seeking || Math.abs(video.currentTime - targetTime) < 0.04) return;
   try { video.currentTime = targetTime; } catch { /* Keep the poster until the media element can seek. */ }
 }
@@ -220,6 +221,7 @@ function renderShell() {
     <button type="button" class="browser-export-background-option" data-video-background="${escapeHtml(preset.id)}" aria-pressed="${settings.backgroundId === preset.id}">
       <img src="${escapeHtml(backgroundAssetUrl(preset.posterPath))}" alt="" loading="lazy">
       <span>${escapeHtml(preset.label)}</span>
+      ${preset.clipSeconds ? `<small>${Math.round(preset.clipSeconds)} с · без повтора</small>` : ""}
     </button>`).join("");
   const speedOptions = VIDEO_SPEED_OPTIONS.map(speed => `<option value="${speed}">${speed.toLocaleString("ru-RU")}×</option>`).join("");
   root.innerHTML = `
@@ -458,7 +460,7 @@ async function startExport() {
       canEncodeTimestampedMp4,
       encodeTimestampedMp4,
       openVideoBackgroundReader
-    } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261029-moving-video-backgrounds-2");
+    } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261030-flow-reels-1");
     const expectedDuration = plan.totalFrames / plan.fps;
     const videoBitrate = chooseVideoBitrate({ durationSeconds: expectedDuration });
     const timestampedMp4Supported = await canEncodeTimestampedMp4({
@@ -471,9 +473,12 @@ async function startExport() {
       const preset = getVideoBackgroundPreset(settings.backgroundId);
       backgroundReader = await openVideoBackgroundReader({
         url: backgroundAssetUrl(preset.videoPath),
+        loop: preset.loop !== false,
         signal: renderController.signal
       });
-      setBackgroundStatus("Фон декодирован. Кадры древа и видеофона будут собраны синхронно.");
+      setBackgroundStatus(preset.loop === false
+        ? `Фон декодирован (${Math.round(preset.clipSeconds)} с). Он проиграется один раз, затем останется последний кадр.`
+        : "Фон декодирован. Кадры древа и видеофона будут собраны синхронно.");
     } catch (error) {
       if (renderController.signal.aborted) throw error;
       setBackgroundStatus(timestampedMp4Supported
@@ -727,7 +732,9 @@ function loadSelectedVideoBackground(backgroundId) {
   poster.onload = () => {
     if (token !== backgroundLoadToken) return;
     background = poster;
-    setBackgroundStatus("Фон готов. В предпросмотре и экспорте он затемняется под линии и подписи древа.");
+    setBackgroundStatus(preset.loop === false
+      ? `Выбран фон на ${Math.round(preset.clipSeconds)} с, без повтора; после него останется последний кадр.`
+      : "Фон готов. В предпросмотре и экспорте он затемняется под линии и подписи древа.");
     updatePreview();
   };
   poster.onerror = () => {
@@ -741,12 +748,14 @@ function loadSelectedVideoBackground(backgroundId) {
   const video = document.createElement("video");
   video.preload = "metadata";
   video.muted = preset.muted;
-  video.loop = true;
+  video.loop = preset.loop !== false;
   video.playsInline = true;
   video.src = backgroundAssetUrl(preset.videoPath);
   video.addEventListener("loadeddata", () => {
     if (token !== backgroundLoadToken) return;
-    setBackgroundStatus("Движущийся фон готов. При экспорте он синхронизируется с каждым кадром древа.");
+    setBackgroundStatus(preset.loop === false
+      ? `Фон готов: ${Math.round(video.duration || preset.clipSeconds)} с, без повтора. После него останется последний кадр.`
+      : "Движущийся фон готов. При экспорте он синхронизируется с каждым кадром древа.");
     updatePreview();
   });
   video.addEventListener("seeked", () => {

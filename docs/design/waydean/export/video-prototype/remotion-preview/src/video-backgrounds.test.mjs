@@ -10,8 +10,10 @@ import {
   startRealtimeVideoBackground
 } from "./video-backgrounds.mjs";
 
-test("video background presets expose the three requested silent scenes with poster and clip assets", () => {
-  assert.deepEqual(VIDEO_BACKGROUND_PRESETS.map(preset => preset.id), ["towers", "village", "eagle"]);
+test("video background presets retain the original scenes and add two combined Flow reels", () => {
+  assert.deepEqual(VIDEO_BACKGROUND_PRESETS.map(preset => preset.id), [
+    "towers", "village", "eagle", "flow-chechen-village", "flow-argun-flight"
+  ]);
   assert.equal(DEFAULT_VIDEO_BACKGROUND_ID, "towers");
   for (const preset of VIDEO_BACKGROUND_PRESETS) {
     assert.ok(preset.label);
@@ -24,12 +26,21 @@ test("video background presets expose the three requested silent scenes with pos
     assert.ok(existsSync(posterAsset), `${preset.id} poster must exist`);
     assert.ok(statSync(videoAsset).size < 10 * 1024 * 1024, `${preset.id} loop should stay phone-friendly to download`);
   }
+
+  const importedReels = VIDEO_BACKGROUND_PRESETS.filter(preset => preset.id.startsWith("flow-"));
+  assert.equal(importedReels.length, 2);
+  for (const preset of importedReels) {
+    assert.equal(preset.loop, false, `${preset.id} should play once instead of repeating its short footage`);
+    assert.ok(preset.clipSeconds >= 15, `${preset.id} should combine multiple source clips`);
+  }
 });
 
 test("video background timestamps loop deterministically and handle negative offsets", () => {
   assert.equal(getVideoBackgroundTimestamp(42.5, 16), 10.5);
   assert.equal(getVideoBackgroundTimestamp(16, 16), 0);
   assert.equal(getVideoBackgroundTimestamp(-1, 16), 15);
+  assert.equal(getVideoBackgroundTimestamp(42.5, 16, { loop: false }), 16);
+  assert.equal(getVideoBackgroundTimestamp(-1, 16, { loop: false }), 0);
 });
 
 test("video sample reader follows output timestamps across loops and releases prior samples", async () => {
@@ -52,6 +63,23 @@ test("video sample reader follows output timestamps across loops and releases pr
   assert.ok(disposed.includes(0.5), "samples no longer used by the output should be released");
   await reader.close();
   assert.ok(disposed.length >= 4, "closing the reader should release retained samples");
+});
+
+test("short video samples play once and hold their final frame instead of repeating", async () => {
+  const openedClips = [];
+  const createSamples = () => {
+    openedClips.push(openedClips.length + 1);
+    return (async function* samples() {
+      for (const timestamp of [0, 1, 2]) yield { timestamp };
+    }());
+  };
+  const reader = createLoopingVideoSampleReader({ durationSeconds: 3, createSamples, loop: false });
+
+  assert.equal((await reader.getSampleAt(1.2)).timestamp, 1);
+  assert.equal((await reader.getSampleAt(4)).timestamp, 2);
+  assert.equal((await reader.getSampleAt(9)).timestamp, 2);
+  assert.equal(openedClips.length, 1);
+  await reader.close();
 });
 
 test("real-time recorder can start the muted native video at the beginning when WebCodecs is unavailable", async () => {

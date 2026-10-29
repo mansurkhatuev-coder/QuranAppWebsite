@@ -77,6 +77,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .browser-export-background-option { display: grid; min-width: 0; gap: 6px; padding: 5px; border: 1px solid rgba(221,208,179,.16); border-radius: 7px; background: rgba(7,12,13,.78); color: #b9b5a7; text-align: left; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
 .browser-export-background-option img { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 4px; background: linear-gradient(135deg, #18211f, #080d0e); object-fit: cover; }
 .browser-export-background-option span { overflow-wrap: anywhere; padding: 0 2px 1px; font-size: 9px; line-height: 1.25; }
+.browser-export-background-option small { padding: 0 2px 2px; color: #9f9b8f; font-size: 8px; line-height: 1.2; }
 .browser-export-background-option[aria-pressed="true"] { border-color: rgba(241,217,158,.83); background: linear-gradient(145deg, rgba(126,91,42,.32), rgba(7,12,13,.9)); box-shadow: inset 0 0 0 1px rgba(241,217,158,.13), 0 0 15px rgba(219,182,111,.08); color: #f1dfb9; }
 .browser-export-background-option:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(233,196,114,.63); }
 .browser-export-background-option:disabled { opacity: .68; cursor: wait; }

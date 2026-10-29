@@ -8,18 +8,31 @@ These are locally generated, silent H.264 loops prepared for compositing behind 
 | Old village path | `village-loop.mp4` | `village-poster.jpg` | 6,233,847 bytes | 38,602 bytes |
 | Eagle above the mountains | `eagle-loop.mp4` | `eagle-poster.jpg` | 6,257,356 bytes | 37,256 bytes |
 
+## Imported Flow footage
+
+Two additional, silent reels combine the user-provided Flow clips from Downloads. They use direct cuts between distinct shots; they play once and hold their last frame instead of repeating short footage.
+
+| Reel | Source shots, in order | Output | Poster |
+|---|---|---:|---:|
+| Towers and mountain village | Aerial village, tower flyover, Chechen combat tower | `flow-chechen-village.mp4` · 23.96 s · 4,223,554 bytes | `flow-chechen-village-poster.jpg` · 58,035 bytes |
+| Argun Gorge | Argun Gorge flyover, mountain stream | `flow-argun-flight.mp4` · 16.00 s · 2,798,878 bytes | `flow-argun-flight-poster.jpg` · 45,700 bytes |
+
+These landscape clips were resized from 1920 × 1080 to 1280 × 720 for faster mobile loading. The original Downloads files were left untouched.
+
 ## Video format
 
 - 1280 × 720, landscape 16:9
 - H.264 / AVC in MP4, 24 constant frames per second
-- 40 seconds per loop (960 frames)
+- 40 seconds per loop (960 frames) for the three generated scenes above
 - No audio track
-- Approximately 1.2 Mbps; about 5.8–6.0 MiB per clip
+- Approximately 1.2 Mbps; about 5.8–6.0 MiB per original loop
 - Posters: 640 × 360 JPEG
 
 ## Motion and loop
 
 The mountain and village scenes use a restrained, cyclic camera push and slight horizontal/vertical drift. The camera returns to its starting framing at the loop boundary. The eagle scene uses a separate transparent eagle silhouette, tinted muted gold, that glides across the upper part of the frame and exits before the cycle restarts. Each scene has a darkened center and soft edge vignette to keep the family tree readable.
+
+The two imported reels preserve the moving Flow footage and switch shots at the source clip boundaries. They are single-play sequences, not loops.
 
 ## Limits
 

@@ -21,6 +21,24 @@ export const VIDEO_BACKGROUND_PRESETS = Object.freeze([
     videoPath: "./remotion-preview/public/video-backgrounds/eagle-loop.mp4",
     posterPath: "./remotion-preview/public/video-backgrounds/eagle-poster.jpg",
     muted: true
+  }),
+  Object.freeze({
+    id: "flow-chechen-village",
+    label: "Башни и горное селение",
+    videoPath: "./remotion-preview/public/video-backgrounds/flow-chechen-village.mp4",
+    posterPath: "./remotion-preview/public/video-backgrounds/flow-chechen-village-poster.jpg",
+    clipSeconds: 24,
+    loop: false,
+    muted: true
+  }),
+  Object.freeze({
+    id: "flow-argun-flight",
+    label: "Аргунское ущелье",
+    videoPath: "./remotion-preview/public/video-backgrounds/flow-argun-flight.mp4",
+    posterPath: "./remotion-preview/public/video-backgrounds/flow-argun-flight-poster.jpg",
+    clipSeconds: 16,
+    loop: false,
+    muted: true
   })
 ]);
 
@@ -34,10 +52,11 @@ export function getVideoBackgroundPreset(id = DEFAULT_VIDEO_BACKGROUND_ID) {
   return VIDEO_BACKGROUND_PRESETS.find(preset => preset.id === id) ?? VIDEO_BACKGROUND_PRESETS[0];
 }
 
-export function getVideoBackgroundTimestamp(elapsedSeconds, durationSeconds) {
+export function getVideoBackgroundTimestamp(elapsedSeconds, durationSeconds, { loop = true } = {}) {
   const duration = Number(durationSeconds);
   const elapsed = Number(elapsedSeconds);
   if (!Number.isFinite(duration) || duration <= 0 || !Number.isFinite(elapsed)) return 0;
+  if (!loop) return Math.min(duration, Math.max(0, elapsed));
   return ((elapsed % duration) + duration) % duration;
 }
 
@@ -83,7 +102,7 @@ export async function startRealtimeVideoBackground(video, { seekTimeoutMs = 1500
   }
 }
 
-export function createLoopingVideoSampleReader({ durationSeconds, createSamples } = {}) {
+export function createLoopingVideoSampleReader({ durationSeconds, createSamples, loop = true } = {}) {
   const duration = Number(durationSeconds);
   if (!Number.isFinite(duration) || duration <= 0) throw new RangeError("Длительность видеофона должна быть больше нуля.");
   if (typeof createSamples !== "function") throw new TypeError("Для декодера видеофона нужен источник кадров.");
@@ -125,8 +144,8 @@ export function createLoopingVideoSampleReader({ durationSeconds, createSamples 
       if (closed) throw new Error("Декодер видеофона уже закрыт.");
       const elapsed = Number(elapsedSeconds);
       if (!Number.isFinite(elapsed)) throw new TypeError("Время кадра видеофона должно быть числом.");
-      const nextLoopIndex = Math.floor(elapsed / duration);
-      const timestamp = getVideoBackgroundTimestamp(elapsed, duration);
+      const nextLoopIndex = loop ? Math.floor(elapsed / duration) : 0;
+      const timestamp = getVideoBackgroundTimestamp(elapsed, duration, { loop });
 
       if (iterator === null || nextLoopIndex !== loopIndex || timestamp < lastTimestamp) {
         await beginLoop(nextLoopIndex);
