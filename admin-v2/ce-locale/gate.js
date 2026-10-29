@@ -62,6 +62,12 @@
         return;
       }
 
+      if (global.AdminV2Runtime?.isProduction === true) {
+        const login = global.AdminReturnRouting?.loginUrl("/admin-v2/", global.location.origin);
+        global.location.replace(login || "/admin/");
+        return;
+      }
+
       app.hidden = true;
       gate.hidden = false;
 
