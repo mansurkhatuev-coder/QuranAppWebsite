@@ -172,6 +172,49 @@ test("full-tree video crossfades overview markers into detailed cards", () => {
   assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"));
 });
 
+test("full-tree video fully opens revealed path cards at medium zoom and keeps side branches compact", () => {
+  const branchPeople = [
+    { id: "root", name: "Родоначальник", generation: 1, parent: null },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
+  const pathNode = story.timeline.layout.nodes.find(node => node.id === "child-9");
+  const branchNode = story.timeline.layout.nodes.find(node => node.id === "child-1");
+  const frame = Array.from({ length: story.timeline.totalFrames }, (_, candidate) => candidate)
+    .find(candidate => {
+      const shot = story.timeline.shots.find(item => candidate >= item.startFrame && candidate < item.startFrame + item.durationFrames);
+      if (!shot?.personIds?.includes("child-9")) return false;
+      const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
+      const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+      const branchProgress = getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale);
+      return branchProgress > 0.2 && branchProgress < 0.8;
+    });
+  const context = fakeCanvasContext();
+  const canvas = { width: 1280, height: 720, getContext: () => context };
+
+  assert.notEqual(frame, undefined, "the active generation should pass through medium zoom");
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+  const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
+  const marker = browserCanvasRenderer.getOverviewCardGeometry(markerRadius);
+  const markerAt = node => context.calls.some(call => call[0] === "round-rect"
+    && Math.abs(call[1] - (node.x - marker.width / 2)) < 1e-6
+    && Math.abs(call[2] - (node.y - marker.height / 2)) < 1e-6
+    && Math.abs(call[3] - marker.width) < 1e-6
+    && Math.abs(call[4] - marker.height) < 1e-6);
+
+  assert.equal(markerAt(pathNode), false, "a revealed selected-path card should have no remaining overview marker");
+  assert.equal(markerAt(branchNode), true, "a side branch should retain the gradual compact transition");
+  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 9"));
+});
+
 test("canvas frame renderer paints the supplied local background, tree cards, and text", () => {
   const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
   const context = fakeCanvasContext();

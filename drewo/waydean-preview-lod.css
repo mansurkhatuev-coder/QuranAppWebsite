@@ -49,6 +49,11 @@
 .graph[data-lod="compact"] .person-node:not(.route) .node-copy { display: none; }
 .graph[data-lod="compact"] .person-node:not(.route)::after { opacity: .82; transform: translate(-50%, -50%) scale(1); }
 
+/* Keep the selected ancestry readable at medium zoom; side branches remain simplified. */
+.graph[data-lod="compact"] .person-node.route .node-avatar { display: block; }
+.graph[data-lod="compact"] .person-node.route .node-copy small { display: block; }
+.graph[data-lod="compact"] .person-node.route .node-copy strong { font-size: 12px; }
+
 .graph[data-lod="overview"] .person-node {
   width: var(--person-card-width, var(--tree-card-width)) !important;
   height: var(--tree-card-height) !important;

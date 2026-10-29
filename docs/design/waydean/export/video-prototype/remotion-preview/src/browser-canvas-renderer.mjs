@@ -15,9 +15,9 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261029-generation-line-reveal-1";
+} from "./project-model.mjs?v=20261029-lineage-detail-medium-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
-import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-generation-line-reveal-1";
+import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -345,6 +345,7 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
   const nodes = new Map(story.timeline.layout.nodes.map(node => [node.id, node]));
   const people = new Map(story.people.map(person => [person.id, person]));
   const pathIndex = new Map(story.timeline.pathIds.slice(1).map((id, index) => [`${story.timeline.pathIds[index]}->${id}`, index]));
+  const pathPersonIds = new Set(story.timeline.pathIds);
   const firstRevealShotByPerson = new Map();
   story.timeline.shots.forEach((shot, shotIndex) => {
     for (const personId of shot.personIds) {
@@ -442,9 +443,11 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
       const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
       if (story.scopeType === "all") {
-        const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale);
-        drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
-        drawCard(context, person, node, opacity * detailProgress, target, story.includeDates);
+        const pathIsRevealed = pathPersonIds.has(person.id)
+          && (firstRevealShotByPerson.get(person.id) ?? Infinity) <= shotIndex;
+        const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale, pathIsRevealed);
+        if (detailProgress < 1) drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
+        if (detailProgress > 0) drawCard(context, person, node, opacity * detailProgress, target, story.includeDates);
         continue;
       }
       if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);
