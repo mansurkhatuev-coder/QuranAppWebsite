@@ -1,6 +1,7 @@
 (() => {
   "use strict";
 
+  const isProduction = window.AdminV2Runtime?.isProduction === true;
   const html = document.documentElement;
   const legacyFrame = document.getElementById("legacy-frame");
   const workbenchFrame = document.getElementById("workbench-frame");
@@ -210,7 +211,7 @@
     }
     state.dirty = Boolean(value) || state.dirtyFrames.size > 0;
     const label = document.querySelector(".save-state span");
-    if (label) label.textContent = state.dirty ? (detail || "Есть несохранённые правки") : "Только тестовый режим";
+    if (label) label.textContent = state.dirty ? (detail || "Есть несохранённые правки") : isProduction ? "Production" : "Только тестовый режим";
     document.querySelector(".save-state")?.classList.toggle("has-changes", state.dirty);
   }
 
@@ -322,6 +323,7 @@
         const drafts = JSON.parse(localStorage.getItem(DRAFT_ACTIVITY_KEY) || "{}");
         drafts.lastSavedAt = new Date().toISOString();
         drafts.source = sourceFrame === workbenchFrame ? "content" : sourceFrame === localeFrame ? "locale" : "legacy";
+        drafts.storage = event.data.storage === "production" ? "production" : "browser";
         localStorage.setItem(DRAFT_ACTIVITY_KEY, JSON.stringify(drafts));
       } catch { /* the saved draft remains in its editor when overview activity is unavailable */ }
       finishDraftSave(true, sourceFrame, event.data.requestId);
@@ -373,7 +375,7 @@
     if (saveDraft) {
       const saved = await requestDraftSave();
       if (!saved) {
-        setDirty(true, "Не удалось подтвердить сохранение. Остались в тестовой админке.");
+        setDirty(true, isProduction ? "Не удалось подтвердить сохранение. Остались в админке." : "Не удалось подтвердить сохранение. Остались в тестовой админке.");
         return;
       }
     }
@@ -386,6 +388,10 @@
       window.location.assign(new URL("../admin/", window.location.href).href);
       return;
     }
+    const copy = document.getElementById("leave-dialog-copy");
+    if (copy) copy.textContent = isProduction
+      ? "Сохранить черновик доступным для этого раздела способом, остаться или перейти без изменений."
+      : "Можно сохранить их как локальный черновик, остаться здесь или перейти без этих изменений.";
     leaveDialog.showModal();
   }
 
@@ -401,7 +407,8 @@
       const draft = JSON.parse(localStorage.getItem(DRAFT_ACTIVITY_KEY) || "{}");
       if (!draft.lastSavedAt) return;
       const stamp = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" }).format(new Date(draft.lastSavedAt));
-      target.innerHTML = `<span class="empty-glyph">✓</span><span><strong>Черновик сохранён локально</strong><small>${stamp} · источник: ${draft.source === "content" ? "редактор материалов" : "инструменты админки"}</small></span>`;
+      const storage = isProduction && draft.storage === "production" ? "Черновик сохранён в production" : "Черновик сохранён локально";
+      target.innerHTML = `<span class="empty-glyph">✓</span><span><strong>${storage}</strong><small>${stamp} · источник: ${draft.source === "content" ? "редактор материалов" : "инструменты админки"}</small></span>`;
     } catch { /* sample UI remains available */ }
   }
 
@@ -412,13 +419,16 @@
       return response.json();
     };
     try {
-      const [support, general, azkar, tajweed] = await Promise.all([
-        readJson("./data/support-dua.json"),
-        readJson("./data/general-dua.json"),
+      const [duaCatalog, azkar, tajweed] = await Promise.all([
+        isProduction
+          ? window.AdminSupabase.loadCatalog()
+          : Promise.all([readJson("./data/support-dua.json"), readJson("./data/general-dua.json")])
+              .then(([support, general]) => ({ support, general })),
         readJson("./data/azkar-classic-preview.json"),
         readJson("./data/azkar-tajweed-translit.json"),
       ]);
-      const duaCount = (Array.isArray(support) ? support.length : 0) + (Array.isArray(general) ? general.length : 0);
+      const duaCount = (Array.isArray(duaCatalog.support) ? duaCatalog.support.length : 0) +
+        (Array.isArray(duaCatalog.general) ? duaCatalog.general.length : 0);
       const azkarCount = Array.isArray(azkar) ? azkar.length : 0;
       const docs = Array.isArray(tajweed?.docs) ? tajweed.docs.length : 0;
       document.getElementById("dua-total").textContent = duaCount.toLocaleString("ru-RU");
@@ -432,6 +442,17 @@
 
   const dateLabel = new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long" }).format(new Date());
   document.getElementById("today-date").textContent = dateLabel;
+  if (isProduction) {
+    document.title = "Админка · QuranApp";
+    document.querySelector("[data-admin-mode-title]")?.replaceChildren("Production");
+    document.querySelector("[data-admin-mode-detail]")?.replaceChildren("Сохранение по текущей учётной записи");
+    document.querySelector("[data-admin-mode-label]")?.replaceChildren("Production");
+    document.querySelector("[data-catalog-source='dua']")?.replaceChildren("Данные Supabase");
+      document.querySelector("[data-catalog-source='azkar']")?.replaceChildren("Образец каталога · 70");
+    document.querySelector("[data-catalog-source='tajweed']")?.replaceChildren("Опубликованный пакет");
+    const storageMode = document.getElementById("content-storage-mode");
+    if (storageMode) storageMode.innerHTML = "<i></i> Дуа и таджвид подключены";
+  }
   renderOverviewAnalytics();
   try {
     const savedDensity = localStorage.getItem("quranapp-admin-v2-design");

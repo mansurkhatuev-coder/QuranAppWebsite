@@ -3,6 +3,7 @@
 
   const editorOnlyPreview = new URLSearchParams(window.location.search).get("editorOnly") === "1";
   const embeddedWorkbench = new URLSearchParams(window.location.search).get("embedded") === "1";
+  const production = window.AdminV2Runtime?.isProduction === true;
   const DRAFT_STORAGE_KEY = "quranapp-admin-v2-workbench-ui-v1";
   const LEGACY_DRAFT_STORAGE_KEY = "quranapp-admin-v2-drafts";
   const TAJWEED_DRAFTS_STORAGE_KEY = "quranapp-admin-v2-workbench-tajweed-docs-v1";
@@ -44,6 +45,7 @@
     duas: [],
     sourceSupportDua: [],
     sourceGeneralDua: [],
+    duaManifest: null,
     tajweedDocs: [],
     localTajweedDocs: [],
     sourceAzkarCatalog: [],
@@ -84,7 +86,7 @@
     "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
   })[char]);
 
-  function requestEmbeddedTajweedSave() {
+  function requestEmbeddedTajweedSave({ saveCloudDraft = false } = {}) {
     const frame = $(".tajweed-editor-embed");
     if (!frame?.contentWindow || !frame.contentDocument?.getElementById("docTranslit")) return Promise.resolve(true);
     const requestId = `tajweed-${Date.now()}-${++tajweedSaveSequence}`;
@@ -92,9 +94,9 @@
       const timer = window.setTimeout(() => {
         pendingTajweedSaves.delete(requestId);
         resolve(false);
-      }, 1200);
+      }, saveCloudDraft ? 20000 : 1200);
       pendingTajweedSaves.set(requestId, { resolve, timer, frame });
-      frame.contentWindow.postMessage({ type: "admin-v2:save-tajweed-document", requestId }, window.location.origin);
+      frame.contentWindow.postMessage({ type: "admin-v2:save-tajweed-document", requestId, saveCloudDraft }, window.location.origin);
     });
   }
   const runAfterEmbeddedTajweedSave = window.AdminV2TransitionGuard.create(
@@ -116,13 +118,31 @@
       return false;
     }
     if (explicit) {
-      const tajweedSaved = await requestEmbeddedTajweedSave();
+      const saveCloudTajweed = production && (state.kind === "tajweed" || state.editorTab === "markup");
+      const tajweedSaved = await requestEmbeddedTajweedSave({ saveCloudDraft: saveCloudTajweed });
       if (!tajweedSaved) {
         showToast("Не удалось подтвердить сохранение таджвид-разметки. Повторите сохранение.");
         return false;
       }
-      showToast("Черновик сохранён на этом устройстве.");
-      window.parent?.postMessage({ type: "admin-v2:saved", requestId: String(requestId || "") }, window.location.origin);
+      try {
+        if (production && state.kind === "dua" && state.editorTab !== "markup") {
+          const record = editableRecord();
+          if (!record?.id || !String(record.text || "").trim()) throw new Error("Перед сохранением заполните ID и арабский текст.");
+          await window.AdminSupabase.upsertDuaItem({ ...record, authenticity: record.authenticity || "unknown", status: record.status || "draft" });
+          showToast("Дуа сохранено в Supabase как черновик. Для обновления пакетов нажмите «Опубликовать дуа».");
+        } else if (saveCloudTajweed) {
+          showToast("Черновик таджвида сохранён в Supabase.");
+        } else if (production) {
+          showToast("Черновик сохранён в браузере. Классические азкары изменятся в приложении только после его обновления.");
+        } else {
+          showToast("Черновик сохранён на этом устройстве.");
+        }
+      } catch (error) {
+        showToast(error.message || "Не удалось сохранить запись в Supabase.");
+        return false;
+      }
+      const savedToProduction = production && (state.kind === "dua" || saveCloudTajweed);
+      window.parent?.postMessage({ type: "admin-v2:saved", requestId: String(requestId || ""), storage: savedToProduction ? "production" : "browser" }, window.location.origin);
     }
     return true;
   }
@@ -664,7 +684,7 @@
           status.classList.remove("ok");
         }
       };
-      childDocument.addEventListener("click", blockRemoteWrite, true);
+      if (!production) childDocument.addEventListener("click", blockRemoteWrite, true);
 
       const stylesheet = childDocument.createElement("link");
       stylesheet.rel = "stylesheet";
@@ -757,15 +777,39 @@
     $("#duplicate-material").hidden = !item || state.kind === "tajweed" || state.editorTab === "markup";
     $("#delete-material").hidden = !item || state.kind === "tajweed" || state.editorTab === "markup";
     $("#breadcrumbs").innerHTML = `<span>Контент</span><b>›</b><span>${state.kind === "dua" ? "Дуа" : state.kind === "tajweed" ? "Таджвид" : state.kind === "materials" ? "Тексты" : "Азкары"}</span><b>›</b><strong>${escapeHtml(title)}</strong>`;
-    $("#draft-label").textContent = hasLocalEdits() ? "Локально · в памяти" : "Тестовый просмотр";
+    $("#draft-label").textContent = hasLocalEdits()
+      ? (production ? "Есть правки" : "Локально · в памяти")
+      : production ? (state.kind === "dua" ? "Supabase" : state.kind === "tajweed" ? "Production" : "Черновик в браузере")
+        : "Тестовый просмотр";
+    const saveButton = $("#save-local-draft");
+    if (saveButton) {
+      saveButton.innerHTML = production && state.kind === "dua" && state.editorTab !== "markup"
+        ? "Сохранить дуа <span aria-hidden=\"true\">↗</span>"
+        : "Сохранить черновик <span aria-hidden=\"true\">↗</span>";
+    }
+    const publishButton = $("#publish-dua");
+    if (publishButton) publishButton.hidden = !production || state.kind !== "dua" || state.editorTab === "markup";
+    const deleteButton = $("#delete-material");
+    if (deleteButton && production && state.kind === "dua") deleteButton.hidden = true;
     $("#source-note").hidden = state.kind !== "azkar";
+    if (state.kind === "azkar") {
+      const note = $("#source-note p");
+      const tag = $("#source-note .source-note-tag");
+      if (production) {
+        if (note) note.innerHTML = "<strong>Показан образец каталога из 70 классических азкаров.</strong> Это не полный живой каталог. Черновик не меняет установленное приложение; для этого нужен отдельный выпуск приложения. Связи и ID таджвида остаются исходными.";
+        if (tag) tag.textContent = "ОБРАЗЕЦ · 70";
+      } else {
+        if (note) note.innerHTML = "<strong>Названия и поля показаны из снимка каталога приложения.</strong> Связи и ID взяты из пакета таджвида и остаются неизменными; правки этого предпросмотра хранятся только в открытой вкладке.";
+        if (tag) tag.textContent = "ТЕСТОВЫЙ СНИМОК";
+      }
+    }
     $("#delivery-title").textContent = state.kind === "dua" ? "Дуа" : state.kind === "tajweed" ? "Таджвид-пакет" : state.kind === "materials" ? "Тексты" : "Азкары";
     $("#delivery-copy").textContent = state.kind === "dua"
-      ? "Дуа остаются в текущем процессе публикации контента на сайте."
+      ? production ? "Черновик сохраняется в Supabase. Кнопка публикации обновляет пакеты сайта через текущую защищённую функцию." : "Дуа остаются в текущем процессе публикации контента на сайте."
       : state.kind === "tajweed"
-        ? "Пакет цветной транслитерации сохраняет отдельный черновик и выборочную публикацию."
-      : state.kind === "materials" ? "Новый раздел проверяется только локально. Хранение и публикация не подключены."
-          : "Это локальный снимок каталога для сверки полей и названий; ID и связи взяты из пакета таджвида.";
+        ? production ? "Черновик и выборочная публикация работают через существующий защищённый редактор таджвида." : "Пакет цветной транслитерации сохраняет отдельный черновик и выборочную публикацию."
+      : state.kind === "materials" ? "Новые тексты сохраняются как черновики в этом браузере; путь публикации для них ещё не подключён."
+          : production ? "Названия и ID сверяются с образцом из 70 записей. Изменения классического азкара требуют обновления приложения." : "Это локальный снимок каталога для сверки полей и названий; ID и связи взяты из пакета таджвида.";
 
     $(".editor-tabs").hidden = false;
     $$(".editor-tab").forEach((tab) => {
@@ -889,6 +933,17 @@
     state.toastTimer = setTimeout(() => { toast.hidden = true; }, 3000);
   }
 
+  function applyProductionLabels() {
+    if (!production) return;
+    document.title = "Контентная студия · QuranApp";
+    $("#workbench-mode-badge").textContent = "PRODUCTION";
+    $("#workbench-mode-copy").textContent = "Дуа и таджвид подключены к действующим сервисам. Черновики других текстов хранятся отдельно в браузере.";
+    $("#workbench-state-indicator").innerHTML = "<i></i>Production · по вашей учётной записи";
+    $(".saved-copy").textContent = "Публикация доступна по отдельной кнопке";
+    $(".library-foot strong").textContent = "Production";
+    $(".library-foot small").textContent = "Сохранение зависит от типа материала";
+  }
+
   function updateHistoryButtons() {
     $("#undo-local").disabled = state.history.length === 0;
     $("#redo-local").disabled = state.future.length === 0;
@@ -932,7 +987,7 @@
 
   function createLocalId(prefix, records) {
     const used = new Set(records.map((record) => String(record.id)));
-    const base = `local-${prefix}-${Date.now().toString(36)}`;
+    const base = `${production && prefix === "dua" ? "dua" : `local-${prefix}`}-${Date.now().toString(36)}`;
     let candidate = base;
     let suffix = 2;
     while (used.has(candidate)) candidate = `${base}-${suffix++}`;
@@ -992,14 +1047,17 @@
 
   async function load() {
     try {
-      const [support, general, tajweed, azkarCatalog] = await Promise.all([
-        fetchJson("../data/support-dua.json"),
-        fetchJson("../data/general-dua.json"),
+      const [duaCatalog, tajweed, azkarCatalog] = await Promise.all([
+        production
+          ? window.AdminSupabase.loadCatalog()
+          : Promise.all([fetchJson("../data/support-dua.json"), fetchJson("../data/general-dua.json")])
+              .then(([support, general]) => ({ support, general })),
         fetchJson("../data/azkar-tajweed-translit.json"),
         fetchJson("../data/azkar-classic-preview.json"),
       ]);
-      state.sourceSupportDua = Array.isArray(support) ? support : [];
-      state.sourceGeneralDua = Array.isArray(general) ? general : [];
+      state.sourceSupportDua = Array.isArray(duaCatalog.support) ? duaCatalog.support : [];
+      state.sourceGeneralDua = Array.isArray(duaCatalog.general) ? duaCatalog.general : [];
+      state.duaManifest = duaCatalog.manifest || null;
       state.duas = [
         ...(materialStore?.materialize("dua-support", state.sourceSupportDua) || state.sourceSupportDua).map((record) => window.AdminV2RecordIdentity.tag(record, "dua-support")),
         ...(materialStore?.materialize("dua-general", state.sourceGeneralDua) || state.sourceGeneralDua).map((record) => window.AdminV2RecordIdentity.tag(record, "dua-general")),
@@ -1046,9 +1104,10 @@
       renderAll();
       if (materialStoreError) showToast(materialStoreError);
     } catch (error) {
-      $("#library-count").textContent = "Не удалось загрузить JSON";
-      $("#library-list").innerHTML = `<div class="library-empty">Откройте страницу через локальный сервер.<br /><small>${escapeHtml(error.message)}</small></div>`;
-      showToast("Для загрузки образцов нужен локальный сервер проекта.");
+      $("#library-count").textContent = production ? "Не удалось загрузить production-каталог" : "Не удалось загрузить JSON";
+      const guidance = production ? "Не удалось получить production-данные из Supabase." : "Откройте страницу через локальный сервер.";
+      $("#library-list").innerHTML = `<div class="library-empty">${guidance}<br /><small>${escapeHtml(error.message)}</small></div>`;
+      showToast(production ? "Не удалось загрузить каталог из Supabase. Проверьте вход и права учётной записи." : "Для загрузки образцов нужен локальный сервер проекта.");
     }
   }
 
@@ -1140,7 +1199,9 @@
       renderAll();
       persistLocalDraftState();
       window.parent?.postMessage({ type: "admin-v2:dirty" }, window.location.origin);
-      showToast("Создан локальный черновик с отдельным ID. В приложение он не публикуется.");
+      showToast(production && kind === "dua"
+        ? "Создан черновик дуа. Сохраните его в Supabase, затем опубликуйте пакет."
+        : "Создан черновик в браузере. Он не попал в приложение.");
     } catch (error) { showToast(error.message || "Не удалось создать черновик."); }
     });
   });
@@ -1189,6 +1250,50 @@
   });
 
   $("#save-local-draft")?.addEventListener("click", () => persistLocalDraftState({ explicit: true }));
+  $("#publish-dua")?.addEventListener("click", async (event) => {
+    if (!production || state.kind !== "dua") return;
+    const button = event.currentTarget;
+    try {
+      const publication = window.AdminV2ProductionContent.buildDuaPublication(state.duas, state.duaManifest);
+      const publishedIds = new Set([...publication.supportDua, ...publication.generalDua].map((record) => String(record.id)));
+      const hiddenFromPackage = [...state.sourceSupportDua, ...state.sourceGeneralDua]
+        .filter((record) => !publishedIds.has(String(record.id)));
+      if (hiddenFromPackage.length) {
+        throw new Error("В списке есть скрытые исходные дуа. Восстановите их перед публикацией; удаление выполняйте в старом редакторе.");
+      }
+      const confirmation = [
+        `Опубликовать пакет дуа? Записей: ${publishedIds.size}.`,
+        "Пакеты сайта и приложения будут обновлены через текущую защищённую функцию.",
+        "Продолжить?",
+      ].join("\n\n");
+      if (!window.confirm(confirmation)) return;
+      button.disabled = true;
+      button.textContent = "Сохраняем…";
+      const draft = materialStore ? JSON.parse(materialStore.exportBackup()) : null;
+      const draftRows = [
+        ...(draft?.records?.["dua-support"] || []),
+        ...(draft?.records?.["dua-general"] || []),
+      ].map((entry) => entry?.record || entry).filter((record) => publishedIds.has(String(record?.id)));
+      for (const record of draftRows) {
+        await window.AdminSupabase.upsertDuaItem({
+          ...record,
+          authenticity: record.authenticity || "unknown",
+          status: record.status || "draft",
+        });
+      }
+      const result = await window.AdminSupabase.publishContent(publication);
+      state.duaManifest = publication.manifest;
+      state.sourceSupportDua = publication.supportDua;
+      state.sourceGeneralDua = publication.generalDua;
+      window.parent?.postMessage({ type: "admin-v2:saved", source: "content", storage: "production" }, window.location.origin);
+      showToast(`Пакеты опубликованы${result?.publishedAt ? ` · ${result.publishedAt}` : ""}. Сайт обновится после публикации GitHub Pages.`);
+    } catch (error) {
+      showToast(error.message || "Не удалось опубликовать пакет дуа.");
+    } finally {
+      button.disabled = false;
+      button.textContent = "Опубликовать дуа";
+    }
+  });
   $("#undo-local")?.addEventListener("click", () => void runAfterEmbeddedTajweedSave(() => applyHistory("undo")));
   $("#redo-local")?.addEventListener("click", () => void runAfterEmbeddedTajweedSave(() => applyHistory("redo")));
   $("#open-tajweed")?.addEventListener("click", () => {
@@ -1242,7 +1347,10 @@
   $("#delete-material")?.addEventListener("click", () => {
     const source = editableRecord();
     if (!source || !materialStore) return;
-    if (!window.confirm(`Скрыть «${displayTitle(activeItem())}» только в тестовой библиотеке? Исходный сайт и приложение не изменятся.`)) return;
+    const deletePrompt = production
+      ? `Скрыть «${displayTitle(activeItem())}» только в черновике этого браузера? Опубликованный пакет приложения не изменится.`
+      : `Скрыть «${displayTitle(activeItem())}» только в тестовой библиотеке? Исходный сайт и приложение не изменятся.`;
+    if (!window.confirm(deletePrompt)) return;
     const collection = collectionForRecord(source);
     const id = String(source.id);
     void runAfterEmbeddedTajweedSave(() => {
@@ -1268,7 +1376,7 @@
       persistLocalDraftState();
       renderAll();
       window.parent?.postMessage({ type: "admin-v2:dirty" }, window.location.origin);
-      showToast("Материал скрыт только в тестовой библиотеке.");
+      showToast(production ? "Материал скрыт только в черновике этого браузера." : "Материал скрыт только в тестовой библиотеке.");
     } catch (error) { showToast(error.message || "Не удалось скрыть запись."); }
     });
   });
@@ -1432,5 +1540,6 @@
     } catch (error) { showToast(error.message || "Не удалось импортировать резервную копию."); }
   });
 
+  applyProductionLabels();
   load();
 })();

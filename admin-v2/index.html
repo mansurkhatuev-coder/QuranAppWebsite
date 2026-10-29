@@ -5,11 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#0b1712" />
-    <title>Админка · тестовая версия — Коран и Азкары</title>
+    <title>Админка — QuranApp</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=Cormorant+Garamond:wght@500;600;700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="./admin-v2.css?v=auth-empty-chart-20261028" />
+    <link rel="stylesheet" href="./admin-v2.css?v=admin-v2-production-20261029" />
   </head>
   <body>
     <section class="access-gate" id="access-gate" role="status" aria-live="polite">
@@ -21,7 +21,7 @@
       </div>
     </section>
     <div class="app-frame" id="app-frame" hidden>
-      <aside class="sidebar" aria-label="Навигация админки">
+      <aside class="sidebar" id="admin-sidebar" aria-label="Навигация админки">
         <a class="brand" href="#overview" data-view-link="overview" aria-label="Обзор админки">
           <span class="brand-seal" aria-hidden="true"><span>۞</span></span>
           <span class="brand-copy"><small>QURANAPP</small><strong>Админка</strong></span>
@@ -46,15 +46,16 @@
 
         <div class="sidebar-footer">
           <span class="connection-mark" aria-hidden="true"></span>
-          <span><strong>Тестовая версия</strong><small>Запись в production заблокирована</small></span>
+          <span><strong data-admin-mode-title>Тестовая версия</strong><small data-admin-mode-detail>Запись в production заблокирована</small></span>
         </div>
       </aside>
 
       <main class="main-area">
         <header class="topbar">
+          <button class="mobile-menu-trigger" id="mobile-menu-trigger" type="button" aria-label="Открыть меню" aria-controls="admin-sidebar" aria-expanded="false">☰</button>
           <div class="breadcrumbs"><span>Админка</span><b>›</b><strong id="view-breadcrumb">Обзор</strong></div>
           <div class="topbar-actions">
-            <span class="save-state"><i></i><span>Только тестовый режим</span></span>
+            <span class="save-state"><i></i><span data-admin-mode-label>Только тестовый режим</span></span>
             <button type="button" class="density-toggle" id="density-toggle" aria-label="Включить компактный вид">Компактный вид</button>
             <button type="button" class="old-version-button" id="old-version-button" aria-label="Открыть старый вариант админки"><span aria-hidden="true">↶</span><span class="old-version-label">Старый вариант</span><span class="old-version-label-short" aria-hidden="true">Старый</span></button>
           </div>
@@ -67,9 +68,9 @@
           </div>
 
           <div class="overview-grid" aria-label="Сводка материалов">
-            <article class="metric-card metric-primary"><div class="metric-head"><span>ДУА</span></div><strong class="metric-value" id="dua-total">—</strong><div class="metric-foot"><span>В тестовом каталоге</span></div></article>
-            <article class="metric-card"><div class="metric-head"><span>АЗКАРЫ</span></div><strong class="metric-value" id="azkar-total">—</strong><div class="metric-foot"><span>В тестовом каталоге</span></div></article>
-            <article class="metric-card"><div class="metric-head"><span>ТАДЖВИД</span></div><strong class="metric-value" id="tajweed-total">—</strong><div class="metric-foot"><span>Связанные разметки</span></div></article>
+            <article class="metric-card metric-primary"><div class="metric-head"><span>ДУА</span></div><strong class="metric-value" id="dua-total">—</strong><div class="metric-foot"><span data-catalog-source="dua">В тестовом каталоге</span></div></article>
+            <article class="metric-card"><div class="metric-head"><span>АЗКАРЫ</span></div><strong class="metric-value" id="azkar-total">—</strong><div class="metric-foot"><span data-catalog-source="azkar">В тестовом каталоге</span></div></article>
+            <article class="metric-card"><div class="metric-head"><span>ТАДЖВИД</span></div><strong class="metric-value" id="tajweed-total">—</strong><div class="metric-foot"><span data-catalog-source="tajweed">Связанные разметки</span></div></article>
           </div>
 
           <div class="overview-analytics">
@@ -100,12 +101,11 @@
 
           <div class="overview-bottom">
             <section class="overview-card activity-card"><div class="card-heading"><h2>Последний черновик</h2></div><div id="draft-activity" class="activity-empty"><span><strong>Пока нет сохранённых черновиков</strong></span></div></section>
-            <section class="overview-card source-card"><div class="card-heading"><h2>Режим</h2></div><div class="source-row"><span class="source-dot is-locked"></span><span>Тестовая копия · запись в приложение отключена</span></div></section>
           </div>
         </section>
 
         <section class="view-panel content-view" data-view-panel="content" aria-label="Единый редактор материалов" hidden>
-          <div class="embed-heading"><div><span class="eyebrow">ЕДИНАЯ КОНТЕНТНАЯ СТУДИЯ</span><h1>Материалы</h1></div><span class="readonly-pill"><i></i> Черновики сохраняются локально</span></div>
+          <div class="embed-heading"><div><span class="eyebrow">ЕДИНАЯ КОНТЕНТНАЯ СТУДИЯ</span><h1>Материалы</h1></div><span class="readonly-pill" id="content-storage-mode"><i></i> Черновики сохраняются локально</span></div>
           <div class="frame-wrap workbench-wrap"><iframe id="workbench-frame" title="Единый редактор дуа, азкаров и текстов" src="./workbench/index.html?embedded=1" loading="eager"></iframe></div>
         </section>
 
@@ -124,7 +124,7 @@
         <div class="dialog-mark">↶</div>
         <span class="eyebrow">ПЕРЕХОД К СТАРОМУ ИНТЕРФЕЙСУ</span>
         <h2 id="leave-title">Есть несохранённые правки</h2>
-        <p>Можно сохранить их как локальный черновик, остаться здесь или перейти без этих изменений.</p>
+        <p id="leave-dialog-copy">Можно сохранить их как локальный черновик, остаться здесь или перейти без этих изменений.</p>
         <div class="leave-actions"><button type="button" class="button-quiet" value="stay" id="leave-stay">Остаться</button><button type="button" class="button-quiet" value="discard" id="leave-discard">Перейти без изменений</button><button type="button" class="button-gold" value="save" id="leave-save">Сохранить черновик</button></div>
       </form>
     </dialog>
@@ -140,7 +140,9 @@
     <script src="../admin/admin-supabase.js?v=analytics-counts-20261028"></script>
     <script src="../admin/admin-return-routing.js?v=1"></script>
     <script src="./overview-chart-data.js?v=1"></script>
+    <script src="./runtime-mode.js?v=admin-v2-production-20261029" defer></script>
     <script src="./admin-v2-access.js?v=1" defer></script>
-    <script src="./admin-v2.js?v=analytics-empty-20261028" defer></script>
+    <script src="./admin-v2.js?v=admin-v2-production-20261029" defer></script>
+    <script src="./mobile-menu.js?v=admin-v2-production-20261029" defer></script>
   </body>
 </html>

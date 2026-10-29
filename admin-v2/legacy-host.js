@@ -22,9 +22,13 @@
 
   if (embedded) {
     document.body.classList.add("admin-v2-embedded");
+    const production = window.AdminV2Runtime?.isProduction === true;
+    document.body.classList.toggle("admin-v2-production", production);
     const note = document.createElement("div");
     note.className = "admin-v2-safety-note";
-    note.innerHTML = '<span class="safety-note-dot"></span><span><strong>Тестовая копия</strong> · production заблокирован · изменения сохраняются как локальные черновики</span>';
+    note.innerHTML = production
+      ? '<span class="safety-note-dot"></span><span><strong>Production</strong> · изменения обрабатываются штатными правами Supabase</span>'
+      : '<span class="safety-note-dot"></span><span><strong>Тестовая копия</strong> · production заблокирован · изменения сохраняются как локальные черновики</span>';
     document.body.prepend(note);
 
     const announce = (type, extra = {}) => window.parent.postMessage({ type, ...extra }, window.location.origin);
