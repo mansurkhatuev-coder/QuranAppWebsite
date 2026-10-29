@@ -8,6 +8,7 @@ const studioSource = readFileSync(new URL("./browser-export-studio.mjs", import.
 const studioHtml = readFileSync(new URL("./browser-export.html", import.meta.url), "utf8");
 const canvasRendererSource = readFileSync(new URL("./remotion-preview/src/browser-canvas-renderer.mjs", import.meta.url), "utf8");
 const projectModelSource = readFileSync(new URL("./remotion-preview/src/project-model.mjs", import.meta.url), "utf8");
+const studioCss = readFileSync(new URL("./browser-export.css", import.meta.url), "utf8");
 
 function collectPublishedModuleGraph(entryPath, visited = new Set()) {
   const filePath = resolve(entryPath);
@@ -35,7 +36,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261029-moving-video-backgrounds-2"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261029-clean-card-speed-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -49,8 +50,8 @@ test("browser video export lets the user choose and preview transition sounds", 
 });
 
 test("smooth tree camera code uses fresh cache keys in the published module chain", () => {
-  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261029-lineage-detail-medium-1/);
-  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261029-lineage-detail-medium-1/);
+  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261029-clean-card-speed-1/);
+  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261029-clean-card-speed-1/);
   assert.match(canvasRendererSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
   assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
 });
@@ -63,8 +64,20 @@ test("video export exposes the three selectable video background presets and per
   assert.match(studioSource, /openVideoBackgroundReader/);
   assert.match(studioSource, /startRealtimeVideoBackground\(backgroundVideoElement\)/);
   assert.match(studioSource, /realtimeVideoBackgroundActive \? backgroundVideoElement : null/);
-  assert.match(studioSource, /await backgroundReader\.getSampleAt\(outputFrame \/ plan\.fps\)/);
+  assert.match(studioSource, /await backgroundReader\.getSampleAt\(outputFrame \/ plan\.fps \* plan\.speed\)/);
   assert.match(studioSource, /выбранным постером/);
+});
+
+test("video export has a persistent 0.25x to 8x speed control that updates preview and final render", () => {
+  assert.match(studioSource, /id="browser-export-speed"/);
+  assert.match(studioSource, /VIDEO_SPEED_OPTIONS/);
+  assert.match(studioSource, /update\(\{ speed: Number\(event\.currentTarget\.value\) \}\)/);
+  assert.match(studioSource, /settings\.speed/);
+  assert.match(studioSource, /outputFrame \/ plan\.fps \* plan\.speed/);
+  assert.match(studioSource, /playbackRate = settings\.speed/);
+  assert.match(studioSource, /timeLabel\(previewPlan\.durationSeconds\)/);
+  assert.match(studioSource, /localStorage\.setItem\(EXPORT_SETTINGS_STORAGE_KEY, JSON\.stringify\(settings\)\)/);
+  assert.match(studioCss, /\.browser-export-speed input/);
 });
 
 test("browser video export auto-uploads finished renders to the private account library", () => {

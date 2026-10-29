@@ -10,18 +10,20 @@ import {
   getFullTreeEdgeRevealProgress,
   getTreeViewportOpacity,
   getVideoCardDetailProgress,
+  getVideoCardContentProgress,
   splitPersonName,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261029-lineage-detail-medium-1";
+} from "./project-model.mjs?v=20261029-clean-card-speed-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
+import { normalizeVideoSpeed } from "./export-studio-model.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
-export function buildBrowserRenderPlan(story, aspectRatio, maxDimension = 720, fps = 24) {
+export function buildBrowserRenderPlan(story, aspectRatio, maxDimension = 720, fps = 24, requestedSpeed = 1) {
   const format = VIDEO_FORMATS[aspectRatio] ?? VIDEO_FORMATS["16:9"];
   const scale = Math.min(1, Math.max(360, Number(maxDimension) || 720) / Math.min(format.width, format.height));
   const width = Math.max(2, Math.floor(format.width * scale / 2) * 2);
@@ -29,16 +31,17 @@ export function buildBrowserRenderPlan(story, aspectRatio, maxDimension = 720, f
   const sourceFps = Number(story?.timeline?.fps) || REMOTION_COMPOSITION.fps;
   const outputFps = Math.min(30, Math.max(1, Math.floor(Number(fps) || 24)));
   const sourceFrames = Math.max(1, Math.floor(Number(story?.timeline?.totalFrames) || 1));
-  const durationSeconds = sourceFrames / sourceFps;
+  const speed = normalizeVideoSpeed(requestedSpeed);
+  const durationSeconds = sourceFrames / sourceFps / speed;
   return {
-    width, height, fps: outputFps, sourceFps, sourceFrames, durationSeconds,
+    width, height, fps: outputFps, sourceFps, sourceFrames, durationSeconds, speed,
     totalFrames: Math.max(1, Math.round(durationSeconds * outputFps))
   };
 }
 
 export function getSourceFrameForBrowserExport(outputFrame, plan) {
   if (Number(outputFrame) >= plan.totalFrames - 1) return plan.sourceFrames - 1;
-  return Math.min(plan.sourceFrames - 1, Math.floor(Math.max(0, Number(outputFrame) || 0) * plan.sourceFps / plan.fps));
+  return Math.min(plan.sourceFrames - 1, Math.floor(Math.max(0, Number(outputFrame) || 0) * plan.sourceFps * plan.speed / plan.fps));
 }
 
 function pathRoundRect(context, x, y, width, height, radius) {
@@ -258,7 +261,7 @@ function drawBackground(context, image, width, height, scale) {
   context.fillStyle = vignette; context.fillRect(0, 0, width, height); context.restore();
 }
 
-function drawCard(context, person, node, alpha, isTarget, includeDates) {
+function drawCard(context, person, node, alpha, isTarget, includeDates, contentAlpha = 1) {
   const x = node.x - node.width / 2; const y = node.y - node.height / 2; const avatarX = x + 30;
   const names = splitPersonName(person.name); const fontSize = person.name.length > 18 ? 13 : 17;
   context.save(); context.globalAlpha = clamp(alpha, 0, 1);
@@ -273,14 +276,18 @@ function drawCard(context, person, node, alpha, isTarget, includeDates) {
   context.fillStyle = card; context.strokeStyle = isTarget ? "#ead29a" : "rgba(223,190,124,0.64)"; context.lineWidth = isTarget ? 1.8 : 1.4;
   pathRoundRect(context, x, y, node.width, node.height, 12); context.fill(); context.stroke();
   if (!isTarget) { context.strokeStyle = "rgba(255,238,197,0.17)"; context.lineWidth = 1; pathRoundRect(context, x + 5, y + 5, node.width - 10, node.height - 10, 8); context.stroke(); }
-  context.beginPath(); context.arc(avatarX, node.y, 22, 0, Math.PI * 2); context.fillStyle = "rgba(215,185,119,0.09)"; context.strokeStyle = "rgba(228,197,129,0.55)"; context.lineWidth = 1.3; context.fill(); context.stroke();
-  context.beginPath(); context.arc(avatarX, node.y - 7, 7, 0, Math.PI * 2); context.moveTo(avatarX - 16, node.y + 16);
-  context.bezierCurveTo(avatarX - 15, node.y + 3, avatarX - 7, node.y + 2, avatarX, node.y + 2); context.bezierCurveTo(avatarX + 9, node.y + 2, avatarX + 15, node.y + 7, avatarX + 16, node.y + 16); context.closePath(); context.fillStyle = "#d7c9ac"; context.fill();
-  context.textAlign = "left"; context.textBaseline = "alphabetic"; context.fillStyle = "#fff8e8"; context.font = `${isTarget ? 700 : 500} ${fontSize}px Georgia, 'Times New Roman', serif`;
-  const textX = x + 67; const startY = node.y - ((names.length - 1) * 8); names.forEach((line, i) => context.fillText(line, textX, startY + i * 15, node.width - 75));
-  const date = formatPersonDateLabel(person, includeDates);
-  if (date) { context.fillStyle = "#d9c599"; context.font = "11px Arial, sans-serif"; context.fillText(date, textX, node.y + 34, node.width - 75); }
-  context.textAlign = "right"; context.fillStyle = "#bda36e"; context.font = "9px Arial, sans-serif"; context.fillText(String(person.generation).padStart(2, "0"), x + node.width - 12, y + 15);
+  if (contentAlpha > 0) {
+    context.save(); context.globalAlpha = clamp(alpha * contentAlpha, 0, 1);
+    context.beginPath(); context.arc(avatarX, node.y, 22, 0, Math.PI * 2); context.fillStyle = "rgba(215,185,119,0.09)"; context.strokeStyle = "rgba(228,197,129,0.55)"; context.lineWidth = 1.3; context.fill(); context.stroke();
+    context.beginPath(); context.arc(avatarX, node.y - 7, 7, 0, Math.PI * 2); context.moveTo(avatarX - 16, node.y + 16);
+    context.bezierCurveTo(avatarX - 15, node.y + 3, avatarX - 7, node.y + 2, avatarX, node.y + 2); context.bezierCurveTo(avatarX + 9, node.y + 2, avatarX + 15, node.y + 7, avatarX + 16, node.y + 16); context.closePath(); context.fillStyle = "#d7c9ac"; context.fill();
+    context.textAlign = "left"; context.textBaseline = "alphabetic"; context.fillStyle = "#fff8e8"; context.font = `${isTarget ? 700 : 500} ${fontSize}px Georgia, 'Times New Roman', serif`;
+    const textX = x + 67; const startY = node.y - ((names.length - 1) * 8); names.forEach((line, i) => context.fillText(line, textX, startY + i * 15, node.width - 75));
+    const date = formatPersonDateLabel(person, includeDates);
+    if (date) { context.fillStyle = "#d9c599"; context.font = "11px Arial, sans-serif"; context.fillText(date, textX, node.y + 34, node.width - 75); }
+    context.textAlign = "right"; context.fillStyle = "#bda36e"; context.font = "9px Arial, sans-serif"; context.fillText(String(person.generation).padStart(2, "0"), x + node.width - 12, y + 15);
+    context.restore();
+  }
   context.restore();
 }
 
@@ -455,11 +462,17 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
           && (firstRevealShotByPerson.get(person.id) ?? Infinity) <= shotIndex;
         const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale, pathIsRevealed);
         if (detailProgress < 1) drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
-        if (detailProgress > 0) drawCard(context, person, node, opacity * detailProgress, target, story.includeDates);
+        if (detailProgress > 0) {
+          const contentProgress = getVideoCardContentProgress(node.width * framing.scale * scale);
+          drawCard(context, person, node, opacity * detailProgress, target, story.includeDates, contentProgress);
+        }
         continue;
       }
       if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);
-      else drawCard(context, person, node, opacity, target, story.includeDates);
+      else {
+        const contentProgress = getVideoCardContentProgress(node.width * framing.scale * scale);
+        drawCard(context, person, node, opacity, target, story.includeDates, contentProgress);
+      }
     }
     context.restore(); drawCopy(context, story, shot, shotIndex, globalFrame, canvas.width, canvas.height);
   };
