@@ -2,8 +2,8 @@
   "use strict";
 
   const embedded = window.parent !== window;
-  const announce = (type) => {
-    if (embedded) window.parent.postMessage({ type }, window.location.origin);
+  const announce = (type, requestId = "") => {
+    if (embedded) window.parent.postMessage({ type, ...(requestId ? { requestId } : {}) }, window.location.origin);
   };
 
   document.addEventListener("input", (event) => {
@@ -17,9 +17,9 @@
     if (!embedded || event.origin !== window.location.origin || event.data?.type !== "admin-v2:save-draft") return;
     try {
       const saved = await window.CeWorkbench?.save();
-      announce(saved === true ? "admin-v2:saved" : "admin-v2:dirty");
+      announce(saved === true ? "admin-v2:saved" : "admin-v2:dirty", event.data.requestId);
     } catch {
-      announce("admin-v2:dirty");
+      announce("admin-v2:dirty", event.data.requestId);
     }
   });
 })();
