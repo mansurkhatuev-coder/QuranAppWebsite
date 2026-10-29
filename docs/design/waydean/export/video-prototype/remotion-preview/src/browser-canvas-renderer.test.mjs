@@ -299,6 +299,13 @@ test("card text and avatars fade in only when there is enough screen space to re
   assert.equal(getVideoCardContentProgress(128), 1);
 });
 
+test("revealed lineage cards use an earlier content fade than compact side branches", () => {
+  assert.equal(getVideoCardContentProgress(55, true), 0);
+  assert.ok(getVideoCardContentProgress(70, true) > 0 && getVideoCardContentProgress(70, true) < 1);
+  assert.equal(getVideoCardContentProgress(84, true), 1);
+  assert.equal(getVideoCardContentProgress(84), 0);
+});
+
 test("canvas frame renderer paints the supplied local background, tree cards, and text", () => {
   const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
   const context = fakeCanvasContext();
