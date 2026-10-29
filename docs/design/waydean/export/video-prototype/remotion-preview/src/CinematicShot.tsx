@@ -26,9 +26,11 @@ import {
   getChapterCopyStartFrame,
   getChapterCopyTransitionOpacities,
   getSceneEdgeEmphasis,
+  getFullTreeEdgeRevealProgress,
   getScenePersonEmphasis,
   getSceneTransitionProgress,
   getScenePresentation,
+  getVideoCardDetailProgress,
   shouldRenderVideoPersonCard,
   getTreeViewportOpacity,
   sampleRemotionFrame
@@ -47,12 +49,12 @@ const clamp = (value: number, min: number, max: number) =>
 function edgePath(
   parent: TreeNode,
   child: TreeNode,
-  parentIsMarker: boolean,
-  childIsMarker: boolean,
+  parentDetail: number,
+  childDetail: number,
   markerRadius: number
 ) {
-  const startY = parent.y + (parentIsMarker ? markerRadius : parent.height / 2 - 2);
-  const endY = child.y - (childIsMarker ? markerRadius : child.height / 2 - 2);
+  const startY = parent.y + markerRadius + (parent.height / 2 - 2 - markerRadius) * parentDetail;
+  const endY = child.y - (markerRadius + (child.height / 2 - 2 - markerRadius) * childDetail);
   const bend = Math.max(18, (endY - startY) * 0.56);
   return "M " + parent.x + " " + startY
     + " C " + parent.x + " " + (startY + bend)
@@ -281,7 +283,9 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
   const framing = getCinematicFramingForFrame(story, frameWidth, frameHeight, globalFrame);
   if (!framing) return null;
   const overview = camera.zoom < 0.5 || framing.scale < 0.5;
-  const markerRadius = overview ? clamp(5 / framing.scale, 8, 64) : 8;
+  const outputScale = Math.min(frameWidth / framing.viewWidth, frameHeight / framing.viewHeight);
+  const overviewMarkerRadius = clamp(4 / Math.max(0.001, framing.scale * outputScale), 8, 64);
+  const markerRadius = overview ? overviewMarkerRadius : 8;
   const transitionProgress = getSceneTransitionProgress(story, shotIndex, localFrame);
   const chapterProgress = shotIndex === 0
     ? interpolate(
@@ -408,6 +412,7 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
             const progress = isLineage
               ? clamp(sample.lineProgress - pathIndex, 0, 1)
               : 1;
+            const generationProgress = getFullTreeEdgeRevealProgress(story, shotIndex, localFrame, edge.key);
             const branchEmphasis = getSceneEdgeEmphasis(story, shotIndex, localFrame, edge.key);
             const contextLineOpacity = story.scopeType === "all"
               ? 0.22
@@ -418,11 +423,20 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
               (contextLineOpacity + branchEmphasis * (0.9 - contextLineOpacity)) * edgeVisibility;
             const parentIsMarker = overview && !revealedPersonIds.has(parent.id);
             const childIsMarker = overview && !revealedPersonIds.has(child.id);
+            const parentDetail = story.scopeType === "all"
+              ? getVideoCardDetailProgress(parent.width * framing.scale * outputScale)
+              : parentIsMarker ? 0 : 1;
+            const childDetail = story.scopeType === "all"
+              ? getVideoCardDetailProgress(child.width * framing.scale * outputScale)
+              : childIsMarker ? 0 : 1;
+            const visiblePath = story.scopeType === "all" || isLineage;
+            const pathProgress = story.scopeType === "all" ? generationProgress : progress;
+            const pathIsMoving = pathProgress < 1;
 
             return (
               <g key={edge.key}>
                 <path
-                  d={edgePath(parent, child, parentIsMarker, childIsMarker, markerRadius)}
+                  d={edgePath(parent, child, parentDetail, childDetail, story.scopeType === "all" ? overviewMarkerRadius : markerRadius)}
                   fill="none"
                   stroke="#e3c982"
                   strokeWidth={1.8 + branchEmphasis * 2.4}
@@ -431,20 +445,20 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
                   opacity={lineOpacity}
                   filter={branchEmphasis > 0.35 ? "url(#waydean-gold-glow)" : undefined}
                 />
-                {isLineage ? (
+                {visiblePath ? (
                   <path
-                    d={edgePath(parent, child, parentIsMarker, childIsMarker, markerRadius)}
+                    d={edgePath(parent, child, parentDetail, childDetail, story.scopeType === "all" ? overviewMarkerRadius : markerRadius)}
                     pathLength={1}
                     strokeDasharray="1"
-                    strokeDashoffset={1 - progress}
+                    strokeDashoffset={1 - pathProgress}
                     fill="none"
-                  stroke="url(#waydean-gold)"
-                  strokeWidth={pathLead ? 4.2 : 1.8}
-                  strokeLinecap="round"
-                  vectorEffect="non-scaling-stroke"
-                  opacity={(pathLead ? 0.9 : 0.12) * edgeVisibility}
-                  filter={pathLead && edgeVisibility > 0 ? "url(#waydean-gold-glow)" : undefined}
-                />
+                    stroke="url(#waydean-gold)"
+                    strokeWidth={story.scopeType === "all" ? (pathIsMoving ? 3.2 : 2.4) : (pathLead ? 4.2 : 1.8)}
+                    strokeLinecap="round"
+                    vectorEffect="non-scaling-stroke"
+                    opacity={(story.scopeType === "all" ? (pathIsMoving ? 0.84 : 0.68) : (pathIsMoving ? 0.9 : 0.12)) * edgeVisibility}
+                    filter={pathIsMoving && edgeVisibility > 0 ? "url(#waydean-gold-glow)" : undefined}
+                  />
                 ) : null}
               </g>
             );
@@ -458,29 +472,37 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
               person.id === story.selectedPersonId
               && (shot.type === "focus" || shot.type === "finale");
             const edgeOpacity = getTreeViewportOpacity(story.scopeType, 1);
+            const shownAsMarker = overview && !revealedPersonIds.has(person.id);
+            const detailProgress = story.scopeType === "all"
+              ? getVideoCardDetailProgress(node.width * framing.scale * outputScale)
+              : shownAsMarker ? 0 : 1;
+            const contextOpacity = story.scopeType === "all" ? 1 : presentation.contextCardOpacity;
 
-            return overview && !revealedPersonIds.has(person.id) ? (
-              <TreeMarker
-                key={person.id}
-                person={person}
-                node={node}
-                emphasis={emphasis}
-                isTarget={isTarget}
-                contextOpacity={story.scopeType === "all" ? 1 : presentation.contextCardOpacity}
-                markerRadius={markerRadius}
-                edgeOpacity={edgeOpacity}
-              />
-            ) : (
-              <PersonCard
-                key={person.id}
-                person={person}
-                node={node}
-                emphasis={emphasis}
-                isTarget={isTarget}
-                includeDates={story.includeDates}
-                contextCardOpacity={story.scopeType === "all" ? 1 : presentation.contextCardOpacity}
-                edgeOpacity={edgeOpacity}
-              />
+            return (
+              <g key={person.id}>
+                {detailProgress < 1 ? (
+                  <TreeMarker
+                    person={person}
+                    node={node}
+                    emphasis={emphasis}
+                    isTarget={isTarget}
+                    contextOpacity={contextOpacity}
+                    markerRadius={story.scopeType === "all" ? overviewMarkerRadius : markerRadius}
+                    edgeOpacity={edgeOpacity * (1 - detailProgress)}
+                  />
+                ) : null}
+                {detailProgress > 0 ? (
+                  <PersonCard
+                    person={person}
+                    node={node}
+                    emphasis={emphasis}
+                    isTarget={isTarget}
+                    includeDates={story.includeDates}
+                    contextCardOpacity={contextOpacity}
+                    edgeOpacity={edgeOpacity * detailProgress}
+                  />
+                ) : null}
+              </g>
             );
           })}
         </g>

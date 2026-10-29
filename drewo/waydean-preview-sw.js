@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v37';
+const CACHE_NAME = 'waydean-preview-shell-v38';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -12,7 +12,7 @@ const PRECACHE = [
   './waydean-preview-loading.css?v=1',
   './waydean-preview.css?v=account-history-1',
   './waydean-preview.css',
-  './waydean-preview-camera.css?v=ios-pinch-stable-1',
+  './waydean-preview-camera.css?v=camera-motion-20261029-1',
   './waydean-preview-master.css?v=person-card-width-1',
   './waydean-preview-lod.css?v=overview-lines-20261028-1',
   './waydean-preview-edit.css',
@@ -28,9 +28,9 @@ const PRECACHE = [
   './waydean-preview-video.css?v=video-local-1',
   './waydean-preview-self.css?v=self-person-20261028-1',
   './waydean-preview-glass-cards.css?v=thin-glass-1',
-  './waydean-preview-auth.css?v=family-auth-1',
+  './waydean-preview-auth.css?v=family-auth-menu-dialog-20261029-1',
   './waydean-preview-appearance.css?v=weather-parity-20261028-1',
-  './waydean-preview.js?v=family-lock-4',
+  './waydean-preview.js?v=menu-video-lines-20261029-1',
   './waydean-preview-appearance.mjs?v=weather-parity-20261028-1',
   './waydean-preview-family-auth.mjs?v=family-auth-1',
   './waydean-preview-family-api.mjs?v=family-lock-2',
@@ -40,7 +40,7 @@ const PRECACHE = [
   './waydean-admin-identity.mjs?v=1',
   './waydean-preview-whoami.mjs?v=identity-storage-20261028-1',
   './waydean-preview-account-history.mjs?v=1',
-  './waydean-preview-pwa.mjs?v=family-push-20261028-3-cache',
+  './waydean-preview-pwa.mjs?v=family-push-20261029-cache-1',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
   './waydean-preview-model.mjs?v=person-card-width-2',
   './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1',
@@ -48,7 +48,7 @@ const PRECACHE = [
   './waydean-preview-lines.mjs',
   './waydean-preview-fixture.mjs',
   './waydean-preview-selection.mjs',
-  './waydean-preview-lod.mjs?v=lod-12-overview-lines',
+  './waydean-preview-lod.mjs?v=lod-13-camera-style-buckets',
   './waydean-preview-dates.mjs?v=calendar-parity-1',
   './waydean-preview-route.mjs?v=family-route-5',
   './waydean-preview-edit.mjs?v=child-id-1',

@@ -5,7 +5,24 @@ import { compactRouteClass, getOverviewCardWorldSize, nextLodLevel } from './way
 import * as lod from './waydean-preview-lod.mjs';
 
 const lodCss = readFileSync(new URL('./waydean-preview-lod.css', import.meta.url), 'utf8');
+const cameraCss = readFileSync(new URL('./waydean-preview-camera.css', import.meta.url), 'utf8');
 const previewSource = readFileSync(new URL('./waydean-preview.js', import.meta.url), 'utf8');
+
+test('pinch camera rounds miniature style values and drops paint effects only during motion', () => {
+  for (const zoom of [0.01, 0.02, 0.08, 0.4, 1, 2.8]) {
+    const styleZoom = lod.getCameraLodStyleZoom(zoom);
+    assert.ok(Math.abs(styleZoom / zoom - 1) < 0.026,
+      `miniature styles should stay within 2.6% of the camera at ${zoom}x`);
+  }
+  assert.equal(lod.getCameraLodStyleZoom(0.4), lod.getCameraLodStyleZoom(0.402),
+    'nearby pinch frames should not rewrite style variables');
+  assert.ok(previewSource.includes('const lodStyleZoom = getCameraLodStyleZoom(zoom)'));
+  assert.match(cameraCss, /\.graph\.camera-moving \.person-node/);
+  assert.match(cameraCss, /backdrop-filter:\s*none\s*!important/);
+  assert.match(cameraCss, /box-shadow:\s*none\s*!important/);
+  assert.doesNotMatch(cameraCss, /camera-moving[^}]*display:\s*none/s,
+    'motion optimization must not hide names, icons, or cards');
+});
 
 test('overview markers keep a readable screen size at every supported zoom', () => {
   for (const [zoom, expectedScreenSize] of [[0.01, 3], [0.02, 3], [0.08, 8], [0.19, 8], [0.34, 8]]) {

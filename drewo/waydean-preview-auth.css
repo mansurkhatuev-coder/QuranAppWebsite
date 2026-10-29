@@ -121,3 +121,52 @@
 .account-admin-message { min-height: 0; margin: 0; color: #c9b681; font: 10px/1.4 var(--sans, Arial), sans-serif; }
 .account-admin-message:empty { display: none; }
 .account-admin-warning { margin: 0; }
+
+.more-popover .more-group {
+  display: grid;
+  gap: 6px;
+  padding: 9px 0 10px;
+  border-bottom: 1px solid rgba(211, 192, 149, .14);
+}
+
+.more-popover .more-group:last-of-type { border-bottom: 0; }
+.more-popover .more-group[hidden] { display: none !important; }
+.more-popover .more-group > h3 {
+  margin: 0 0 2px;
+  color: #c7a557;
+  font: 600 9px/1.3 var(--ui, Arial, sans-serif);
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.more-popover .more-group > .more-item { border: 1px solid rgba(211, 192, 149, .12); border-radius: 8px; }
+.more-popover .more-group > .more-item:hover { border-color: rgba(223, 190, 112, .38); }
+.more-popover .more-group .appearance-controls { margin: 0; }
+.account-admin-tools #accountAdminPasswordOpen { margin-top: 2px; }
+
+.account-admin-password-dialog {
+  width: min(430px, calc(100vw - 32px));
+  max-height: min(90dvh, 620px);
+  padding: 0;
+  overflow: auto;
+  border: 1px solid rgba(212, 177, 95, .52);
+  border-radius: 16px;
+  background: linear-gradient(145deg, #121b1b, #071013 74%);
+  color: #f0e9d8;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, .68);
+}
+.account-admin-password-dialog::backdrop { background: rgba(0, 0, 0, .68); backdrop-filter: blur(3px); }
+.account-admin-password-dialog form { display: grid; gap: 9px; padding: 22px; }
+.account-admin-dialog-heading { display: grid; gap: 5px; margin-bottom: 2px; }
+.account-admin-dialog-heading small { color: #c7a557; font: 600 9px var(--ui, Arial, sans-serif); letter-spacing: .14em; }
+.account-admin-dialog-heading strong { color: #f2dfac; font: 600 20px/1.25 var(--sans, Georgia, serif); }
+.account-admin-password-dialog form > p { margin: 0; color: #aaa491; font: 12px/1.5 var(--ui, Arial, sans-serif); }
+.account-admin-password-dialog label { color: #bdb49e; font: 11px var(--ui, Arial, sans-serif); }
+.account-admin-password-dialog input { width: 100%; min-height: 42px; padding: 9px 11px; border: 1px solid rgba(211, 192, 149, .28); border-radius: 8px; background: #071013; color: #f4ead1; }
+.account-admin-password-dialog input:focus-visible { outline: 2px solid rgba(223, 190, 112, .58); outline-offset: 1px; }
+.account-admin-dialog-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 3px; }
+.account-admin-dialog-actions button { min-height: 40px; }
+
+@media (max-width: 700px) {
+  .account-admin-password-dialog { width: min(430px, calc(100vw - 24px)); }
+  .account-admin-password-dialog form { padding: 18px; }
+}

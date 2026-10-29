@@ -10,6 +10,14 @@ export function getOverviewMarkerWorldSize(zoom) {
   return desiredSize / scale;
 }
 
+/** Quantize only miniature-card styling so pinch transforms do not recalculate six CSS vars every frame. */
+export function getCameraLodStyleZoom(zoom) {
+  const scale = Number(zoom);
+  if (!Number.isFinite(scale) || scale <= 0) return 1;
+  const step = Math.log(1.05);
+  return Math.exp(Math.round(Math.log(scale) / step) * step);
+}
+
 export function getOverviewCardWorldSize(zoom) {
   const scale = Number(zoom);
   if (!Number.isFinite(scale) || scale <= 0) return { width: 8, height: 5.6 };

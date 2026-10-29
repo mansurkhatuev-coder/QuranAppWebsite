@@ -7,15 +7,17 @@ import {
   getChapterCopyStartFrame,
   getChapterCopyTransitionOpacities,
   getGenerationDateExcerpt,
+  getFullTreeEdgeRevealProgress,
   getTreeViewportOpacity,
+  getVideoCardDetailProgress,
   splitPersonName,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261028-slow-tree-exit-1";
+} from "./project-model.mjs?v=20261029-generation-line-reveal-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
-import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261028-slow-tree-exit-1";
+import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-generation-line-reveal-1";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -52,18 +54,22 @@ function pathRoundRect(context, x, y, width, height, radius) {
   context.lineTo(x, y + r); context.quadraticCurveTo(x, y, x + r, y); context.closePath();
 }
 
-function edgeCurve(parent, child, parentIsMarker, childIsMarker, markerRadius) {
+function endpointDetail(value) {
+  return typeof value === "boolean" ? (value ? 0 : 1) : clamp(value, 0, 1);
+}
+
+function edgeCurve(parent, child, parentDetail, childDetail, markerRadius) {
   const markerHalfHeight = getOverviewCardHalfHeight(markerRadius);
-  const startY = parent.y + (parentIsMarker ? markerHalfHeight : parent.height / 2 - 2);
-  const endY = child.y - (childIsMarker ? markerHalfHeight : child.height / 2 - 2);
+  const startY = parent.y + markerHalfHeight + (parent.height / 2 - 2 - markerHalfHeight) * endpointDetail(parentDetail);
+  const endY = child.y - (markerHalfHeight + (child.height / 2 - 2 - markerHalfHeight) * endpointDetail(childDetail));
   const bend = Math.max(18, (endY - startY) * 0.56);
   return [parent.x, startY, parent.x, startY + bend, child.x, endY - bend, child.x, endY];
 }
 
-function edgePolyline(parent, child, parentIsMarker, childIsMarker, markerRadius) {
+function edgePolyline(parent, child, parentDetail, childDetail, markerRadius) {
   const markerHalfHeight = getOverviewCardHalfHeight(markerRadius);
-  const startY = parent.y + (parentIsMarker ? markerHalfHeight : parent.height / 2);
-  const endY = child.y - (childIsMarker ? markerHalfHeight : child.height / 2);
+  const startY = parent.y + markerHalfHeight + (parent.height / 2 - markerHalfHeight) * endpointDetail(parentDetail);
+  const endY = child.y - (markerHalfHeight + (child.height / 2 - markerHalfHeight) * endpointDetail(childDetail));
   const junctionY = startY + (endY - startY) * 0.5;
   return [parent.x, startY, parent.x, junctionY, child.x, junctionY, child.x, endY];
 }
@@ -162,7 +168,9 @@ function drawFamilyTreeConnectors(context, edges) {
         junctionY: edge.points[3],
         leftX: edge.parent.x,
         rightX: edge.parent.x,
-        alpha: edge.alpha,
+        baseAlpha: edge.baseAlpha,
+        revealAlpha: edge.revealAlpha,
+        revealProgress: edge.revealProgress,
         lineWidth: edge.lineWidth,
         edges: []
       };
@@ -170,7 +178,9 @@ function drawFamilyTreeConnectors(context, edges) {
     }
     group.leftX = Math.min(group.leftX, edge.child.x);
     group.rightX = Math.max(group.rightX, edge.child.x);
-    group.alpha = Math.max(group.alpha, edge.alpha);
+    group.baseAlpha = Math.max(group.baseAlpha, edge.baseAlpha);
+    group.revealAlpha = Math.max(group.revealAlpha, edge.revealAlpha);
+    group.revealProgress = Math.max(group.revealProgress, edge.revealProgress);
     group.lineWidth = Math.max(group.lineWidth, edge.lineWidth);
     group.edges.push(edge);
   }
@@ -180,8 +190,8 @@ function drawFamilyTreeConnectors(context, edges) {
   context.lineJoin = "round";
   context.strokeStyle = "#e3c982";
   for (const group of groups.values()) {
-    const { parent, startY, junctionY, leftX, rightX, alpha, lineWidth, edges: connections } = group;
-    context.globalAlpha = alpha;
+    const { parent, startY, junctionY, leftX, rightX, baseAlpha, revealAlpha, revealProgress, lineWidth, edges: connections } = group;
+    context.globalAlpha = baseAlpha;
     context.lineWidth = lineWidth;
     context.beginPath();
     context.moveTo(parent.x, startY);
@@ -191,12 +201,33 @@ function drawFamilyTreeConnectors(context, edges) {
     context.stroke();
 
     for (const edge of connections) {
-      context.globalAlpha = edge.alpha;
-      context.lineWidth = edge.lineWidth;
       context.beginPath();
       context.moveTo(edge.child.x, junctionY);
       context.lineTo(edge.child.x, edge.points[7]);
       context.stroke();
+    }
+
+    if (revealProgress <= 0) continue;
+    context.globalAlpha = revealAlpha;
+    context.lineWidth = lineWidth * 1.15;
+    const trunkProgress = clamp(revealProgress / 0.24, 0, 1);
+    if (trunkProgress > 0) {
+      drawPartialPolyline(context, [parent.x, startY, parent.x, junctionY], trunkProgress);
+      context.stroke();
+    }
+    const spreadProgress = clamp((revealProgress - 0.16) / 0.5, 0, 1);
+    if (spreadProgress > 0) {
+      drawPartialPolyline(context, [parent.x, junctionY, leftX, junctionY], spreadProgress);
+      context.stroke();
+      drawPartialPolyline(context, [parent.x, junctionY, rightX, junctionY], spreadProgress);
+      context.stroke();
+    }
+    const dropProgress = clamp((revealProgress - 0.6) / 0.4, 0, 1);
+    if (dropProgress > 0) {
+      for (const edge of connections) {
+        drawPartialPolyline(context, [edge.child.x, junctionY, edge.child.x, edge.points[7]], dropProgress);
+        context.stroke();
+      }
     }
   }
   context.restore();
@@ -329,7 +360,8 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     drawBackground(context, backgroundImage, canvas.width, canvas.height, getBackgroundScale(sample.frame, story.timeline.totalFrames));
     const overview = sample.camera.zoom < 0.5 || framing.scale < 0.5;
     const presentation = getScenePresentation(shot.type); const scale = Math.min(canvas.width / framing.viewWidth, canvas.height / framing.viewHeight);
-    const markerRadius = overview ? getOverviewMarkerRadius(framing.scale, scale) : 8;
+    const overviewMarkerRadius = getOverviewMarkerRadius(framing.scale, scale);
+    const markerRadius = overview ? overviewMarkerRadius : 8;
     const offsetX = (canvas.width - framing.viewWidth * scale) / 2; const offsetY = (canvas.height - framing.viewHeight * scale) / 2;
     context.save(); context.translate(offsetX + framing.translateX * scale, offsetY + framing.translateY * scale); context.scale(framing.scale * scale, framing.scale * scale);
     const orthogonalTree = story.scopeType === "all";
@@ -342,6 +374,15 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const emphasis = getSceneEdgeEmphasis(story, shotIndex, local, edge.key);
       const parentIsMarker = overview && (firstRevealShotByPerson.get(parent.id) ?? Infinity) > shotIndex;
       const childIsMarker = overview && (firstRevealShotByPerson.get(child.id) ?? Infinity) > shotIndex;
+      const parentDetail = story.scopeType === "all"
+        ? getVideoCardDetailProgress(parent.width * framing.scale * scale)
+        : parentIsMarker ? 0 : 1;
+      const childDetail = story.scopeType === "all"
+        ? getVideoCardDetailProgress(child.width * framing.scale * scale)
+        : childIsMarker ? 0 : 1;
+      const generationProgress = story.scopeType === "all"
+        ? getFullTreeEdgeRevealProgress(story, shotIndex, local, edge.key)
+        : 0;
       const base = story.scopeType === "all" ? 0.22 : shot.type === "opening" || shot.type === "finale" ? 0.24 : 0.08;
       const visible = getTreeViewportOpacity(story.scopeType, 1);
       return [{
@@ -350,13 +391,17 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         child,
         isPath,
         progress,
+        generationProgress,
         emphasis,
         visible,
         alpha: (base + emphasis * (0.9 - base)) * visible,
+        baseAlpha: base * visible,
+        revealAlpha: 0.68 * visible,
+        revealProgress: generationProgress,
         lineWidth: (1.8 + emphasis * 2.4) / (framing.scale * scale),
         points: orthogonalTree
-          ? edgePolyline(parent, child, parentIsMarker, childIsMarker, markerRadius)
-          : edgeCurve(parent, child, parentIsMarker, childIsMarker, markerRadius)
+          ? edgePolyline(parent, child, parentDetail, childDetail, overviewMarkerRadius)
+          : edgeCurve(parent, child, parentDetail, childDetail, markerRadius)
       }];
     });
 
@@ -376,7 +421,7 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
 
     for (const edge of edgeStates) {
       const { parent, child, isPath, progress, visible, points } = edge;
-      if (isPath && progress > 0) {
+      if (story.scopeType !== "all" && isPath && progress > 0) {
         const endpoint = orthogonalTree
           ? drawPartialPolyline(context, points, progress)
           : drawPartialCurve(context, points, progress);
@@ -396,6 +441,12 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         ? 1
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
       const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
+      if (story.scopeType === "all") {
+        const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale);
+        drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
+        drawCard(context, person, node, opacity * detailProgress, target, story.includeDates);
+        continue;
+      }
       if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);
       else drawCard(context, person, node, opacity, target, story.includeDates);
     }
