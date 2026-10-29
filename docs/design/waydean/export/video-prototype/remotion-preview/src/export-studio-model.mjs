@@ -6,11 +6,13 @@ import {
   REMOTION_COMPOSITION,
   VIDEO_FORMATS
 } from "./composition-config.mjs";
+import { DEFAULT_VIDEO_BACKGROUND_ID, isVideoBackgroundId } from "./video-backgrounds.mjs";
 
 export const EXPORT_SETTINGS_STORAGE_KEY = "waydean.video-export.settings.v1";
 
 export const DEFAULT_EXPORT_SETTINGS = Object.freeze({
-  ...DEFAULT_FAMILY_HISTORY_PROPS
+  ...DEFAULT_FAMILY_HISTORY_PROPS,
+  backgroundId: DEFAULT_VIDEO_BACKGROUND_ID
 });
 
 const SCOPE_TYPES = new Set(["all", "path", "branch"]);
@@ -41,7 +43,10 @@ export function normalizeExportSettings(input = {}, people = []) {
       : DEFAULT_VIDEO_ASPECT_RATIO,
     includeDates: input.includeDates === undefined
       ? DEFAULT_FAMILY_HISTORY_PROPS.includeDates
-      : input.includeDates === true
+      : input.includeDates === true,
+    backgroundId: isVideoBackgroundId(input.backgroundId)
+      ? input.backgroundId
+      : DEFAULT_VIDEO_BACKGROUND_ID
   };
 }
 

@@ -234,11 +234,19 @@ function drawFamilyTreeConnectors(context, edges) {
 }
 
 function drawBackground(context, image, width, height, scale) {
-  if (!image?.width || !image?.height) { context.fillStyle = "#070b0c"; context.fillRect(0, 0, width, height); return; }
-  const cover = Math.max(width / image.width, height / image.height) * scale;
-  const imageWidth = image.width * cover; const imageHeight = image.height * cover;
+  const sourceWidth = Number(image?.displayWidth || image?.videoWidth || image?.naturalWidth || image?.width);
+  const sourceHeight = Number(image?.displayHeight || image?.videoHeight || image?.naturalHeight || image?.height);
+  if (!sourceWidth || !sourceHeight) { context.fillStyle = "#070b0c"; context.fillRect(0, 0, width, height); return; }
+  const cover = Math.max(width / sourceWidth, height / sourceHeight) * scale;
+  const imageWidth = sourceWidth * cover; const imageHeight = sourceHeight * cover;
   context.save(); context.filter = "brightness(0.66) saturate(0.78)";
-  context.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight); context.filter = "none";
+  if (typeof image.draw === "function") {
+    const cropWidth = width / cover; const cropHeight = height / cover;
+    image.draw(context, (sourceWidth - cropWidth) / 2, (sourceHeight - cropHeight) / 2, cropWidth, cropHeight, 0, 0, width, height);
+  } else {
+    context.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight);
+  }
+  context.filter = "none";
   let gradient = context.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, "rgba(3,7,8,0.58)"); gradient.addColorStop(0.37, "rgba(4,8,8,0.13)"); gradient.addColorStop(1, "rgba(3,7,7,0.58)");
   context.fillStyle = gradient; context.fillRect(0, 0, width, height);
@@ -353,12 +361,12 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     }
   });
 
-  return frame => {
+  return (frame, videoBackgroundFrame = null) => {
     const globalFrame = clamp(Math.floor(Number(frame) || 0), 0, story.timeline.totalFrames - 1);
     const sample = sampleRemotionFrame(story, globalFrame); if (!sample) return;
     const shotIndex = sample.shotIndex; const shot = story.timeline.shots[shotIndex]; const local = Math.max(0, globalFrame - shot.startFrame);
     const framing = getCinematicFramingForFrame(story, canvas.width, canvas.height, globalFrame); if (!framing) return;
-    drawBackground(context, backgroundImage, canvas.width, canvas.height, getBackgroundScale(sample.frame, story.timeline.totalFrames));
+    drawBackground(context, videoBackgroundFrame ?? backgroundImage, canvas.width, canvas.height, getBackgroundScale(sample.frame, story.timeline.totalFrames));
     const overview = sample.camera.zoom < 0.5 || framing.scale < 0.5;
     const presentation = getScenePresentation(shot.type); const scale = Math.min(canvas.width / framing.viewWidth, canvas.height / framing.viewHeight);
     const overviewMarkerRadius = getOverviewMarkerRadius(framing.scale, scale);

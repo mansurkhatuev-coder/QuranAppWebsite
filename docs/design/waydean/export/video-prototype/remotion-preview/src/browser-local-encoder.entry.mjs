@@ -1,12 +1,17 @@
 import {
   AudioBufferSource,
+  ALL_FORMATS,
   BufferTarget,
   CanvasSource,
+  Input,
   Mp4OutputFormat,
   Output,
+  UrlSource,
+  VideoSampleSink,
   canEncodeAudio,
   getEncodableVideoCodecs
 } from "mediabunny";
+import { createLoopingVideoSampleReader } from "./video-backgrounds.mjs";
 let aacEncoderReady = false;
 
 async function ensureAacEncoder() {
@@ -28,6 +33,53 @@ export async function canEncodeTimestampedMp4({ width, height, bitrate, includeA
     return true;
   } catch {
     return false;
+  }
+}
+
+export async function openVideoBackgroundReader({ url, signal } = {}) {
+  if (typeof globalThis.VideoDecoder !== "function") {
+    throw new Error("Этот браузер не поддерживает покадровое декодирование видеофона.");
+  }
+  if (!url) throw new TypeError("Для декодера видеофона нужен адрес ролика.");
+
+  const input = new Input({ source: new UrlSource(url), formats: ALL_FORMATS });
+  const abortInput = () => { void input.dispose(); };
+  signal?.addEventListener("abort", abortInput, { once: true });
+
+  try {
+    if (signal?.aborted) throw new DOMException("Экспорт видео отменён", "AbortError");
+    const track = await input.getPrimaryVideoTrack();
+    if (!track || !(await track.canDecode())) {
+      throw new Error("Браузер не может декодировать выбранный видеофон.");
+    }
+
+    const durationSeconds = await input.computeDuration();
+    if (!Number.isFinite(durationSeconds) || durationSeconds <= 0) {
+      throw new Error("У выбранного видеофона не удалось определить длительность.");
+    }
+
+    const sink = new VideoSampleSink(track);
+    const samples = createLoopingVideoSampleReader({
+      durationSeconds,
+      createSamples: () => sink.samples(0, durationSeconds)
+    });
+    let closed = false;
+
+    return {
+      durationSeconds,
+      getSampleAt: samples.getSampleAt,
+      async close() {
+        if (closed) return;
+        closed = true;
+        signal?.removeEventListener("abort", abortInput);
+        await samples.close();
+        await input.dispose();
+      }
+    };
+  } catch (error) {
+    signal?.removeEventListener("abort", abortInput);
+    await input.dispose();
+    throw error;
   }
 }
 
