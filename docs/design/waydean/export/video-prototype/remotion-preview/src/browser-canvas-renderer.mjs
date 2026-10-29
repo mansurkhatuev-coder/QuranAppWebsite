@@ -16,7 +16,7 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261029-clean-card-speed-1";
+} from "./project-model.mjs?v=20261029-lineage-content-medium-2";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { normalizeVideoSpeed } from "./export-studio-model.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";
@@ -463,7 +463,7 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale, pathIsRevealed);
         if (detailProgress < 1) drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
         if (detailProgress > 0) {
-          const contentProgress = getVideoCardContentProgress(node.width * framing.scale * scale);
+          const contentProgress = getVideoCardContentProgress(node.width * framing.scale * scale, pathIsRevealed);
           drawCard(context, person, node, opacity * detailProgress, target, story.includeDates, contentProgress);
         }
         continue;

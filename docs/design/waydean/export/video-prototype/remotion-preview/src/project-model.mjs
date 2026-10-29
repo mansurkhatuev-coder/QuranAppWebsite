@@ -258,10 +258,12 @@ export function getVideoCardDetailProgress(renderedWidthPx, keepLineageDetailed 
   return progress * progress * (3 - 2 * progress);
 }
 
-export function getVideoCardContentProgress(renderedWidthPx) {
+export function getVideoCardContentProgress(renderedWidthPx, keepLineageDetailed = false) {
   const width = Number(renderedWidthPx);
   if (!Number.isFinite(width)) return 0;
-  const progress = clamp((width - 88) / (128 - 88), 0, 1);
+  const fadeStart = keepLineageDetailed ? 56 : 88;
+  const fadeEnd = keepLineageDetailed ? 84 : 128;
+  const progress = clamp((width - fadeStart) / (fadeEnd - fadeStart), 0, 1);
   return progress * progress * (3 - 2 * progress);
 }
 

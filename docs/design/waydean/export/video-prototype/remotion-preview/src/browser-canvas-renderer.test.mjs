@@ -40,7 +40,7 @@ function fakeCanvasContext() {
     arc: (...args) => calls.push(["arc", ...args]),
     fillRect: (...args) => calls.push(["fill-rect", ...args]),
     drawImage: (...args) => calls.push(["image", ...args]),
-    fillText: (...args) => calls.push(["text", ...args]),
+    fillText: (...args) => calls.push(["text", ...args, context.globalAlpha]),
     save: () => calls.push(["save"]),
     restore: () => calls.push(["restore"]),
     translate: (...args) => calls.push(["translate", ...args]),
@@ -211,7 +211,7 @@ test("full-tree video crossfades overview markers into detailed cards", () => {
   assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"));
 });
 
-test("full-tree video fully opens revealed path cards at medium zoom and keeps side branches compact", () => {
+test("full-tree video keeps revealed path content visible at medium zoom and side branches compact", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -231,7 +231,11 @@ test("full-tree video fully opens revealed path cards at medium zoom and keeps s
       const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
       const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
       const branchProgress = getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale);
-      return branchProgress > 0.2 && branchProgress < 0.8;
+      const pathContentProgress = getVideoCardContentProgress(pathNode.width * framing.scale * outputScale);
+      const pathDetailProgress = getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true);
+      return branchProgress > 0.2 && branchProgress < 0.8
+        && pathDetailProgress === 1
+        && pathContentProgress < 0.2;
     });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
@@ -251,7 +255,55 @@ test("full-tree video fully opens revealed path cards at medium zoom and keeps s
 
   assert.equal(markerAt(pathNode), false, "a revealed selected-path card should have no remaining overview marker");
   assert.equal(markerAt(branchNode), true, "a side branch should retain the gradual compact transition");
-  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 9"));
+  const pathName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 9");
+  assert.ok(pathName, "a revealed path card should render its name");
+  assert.ok(pathName.at(-1) > 0.99, "a revealed path card should keep its name fully visible at medium zoom");
+});
+
+test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
+  const branchPeople = [
+    { id: "root", name: "Родоначальник", generation: 1, parent: null },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
+  const node = story.timeline.layout.nodes.find(item => item.id === "child-1");
+  const frame = Array.from({ length: story.timeline.totalFrames }, (_, candidate) => candidate)
+    .find(candidate => {
+      const shot = story.timeline.shots.find(item => candidate >= item.startFrame && candidate < item.startFrame + item.durationFrames);
+      if (!shot?.personIds?.includes("child-1")) return false;
+      const framing = getCinematicFramingForFrame(story, 720, 1280, candidate);
+      const outputScale = Math.min(720 / framing.viewWidth, 1280 / framing.viewHeight);
+      const projectedWidth = node.width * framing.scale * outputScale;
+      return projectedWidth < 76 && getVideoCardDetailProgress(projectedWidth) > 0;
+    });
+  const context = fakeCanvasContext();
+  const canvas = { width: 720, height: 1280, getContext: () => context };
+
+  assert.notEqual(frame, undefined, "the camera should cross the tiny-card detail transition");
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  assert.equal(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"), false,
+    "tiny bright name glyphs should stay hidden until there is enough room to render them cleanly");
+  assert.equal(context.calls.some(call => call[0] === "round-rect" && call[3] === node.width && call[4] === node.height), true,
+    "the dark card silhouette should remain visible during the transition");
+});
+
+test("card text and avatars fade in only when there is enough screen space to render them cleanly", () => {
+  assert.equal(getVideoCardContentProgress(87), 0);
+  assert.ok(getVideoCardContentProgress(108) > 0 && getVideoCardContentProgress(108) < 1);
+  assert.equal(getVideoCardContentProgress(128), 1);
+});
+
+test("revealed lineage cards use an earlier content fade than compact side branches", () => {
+  assert.equal(getVideoCardContentProgress(55, true), 0);
+  assert.ok(getVideoCardContentProgress(70, true) > 0 && getVideoCardContentProgress(70, true) < 1);
+  assert.equal(getVideoCardContentProgress(84, true), 1);
+  assert.equal(getVideoCardContentProgress(84), 0);
 });
 
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
