@@ -17,8 +17,8 @@ import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
 import {
-  compactRouteClass, getConnectorCardHeight, getOverviewCardWorldSize, getOverviewLineWorldWidth, getOverviewMarkerWorldSize, nextLodLevel
-} from './waydean-preview-lod.mjs?v=lod-12-overview-lines';
+  compactRouteClass, getCameraLodStyleZoom, getConnectorCardHeight, getOverviewCardWorldSize, getOverviewLineWorldWidth, getOverviewMarkerWorldSize, nextLodLevel
+} from './waydean-preview-lod.mjs?v=lod-13-camera-style-buckets';
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
@@ -29,7 +29,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261028-3-cache';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261029-cache-1';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 import {
   createWeatherController, normalizeAppearance, readAppearance, resolveSkyPeriod, writeAppearance
@@ -117,6 +117,13 @@ const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
 const scheduleMiniViewportUpdate = createFrameCoalescer(requestAnimationFrame, updateMiniViewport);
+let cameraMotionTimer = 0;
+
+function markCameraMoving() {
+  ui.graph.classList.add('camera-moving');
+  clearTimeout(cameraMotionTimer);
+  cameraMotionTimer = window.setTimeout(() => ui.graph.classList.remove('camera-moving'), 150);
+}
 
 function renderTreeConnectors() {
   if (!currentConnectorLayout) return;
@@ -213,11 +220,12 @@ function syncCameraLayout(dimensions = null) {
   if (ui.extent.style.height !== extentHeight) ui.extent.style.height = extentHeight;
   const transform = `translate(${layout.offsetX}px, ${layout.offsetY}px) scale(${zoom})`;
   if (ui.graph.style.transform !== transform) ui.graph.style.transform = transform;
-  const overviewCardSize = getOverviewCardWorldSize(zoom);
-  const overviewMarkerSize = `${getOverviewMarkerWorldSize(zoom)}px`;
-  const overviewLineWidth = `${getOverviewLineWorldWidth(zoom)}px`;
-  const overviewCardBorderWidth = `${getOverviewLineWorldWidth(zoom, 1.2)}px`;
-  const overviewCardHighlightWidth = `${getOverviewLineWorldWidth(zoom, 1.8)}px`;
+  const lodStyleZoom = getCameraLodStyleZoom(zoom);
+  const overviewCardSize = getOverviewCardWorldSize(lodStyleZoom);
+  const overviewMarkerSize = `${getOverviewMarkerWorldSize(lodStyleZoom)}px`;
+  const overviewLineWidth = `${getOverviewLineWorldWidth(lodStyleZoom)}px`;
+  const overviewCardBorderWidth = `${getOverviewLineWorldWidth(lodStyleZoom, 1.2)}px`;
+  const overviewCardHighlightWidth = `${getOverviewLineWorldWidth(lodStyleZoom, 1.8)}px`;
   const overviewCardWidth = `${overviewCardSize.width}px`;
   const overviewCardHeight = `${overviewCardSize.height}px`;
   if (ui.graph.style.getPropertyValue('--overview-card-width') !== overviewCardWidth) {
@@ -1945,7 +1953,7 @@ async function changeAccountFamilyPassword(event) {
     }, accountAdminAccess);
     if (result.passwordChanged !== true) throw new Error('Сервер не подтвердил смену пароля.');
     $('#accountAdminPasswordForm').reset();
-    message.textContent = 'Пароль изменён. Передайте его членам семьи, которым нужен вход.';
+    $('#accountAdminPasswordDialog').close();
     announce('Пароль семейного входа изменён.');
   } catch (error) {
     message.textContent = error?.message || 'Не удалось изменить семейный пароль.';
@@ -2421,6 +2429,19 @@ function bindControls() {
   $('#moreHistory').addEventListener('click', () => { openPopover(ui.history); renderLocalHistory(); });
   $('#moreBackups').addEventListener('click', () => { openPopover(ui.backups); renderLocalBackups(); renderAccountBackups(); });
   $('#accountAdminLockToggle').addEventListener('click', toggleAccountTreeLock);
+  $('#accountAdminPasswordOpen').addEventListener('click', () => {
+    if (!accountPreview || !accountAdminAccess) return;
+    const dialog = $('#accountAdminPasswordDialog');
+    $('#accountAdminPasswordForm').reset();
+    $('#accountAdminPasswordMessage').textContent = '';
+    dialog.showModal();
+    $('#accountAdminNewPassword').focus();
+  });
+  $('#accountAdminPasswordCancel').addEventListener('click', () => $('#accountAdminPasswordDialog').close());
+  $('#accountAdminPasswordDialog').addEventListener('close', () => {
+    $('#accountAdminPasswordForm').reset();
+    $('#accountAdminPasswordMessage').textContent = '';
+  });
   $('#accountAdminPasswordForm').addEventListener('submit', changeAccountFamilyPassword);
   $('#createLocalBackup').addEventListener('click', makeLocalBackup);
   $('#createAccountBackup').addEventListener('click', createAccountBackup);
@@ -2544,17 +2565,22 @@ function bindCameraGestures() {
   let miniDrag = null;
   ui.miniSvg.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
+    markCameraMoving();
     miniDrag = event.pointerId;
     ui.miniSvg.setPointerCapture(event.pointerId);
     moveFromMiniMap(event.clientX, event.clientY);
     event.preventDefault();
   });
   ui.miniSvg.addEventListener('pointermove', event => {
-    if (miniDrag === event.pointerId) moveFromMiniMap(event.clientX, event.clientY);
+    if (miniDrag === event.pointerId) {
+      markCameraMoving();
+      moveFromMiniMap(event.clientX, event.clientY);
+    }
   });
   const endMiniDrag = event => {
     if (miniDrag !== event.pointerId) return;
     miniDrag = null;
+    markCameraMoving();
     if (ui.miniSvg.hasPointerCapture(event.pointerId)) ui.miniSvg.releasePointerCapture(event.pointerId);
   };
   ui.miniSvg.addEventListener('pointerup', endMiniDrag);
@@ -2566,6 +2592,7 @@ function bindCameraGestures() {
     }[event.key];
     if (!delta) return;
     event.preventDefault();
+    markCameraMoving();
     ui.viewport.scrollBy({
       left: delta[0] * Math.max(48, ui.viewport.clientWidth * 0.18),
       top: delta[1] * Math.max(48, ui.viewport.clientHeight * 0.18),
@@ -2592,6 +2619,7 @@ function bindCameraGestures() {
   };
   const beginPinch = () => {
     if (pointers.size < 2) return;
+    markCameraMoving();
     const start = pair();
     const bounds = ui.viewport.getBoundingClientRect();
     pinchStart = {
@@ -2634,14 +2662,17 @@ function bindCameraGestures() {
       const distance = Math.hypot(event.clientX - previous.startX, event.clientY - previous.startY);
       if (!previous.dragging && distance >= 5) {
         previous.dragging = true;
+        markCameraMoving();
         ui.viewport.scrollBy({ left: previous.startX - event.clientX, top: previous.startY - event.clientY, behavior: 'instant' });
       } else if (previous.dragging) {
+        markCameraMoving();
         ui.viewport.scrollBy({ left: previous.x - event.clientX, top: previous.y - event.clientY, behavior: 'instant' });
       }
       previous.x = event.clientX;
       previous.y = event.clientY;
     } else {
       for (const pointer of pointers.values()) pointer.dragging = true;
+      markCameraMoving();
       previous.x = event.clientX;
       previous.y = event.clientY;
       const after = pair();
@@ -2664,6 +2695,7 @@ function bindCameraGestures() {
       }, 450);
     }
     const wasPinching = pointers.size >= 2;
+    if (pointer?.dragging || wasPinching) markCameraMoving();
     if (wasPinching) pinchUpdates.flush();
     pointers.delete(event.pointerId);
     if (wasPinching && pointers.size >= 2) beginPinch();
@@ -2673,6 +2705,7 @@ function bindCameraGestures() {
   };
   ui.viewport.addEventListener('pointerup', endPan);
   ui.viewport.addEventListener('pointercancel', endPan);
+  ui.viewport.addEventListener('scroll', markCameraMoving, { passive: true });
   ui.viewport.addEventListener('wheel', event => {
     event.preventDefault();
     const bounds = ui.viewport.getBoundingClientRect();
@@ -2688,6 +2721,7 @@ function setZoom(
   previousAnchorY = anchorY,
   gestureOrigin = null
 ) {
+  markCameraMoving();
   const previousZoom = gestureOrigin?.zoom ?? zoom;
   const previousLayout = gestureOrigin?.layout ?? currentCameraLayout;
   const scrollLeft = gestureOrigin?.scrollLeft ?? ui.viewport.scrollLeft;
@@ -2980,6 +3014,7 @@ async function initialize() {
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
     $('#moreHistory').hidden = !localTreeDraft;
     $('#moreBackups').hidden = !localTreeDraft;
+    $('#moreSectionSaving').hidden = !localTreeDraft;
     $('#accountBackupGroup').hidden = !accountPreview;
     $('#historyTitle').textContent = accountPreview ? 'История сайта и устройства' : 'История локальных действий';
     $('#historyNote').textContent = accountPreview
@@ -3012,6 +3047,7 @@ async function initialize() {
       || (familyPreview && canEditFamilyTreeRole(familySessionRole)));
     $('#moreHistory').hidden = !localTreeDraft;
     $('#moreBackups').hidden = !localTreeDraft;
+    $('#moreSectionSaving').hidden = !localTreeDraft;
     const remoteEditor = hasRemoteTreeWriteAccess();
     $('#historyTitle').textContent = remoteEditor ? 'История сайта и устройства' : 'История локальных действий';
     $('#historyNote').textContent = remoteEditor

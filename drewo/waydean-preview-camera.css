@@ -20,6 +20,23 @@
 .mini-map svg:focus-visible { outline: 2px solid var(--gold-bright); outline-offset: 2px; }
 .mini-window { pointer-events: none; }
 
+/* Keep cards and labels readable while temporarily dropping expensive paint effects during camera movement. */
+.graph.camera-moving .person-node,
+.graph.camera-moving .person-node::before,
+.graph.camera-moving .person-node::after,
+.graph.camera-moving .node-avatar {
+  -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
+  box-shadow: none !important;
+  filter: none !important;
+  transition: none !important;
+}
+
+.graph.camera-moving .tree-line,
+.graph.camera-moving .tree-line.lod-route {
+  filter: none !important;
+}
+
 .graph[data-lod="compact"] .person-node { height: 106px; }
 .graph[data-lod="compact"] .node-avatar { height: 88px; }
 .graph[data-lod="compact"] .node-copy small { display: none; }

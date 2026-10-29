@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
+import { URL } from "node:url";
 import {
   buildRemotionStory,
   getCinematicFramingForFrame,
+  getVideoCardDetailProgress,
   sampleRemotionFrame
 } from "./project-model.mjs";
 import {
@@ -136,7 +138,7 @@ test("full-tree overview video draws a visible mini-card for every generation", 
   assert.ok(miniCards.length >= multigenerationalPeople.length - 1);
 });
 
-test("full-tree branch cards stay as cards when the camera crosses overview scale", () => {
+test("full-tree video crossfades overview markers into detailed cards", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -147,17 +149,26 @@ test("full-tree branch cards stay as cards when the camera crosses overview scal
     }))
   ];
   const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
-  const shotIndex = story.timeline.shots.findIndex(shot => shot.type === "branching");
-  const shot = story.timeline.shots[shotIndex];
-  const frame = Array.from({ length: shot.durationFrames }, (_, offset) => shot.startFrame + offset)
-    .find(candidate => getCinematicFramingForFrame(story, 1280, 720, candidate).scale < 0.5);
+  const node = story.timeline.layout.nodes.find(item => item.id === "child-1");
+  const frame = Array.from({ length: story.timeline.totalFrames }, (_, candidate) => candidate)
+    .find(candidate => {
+      const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
+      const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+      return getVideoCardDetailProgress(node.width * framing.scale * outputScale) > 0.2
+        && getVideoCardDetailProgress(node.width * framing.scale * outputScale) < 0.8;
+    });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
 
-  assert.notEqual(frame, undefined, "fixture must cross the overview scale during this scene");
+  assert.notEqual(frame, undefined, "camera travel should pass through a gradual marker-to-card range");
   createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
 
-  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Родоначальник"));
+  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+  const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
+  const marker = browserCanvasRenderer.getOverviewCardGeometry(markerRadius);
+  assert.ok(context.calls.some(call => call[0] === "round-rect" && call[3] === marker.width && call[4] === marker.height));
+  assert.ok(context.calls.some(call => call[0] === "round-rect" && call[3] === node.width && call[4] === node.height));
   assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"));
 });
 
@@ -194,12 +205,14 @@ test("full-tree video uses aligned family rails while my-path keeps its curved c
   const edge = fullTree.story.timeline.layout.edges.find(item => item.childId === "child-a");
   const parent = fullTree.story.timeline.layout.nodes.find(node => node.id === edge.parentId);
   const child = fullTree.story.timeline.layout.nodes.find(node => node.id === edge.childId);
-  const sample = sampleRemotionFrame(fullTree.story, fullTree.frame);
   const framing = getCinematicFramingForFrame(fullTree.story, 1280, 720, fullTree.frame);
-  const overview = sample.camera.zoom < 0.5 || framing.scale < 0.5;
-  const markerRadius = overview ? Math.min(Math.max(5 / framing.scale, 8), 64) : 8;
-  const startY = parent.y + (overview ? markerRadius : parent.height / 2);
-  const endY = child.y - (overview ? markerRadius : child.height / 2);
+  const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+  const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
+  const markerHalfHeight = browserCanvasRenderer.getOverviewCardHalfHeight(markerRadius);
+  const parentDetail = getVideoCardDetailProgress(parent.width * framing.scale * outputScale);
+  const childDetail = getVideoCardDetailProgress(child.width * framing.scale * outputScale);
+  const startY = parent.y + markerHalfHeight + (parent.height / 2 - markerHalfHeight) * parentDetail;
+  const endY = child.y - (markerHalfHeight + (child.height / 2 - markerHalfHeight) * childDetail);
   const junctionY = startY + (endY - startY) * 0.5;
   const hasSegment = (context, fromX, fromY, toX, toY) => context.calls.some((call, index) =>
     call[0] === "move" && call[1] === fromX && call[2] === fromY &&

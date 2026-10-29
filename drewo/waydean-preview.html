@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="waydean-local-build" content="release-candidate-2026-10-28-family-lock-video-pacing-4">
+  <meta name="waydean-local-build" content="release-candidate-2026-10-29-video-lines-menu-camera-1">
   <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -14,7 +14,7 @@
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="stylesheet" href="waydean-preview.css?v=account-history-1">
   <link rel="stylesheet" href="waydean-preview-loading.css?v=1">
-  <link rel="stylesheet" href="waydean-preview-camera.css?v=ios-pinch-stable-1">
+  <link rel="stylesheet" href="waydean-preview-camera.css?v=camera-motion-20261029-1">
   <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-lod.css?v=overview-lines-20261028-1">
   <link rel="stylesheet" href="waydean-preview-edit.css">
@@ -30,7 +30,7 @@
   <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
   <link rel="stylesheet" href="waydean-preview-self.css?v=self-person-20261028-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=thin-glass-1">
-  <link rel="stylesheet" href="waydean-preview-auth.css?v=family-auth-1">
+  <link rel="stylesheet" href="waydean-preview-auth.css?v=family-auth-menu-dialog-20261029-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
 </head>
 <body>
@@ -168,54 +168,76 @@
     </section>
     <section class="popover more-popover" id="morePopover" hidden aria-label="Дополнительные действия">
       <div class="popover-head"><strong>Ещё</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
-      <section class="appearance-controls" aria-labelledby="appearanceHeading">
-        <div class="appearance-heading"><strong id="appearanceHeading">Оформление</strong><small id="appearanceSummary" aria-live="polite">Настройки сохраняются на этом устройстве</small></div>
-        <label for="appearanceTheme">Стиль</label>
-        <select id="appearanceTheme" aria-label="Стиль оформления">
-          <option value="classic">Классика</option>
-          <option value="premium">Премиум</option>
-        </select>
-        <label for="appearanceSky">День и ночь</label>
-        <select id="appearanceSky" aria-label="Режим дня и ночи">
-          <option value="auto">Авто · по времени устройства</option>
-          <option value="day">День</option>
-          <option value="night">Ночь</option>
-        </select>
+      <section class="more-group" id="moreSectionTree" aria-labelledby="moreTreeHeading">
+        <h3 id="moreTreeHeading">Древо</h3>
+        <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
+        <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Выбранный человек и его родные</small></button>
+        <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
+        <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
       </section>
-      <button class="more-item weather-action" id="weatherAction" type="button" aria-label="Погода рядом. Нажмите, чтобы обновить">
-        <strong id="weatherActionTitle">Погода рядом</strong>
-        <small id="weatherActionDetail" aria-live="polite">Нажмите, чтобы узнать погоду по геолокации</small>
-      </button>
-      <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
-      <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Выбранный человек и его родные</small></button>
-      <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
-      <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
-      <button class="more-item" id="moreExport"><strong>Экспорт дерева</strong><small>Скачать SVG или подготовить PDF и печать</small></button>
-      <button class="more-item" id="moreRefresh" type="button"><strong>Обновить страницу</strong><small>Загрузить свежую версию дерева</small></button>
-      <button class="more-item local-data-action" id="moreHistory" type="button" hidden><strong>История локальных действий</strong><small>Сохранения и восстановление в этом браузере</small></button>
-      <button class="more-item local-data-action" id="moreBackups" type="button" hidden><strong>Резервные копии · локально</strong><small>Создать снимок, закрепить или восстановить</small></button>
-      <button class="more-item" id="morePwa" type="button"><strong>Приложение и уведомления</strong><small>Установка на устройство, офлайн и проверка уведомлений</small></button>
-      <button class="more-item" id="moreVideo" type="button" hidden><strong>Создать видео</strong><small>Соберите ролик и скачайте его на этом устройстве</small></button>
-      <button class="more-item" id="moreTreesCabinet" type="button"><strong>Кабинет деревьев</strong><small>Управление семьями, доступом и аккаунтом</small></button>
-      <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Текущее древо</strong><small>Открыть привычную версию</small></button>
-      <button class="more-item family-logout-action" id="familyLogout" type="button" hidden><strong>Выйти из семейного входа</strong><small>Завершить сессию в этой вкладке</small></button>
-      <section class="account-admin-tools" id="accountAdminPanel" hidden aria-label="Управление доступом к древу">
-        <div class="account-admin-tools-heading"><small>АДМИНИСТРИРОВАНИЕ</small><strong>Доступ к древу</strong></div>
-        <div class="account-admin-lock-state" aria-live="polite"><strong id="accountAdminLockState">Загружаем состояние…</strong><small id="accountAdminLockDetail">Проверяем доступ по администраторской учётной записи.</small></div>
-        <button class="secondary-action" id="accountAdminLockToggle" type="button" disabled>Загрузка…</button>
-        <p class="account-admin-message" id="accountAdminLockMessage" role="status" aria-live="polite"></p>
-        <form id="accountAdminPasswordForm" autocomplete="off">
-          <strong>Пароль для семейного входа</strong>
-          <label for="accountAdminNewPassword">Новый пароль</label>
-          <input id="accountAdminNewPassword" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
-          <label for="accountAdminPasswordConfirm">Повторите пароль</label>
-          <input id="accountAdminPasswordConfirm" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
-          <p class="account-admin-message" id="accountAdminPasswordMessage" role="status" aria-live="polite"></p>
-          <button class="primary-action" id="accountAdminPasswordSubmit" type="submit">Сменить пароль</button>
-        </form>
-        <small class="account-admin-warning">Смена пароля завершит прежние семейные входы. Администраторская учётная запись Waydean останется активной.</small>
+      <section class="more-group" id="moreSectionAppearance" aria-labelledby="appearanceHeading">
+        <h3 id="appearanceHeading">Оформление</h3>
+        <section class="appearance-controls" aria-label="Настройки оформления">
+          <div class="appearance-heading"><strong>Вид дерева</strong><small id="appearanceSummary" aria-live="polite">Настройки сохраняются на этом устройстве</small></div>
+          <label for="appearanceTheme">Стиль</label>
+          <select id="appearanceTheme" aria-label="Стиль оформления">
+            <option value="classic">Классика</option>
+            <option value="premium">Премиум</option>
+          </select>
+          <label for="appearanceSky">День и ночь</label>
+          <select id="appearanceSky" aria-label="Режим дня и ночи">
+            <option value="auto">Авто · по времени устройства</option>
+            <option value="day">День</option>
+            <option value="night">Ночь</option>
+          </select>
+        </section>
+        <button class="more-item weather-action" id="weatherAction" type="button" aria-label="Погода рядом. Нажмите, чтобы обновить">
+          <strong id="weatherActionTitle">Погода рядом</strong>
+          <small id="weatherActionDetail" aria-live="polite">Нажмите, чтобы узнать погоду по геолокации</small>
+        </button>
+      </section>
+      <section class="more-group" id="moreSectionSaving" aria-labelledby="moreSavingHeading" hidden>
+        <h3 id="moreSavingHeading">Сохранение</h3>
+        <button class="more-item local-data-action" id="moreHistory" type="button" hidden><strong>История локальных действий</strong><small>Сохранения и восстановление в этом браузере</small></button>
+        <button class="more-item local-data-action" id="moreBackups" type="button" hidden><strong>Резервные копии</strong><small>Создать снимок, закрепить или восстановить</small></button>
+      </section>
+      <section class="more-group" id="moreSectionExport" aria-labelledby="moreExportHeading">
+        <h3 id="moreExportHeading">Экспорт и обмен</h3>
+        <button class="more-item" id="moreExport"><strong>Печать и экспорт дерева</strong><small>Скачать SVG или подготовить PDF и печать</small></button>
+        <button class="more-item" id="moreVideo" type="button" hidden><strong>Создать видео</strong><small>Соберите ролик и скачайте его на этом устройстве</small></button>
+      </section>
+      <section class="more-group" id="moreSectionDevice" aria-labelledby="moreDeviceHeading">
+        <h3 id="moreDeviceHeading">Устройство</h3>
+        <button class="more-item" id="morePwa" type="button"><strong>Приложение и уведомления</strong><small>Установка на устройство, офлайн и проверка уведомлений</small></button>
+        <button class="more-item" id="moreRefresh" type="button"><strong>Обновить дерево</strong><small>Загрузить свежую версию данных</small></button>
+        <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Открыть основное древо</strong><small>Перейти к привычной версии</small></button>
+      </section>
+      <section class="more-group" id="moreSectionAccount" aria-labelledby="moreAccountHeading">
+        <h3 id="moreAccountHeading">Аккаунт и доступ</h3>
+        <button class="more-item" id="moreTreesCabinet" type="button"><strong>Кабинет деревьев</strong><small>Управление семьями, доступом и аккаунтом</small></button>
+        <button class="more-item family-logout-action" id="familyLogout" type="button" hidden><strong>Выйти из семейного входа</strong><small>Завершить сессию в этой вкладке</small></button>
+        <section class="account-admin-tools" id="accountAdminPanel" hidden aria-label="Управление доступом к древу">
+          <div class="account-admin-tools-heading"><small>АДМИНИСТРИРОВАНИЕ</small><strong>Доступ к древу</strong></div>
+          <div class="account-admin-lock-state" aria-live="polite"><strong id="accountAdminLockState">Загружаем состояние…</strong><small id="accountAdminLockDetail">Проверяем доступ по администраторской учётной записи.</small></div>
+          <button class="secondary-action" id="accountAdminLockToggle" type="button" disabled>Загрузка…</button>
+          <p class="account-admin-message" id="accountAdminLockMessage" role="status" aria-live="polite"></p>
+          <button class="secondary-action" id="accountAdminPasswordOpen" type="button">Сменить семейный пароль</button>
+          <small class="account-admin-warning">При смене пароля прежние семейные входы завершатся. Учётная запись администратора Waydean останется активной.</small>
+        </section>
       </section>
     </section>
+    <dialog class="account-admin-password-dialog" id="accountAdminPasswordDialog" aria-labelledby="accountAdminPasswordTitle">
+      <form id="accountAdminPasswordForm" autocomplete="off">
+        <div class="account-admin-dialog-heading"><small>УПРАВЛЕНИЕ ДОСТУПОМ</small><strong id="accountAdminPasswordTitle">Новый пароль семейного входа</strong></div>
+        <p>После смены пароля людям понадобится войти заново.</p>
+        <label for="accountAdminNewPassword">Новый пароль</label>
+        <input id="accountAdminNewPassword" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
+        <label for="accountAdminPasswordConfirm">Повторите пароль</label>
+        <input id="accountAdminPasswordConfirm" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
+        <p class="account-admin-message" id="accountAdminPasswordMessage" role="status" aria-live="polite"></p>
+        <div class="account-admin-dialog-actions"><button class="primary-action" id="accountAdminPasswordSubmit" type="submit">Сменить пароль</button><button class="secondary-action" id="accountAdminPasswordCancel" type="button">Отмена</button></div>
+      </form>
+    </dialog>
     <section class="popover pwa-popover" id="pwaPopover" hidden aria-label="Приложение Waydean и уведомления">
       <div class="popover-head"><strong>Waydean на устройстве</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
       <div class="pwa-state-card">
@@ -295,7 +317,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-          import('./waydean-preview.js?v=family-lock-4');
+          import('./waydean-preview.js?v=menu-video-lines-20261029-1');
     }
   </script>
 </body>

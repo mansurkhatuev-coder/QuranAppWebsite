@@ -5,8 +5,10 @@ import {
   FULL_TREE_GENERATION_GROUP_SIZE,
   formatPersonDateLabel,
   getCinematicFramingForFrame,
+  getFullTreeEdgeRevealProgress,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
+  getVideoCardDetailProgress,
   shouldRenderVideoPersonCard,
   getTreeViewportOpacity
 } from "./project-model.mjs";
@@ -265,7 +267,7 @@ test("full-tree generations move through spatially adjacent groups instead of is
   }
 });
 
-test("full-tree branch scene reveals all family lines together without dropping connectors", () => {
+test("full-tree generation draws sibling links together and keeps completed links visible", () => {
   const people = [
     { id: "root", name: "Предок", generation: 1, parent: null },
     ...Array.from({ length: 3 }, (_, parentIndex) => ({
@@ -280,13 +282,56 @@ test("full-tree branch scene reveals all family lines together without dropping 
     ]).flat()
   ];
   const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "grandchild-3-b" });
-  const branchShots = story.timeline.shots.filter(shot => shot.type === "branching");
-  const actualEdges = branchShots.flatMap(shot => shot.activeEdgeKeys).sort();
+  const generationShots = story.timeline.shots.filter(shot => shot.type === "generation");
+  const generationTwoIndex = story.timeline.shots.findIndex(shot => shot.type === "generation" && shot.generation === 2);
+  const generationThreeIndex = story.timeline.shots.findIndex(shot => shot.type === "generation" && shot.generation === 3);
+  const generationTwo = story.timeline.shots[generationTwoIndex];
+  const actualEdges = generationShots.flatMap(shot => shot.activeEdgeKeys).sort();
   const expectedEdges = people.filter(person => person.parent).map(person => `${person.parent}->${person.id}`).sort();
 
-  assert.equal(branchShots.length, 1);
-  assert.ok(branchShots.every(shot => shot.activeEdgeKeys.length > 0));
+  assert.equal(story.timeline.shots.some(shot => shot.type === "branching"), false,
+    "all-tree connectors should reveal with their generation, not replay in a late branch scene");
   assert.deepEqual(actualEdges, expectedEdges);
+  assert.deepEqual(generationTwo.activeEdgeKeys.sort(), ["root->child-1", "root->child-2", "root->child-3"].sort());
+  const revealFrame = Math.floor(generationTwo.durationFrames * 0.3);
+  const siblingProgress = ["root->child-1", "root->child-2", "root->child-3"].map(edgeKey =>
+    getFullTreeEdgeRevealProgress(story, generationTwoIndex, revealFrame, edgeKey));
+  assert.ok(siblingProgress[0] > 0 && siblingProgress[0] < 1);
+  assert.deepEqual(siblingProgress, [siblingProgress[0], siblingProgress[0], siblingProgress[0]],
+    "siblings in the same generation should share one reveal clock");
+  assert.equal(getFullTreeEdgeRevealProgress(story, generationThreeIndex, 0, "root->child-1"), 1,
+    "completed connectors must remain fully drawn in later scenes");
+  assert.equal(getFullTreeEdgeRevealProgress(story, generationTwoIndex, revealFrame, "child-1->grandchild-1-a"), 0,
+    "future-generation connectors should wait for their own generation");
+});
+
+test("large generations reveal all their connectors in the first generation segment", () => {
+  const people = [
+    { id: "root", name: "Предок", generation: 1, parent: null },
+    ...Array.from({ length: FULL_TREE_GENERATION_GROUP_SIZE + 1 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people, scopeType: "all", selectedPersonId: "child-1" });
+  const generationTwo = story.timeline.shots.filter(shot => shot.type === "generation" && shot.generation === 2);
+  const expectedEdges = people.filter(person => person.parent).map(person => `root->${person.id}`).sort();
+
+  assert.equal(generationTwo.length, 2, "the card reveal may be segmented for a large generation");
+  assert.deepEqual(generationTwo[0].activeEdgeKeys.sort(), expectedEdges,
+    "all sibling links should share one generation-level reveal");
+  assert.deepEqual(generationTwo[1].activeEdgeKeys, [],
+    "later card segments must not replay their connectors");
+});
+
+test("full-tree cards blend smoothly from overview markers to detailed cards", () => {
+  assert.equal(getVideoCardDetailProgress(36), 0);
+  const samples = [44, 64, 84, 104, 124, 144].map(getVideoCardDetailProgress);
+  assert.ok(samples.every(value => value > 0 && value < 1));
+  assert.deepEqual(samples, [...samples].sort((left, right) => left - right));
+  assert.equal(getVideoCardDetailProgress(160), 1);
 });
 
 test("full-tree focus keeps the previous branch in frame during the camera approach", () => {

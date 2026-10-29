@@ -138,6 +138,10 @@ export function getScenePersonEmphasis(story: StoryModel, shotIndex: number, loc
 
 export function shouldRenderVideoPersonCard(story: StoryModel, shotIndex: number, personId: string, overview: boolean): boolean;
 
+export function getFullTreeEdgeRevealProgress(story: StoryModel, shotIndex: number, localFrame: number, edgeKey: string): number;
+
+export function getVideoCardDetailProgress(renderedWidthPx: number): number;
+
 export function getSceneEdgeEmphasis(story: StoryModel, shotIndex: number, localFrame: number, edgeKey: string): number;
 
 export function getSelectedCardReveal(shotType: string, localFrame: number): number;

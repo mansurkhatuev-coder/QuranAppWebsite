@@ -5,7 +5,7 @@ import {
   easeCinematic,
   layoutFamilyTree,
   sampleCinematicTimeline
-} from "../../cinematic-timeline.mjs?v=20261028-slow-tree-exit-1";
+} from "../../cinematic-timeline.mjs?v=20261029-generation-line-reveal-1";
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
@@ -32,6 +32,7 @@ function transitionProgress(shotCount, transitionFrames, localFrame) {
 
 function groupFullTreeGenerationScenes(scenes, people, layout) {
   const scenePeople = new Map(scenes.flatMap(scene => (scene.people ?? []).map(person => [person.id, person])));
+  const peopleById = new Map(people.map(person => [person.id, person]));
   const xById = new Map(layout.nodes.map(node => [node.id, node.x]));
   const result = [];
 
@@ -53,6 +54,15 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
 
     const generationIds = generationScenes.flatMap(scene => scene.personIds)
       .sort((left, right) => (xById.get(left) ?? 0) - (xById.get(right) ?? 0));
+    const childrenByParent = new Map();
+    for (const childId of generationIds) {
+      const parentId = peopleById.get(childId)?.parent;
+      if (!parentId) continue;
+      const childIds = childrenByParent.get(parentId) ?? [];
+      childIds.push(childId);
+      childrenByParent.set(parentId, childIds);
+    }
+    const generationBranches = [...childrenByParent].map(([parentId, childIds]) => ({ parentId, childIds }));
     const groupCount = Math.ceil(generationIds.length / FULL_TREE_GENERATION_GROUP_SIZE);
     for (let start = 0; start < generationIds.length; start += FULL_TREE_GENERATION_GROUP_SIZE) {
       const part = generationIds.slice(start, start + FULL_TREE_GENERATION_GROUP_SIZE);
@@ -67,39 +77,10 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
         groupEnd: start + part.length,
         groupTotal: generationIds.length,
         personIds: part,
-        people: part.map(id => scenePeople.get(id) ?? people.find(person => person.id === id)).filter(Boolean)
+        people: part.map(id => scenePeople.get(id) ?? peopleById.get(id)).filter(Boolean),
+        branches: start === 0 ? generationBranches : []
       });
     }
-  }
-
-  return result;
-}
-
-function groupFullTreeBranchScenes(scenes) {
-  const result = [];
-
-  for (let index = 0; index < scenes.length;) {
-    const first = scenes[index];
-    if (first.type !== "branching") {
-      result.push(first);
-      index += 1;
-      continue;
-    }
-
-    const branchScenes = [];
-    while (index < scenes.length && scenes[index].type === "branching") {
-      branchScenes.push(scenes[index]);
-      index += 1;
-    }
-    const personIds = [...new Set(branchScenes.flatMap(scene => scene.personIds))];
-    result.push({
-      ...first,
-      id: "branching-all",
-      label: "Связи поколений",
-      title: "Линии рода",
-      personIds,
-      branches: branchScenes.flatMap(scene => scene.branches ?? [])
-    });
   }
 
   return result;
@@ -134,7 +115,8 @@ export function buildRemotionStory(options = {}) {
     : people.at(-1)?.id ?? "";
   if (scopeType === "all") {
     const layout = layoutFamilyTree(people);
-    scenes = groupFullTreeBranchScenes(groupFullTreeGenerationScenes(scenes, people, layout));
+    scenes = groupFullTreeGenerationScenes(scenes, people, layout)
+      .filter(scene => scene.type !== "branching");
   }
   const timeline = buildCinematicTimeline(people, scenes, {
     fps: REMOTION_COMPOSITION.fps,
@@ -251,6 +233,25 @@ export function shouldRenderVideoPersonCard(story, shotIndex, personId, overview
   const shots = story?.timeline?.shots ?? [];
   const throughShot = Math.max(0, Math.floor(Number(shotIndex) || 0) + 1);
   return shots.slice(0, throughShot).some(shot => shot.personIds?.includes(personId));
+}
+
+export function getFullTreeEdgeRevealProgress(story, shotIndex, localFrame, edgeKey) {
+  if (story?.scopeType !== "all" || !edgeKey) return 0;
+  const shots = story?.timeline?.shots ?? [];
+  const revealShotIndex = shots.findIndex(shot => shot.activeEdgeKeys?.includes(edgeKey));
+  if (revealShotIndex < 0 || shotIndex < revealShotIndex) return 0;
+  if (shotIndex > revealShotIndex) return 1;
+  const shot = shots[revealShotIndex];
+  const revealFrames = Math.max(1, Math.floor(shot.durationFrames * 0.62));
+  const linearProgress = clamp((Number(localFrame) || 0) / revealFrames, 0, 1);
+  return linearProgress * linearProgress * (3 - 2 * linearProgress);
+}
+
+export function getVideoCardDetailProgress(renderedWidthPx) {
+  const width = Number(renderedWidthPx);
+  if (!Number.isFinite(width)) return 0;
+  const progress = clamp((width - 36) / (160 - 36), 0, 1);
+  return progress * progress * (3 - 2 * progress);
 }
 
 export function getSceneEdgeEmphasis(story, shotIndex, localFrame, edgeKey) {
