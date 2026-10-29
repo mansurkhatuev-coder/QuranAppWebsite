@@ -1,5 +1,5 @@
-import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, normalizeExportSettings } from "./remotion-preview/src/export-studio-model.mjs";
-import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261029-moving-video-backgrounds-2";
+import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs";
+import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261029-clean-card-speed-1";
 import {
   chooseVideoBitrate,
   getBrowserVideoSupport,
@@ -12,8 +12,8 @@ import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
-} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261029-lineage-detail-medium-1";
-import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261018-timestamped-audio";
+} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261029-clean-card-speed-1";
+import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261029-clean-card-speed-1";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
 
@@ -34,6 +34,15 @@ const DEMO_PEOPLE = [
 const people = handoff?.tree.people?.length ? handoff.tree.people : DEMO_PEOPLE;
 const BACKGROUND_PREFERENCE_STORAGE_KEY = "waydean.video-export.background.v1";
 
+function readSavedSettings() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(EXPORT_SETTINGS_STORAGE_KEY) ?? "{}");
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
 function readBackgroundPreference() {
   try { return window.localStorage.getItem(BACKGROUND_PREFERENCE_STORAGE_KEY) ?? DEFAULT_VIDEO_BACKGROUND_ID; }
   catch { return DEFAULT_VIDEO_BACKGROUND_ID; }
@@ -41,6 +50,7 @@ function readBackgroundPreference() {
 
 let settings = normalizeExportSettings({
   ...DEFAULT_EXPORT_SETTINGS,
+  ...readSavedSettings(),
   backgroundId: readBackgroundPreference(),
   ...(handoff?.settings ?? {})
 }, people);
@@ -84,16 +94,18 @@ function setBackgroundStatus(message) {
 }
 
 function getPreviewBackground() {
-  return backgroundVideoElement?.readyState >= 2
+  const playbackInSync = playbackRequestId === null
+    || Math.abs(Number(backgroundVideoElement?.playbackRate) - settings.speed) < 0.01;
+  return backgroundVideoElement?.readyState >= 2 && playbackInSync
     ? backgroundVideoElement
     : background ?? fallbackBackground;
 }
 
-function syncPreviewBackgroundToFrame() {
+function syncPreviewBackgroundToFrame(sourceFrame = frame) {
   const video = backgroundVideoElement;
   if (!video || !Number.isFinite(video.duration) || video.duration <= 0 || !previewPlan) return;
   if (playbackRequestId !== null) return;
-  const targetTime = getVideoBackgroundTimestamp(frame / previewPlan.sourceFps, video.duration);
+  const targetTime = getVideoBackgroundTimestamp(sourceFrame / previewPlan.sourceFps, video.duration);
   if (video.seeking || Math.abs(video.currentTime - targetTime) < 0.04) return;
   try { video.currentTime = targetTime; } catch { /* Keep the poster until the media element can seek. */ }
 }
@@ -123,21 +135,24 @@ function stopPreviewPlayback() {
   if (playbackRequestId !== null) cancelAnimationFrame(playbackRequestId);
   playbackRequestId = null;
   backgroundVideoElement?.pause?.();
+  if (backgroundVideoElement) backgroundVideoElement.playbackRate = 1;
   setPreviewPlaybackButton(false);
 }
 
 function paintPreviewFrame() {
-  syncPreviewBackgroundToFrame();
-  previewFrameRenderer?.(frame, getPreviewBackground());
+  const sourceFrame = previewPlan ? getSourceFrameForBrowserExport(frame, previewPlan) : frame;
+  syncPreviewBackgroundToFrame(sourceFrame);
+  previewFrameRenderer?.(sourceFrame, getPreviewBackground());
   root.querySelector("#browser-export-scrub").value = String(frame);
 }
 
 function startPreviewPlayback() {
-  if (rendering || !previewPlan || preview.durationFrames < 2) return;
-  const lastFrame = preview.durationFrames - 1;
+  if (rendering || !previewPlan || previewPlan.totalFrames < 2) return;
+  const lastFrame = previewPlan.totalFrames - 1;
   if (frame >= lastFrame) frame = 0;
   playbackStartFrame = frame;
-  syncPreviewBackgroundToFrame();
+  syncPreviewBackgroundToFrame(getSourceFrameForBrowserExport(frame, previewPlan));
+  if (backgroundVideoElement) backgroundVideoElement.playbackRate = settings.speed;
   void backgroundVideoElement?.play?.().catch?.(() => {});
   playbackStartedAt = performance.now();
   setPreviewPlaybackButton(true);
@@ -147,13 +162,13 @@ function startPreviewPlayback() {
     frame = getPreviewPlaybackFrame({
       startFrame: playbackStartFrame,
       elapsedMs: now - playbackStartedAt,
-      sourceFps: previewPlan.sourceFps,
-      totalFrames: preview.durationFrames
+      sourceFps: previewPlan.fps,
+      totalFrames: previewPlan.totalFrames
     });
     paintPreviewFrame();
     if (frame >= lastFrame) {
-      playbackRequestId = null;
-      setPreviewPlaybackButton(false);
+      stopPreviewPlayback();
+      paintPreviewFrame();
       return;
     }
     playbackRequestId = requestAnimationFrame(tick);
@@ -162,11 +177,13 @@ function startPreviewPlayback() {
   playbackRequestId = requestAnimationFrame(tick);
 }
 
-function updatePreview() {
+function updatePreview(sourceFrameToPreserve = null) {
   stopPreviewPlayback();
   preview = buildExportPreview(settings, people);
-  frame = Math.min(frame, Math.max(0, preview.durationFrames - 1));
-  previewPlan = buildBrowserRenderPlan(preview.story, settings.aspectRatio);
+  previewPlan = buildBrowserRenderPlan(preview.story, settings.aspectRatio, 720, 24, settings.speed);
+  frame = sourceFrameToPreserve === null
+    ? Math.min(frame, Math.max(0, previewPlan.totalFrames - 1))
+    : Math.min(Math.floor(sourceFrameToPreserve * previewPlan.fps / previewPlan.sourceFps / previewPlan.speed), previewPlan.totalFrames - 1);
   const canvas = root.querySelector("#browser-export-frame");
   canvas.width = previewPlan.width;
   canvas.height = previewPlan.height;
@@ -174,10 +191,17 @@ function updatePreview() {
     ? createBrowserCanvasFrameRenderer({ canvas, story: preview.story, backgroundImage: background })
     : null;
   paintPreviewFrame();
-  root.querySelector("#browser-export-scrub").max = String(Math.max(0, preview.durationFrames - 1));
-  root.querySelector("#browser-export-play").disabled = preview.durationFrames < 2 || rendering;
+  root.querySelector("#browser-export-scrub").max = String(Math.max(0, previewPlan.totalFrames - 1));
+  root.querySelector("#browser-export-play").disabled = previewPlan.totalFrames < 2 || rendering;
+  const speedControl = root.querySelector("#browser-export-speed");
+  if (speedControl) {
+    speedControl.value = String(settings.speed);
+    speedControl.setAttribute("aria-valuetext", `${settings.speed.toLocaleString("ru-RU")}×, длительность ${timeLabel(previewPlan.durationSeconds)}`);
+  }
+  const speedValue = root.querySelector("#browser-export-speed-value");
+  if (speedValue) speedValue.textContent = `${settings.speed.toLocaleString("ru-RU")}× · ${timeLabel(previewPlan.durationSeconds)}`;
   root.querySelector(".browser-export-summary").innerHTML = [
-    `${preview.sceneCount} сцен`, `${preview.peopleCount} человек`, timeLabel(preview.durationSeconds),
+    `${preview.sceneCount} сцен`, `${preview.peopleCount} человек`, timeLabel(previewPlan.durationSeconds),
     `${previewPlan.width} × ${previewPlan.height} · ${previewPlan.fps} кадр/с`
   ].map(value => `<span>${escapeHtml(value)}</span>`).join("");
   root.querySelector("#browser-export-start").disabled = !support.supported || !background || rendering;
@@ -197,6 +221,7 @@ function renderShell() {
       <img src="${escapeHtml(backgroundAssetUrl(preset.posterPath))}" alt="" loading="lazy">
       <span>${escapeHtml(preset.label)}</span>
     </button>`).join("");
+  const speedOptions = VIDEO_SPEED_OPTIONS.map(speed => `<option value="${speed}">${speed.toLocaleString("ru-RU")}×</option>`).join("");
   root.innerHTML = `
     <div class="browser-export-shell">
       <header class="browser-export-header">
@@ -231,6 +256,12 @@ function renderShell() {
           <label class="browser-export-field">Центральный человек<select id="browser-export-person">${options}</select></label>
           <div class="browser-export-formats" role="group" aria-label="Формат кадра">${formatButtons}</div>
           <label class="browser-export-dates"><input id="browser-export-dates" type="checkbox"${settings.includeDates ? " checked" : ""}> Показывать даты в кадрах</label>
+          <label class="browser-export-speed" for="browser-export-speed">
+            <span class="browser-export-speed-heading"><span>Скорость видео</span><output id="browser-export-speed-value">${settings.speed.toLocaleString("ru-RU")}× · ${timeLabel(preview.durationSeconds / settings.speed)}</output></span>
+            <input id="browser-export-speed" type="range" min="0.25" max="8" step="0.25" value="${settings.speed}" list="browser-export-speed-options" aria-label="Скорость видео" aria-valuetext="${settings.speed.toLocaleString("ru-RU")}×">
+            <datalist id="browser-export-speed-options">${speedOptions}</datalist>
+            <span class="browser-export-speed-range"><span>0,25× · медленно</span><span>8× · быстро</span></span>
+          </label>
           <section class="browser-export-background-picker" aria-label="Фон видео">
             <span class="browser-export-background-heading">Движущийся фон</span>
             <div class="browser-export-backgrounds" role="group" aria-label="Выберите видеофон">${backgroundButtons}</div>
@@ -269,6 +300,7 @@ function bindEvents() {
   root.querySelector("#browser-export-scope").addEventListener("change", event => update({ scopeType: event.currentTarget.value }));
   root.querySelector("#browser-export-person").addEventListener("change", event => update({ selectedPersonId: event.currentTarget.value }));
   root.querySelector("#browser-export-dates").addEventListener("change", event => update({ includeDates: event.currentTarget.checked }));
+  root.querySelector("#browser-export-speed").addEventListener("input", event => update({ speed: Number(event.currentTarget.value) }));
   root.querySelectorAll("[data-video-background]").forEach(button => button.addEventListener("click", () => {
     const backgroundId = button.dataset.videoBackground;
     root.querySelectorAll("[data-video-background]").forEach(option => option.setAttribute("aria-pressed", String(option === button)));
@@ -300,12 +332,16 @@ function bindEvents() {
 }
 
 function update(patch) {
+  const sourceFrameToPreserve = Object.hasOwn(patch, "speed") && previewPlan
+    ? getSourceFrameForBrowserExport(frame, previewPlan)
+    : null;
   settings = normalizeExportSettings({ ...settings, ...patch }, people);
+  try { window.localStorage.setItem(EXPORT_SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch { /* Preference persistence is optional in private browsing. */ }
   if (Object.hasOwn(patch, "backgroundId")) {
     try { window.localStorage.setItem(BACKGROUND_PREFERENCE_STORAGE_KEY, settings.backgroundId); } catch { /* Preference persistence is optional in private browsing. */ }
     loadSelectedVideoBackground(settings.backgroundId);
   }
-  clearVideo(); updatePreview();
+  clearVideo(); updatePreview(sourceFrameToPreserve);
 }
 
 function showError(message) {
@@ -394,19 +430,21 @@ async function startExport() {
   const canvas = root.querySelector("#browser-export-frame");
   if (!canvas || !background || !support.supported) return;
   clearVideo();
-  const plan = buildBrowserRenderPlan(preview.story, settings.aspectRatio);
+  const plan = buildBrowserRenderPlan(preview.story, settings.aspectRatio, 720, 24, settings.speed);
   const drawFrame = createBrowserCanvasFrameRenderer({ canvas, story: preview.story, backgroundImage: background });
   stopPreviewPlayback();
   const cueFrames = new Set(getTransitionCueFrames(preview.story.timeline.shots, {
     sourceFps: plan.sourceFps,
     fps: plan.fps,
     totalFrames: plan.totalFrames,
-    transitionFrames: preview.story.timeline.transitionFrames
+    transitionFrames: preview.story.timeline.transitionFrames,
+    speed: plan.speed
   }));
   renderController = new AbortController();
   rendering = true;
   root.querySelector("#browser-export-start").disabled = true;
   root.querySelector("#browser-export-play").disabled = true;
+  root.querySelector("#browser-export-speed").disabled = true;
   root.querySelectorAll("[data-video-background]").forEach(button => { button.disabled = true; });
   root.querySelector(".browser-export-cancel").hidden = false;
   root.querySelector("#browser-export-scrub").disabled = true;
@@ -444,10 +482,16 @@ async function startExport() {
     }
 
     if (!backgroundReader && !timestampedMp4Supported) {
-      realtimeVideoBackgroundActive = await startRealtimeVideoBackground(backgroundVideoElement);
+      backgroundVideoElement.playbackRate = settings.speed;
+      const supportsRequestedBackgroundSpeed = Math.abs(backgroundVideoElement.playbackRate - settings.speed) < 0.01;
+      if (supportsRequestedBackgroundSpeed) {
+        realtimeVideoBackgroundActive = await startRealtimeVideoBackground(backgroundVideoElement);
+      }
       setBackgroundStatus(realtimeVideoBackgroundActive
         ? "Используем нативное воспроизведение видеофона в реальном времени вместе с записью дерева."
-        : "Видеофон недоступен; ролик будет собран с постером выбранной сцены.");
+        : supportsRequestedBackgroundSpeed
+          ? "Видеофон недоступен; ролик будет собран с постером выбранной сцены."
+          : "Браузер не поддерживает выбранную скорость видеофона; используем постер, а скорость движения древа сохраним.");
     }
 
     const closeBackgroundReader = async () => {
@@ -459,7 +503,7 @@ async function startExport() {
       let backgroundSample = null;
       if (backgroundReader) {
         try {
-          backgroundSample = await backgroundReader.getSampleAt(outputFrame / plan.fps);
+          backgroundSample = await backgroundReader.getSampleAt(outputFrame / plan.fps * plan.speed);
         } catch (error) {
           if (renderController.signal.aborted) throw error;
           await closeBackgroundReader();
@@ -536,11 +580,13 @@ async function startExport() {
     try { await wakeLock?.release?.(); } catch { /* screen lock is optional */ }
     try { await audioPlayer?.close(); } catch { /* retain the video result if browser audio teardown fails */ }
     backgroundVideoElement?.pause?.();
+    if (backgroundVideoElement) backgroundVideoElement.playbackRate = 1;
     rendering = false; renderController = null;
     root.querySelector("#browser-export-start").disabled = !support.supported || !background;
     root.querySelector("#browser-export-start").textContent = "Создать видео на устройстве";
     root.querySelectorAll("[data-video-background]").forEach(button => { button.disabled = false; });
-    root.querySelector("#browser-export-play").disabled = preview.durationFrames < 2;
+    root.querySelector("#browser-export-play").disabled = previewPlan.totalFrames < 2;
+    root.querySelector("#browser-export-speed").disabled = false;
     root.querySelector(".browser-export-cancel").hidden = true;
     root.querySelector("#browser-export-scrub").disabled = false;
   }

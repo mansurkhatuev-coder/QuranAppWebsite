@@ -20,11 +20,13 @@ export function getTransitionCueFrames(shots, {
   fps,
   totalFrames = Infinity,
   transitionFrames = SCENE_TRANSITION_FRAMES,
-  highlightThreshold = ACTIVE_HIGHLIGHT_EMPHASIS_THRESHOLD
+  highlightThreshold = ACTIVE_HIGHLIGHT_EMPHASIS_THRESHOLD,
+  speed = 1
 } = {}) {
   const sourceRate = Number(sourceFps);
   const outputRate = Number(fps);
-  if (!(sourceRate > 0) || !(outputRate > 0)) return [];
+  const playbackSpeed = Number(speed);
+  if (!(sourceRate > 0) || !(outputRate > 0) || !(playbackSpeed > 0)) return [];
 
   const highlightOffset = getHighlightStartOffset(transitionFrames, highlightThreshold);
   const cues = new Set();
@@ -32,7 +34,7 @@ export function getTransitionCueFrames(shots, {
     const startFrame = Number(shot?.startFrame);
     if (!Number.isFinite(startFrame) || startFrame <= 0) continue;
     const visibleHighlightFrame = startFrame + highlightOffset;
-    const outputFrame = Math.ceil(visibleHighlightFrame * outputRate / sourceRate);
+    const outputFrame = Math.ceil(visibleHighlightFrame * outputRate / sourceRate / playbackSpeed);
     if (outputFrame < totalFrames) cues.add(outputFrame);
   }
   return [...cues].sort((left, right) => left - right);

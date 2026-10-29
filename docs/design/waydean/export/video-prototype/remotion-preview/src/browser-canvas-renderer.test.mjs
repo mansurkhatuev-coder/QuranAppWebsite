@@ -6,6 +6,7 @@ import {
   buildRemotionStory,
   getCinematicFramingForFrame,
   getVideoCardDetailProgress,
+  getVideoCardContentProgress,
   sampleRemotionFrame
 } from "./project-model.mjs";
 import {
@@ -71,6 +72,21 @@ test("browser output frame maps back to the shared 30 fps story timeline", () =>
   assert.equal(getSourceFrameForBrowserExport(1, plan), 1);
   assert.equal(getSourceFrameForBrowserExport(2, plan), 2);
   assert.equal(getSourceFrameForBrowserExport(plan.totalFrames - 1, plan), plan.sourceFrames - 1);
+});
+
+test("browser render speed changes exported duration and source-frame sampling", () => {
+  const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
+  const normal = buildBrowserRenderPlan(story, "16:9");
+  const fast = buildBrowserRenderPlan(story, "16:9", 720, 24, 4);
+  const slow = buildBrowserRenderPlan(story, "16:9", 720, 24, 0.25);
+
+  assert.equal(fast.speed, 4);
+  assert.equal(fast.durationSeconds, normal.durationSeconds / 4);
+  assert.equal(fast.totalFrames, Math.round(normal.totalFrames / 4));
+  assert.equal(getSourceFrameForBrowserExport(24, fast), 120);
+  assert.equal(slow.speed, 0.25);
+  assert.equal(slow.durationSeconds, normal.durationSeconds * 4);
+  assert.equal(getSourceFrameForBrowserExport(24, slow), 7);
 });
 
 test("browser canvas renderer draws a decoded background sample before the tree frame", () => {
@@ -236,6 +252,45 @@ test("full-tree video fully opens revealed path cards at medium zoom and keeps s
   assert.equal(markerAt(pathNode), false, "a revealed selected-path card should have no remaining overview marker");
   assert.equal(markerAt(branchNode), true, "a side branch should retain the gradual compact transition");
   assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 9"));
+});
+
+test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
+  const branchPeople = [
+    { id: "root", name: "Родоначальник", generation: 1, parent: null },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
+  const node = story.timeline.layout.nodes.find(item => item.id === "child-1");
+  const frame = Array.from({ length: story.timeline.totalFrames }, (_, candidate) => candidate)
+    .find(candidate => {
+      const shot = story.timeline.shots.find(item => candidate >= item.startFrame && candidate < item.startFrame + item.durationFrames);
+      if (!shot?.personIds?.includes("child-1")) return false;
+      const framing = getCinematicFramingForFrame(story, 720, 1280, candidate);
+      const outputScale = Math.min(720 / framing.viewWidth, 1280 / framing.viewHeight);
+      const projectedWidth = node.width * framing.scale * outputScale;
+      return projectedWidth < 76 && getVideoCardDetailProgress(projectedWidth) > 0;
+    });
+  const context = fakeCanvasContext();
+  const canvas = { width: 720, height: 1280, getContext: () => context };
+
+  assert.notEqual(frame, undefined, "the camera should cross the tiny-card detail transition");
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  assert.equal(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"), false,
+    "tiny bright name glyphs should stay hidden until there is enough room to render them cleanly");
+  assert.equal(context.calls.some(call => call[0] === "round-rect" && call[3] === node.width && call[4] === node.height), true,
+    "the dark card silhouette should remain visible during the transition");
+});
+
+test("card text and avatars fade in only when there is enough screen space to render them cleanly", () => {
+  assert.equal(getVideoCardContentProgress(87), 0);
+  assert.ok(getVideoCardContentProgress(108) > 0 && getVideoCardContentProgress(108) < 1);
+  assert.equal(getVideoCardContentProgress(128), 1);
 });
 
 test("canvas frame renderer paints the supplied local background, tree cards, and text", () => {

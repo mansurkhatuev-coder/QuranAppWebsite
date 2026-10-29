@@ -62,6 +62,15 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .browser-export-formats small { color: #9fa196; font-size: 9px; }
 .browser-export-dates { display: flex; align-items: center; gap: 9px; color: #c9c4b6; font-size: 11px; }
 .browser-export-dates input { width: 17px; height: 17px; accent-color: var(--gold); }
+.browser-export-speed { display: grid; gap: 8px; padding: 11px; border: 1px solid rgba(220,190,133,.17); border-radius: 8px; background: linear-gradient(145deg, rgba(225,184,99,.045), rgba(5,10,11,.6)); color: #c9c4b6; font-size: 11px; }
+.browser-export-speed-heading, .browser-export-speed-range { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.browser-export-speed-heading { color: #e1ca95; font: 500 13px Georgia, serif; }
+.browser-export-speed-heading output { color: #f2e4c4; font: 600 12px Inter, Arial, sans-serif; font-variant-numeric: tabular-nums; }
+.browser-export-speed input { width: 100%; margin: 1px 0; accent-color: var(--gold); cursor: pointer; }
+.browser-export-speed input:disabled { cursor: wait; opacity: .6; }
+.browser-export-speed-range { color: #969b90; font-size: 9px; }
+.browser-export-speed-range span:last-child { text-align: right; }
+.browser-export-speed datalist { display: none; }
 .browser-export-background-picker { display: grid; gap: 8px; padding: 11px; border: 1px solid rgba(220,190,133,.17); border-radius: 8px; background: linear-gradient(145deg, rgba(225,184,99,.045), rgba(5,10,11,.6)); }
 .browser-export-background-heading { color: #e1ca95; font: 500 13px Georgia, serif; }
 .browser-export-backgrounds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }

@@ -7,10 +7,16 @@ export type ExportSettings = {
   includeDates: boolean;
   aspectRatio: VideoAspectRatio;
   backgroundId: string;
+  speed: number;
 };
 
 export declare const EXPORT_SETTINGS_STORAGE_KEY: string;
+export declare const VIDEO_SPEED_MIN: number;
+export declare const VIDEO_SPEED_MAX: number;
+export declare const VIDEO_SPEED_STEP: number;
+export declare const VIDEO_SPEED_OPTIONS: readonly number[];
 export declare const DEFAULT_EXPORT_SETTINGS: Readonly<ExportSettings>;
+export declare function normalizeVideoSpeed(value: unknown): number;
 export declare function normalizeExportSettings(input?: Partial<ExportSettings>, people?: import("./project-model.mjs").PersonRecord[]): ExportSettings;
 export declare function buildExportPreview(input?: Partial<ExportSettings>, people?: import("./project-model.mjs").PersonRecord[]): {
   settings: ExportSettings;

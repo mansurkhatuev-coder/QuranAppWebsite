@@ -38,6 +38,15 @@ test("cue frame coincides with the next scene card crossing the visible highligh
   assert.ok(getScenePersonEmphasis(story, 1, previousLocalFrame, "next") < 0.25);
 });
 
+test("transition sounds move earlier when the rendered story is accelerated", () => {
+  const shots = [{ startFrame: 0 }, { startFrame: 48 }, { startFrame: 96 }];
+  const normal = getTransitionCueFrames(shots, { sourceFps: 30, fps: 24, transitionFrames: 36 });
+  const fast = getTransitionCueFrames(shots, { sourceFps: 30, fps: 24, transitionFrames: 36, speed: 2 });
+
+  assert.deepEqual(normal, [50, 88]);
+  assert.deepEqual(fast, [25, 44]);
+});
+
 test("creates and schedules a short, locally synthesized click", async () => {
   const events = [];
   const audioTrack = { kind: "audio" };

@@ -9,14 +9,29 @@ import {
 import { DEFAULT_VIDEO_BACKGROUND_ID, isVideoBackgroundId } from "./video-backgrounds.mjs";
 
 export const EXPORT_SETTINGS_STORAGE_KEY = "waydean.video-export.settings.v1";
+export const VIDEO_SPEED_MIN = 0.25;
+export const VIDEO_SPEED_MAX = 8;
+export const VIDEO_SPEED_STEP = 0.25;
+export const VIDEO_SPEED_OPTIONS = Object.freeze(Array.from(
+  { length: (VIDEO_SPEED_MAX - VIDEO_SPEED_MIN) / VIDEO_SPEED_STEP + 1 },
+  (_, index) => VIDEO_SPEED_MIN + index * VIDEO_SPEED_STEP
+));
 
 export const DEFAULT_EXPORT_SETTINGS = Object.freeze({
   ...DEFAULT_FAMILY_HISTORY_PROPS,
-  backgroundId: DEFAULT_VIDEO_BACKGROUND_ID
+  backgroundId: DEFAULT_VIDEO_BACKGROUND_ID,
+  speed: 1
 });
 
 const SCOPE_TYPES = new Set(["all", "path", "branch"]);
 const ASPECT_RATIOS = new Set(Object.keys(VIDEO_FORMATS));
+
+export function normalizeVideoSpeed(value) {
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 1;
+  const stepped = Math.round(numeric / VIDEO_SPEED_STEP) * VIDEO_SPEED_STEP;
+  return Math.min(VIDEO_SPEED_MAX, Math.max(VIDEO_SPEED_MIN, Number(stepped.toFixed(2))));
+}
 
 function defaultPersonId(people) {
   return [...people]
@@ -46,7 +61,8 @@ export function normalizeExportSettings(input = {}, people = []) {
       : input.includeDates === true,
     backgroundId: isVideoBackgroundId(input.backgroundId)
       ? input.backgroundId
-      : DEFAULT_VIDEO_BACKGROUND_ID
+      : DEFAULT_VIDEO_BACKGROUND_ID,
+    speed: normalizeVideoSpeed(input.speed ?? DEFAULT_EXPORT_SETTINGS.speed)
   };
 }
 
