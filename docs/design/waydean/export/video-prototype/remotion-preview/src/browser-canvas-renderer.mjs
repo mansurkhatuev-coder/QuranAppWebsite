@@ -16,7 +16,7 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261029-clean-card-speed-1";
+} from "./project-model.mjs?v=20261029-lineage-content-medium-2";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { normalizeVideoSpeed } from "./export-studio-model.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";

@@ -306,6 +306,45 @@ test("revealed lineage cards use an earlier content fade than compact side branc
   assert.equal(getVideoCardContentProgress(84), 0);
 });
 
+test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
+  const branchPeople = [
+    { id: "root", name: "Родоначальник", generation: 1, parent: null },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
+  const node = story.timeline.layout.nodes.find(item => item.id === "child-1");
+  const frame = Array.from({ length: story.timeline.totalFrames }, (_, candidate) => candidate)
+    .find(candidate => {
+      const shot = story.timeline.shots.find(item => candidate >= item.startFrame && candidate < item.startFrame + item.durationFrames);
+      if (!shot?.personIds?.includes("child-1")) return false;
+      const framing = getCinematicFramingForFrame(story, 720, 1280, candidate);
+      const outputScale = Math.min(720 / framing.viewWidth, 1280 / framing.viewHeight);
+      const projectedWidth = node.width * framing.scale * outputScale;
+      return projectedWidth < 76 && getVideoCardDetailProgress(projectedWidth) > 0;
+    });
+  const context = fakeCanvasContext();
+  const canvas = { width: 720, height: 1280, getContext: () => context };
+
+  assert.notEqual(frame, undefined, "the camera should cross the tiny-card detail transition");
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  assert.equal(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"), false,
+    "tiny bright name glyphs should stay hidden until there is enough room to render them cleanly");
+  assert.equal(context.calls.some(call => call[0] === "round-rect" && call[3] === node.width && call[4] === node.height), true,
+    "the dark card silhouette should remain visible during the transition");
+});
+
+test("card text and avatars fade in only when there is enough screen space to render them cleanly", () => {
+  assert.equal(getVideoCardContentProgress(87), 0);
+  assert.ok(getVideoCardContentProgress(108) > 0 && getVideoCardContentProgress(108) < 1);
+  assert.equal(getVideoCardContentProgress(128), 1);
+});
+
 test("canvas frame renderer paints the supplied local background, tree cards, and text", () => {
   const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
   const context = fakeCanvasContext();

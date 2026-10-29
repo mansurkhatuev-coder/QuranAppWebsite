@@ -1,45 +1,15 @@
-# Админка V2
+# Terra admin
 
-Новая админка открывается на `/admin-v2/`. Старый интерфейс остаётся доступен через кнопку «Старый вариант» в верхней панели. Локальный адрес используется только для предпросмотра: запись и публикация там заблокированы.
+`/admin-v2/` is the Figma-directed production entry for the new admin. It uses the existing Supabase account and production APIs. `/admin/` remains available through the always-visible “Старый вариант” link and the sign-in fallback.
 
-## Production и локальный предпросмотр
+The UI keeps its local preview separate: on localhost it reads sample content, shows no production analytics, and disables actions that publish or modify cloud data. On `https://waydean.ru/admin-v2/`, the app requires the existing Supabase admin session.
 
-Production-режим включается только на `https://waydean.ru/admin-v2/` и вложенных страницах. Вход проверяется через существующую сессию Supabase, права на запись и публикацию — действующими RLS-политиками и Edge Functions. Режим не включается на HTTP, localhost, зеркальных доменах или других разделах сайта.
+## Connected modules
 
-Запуск локального просмотра из корня проекта:
+- Overview and interactive analytics use the existing analytics dashboard and read-only store-download data. The chart shows only the dates returned by the server; all-time totals are shown separately.
+- Dua records load from Supabase, preserve their IDs and extra fields, save as cloud drafts, and publish through the existing content publisher after confirmation.
+- Azkar and Tajweed documents open in the existing specialist editor with its original Arabic keyboard, font settings, normalization, selection, rule palette, and mark handling. Its existing cloud draft workflow remains intact.
+- Home banners and daily pools, app release metadata, course feedback, giveaway entries, translations, and service checks use their existing admin handlers.
+- Translation strings are saved as a cloud draft. Publishing those strings into the mobile app remains a separate release step.
 
-```powershell
-py -m http.server 8783 --bind 127.0.0.1
-```
-
-Откройте `http://127.0.0.1:8783/admin-v2/`. Не открывайте HTML-файлы напрямую: редактор использует iframe и JSON-пакеты.
-
-## Подключённые действия
-
-| Раздел | Production-поведение |
-| --- | --- |
-| Обзор | Дуа считаются по Supabase. Азкары показывают отдельный образец каталога из 70 записей, таджвид — опубликованный пакет. Аналитика запрашивает реальные доступные ряды, без демонстрационных данных на production. |
-| Дуа | Загружаются из `dua_items`. «Сохранить дуа» пишет выбранную запись в Supabase; «Опубликовать дуа» отдельно подтверждается и обновляет пакеты через действующую `publish-content` Edge Function. Перед отправкой проверяются ID, категория, дубли и арабский текст. |
-| Таджвид | Используется исходный специализированный редактор с нормализацией, шрифтами и полной арабской клавиатурой. Черновики сохраняются в Supabase, публикация использует существующий защищённый маршрут с проверкой версии. |
-| Главная, баннеры, отзывы, розыгрыш, обновления и аналитика | Встроены исходные production-модули и их Supabase/Edge Function операции; тестовый перехватчик запросов работает только вне production-маршрута. |
-| Классические азкары и новые тексты | Встроен образец классического каталога на 70 записей; это не полный живой каталог. Правки в этих типах пока являются черновиками в текущем браузере. Изменение классических азкаров в установленном приложении требует отдельного выпуска приложения. |
-| Переводы интерфейса | Копия CE-редактора. Локальный предпросмотр не меняет production. |
-
-Сохранение материала не означает его публикацию. Для дуа публикация запускается отдельной кнопкой; для таджвида используются его собственные «Черновик» и «Опубликовать». Остальные черновые типы явно помечены как локальные.
-
-## Сохранённые возможности редактора
-
-Арабская клавиатура сохраняет группы знаков, выбор коранического шрифта и настройки. Таджвид-копия сохраняет нормализацию схемы, горячие клавиши, все правила разметки, импорт/экспорт и выборочную публикацию. Изменения интерфейса не меняют тексты или ID пакетов.
-
-При переходе к старому варианту несохранённые поля можно сохранить в браузере, оставить открытыми или отбросить. Старый `/admin/` продолжает работать независимо от V2.
-
-## Аналитика
-
-В production обзор использует реальные доступные данные и не подставляет демонстрационные ряды. График остаётся интерактивным. Дневная таблица показывает фактический доступный диапазон; диапазон не подписывается как полная история без подтверждающих данных. Скачивания магазинов и установки приложения остаются разными показателями.
-
-## Граница безопасности
-
-- Локальный предпросмотр оставляет старый read-only перехватчик записей и локальные черновики.
-- Production распознаётся только по точному HTTPS-origin и `/admin-v2/`; все серверные операции требуют текущую сессию и штатные права backend.
-- Существующие RLS-политики, роли и секреты не изменялись.
-- Для классических азкаров и новых текстов не добавлялась новая схема публикации; их черновики не выдаются за опубликованные данные. Классический азкар-каталог ограничен образцом в `admin-v2/data/azkar-classic-preview.json` (70 записей).
+No database migration is applied by this UI change. The existing `/admin/` route and its specialist modules remain intact.
