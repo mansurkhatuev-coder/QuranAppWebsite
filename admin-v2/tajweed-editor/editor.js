@@ -1,9 +1,11 @@
 (() => {
   "use strict";
 
-  const STORAGE_KEY = "quranapp-admin-v2-tajweed-editor-library:v1";
-  const STORAGE_BACKUP_KEY = "quranapp-admin-v2-tajweed-editor-library-backup:v1";
-  const PREVIEW_DOC_IDS_KEY = "quranapp-admin-v2-tajweed-editor-source-docs:v1";
+  const previewVersion = new URLSearchParams(window.location.search).get("previewVersion");
+  const storageScope = previewVersion === "terra-preview" ? ":terra-preview" : "";
+  const STORAGE_KEY = `quranapp-admin-v2-tajweed-editor-library:v1${storageScope}`;
+  const STORAGE_BACKUP_KEY = `quranapp-admin-v2-tajweed-editor-library-backup:v1${storageScope}`;
+  const PREVIEW_DOC_IDS_KEY = `quranapp-admin-v2-tajweed-editor-source-docs:v1${storageScope}`;
   const SCHEMA_VERSION = 2;
 
   const RULES = [
@@ -796,7 +798,7 @@
   async function cloudSaveDraft() {
     if (!globalThis.TajweedCloud) {
       alert("Cloud-модуль не загружен");
-      return;
+      return false;
     }
     commitCurrentToLibrary();
     els.saveStatus.textContent = "Черновик…";
@@ -810,10 +812,12 @@
       });
       els.saveStatus.textContent = `Черновик · ${result.updatedBy || "ok"}`;
       els.saveStatus.classList.add("ok");
+      return true;
     } catch (error) {
       els.saveStatus.textContent =
         error instanceof Error ? error.message : "Ошибка черновика";
       els.saveStatus.classList.remove("ok");
+      return false;
     }
   }
 
@@ -1559,12 +1563,17 @@
       return;
     }
     if (event.data?.type === "admin-v2:save-tajweed-document") {
-      const saved = flushLibrarySave();
-      window.parent?.postMessage({
-        type: "admin-v2:tajweed-save-result",
-        requestId: String(event.data.requestId || ""),
-        saved,
-      }, window.location.origin);
+      void (async () => {
+        let saved = flushLibrarySave();
+        if (saved && event.data.saveCloudDraft === true && window.AdminV2Runtime?.isProduction === true) {
+          saved = await cloudSaveDraft();
+        }
+        window.parent?.postMessage({
+          type: "admin-v2:tajweed-save-result",
+          requestId: String(event.data.requestId || ""),
+          saved,
+        }, window.location.origin);
+      })();
     }
   });
 
@@ -1576,6 +1585,25 @@
       }
     }
 
+    if (window.AdminV2Runtime?.isProduction === true) {
+      document.title = "Таджвид · QuranApp Admin";
+      const eyebrow = document.querySelector(".eyebrow .eyebrow-full");
+      if (eyebrow) eyebrow.textContent = "Production · Supabase + публикация";
+      const load = $("btnCloudLoad");
+      const save = $("btnCloudSave");
+      const pull = $("btnCloudPull");
+      const publish = $("btnCloudPublish");
+      if (load) { load.title = "Загрузить черновик из Supabase"; const full = load.querySelector(".label-full"); if (full) full.textContent = "Черновик ↓"; const short = load.querySelector(".label-short"); if (short) short.textContent = "↓обл."; }
+      if (save) { save.title = "Сохранить черновик в Supabase"; const full = save.querySelector(".label-full"); if (full) full.textContent = "Сохранить черновик"; const short = save.querySelector(".label-short"); if (short) short.textContent = "↑обл."; }
+      if (pull) { pull.title = "Загрузить опубликованный пакет с waydean.ru"; const full = pull.querySelector(".label-full"); if (full) full.textContent = "Загрузить опубликованное"; }
+      if (publish) { publish.removeAttribute("aria-disabled"); publish.title = "Опубликовать отмеченные документы"; const full = publish.querySelector(".label-full"); if (full) full.textContent = "Опубликовать"; const short = publish.querySelector(".label-short"); if (short) short.textContent = "Pub"; }
+      for (const item of document.querySelectorAll(".help-list li")) {
+        const heading = item.querySelector("strong")?.textContent || "";
+        if (heading.startsWith("Черновик ↑/↓")) item.innerHTML = "<strong>Черновик ↑/↓</strong> — сохраняет и загружает библиотеку через Supabase.";
+        if (heading.startsWith("Публикация")) item.innerHTML = "<strong>Публикация</strong> — отправляет отмеченные документы в действующий пакет приложения.";
+        if (heading.startsWith("Загрузить с прода")) item.innerHTML = "<strong>Загрузить с прода</strong> — загружает опубликованный пакет сайта.";
+      }
+    }
     renderRulesUi();
     bindCanvasPointer();
     bindChrome();

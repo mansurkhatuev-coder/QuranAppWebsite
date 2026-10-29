@@ -6,6 +6,7 @@
   if (!root) return;
 
   root.AdminV2LegacyDraftsModule = moduleApi;
+  if (root.AdminV2Runtime?.isProduction === true) return;
   if (root.document && root.AdminSupabase) {
     try {
       const adapter = moduleApi.createLegacyDraftAdapter({

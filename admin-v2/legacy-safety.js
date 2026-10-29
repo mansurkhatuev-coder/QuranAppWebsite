@@ -1,6 +1,11 @@
 (() => {
   "use strict";
 
+  if (window.AdminV2Runtime?.isProduction === true) {
+    window.AdminV2Safety = Object.freeze({ readOnly: false, message: "Production: серверные права проверяются через Supabase." });
+    return;
+  }
+
   const WRITE_BLOCKED_MESSAGE = "Тестовая версия блокирует изменения в production. Сохраните локальный черновик или вернитесь в редактор.";
   const STORE_READ_BLOCKED_MESSAGE = "Чтение через store-downloads отключено в тестовом просмотре: эта функция может менять схему базы.";
   const originalFetch = window.fetch.bind(window);

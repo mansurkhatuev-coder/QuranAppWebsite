@@ -14,8 +14,8 @@
   </head>
   <body>
     <div class="preview-bar">
-      <span class="preview-badge">ТЕСТОВАЯ СБОРКА</span>
-      <span>Отдельная тестовая копия · черновики сохраняются локально · публикация отключена</span>
+      <span class="preview-badge" id="workbench-mode-badge">ТЕСТОВАЯ СБОРКА</span>
+      <span id="workbench-mode-copy">Отдельная тестовая копия · черновики сохраняются локально · публикация отключена</span>
       <a href="../" aria-label="Вернуться в тестовую админку">Назад в тестовую админку <span aria-hidden="true">↗</span></a>
     </div>
 
@@ -28,7 +28,7 @@
         </span>
       </a>
       <div class="topbar-center">
-        <span class="state-indicator"><i></i>Предпросмотр без записи</span>
+        <span class="state-indicator" id="workbench-state-indicator"><i></i>Предпросмотр без записи</span>
         <span class="topbar-divider" aria-hidden="true"></span>
         <span class="saved-copy">Рабочая версия не затронута</span>
       </div>
@@ -149,7 +149,7 @@
 
           <footer class="editor-footer">
             <div class="footer-normalization"><span class="normalization-check">✓</span><span><strong>Нормализация таджвид-схемы сохранена</strong><small>v2 · text → transliteration · rule → rules · символьные смещения ограничены текстом</small></span></div>
-            <div class="footer-actions"><button type="button" class="button button-outline" data-notice="Предпросмотр приложения в тестовой версии не сохраняет данные.">Предпросмотр</button><button type="button" class="button button-primary" id="save-local-draft">Сохранить черновик <span aria-hidden="true">↗</span></button></div>
+          <div class="footer-actions"><button type="button" class="button button-outline" data-notice="Предпросмотр приложения не сохраняет данные.">Предпросмотр</button><button type="button" class="button button-outline" id="publish-dua" hidden>Опубликовать дуа</button><button type="button" class="button button-primary" id="save-local-draft">Сохранить черновик <span aria-hidden="true">↗</span></button></div>
           </footer>
         </section>
 
@@ -178,17 +178,22 @@
             <p id="delivery-copy">Пакет дуа публикуется через текущий контентный процесс.</p>
             <div class="delivery-state"><i></i><span>Путь сохранён отдельно</span></div>
           </section>
-          <div class="inspector-foot"><span class="privacy-shield" aria-hidden="true">◈</span><span>Тестовая сборка использует опубликованные JSON как образцы и не меняет их.</span></div>
+          <div class="inspector-foot"><span class="privacy-shield" aria-hidden="true">◈</span><span>Способ сохранения зависит от типа материала. Опубликованные пакеты обновляются отдельно.</span></div>
         </aside>
       </section>
 
       <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
     </main>
+    <script src="../runtime-mode.js?v=admin-v2-production-20261029" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="../../admin/supabase-config.js?v=6"></script>
+    <script src="../../admin/admin-supabase.js?v=analytics-counts-20261028"></script>
+    <script src="../production-content.js?v=admin-v2-dua-publish-20261029"></script>
     <script src="./material-drafts.js?v=admin-v2-workbench" defer></script>
     <script src="./record-identity.js?v=admin-v2-workbench" defer></script>
     <script src="./tajweed-links.js?v=admin-v2-workbench" defer></script>
     <script src="./arabic-input.js?v=admin-v2-workbench" defer></script>
     <script src="./transition-guard.js?v=admin-v2-transition-guard" defer></script>
-    <script src="./prototype.js?v=admin-v2-workbench-recovery-20261027" defer></script>
+    <script src="./prototype.js?v=admin-v2-production-20261029" defer></script>
   </body>
 </html>

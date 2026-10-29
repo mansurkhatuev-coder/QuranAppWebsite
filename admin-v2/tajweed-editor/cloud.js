@@ -3,8 +3,9 @@
  * Depends on window.AdminSupabase from ../admin/admin-supabase.js
  */
 (function initTajweedCloud(global) {
-  // This cloned editor is permanently test-only: do not make safety depend on the URL.
-  const IS_PREVIEW = true;
+  // Live writes are enabled only on the authenticated canonical Admin V2 route.
+  // Local preview and every non-canonical origin remain test-only.
+  const IS_PREVIEW = global.AdminV2Runtime?.isProduction !== true;
   const SITE_ORIGIN = IS_PREVIEW ? 'https://waydean.ru' : (global.location?.origin || 'https://waydean.ru');
   const SITE_PACK_URL = `${SITE_ORIGIN}/data/azkar-tajweed-translit.json`;
   const SITE_MANIFEST_URL = `${SITE_ORIGIN}/data/remote-azkar-tajweed.manifest.json`;
