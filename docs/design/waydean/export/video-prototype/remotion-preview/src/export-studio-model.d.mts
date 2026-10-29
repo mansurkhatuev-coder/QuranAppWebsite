@@ -6,6 +6,7 @@ export type ExportSettings = {
   selectedPersonId: string;
   includeDates: boolean;
   aspectRatio: VideoAspectRatio;
+  backgroundId: string;
 };
 
 export declare const EXPORT_SETTINGS_STORAGE_KEY: string;

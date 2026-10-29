@@ -35,7 +35,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261029-lineage-detail-medium-1"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261029-moving-video-backgrounds-2"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -53,6 +53,18 @@ test("smooth tree camera code uses fresh cache keys in the published module chai
   assert.match(canvasRendererSource, /project-model\.mjs\?v=20261029-lineage-detail-medium-1/);
   assert.match(canvasRendererSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
   assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
+});
+
+test("video export exposes the three selectable video background presets and persists the chosen ID", () => {
+  assert.match(studioSource, /VIDEO_BACKGROUND_PRESETS/);
+  assert.match(studioSource, /data-video-background=/);
+  assert.match(studioSource, /backgroundId:/);
+  assert.match(studioSource, /browser-export-backgrounds/);
+  assert.match(studioSource, /openVideoBackgroundReader/);
+  assert.match(studioSource, /startRealtimeVideoBackground\(backgroundVideoElement\)/);
+  assert.match(studioSource, /realtimeVideoBackgroundActive \? backgroundVideoElement : null/);
+  assert.match(studioSource, /await backgroundReader\.getSampleAt\(outputFrame \/ plan\.fps\)/);
+  assert.match(studioSource, /выбранным постером/);
 });
 
 test("browser video export auto-uploads finished renders to the private account library", () => {

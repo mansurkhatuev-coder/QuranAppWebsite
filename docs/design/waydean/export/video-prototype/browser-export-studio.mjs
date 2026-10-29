@@ -1,4 +1,5 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, normalizeExportSettings } from "./remotion-preview/src/export-studio-model.mjs";
+import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261029-moving-video-backgrounds-2";
 import {
   chooseVideoBitrate,
   getBrowserVideoSupport,
@@ -31,7 +32,18 @@ const DEMO_PEOPLE = [
   { id: "demo-4", name: "Новая ветвь", generation: 4, parent: "demo-3", born: 1961, died: null }
 ];
 const people = handoff?.tree.people?.length ? handoff.tree.people : DEMO_PEOPLE;
-let settings = normalizeExportSettings(handoff?.settings ?? DEFAULT_EXPORT_SETTINGS, people);
+const BACKGROUND_PREFERENCE_STORAGE_KEY = "waydean.video-export.background.v1";
+
+function readBackgroundPreference() {
+  try { return window.localStorage.getItem(BACKGROUND_PREFERENCE_STORAGE_KEY) ?? DEFAULT_VIDEO_BACKGROUND_ID; }
+  catch { return DEFAULT_VIDEO_BACKGROUND_ID; }
+}
+
+let settings = normalizeExportSettings({
+  ...DEFAULT_EXPORT_SETTINGS,
+  backgroundId: readBackgroundPreference(),
+  ...(handoff?.settings ?? {})
+}, people);
 let preview = buildExportPreview(settings, people);
 let frame = 0;
 let previewPlan = null;
@@ -40,6 +52,9 @@ let playbackRequestId = null;
 let playbackStartedAt = 0;
 let playbackStartFrame = 0;
 let background = null;
+let fallbackBackground = null;
+let backgroundVideoElement = null;
+let backgroundLoadToken = 0;
 let videoBlob = null;
 let videoUrl = "";
 let videoObjectPath = "";
@@ -57,6 +72,30 @@ const escapeHtml = value => String(value ?? "").replace(/[&<>"']/g, character =>
 function timeLabel(seconds) {
   const value = Math.max(0, Math.round(seconds));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, "0")}`;
+}
+
+function backgroundAssetUrl(path) {
+  return new URL(path, window.location.href).href;
+}
+
+function setBackgroundStatus(message) {
+  const status = root.querySelector(".browser-export-background-status");
+  if (status) status.textContent = message;
+}
+
+function getPreviewBackground() {
+  return backgroundVideoElement?.readyState >= 2
+    ? backgroundVideoElement
+    : background ?? fallbackBackground;
+}
+
+function syncPreviewBackgroundToFrame() {
+  const video = backgroundVideoElement;
+  if (!video || !Number.isFinite(video.duration) || video.duration <= 0 || !previewPlan) return;
+  if (playbackRequestId !== null) return;
+  const targetTime = getVideoBackgroundTimestamp(frame / previewPlan.sourceFps, video.duration);
+  if (video.seeking || Math.abs(video.currentTime - targetTime) < 0.04) return;
+  try { video.currentTime = targetTime; } catch { /* Keep the poster until the media element can seek. */ }
 }
 
 function clearVideo() {
@@ -83,11 +122,13 @@ function setPreviewPlaybackButton(playing) {
 function stopPreviewPlayback() {
   if (playbackRequestId !== null) cancelAnimationFrame(playbackRequestId);
   playbackRequestId = null;
+  backgroundVideoElement?.pause?.();
   setPreviewPlaybackButton(false);
 }
 
 function paintPreviewFrame() {
-  previewFrameRenderer?.(frame);
+  syncPreviewBackgroundToFrame();
+  previewFrameRenderer?.(frame, getPreviewBackground());
   root.querySelector("#browser-export-scrub").value = String(frame);
 }
 
@@ -96,6 +137,8 @@ function startPreviewPlayback() {
   const lastFrame = preview.durationFrames - 1;
   if (frame >= lastFrame) frame = 0;
   playbackStartFrame = frame;
+  syncPreviewBackgroundToFrame();
+  void backgroundVideoElement?.play?.().catch?.(() => {});
   playbackStartedAt = performance.now();
   setPreviewPlaybackButton(true);
 
@@ -127,7 +170,7 @@ function updatePreview() {
   const canvas = root.querySelector("#browser-export-frame");
   canvas.width = previewPlan.width;
   canvas.height = previewPlan.height;
-  previewFrameRenderer = background
+  previewFrameRenderer = background || fallbackBackground
     ? createBrowserCanvasFrameRenderer({ canvas, story: preview.story, backgroundImage: background })
     : null;
   paintPreviewFrame();
@@ -148,6 +191,11 @@ function renderShell() {
   const formatButtons = Object.entries(VIDEO_FORMATS).map(([ratio, format]) => `
     <button type="button" data-ratio="${ratio}" aria-pressed="${settings.aspectRatio === ratio}">
       <strong>${ratio}</strong><small>${escapeHtml(format.label)}</small>
+    </button>`).join("");
+  const backgroundButtons = VIDEO_BACKGROUND_PRESETS.map(preset => `
+    <button type="button" class="browser-export-background-option" data-video-background="${escapeHtml(preset.id)}" aria-pressed="${settings.backgroundId === preset.id}">
+      <img src="${escapeHtml(backgroundAssetUrl(preset.posterPath))}" alt="" loading="lazy">
+      <span>${escapeHtml(preset.label)}</span>
     </button>`).join("");
   root.innerHTML = `
     <div class="browser-export-shell">
@@ -183,6 +231,11 @@ function renderShell() {
           <label class="browser-export-field">Центральный человек<select id="browser-export-person">${options}</select></label>
           <div class="browser-export-formats" role="group" aria-label="Формат кадра">${formatButtons}</div>
           <label class="browser-export-dates"><input id="browser-export-dates" type="checkbox"${settings.includeDates ? " checked" : ""}> Показывать даты в кадрах</label>
+          <section class="browser-export-background-picker" aria-label="Фон видео">
+            <span class="browser-export-background-heading">Движущийся фон</span>
+            <div class="browser-export-backgrounds" role="group" aria-label="Выберите видеофон">${backgroundButtons}</div>
+            <p class="browser-export-background-status" role="status">Загружаем выбранный фон…</p>
+          </section>
           <div class="browser-export-sound-control">
             <label class="browser-export-field" for="browser-export-sound">Звук переходов<select id="browser-export-sound">
               <option value="click" selected>Приятный щелчок</option>
@@ -216,6 +269,11 @@ function bindEvents() {
   root.querySelector("#browser-export-scope").addEventListener("change", event => update({ scopeType: event.currentTarget.value }));
   root.querySelector("#browser-export-person").addEventListener("change", event => update({ selectedPersonId: event.currentTarget.value }));
   root.querySelector("#browser-export-dates").addEventListener("change", event => update({ includeDates: event.currentTarget.checked }));
+  root.querySelectorAll("[data-video-background]").forEach(button => button.addEventListener("click", () => {
+    const backgroundId = button.dataset.videoBackground;
+    root.querySelectorAll("[data-video-background]").forEach(option => option.setAttribute("aria-pressed", String(option === button)));
+    update({ backgroundId });
+  }));
   root.querySelector("#browser-export-sound").addEventListener("change", event => {
     transitionSoundStyle = event.currentTarget.value;
     clearVideo();
@@ -243,6 +301,10 @@ function bindEvents() {
 
 function update(patch) {
   settings = normalizeExportSettings({ ...settings, ...patch }, people);
+  if (Object.hasOwn(patch, "backgroundId")) {
+    try { window.localStorage.setItem(BACKGROUND_PREFERENCE_STORAGE_KEY, settings.backgroundId); } catch { /* Preference persistence is optional in private browsing. */ }
+    loadSelectedVideoBackground(settings.backgroundId);
+  }
   clearVideo(); updatePreview();
 }
 
@@ -345,6 +407,7 @@ async function startExport() {
   rendering = true;
   root.querySelector("#browser-export-start").disabled = true;
   root.querySelector("#browser-export-play").disabled = true;
+  root.querySelectorAll("[data-video-background]").forEach(button => { button.disabled = true; });
   root.querySelector(".browser-export-cancel").hidden = false;
   root.querySelector("#browser-export-scrub").disabled = true;
   showError(""); updateProgress(0, plan.totalFrames);
@@ -353,45 +416,96 @@ async function startExport() {
   try {
     try { wakeLock = await navigator.wakeLock?.request?.("screen"); } catch { wakeLock = null; }
     root.querySelector("#browser-export-start").textContent = "Готовим точный рендер…";
-      const { canEncodeTimestampedMp4, encodeTimestampedMp4 } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261028-continuous-camera-exit-2");
+    const {
+      canEncodeTimestampedMp4,
+      encodeTimestampedMp4,
+      openVideoBackgroundReader
+    } = await import("./assets/browser-encoder/browser-local-encoder.js?v=20261029-moving-video-backgrounds-2");
     const expectedDuration = plan.totalFrames / plan.fps;
     const videoBitrate = chooseVideoBitrate({ durationSeconds: expectedDuration });
     const timestampedMp4Supported = await canEncodeTimestampedMp4({
       width: plan.width, height: plan.height, bitrate: videoBitrate, includeAudio: transitionSoundStyle !== "none"
     });
-    const drawOutputFrame = outputFrame => drawFrame(getSourceFrameForBrowserExport(outputFrame, plan));
+    let backgroundReader = null;
+    let backgroundReaderClosed = false;
+    let realtimeVideoBackgroundActive = false;
+    try {
+      const preset = getVideoBackgroundPreset(settings.backgroundId);
+      backgroundReader = await openVideoBackgroundReader({
+        url: backgroundAssetUrl(preset.videoPath),
+        signal: renderController.signal
+      });
+      setBackgroundStatus("Фон декодирован. Кадры древа и видеофона будут собраны синхронно.");
+    } catch (error) {
+      if (renderController.signal.aborted) throw error;
+      setBackgroundStatus(timestampedMp4Supported
+        ? "Покадровый декодер недоступен; используем постер выбранного фона."
+        : "Покадровый декодер недоступен; проверяем нативное воспроизведение выбранного фона.");
+    }
+
+    if (!backgroundReader && !timestampedMp4Supported) {
+      realtimeVideoBackgroundActive = await startRealtimeVideoBackground(backgroundVideoElement);
+      setBackgroundStatus(realtimeVideoBackgroundActive
+        ? "Используем нативное воспроизведение видеофона в реальном времени вместе с записью дерева."
+        : "Видеофон недоступен; ролик будет собран с постером выбранной сцены.");
+    }
+
+    const closeBackgroundReader = async () => {
+      if (!backgroundReader || backgroundReaderClosed) return;
+      backgroundReaderClosed = true;
+      try { await backgroundReader.close(); } catch { /* Keep a completed tree export if decoder cleanup fails. */ }
+    };
+    const drawOutputFrame = async outputFrame => {
+      let backgroundSample = null;
+      if (backgroundReader) {
+        try {
+          backgroundSample = await backgroundReader.getSampleAt(outputFrame / plan.fps);
+        } catch (error) {
+          if (renderController.signal.aborted) throw error;
+          await closeBackgroundReader();
+          backgroundReader = null;
+          setBackgroundStatus("Видеофон прервался при декодировании; завершаем ролик с выбранным постером.");
+        }
+      }
+      const nativeVideoFrame = realtimeVideoBackgroundActive ? backgroundVideoElement : null;
+      drawFrame(getSourceFrameForBrowserExport(outputFrame, plan), backgroundSample ?? nativeVideoFrame);
+    };
     let recordedBlob;
-    if (timestampedMp4Supported) {
-      const audioBuffer = transitionSoundStyle === "none" ? null : await createTransitionAudioBuffer({
-        style: transitionSoundStyle,
-        cueTimes: [...cueFrames].map(outputFrame => outputFrame / plan.fps),
-        durationSeconds: expectedDuration
-      });
-      if (transitionSoundStyle !== "none" && !audioBuffer) {
-        root.querySelector(".browser-export-sound-status").textContent = "Не удалось подготовить звуковую дорожку; видео будет без звука.";
+    try {
+      if (timestampedMp4Supported) {
+        const audioBuffer = transitionSoundStyle === "none" ? null : await createTransitionAudioBuffer({
+          style: transitionSoundStyle,
+          cueTimes: [...cueFrames].map(outputFrame => outputFrame / plan.fps),
+          durationSeconds: expectedDuration
+        });
+        if (transitionSoundStyle !== "none" && !audioBuffer) {
+          root.querySelector(".browser-export-sound-status").textContent = "Не удалось подготовить звуковую дорожку; видео будет без звука.";
+        }
+        recordedBlob = await encodeTimestampedMp4({
+          canvas, totalFrames: plan.totalFrames, fps: plan.fps, bitrate: videoBitrate, audioBuffer,
+          signal: renderController.signal,
+          drawFrame: drawOutputFrame,
+          onProgress: (current, total) => { if (current % plan.fps === 0) updateProgress(current, total); }
+        });
+      } else {
+        audioPlayer = await createTransitionAudioTrack({ style: transitionSoundStyle });
+        if (transitionSoundStyle !== "none" && !audioPlayer) {
+          root.querySelector(".browser-export-sound-status").textContent = "Не удалось загрузить выбранный звук; видео будет без звука.";
+        }
+        await audioPlayer?.resume();
+        recordedBlob = await recordCanvasVideo({
+          canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: expectedDuration, signal: renderController.signal,
+          audioTracks: audioPlayer?.audioTracks,
+          onTimingWait: () => { root.querySelector("#browser-export-start").textContent = "Завершаем запись видео…"; },
+          drawFrame: async outputFrame => {
+            await drawOutputFrame(outputFrame);
+            if (cueFrames.has(outputFrame)) audioPlayer?.playCue();
+          },
+          onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
+        });
       }
-      recordedBlob = await encodeTimestampedMp4({
-        canvas, totalFrames: plan.totalFrames, fps: plan.fps, bitrate: videoBitrate, audioBuffer,
-        signal: renderController.signal,
-        drawFrame: drawOutputFrame,
-        onProgress: (current, total) => { if (current % plan.fps === 0) updateProgress(current, total); }
-      });
-    } else {
-      audioPlayer = await createTransitionAudioTrack({ style: transitionSoundStyle });
-      if (transitionSoundStyle !== "none" && !audioPlayer) {
-        root.querySelector(".browser-export-sound-status").textContent = "Не удалось загрузить выбранный звук; видео будет без звука.";
-      }
-      await audioPlayer?.resume();
-      recordedBlob = await recordCanvasVideo({
-        canvas, totalFrames: plan.totalFrames, fps: plan.fps, durationSeconds: expectedDuration, signal: renderController.signal,
-        audioTracks: audioPlayer?.audioTracks,
-        onTimingWait: () => { root.querySelector("#browser-export-start").textContent = "Завершаем запись видео…"; },
-        drawFrame: async outputFrame => {
-          drawOutputFrame(outputFrame);
-          if (cueFrames.has(outputFrame)) audioPlayer?.playCue();
-        },
-        onProgress: (current, total) => { if (current % plan.fps === 0 || current === total) updateProgress(current, total); }
-      });
+    } finally {
+      await closeBackgroundReader();
     }
     const actualDuration = await inspectRecordedDuration(recordedBlob);
     const durationIssue = getRecordedVideoDurationIssue(actualDuration, expectedDuration);
@@ -421,9 +535,11 @@ async function startExport() {
   } finally {
     try { await wakeLock?.release?.(); } catch { /* screen lock is optional */ }
     try { await audioPlayer?.close(); } catch { /* retain the video result if browser audio teardown fails */ }
+    backgroundVideoElement?.pause?.();
     rendering = false; renderController = null;
     root.querySelector("#browser-export-start").disabled = !support.supported || !background;
     root.querySelector("#browser-export-start").textContent = "Создать видео на устройстве";
+    root.querySelectorAll("[data-video-background]").forEach(button => { button.disabled = false; });
     root.querySelector("#browser-export-play").disabled = preview.durationFrames < 2;
     root.querySelector(".browser-export-cancel").hidden = true;
     root.querySelector("#browser-export-scrub").disabled = false;
@@ -555,11 +671,59 @@ function showSupport() {
   updatePreview();
 }
 
+function loadSelectedVideoBackground(backgroundId) {
+  const token = ++backgroundLoadToken;
+  const preset = getVideoBackgroundPreset(backgroundId);
+  backgroundVideoElement?.pause?.();
+  background = fallbackBackground;
+
+  const poster = new Image();
+  poster.onload = () => {
+    if (token !== backgroundLoadToken) return;
+    background = poster;
+    setBackgroundStatus("Фон готов. В предпросмотре и экспорте он затемняется под линии и подписи древа.");
+    updatePreview();
+  };
+  poster.onerror = () => {
+    if (token !== backgroundLoadToken) return;
+    background = fallbackBackground;
+    setBackgroundStatus("Не удалось загрузить постер фона; используем запасной фон Waydean.");
+    updatePreview();
+  };
+  poster.src = backgroundAssetUrl(preset.posterPath);
+
+  const video = document.createElement("video");
+  video.preload = "metadata";
+  video.muted = preset.muted;
+  video.loop = true;
+  video.playsInline = true;
+  video.src = backgroundAssetUrl(preset.videoPath);
+  video.addEventListener("loadeddata", () => {
+    if (token !== backgroundLoadToken) return;
+    setBackgroundStatus("Движущийся фон готов. При экспорте он синхронизируется с каждым кадром древа.");
+    updatePreview();
+  });
+  video.addEventListener("seeked", () => {
+    if (token === backgroundLoadToken && playbackRequestId === null && !rendering) paintPreviewFrame();
+  });
+  video.addEventListener("error", () => {
+    if (token !== backgroundLoadToken) return;
+    setBackgroundStatus("Ролик фона не загрузился. При экспорте будет использован его постер.");
+  });
+  backgroundVideoElement = video;
+  video.load();
+}
+
 function loadBackground() {
   const image = new Image();
-  image.onload = () => { background = image; updatePreview(); };
+  image.onload = () => {
+    fallbackBackground = image;
+    if (!background) background = image;
+    updatePreview();
+  };
   image.onerror = () => showError("Не удалось загрузить изображение фона. Проверьте, что файл семейного дерева открыт по HTTPS.");
   image.src = new URL("./remotion-preview/public/waydean-cinematic-background.png", window.location.href).href;
+  loadSelectedVideoBackground(settings.backgroundId);
 }
 
 renderShell();

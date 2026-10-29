@@ -73,6 +73,29 @@ test("browser output frame maps back to the shared 30 fps story timeline", () =>
   assert.equal(getSourceFrameForBrowserExport(plan.totalFrames - 1, plan), plan.sourceFrames - 1);
 });
 
+test("browser canvas renderer draws a decoded background sample before the tree frame", () => {
+  const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
+  const context = fakeCanvasContext();
+  const canvas = { width: 1280, height: 720, getContext: () => context };
+  const sample = {
+    displayWidth: 1920,
+    displayHeight: 1080,
+    draw: (...args) => context.calls.push(["video-sample", ...args.slice(1)])
+  };
+  const renderFrame = createBrowserCanvasFrameRenderer({
+    canvas,
+    story,
+    backgroundImage: { width: 1600, height: 900 }
+  });
+
+  renderFrame(0, sample);
+
+  const sampleDrawIndex = context.calls.findIndex(call => call[0] === "video-sample");
+  const treeDrawIndex = context.calls.findIndex(call => call[0] === "round-rect");
+  assert.ok(sampleDrawIndex >= 0, "a decoded video sample should be drawn instead of the still background");
+  assert.ok(treeDrawIndex > sampleDrawIndex, "tree cards must be composited on top of the video background");
+});
+
 test("overview markers keep a readable radius in exported pixels at very small camera zoom", () => {
   for (const [framingScale, outputScale] of [[0.01, 0.75], [0.08, 1], [0.2, 1.2]]) {
     const radius = browserCanvasRenderer.getOverviewMarkerRadius(framingScale, outputScale);

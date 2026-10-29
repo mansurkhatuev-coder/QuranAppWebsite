@@ -62,6 +62,16 @@ button:focus-visible, input:focus-visible, select:focus-visible, a:focus-visible
 .browser-export-formats small { color: #9fa196; font-size: 9px; }
 .browser-export-dates { display: flex; align-items: center; gap: 9px; color: #c9c4b6; font-size: 11px; }
 .browser-export-dates input { width: 17px; height: 17px; accent-color: var(--gold); }
+.browser-export-background-picker { display: grid; gap: 8px; padding: 11px; border: 1px solid rgba(220,190,133,.17); border-radius: 8px; background: linear-gradient(145deg, rgba(225,184,99,.045), rgba(5,10,11,.6)); }
+.browser-export-background-heading { color: #e1ca95; font: 500 13px Georgia, serif; }
+.browser-export-backgrounds { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+.browser-export-background-option { display: grid; min-width: 0; gap: 6px; padding: 5px; border: 1px solid rgba(221,208,179,.16); border-radius: 7px; background: rgba(7,12,13,.78); color: #b9b5a7; text-align: left; cursor: pointer; transition: border-color .18s ease, background .18s ease, transform .18s ease; }
+.browser-export-background-option img { display: block; width: 100%; aspect-ratio: 16 / 9; border-radius: 4px; background: linear-gradient(135deg, #18211f, #080d0e); object-fit: cover; }
+.browser-export-background-option span { overflow-wrap: anywhere; padding: 0 2px 1px; font-size: 9px; line-height: 1.25; }
+.browser-export-background-option[aria-pressed="true"] { border-color: rgba(241,217,158,.83); background: linear-gradient(145deg, rgba(126,91,42,.32), rgba(7,12,13,.9)); box-shadow: inset 0 0 0 1px rgba(241,217,158,.13), 0 0 15px rgba(219,182,111,.08); color: #f1dfb9; }
+.browser-export-background-option:hover:not(:disabled) { transform: translateY(-1px); border-color: rgba(233,196,114,.63); }
+.browser-export-background-option:disabled { opacity: .68; cursor: wait; }
+.browser-export-background-status { margin: 0; color: #969b90; font-size: 9px; line-height: 1.45; }
 .browser-export-sound-control { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: end; gap: 8px; }
 .browser-export-sound-preview { min-height: 41px; padding: 0 11px; border: 1px solid rgba(221,208,179,.18); border-radius: 6px; background: rgba(255,255,255,.035); color: #e2d0a7; font-size: 10px; cursor: pointer; white-space: nowrap; }
 .browser-export-sound-preview:hover:not(:disabled) { border-color: rgba(233,196,114,.6); background: rgba(225,184,99,.08); }
