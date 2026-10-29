@@ -29,7 +29,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261029-cache-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261029-cache-2';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 import {
   createWeatherController, normalizeAppearance, readAppearance, resolveSkyPeriod, writeAppearance

@@ -269,6 +269,10 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
     ])),
     [story.timeline.pathIds]
   );
+  const pathPersonIds = useMemo(
+    () => new Set(story.timeline.pathIds),
+    [story.timeline.pathIds]
+  );
   const revealedPersonIds = useMemo(
     () => new Set(story.timeline.layout.nodes
       .filter(node => shouldRenderVideoPersonCard(story, shotIndex, node.id, true))
@@ -474,7 +478,10 @@ export const CinematicShot = ({ story, shot, shotIndex }: Props) => {
             const edgeOpacity = getTreeViewportOpacity(story.scopeType, 1);
             const shownAsMarker = overview && !revealedPersonIds.has(person.id);
             const detailProgress = story.scopeType === "all"
-              ? getVideoCardDetailProgress(node.width * framing.scale * outputScale)
+              ? getVideoCardDetailProgress(
+                node.width * framing.scale * outputScale,
+                pathPersonIds.has(person.id) && revealedPersonIds.has(person.id)
+              )
               : shownAsMarker ? 0 : 1;
             const contextOpacity = story.scopeType === "all" ? 1 : presentation.contextCardOpacity;
 

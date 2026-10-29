@@ -334,6 +334,18 @@ test("full-tree cards blend smoothly from overview markers to detailed cards", (
   assert.equal(getVideoCardDetailProgress(160), 1);
 });
 
+test("full-tree video expands a revealed lineage before background branch cards", () => {
+  assert.equal(getVideoCardDetailProgress(20, true), 0);
+  assert.ok(getVideoCardDetailProgress(30, true) > 0 && getVideoCardDetailProgress(30, true) < 1,
+    "the focused lineage should still transition smoothly out of the far overview");
+  assert.equal(getVideoCardDetailProgress(34, true), 1,
+    "lineage cards should be fully detailed by the medium zoom level");
+  const branchProgress = getVideoCardDetailProgress(80);
+  assert.ok(branchProgress > 0 && branchProgress < 1,
+    "background relatives should retain the cheaper smooth detail transition");
+  assert.equal(getVideoCardDetailProgress(80, true), 1);
+});
+
 test("full-tree focus keeps the previous branch in frame during the camera approach", () => {
   const people = Array.from({ length: 13 }, (_, index) => ({
     id: `ancestor-${index + 1}`,

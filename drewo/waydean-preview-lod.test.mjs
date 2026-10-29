@@ -100,3 +100,10 @@ test('only people on the selected or active route retain compact labels', () => 
   assert.equal(compactRouteClass('parent', routePeople), ' route');
   assert.equal(compactRouteClass('sibling', routePeople), '');
 });
+
+test('medium zoom keeps the selected path card photo and dates expanded', () => {
+  assert.match(lodCss, /\.graph\[data-lod="compact"\] \.person-node\.route \.node-avatar\s*\{\s*display:\s*block\s*;/);
+  assert.match(lodCss, /\.graph\[data-lod="compact"\] \.person-node\.route \.node-copy small\s*\{\s*display:\s*block\s*;/);
+  assert.doesNotMatch(lodCss, /\.graph\[data-lod="overview"\] \.person-node\.route/,
+    'only the medium zoom level should keep full path details; far overview stays optimized');
+});

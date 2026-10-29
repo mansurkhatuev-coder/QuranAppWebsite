@@ -5,7 +5,7 @@ import {
   easeCinematic,
   layoutFamilyTree,
   sampleCinematicTimeline
-} from "../../cinematic-timeline.mjs?v=20261029-generation-line-reveal-1";
+} from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
@@ -247,9 +247,13 @@ export function getFullTreeEdgeRevealProgress(story, shotIndex, localFrame, edge
   return linearProgress * linearProgress * (3 - 2 * linearProgress);
 }
 
-export function getVideoCardDetailProgress(renderedWidthPx) {
+export function getVideoCardDetailProgress(renderedWidthPx, keepLineageDetailed = false) {
   const width = Number(renderedWidthPx);
   if (!Number.isFinite(width)) return 0;
+  if (keepLineageDetailed === true) {
+    const lineageProgress = clamp((width - 26) / (34 - 26), 0, 1);
+    return lineageProgress * lineageProgress * (3 - 2 * lineageProgress);
+  }
   const progress = clamp((width - 36) / (160 - 36), 0, 1);
   return progress * progress * (3 - 2 * progress);
 }
