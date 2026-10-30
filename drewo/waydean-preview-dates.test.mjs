@@ -34,6 +34,6 @@ test('missing and invalid dates do not become invented years', () => {
 });
 
 test('calendar parity module is versioned and included in the offline PWA cache', () => {
-  assert.match(html, /waydean-preview\.js\?v=menu-video-lines-20261029-1/);
+  assert.match(html, /waydean-preview\.js\?v=lineage-whoami-retention-20261030-1/);
   assert.match(serviceWorker, /waydean-preview-dates\.mjs\?v=calendar-parity-1/);
 });

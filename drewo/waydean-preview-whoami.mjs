@@ -11,7 +11,6 @@ export function readWhoAmIPerson(storage, treeKey, validPersonIds) {
       ? validPersonIds
       : new Set(Array.isArray(validPersonIds) ? validPersonIds : []);
     if (validIds.has(personId)) return personId;
-    storage?.removeItem(key);
   } catch {
     return null;
   }

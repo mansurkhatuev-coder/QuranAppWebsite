@@ -9,6 +9,7 @@ import {
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getVideoCardDetailProgress,
+  isSelectedLineagePerson,
   shouldRenderVideoPersonCard,
   getTreeViewportOpacity
 } from "./project-model.mjs";
@@ -344,6 +345,25 @@ test("full-tree video expands a revealed lineage before background branch cards"
   assert.ok(branchProgress > 0 && branchProgress < 1,
     "background relatives should retain the cheaper smooth detail transition");
   assert.equal(getVideoCardDetailProgress(80, true), 1);
+});
+
+test("full-tree rendering recognizes the entire selected lineage before each person's reveal scene", () => {
+  const people = [
+    { id: "root", name: "Родоначальник", generation: 1, parent: null },
+    ...Array.from({ length: 9 }, (_, index) => ({
+      id: `child-${index + 1}`,
+      name: `Потомок ${index + 1}`,
+      generation: 2,
+      parent: "root"
+    }))
+  ];
+  const story = buildRemotionStory({ people, selectedPersonId: "child-9", scopeType: "all" });
+  const firstRevealShot = story.timeline.shots.findIndex(shot => shot.personIds.includes("child-9"));
+
+  assert.ok(firstRevealShot > 0, "the selected person is introduced after the opening scene");
+  assert.equal(isSelectedLineagePerson(story, "root"), true);
+  assert.equal(isSelectedLineagePerson(story, "child-9"), true);
+  assert.equal(isSelectedLineagePerson(story, "child-1"), false);
 });
 
 test("full-tree focus keeps the previous branch in frame during the camera approach", () => {
