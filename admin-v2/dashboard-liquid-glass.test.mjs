@@ -18,7 +18,9 @@ test("Liquid Glass stays scoped to the overview and has a non-blurred fallback",
 });
 
 test("selected analytics values and store deltas are readable at dashboard scale", () => {
-  assert.match(css, /\.chart-detail\s+strong\s*\{[^}]*font-size:\s*1[6-9]px/s);
+  assert.match(css, /#app-frame\s+\.chart-detail\s+strong\s*\{[^}]*font-size:\s*2[0-9]px/s);
+  assert.match(css, /#app-frame\s+\.stat\s+strong\s*\{[^}]*font-size:\s*3[2-9]px/s);
+  assert.match(css, /#app-frame\s+\.admin-analytics-value\s*\{[^}]*font-size:\s*3[0-9]px/s);
   assert.match(terraCss, /\.admin-store-delta\.is-up\s*\{[^}]*padding:/s);
   assert.match(terraCss, /\.admin-store-delta\.is-up\s*\{[^}]*font-size:\s*1[3-9]px/s);
 });

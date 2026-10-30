@@ -54,6 +54,10 @@ test("overview chart keeps every date, uses responsive grouped bars, and opens t
   assert.equal(config.options.responsive, true);
   assert.equal(config.options.maintainAspectRatio, false);
   assert.equal(config.options.scales.x.ticks.autoSkip, true);
+  assert.ok(config.options.scales.x.ticks.font.size >= 13);
+  assert.ok(config.options.scales.y.ticks.font.size >= 13);
+  assert.ok(config.options.plugins.tooltip.titleFont.size >= 16);
+  assert.ok(config.options.plugins.tooltip.bodyFont.size >= 15);
   config.options.onClick({}, [{ index: 1 }]);
   assert.equal(selected, rows[1]);
 });
