@@ -35,7 +35,7 @@ function fakeCanvasContext() {
     lineTo: (...args) => calls.push(["line", ...args]),
     bezierCurveTo: (...args) => calls.push(["curve", ...args]),
     quadraticCurveTo: (...args) => calls.push(["quadratic", ...args]),
-    roundRect: (...args) => calls.push(["round-rect", ...args]),
+    roundRect: (...args) => calls.push(["round-rect", ...args, context.globalAlpha]),
     closePath: () => calls.push(["close"]),
     fill: () => calls.push(["fill"]),
     stroke: () => calls.push(["stroke"]),
@@ -175,7 +175,7 @@ test("overview video connectors end at the rectangular card edge", () => {
     "curved and orthogonal connectors must both use the marker card half-height, not its round radius");
 });
 
-test("full-tree overview video draws a visible mini-card for every generation", () => {
+test("full-tree overview video draws a compact card silhouette for every generation", () => {
   const multigenerationalPeople = Array.from({ length: 14 }, (_, index) => ({
     id: `generation-${index + 1}`,
     name: `Поколение ${index + 1}`,
@@ -191,21 +191,18 @@ test("full-tree overview video draws a visible mini-card for every generation", 
   const frame = shot.startFrame;
   const sample = sampleRemotionFrame(story, frame);
   const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
-  const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
-  const expectedCard = browserCanvasRenderer.getOverviewCardGeometry(browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale));
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
 
   assert.ok(sample.camera.zoom < 0.5 || framing.scale < 0.5, "the opening shot should use overview cards");
   createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
 
-  const miniCards = context.calls.filter(call => call[0] === "round-rect"
-    && Math.abs(call[3] - expectedCard.width) < 1e-9
-    && Math.abs(call[4] - expectedCard.height) < 1e-9);
-  assert.ok(miniCards.length >= multigenerationalPeople.length - 1);
+  const cardTransforms = context.calls.filter(call => call[0] === "scale");
+  assert.ok(cardTransforms.length >= multigenerationalPeople.length,
+    "every generation should receive an adaptive card silhouette");
 });
 
-test("full-tree video crossfades overview markers into detailed cards", () => {
+test("full-tree cards expand from compact markers without fading their dark backing", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -221,22 +218,50 @@ test("full-tree video crossfades overview markers into detailed cards", () => {
     .find(candidate => {
       const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
       const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
-      return getVideoCardDetailProgress(node.width * framing.scale * outputScale) > 0.2
-        && getVideoCardDetailProgress(node.width * framing.scale * outputScale) < 0.8;
+      const progress = getVideoCardDetailProgress(node.width * framing.scale * outputScale);
+      const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
+      const geometry = browserCanvasRenderer.getVideoCardRevealGeometry(node, progress, markerRadius);
+      return progress > 0.55 && progress < 0.8
+        && geometry.width * framing.scale * outputScale < 88;
     });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
 
-  assert.notEqual(frame, undefined, "camera travel should pass through a gradual marker-to-card range");
+  assert.notEqual(frame, undefined, "camera travel should pass through the compact-to-detail range");
   createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
 
   const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
   const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
   const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
   const marker = browserCanvasRenderer.getOverviewCardGeometry(markerRadius);
-  assert.ok(context.calls.some(call => call[0] === "round-rect" && call[3] === marker.width && call[4] === marker.height));
-  assert.ok(context.calls.some(call => call[0] === "round-rect" && call[3] === node.width && call[4] === node.height));
-  assert.ok(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"));
+  const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * outputScale);
+  const geometry = browserCanvasRenderer.getVideoCardRevealGeometry(node, detailProgress, markerRadius);
+  const body = context.calls.find(call => call[0] === "round-rect"
+    && Math.abs(call[1] - (node.x - node.width / 2)) < 1e-6
+    && Math.abs(call[2] - (node.y - node.height / 2)) < 1e-6
+    && call[3] === node.width && call[4] === node.height);
+
+  assert.ok(geometry.width > marker.width && geometry.width < node.width,
+    "the compact silhouette should grow smoothly to the full card size");
+  assert.ok(body, "the interpolated silhouette should be drawn as a family card");
+  assert.equal(body[6], 1, "the card backing must stay opaque throughout the zoom transition");
+  assert.equal(getVideoCardContentProgress(geometry.width * framing.scale * outputScale), 0,
+    "text remains hidden until the actually visible card has room for legible details");
+  assert.equal(context.calls.some(call => call[0] === "text" && call[1] === "Потомок 1"), false,
+    "subpixel name glyphs must not flicker as white bars");
+});
+
+test("card reveal geometry interpolates from a consistent dark mini-card to the full block", () => {
+  const node = { x: 40, y: 60, width: 180, height: 76 };
+  const marker = browserCanvasRenderer.getOverviewCardGeometry(4);
+  const start = browserCanvasRenderer.getVideoCardRevealGeometry(node, 0, 4);
+  const middle = browserCanvasRenderer.getVideoCardRevealGeometry(node, 0.5, 4);
+  const end = browserCanvasRenderer.getVideoCardRevealGeometry(node, 1, 4);
+
+  assert.deepEqual([start.width, start.height], [marker.width, marker.height]);
+  assert.ok(middle.width > start.width && middle.width < end.width);
+  assert.ok(middle.height > start.height && middle.height < end.height);
+  assert.deepEqual([end.width, end.height], [node.width, node.height]);
 });
 
 test("full-tree video keeps revealed path content visible at medium zoom and side branches compact", () => {
@@ -259,11 +284,11 @@ test("full-tree video keeps revealed path content visible at medium zoom and sid
       const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
       const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
       const branchProgress = getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale);
-      const pathContentProgress = getVideoCardContentProgress(pathNode.width * framing.scale * outputScale);
+      const pathContentProgress = getVideoCardContentProgress(pathNode.width * framing.scale * outputScale, true);
       const pathDetailProgress = getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true);
       return branchProgress > 0.2 && branchProgress < 0.8
         && pathDetailProgress === 1
-        && pathContentProgress < 0.2;
+        && pathContentProgress === 1;
     });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
@@ -274,15 +299,19 @@ test("full-tree video keeps revealed path content visible at medium zoom and sid
   const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
   const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
   const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
-  const marker = browserCanvasRenderer.getOverviewCardGeometry(markerRadius);
-  const markerAt = node => context.calls.some(call => call[0] === "round-rect"
-    && Math.abs(call[1] - (node.x - marker.width / 2)) < 1e-6
-    && Math.abs(call[2] - (node.y - marker.height / 2)) < 1e-6
-    && Math.abs(call[3] - marker.width) < 1e-6
-    && Math.abs(call[4] - marker.height) < 1e-6);
+  const pathGeometry = browserCanvasRenderer.getVideoCardRevealGeometry(pathNode,
+    getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true), markerRadius);
+  const branchGeometry = browserCanvasRenderer.getVideoCardRevealGeometry(branchNode,
+    getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale), markerRadius);
+  const hasCardScale = geometry => context.calls.some(call => call[0] === "scale"
+    && Math.abs(call[1] - geometry.scaleX) < 1e-6
+    && Math.abs(call[2] - geometry.scaleY) < 1e-6);
 
-  assert.equal(markerAt(pathNode), false, "a revealed selected-path card should have no remaining overview marker");
-  assert.equal(markerAt(branchNode), true, "a side branch should retain the gradual compact transition");
+  assert.equal(pathGeometry.scaleX, 1, "a revealed selected-path card remains fully expanded");
+  assert.ok(branchGeometry.scaleX > 0 && branchGeometry.scaleX < 1,
+    "a side branch should grow smoothly from its compact marker");
+  assert.ok(hasCardScale(pathGeometry));
+  assert.ok(hasCardScale(branchGeometry));
   const pathName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 9");
   assert.ok(pathName, "a revealed path card should render its name");
   assert.ok(pathName.at(-1) > 0.99, "a revealed path card should keep its name fully visible at medium zoom");
@@ -328,10 +357,10 @@ test("card text and avatars fade in only when there is enough screen space to re
 });
 
 test("revealed lineage cards use an earlier content fade than compact side branches", () => {
-  assert.equal(getVideoCardContentProgress(55, true), 0);
-  assert.ok(getVideoCardContentProgress(70, true) > 0 && getVideoCardContentProgress(70, true) < 1);
-  assert.equal(getVideoCardContentProgress(84, true), 1);
-  assert.equal(getVideoCardContentProgress(84), 0);
+  assert.equal(getVideoCardContentProgress(87, true), 0);
+  assert.ok(getVideoCardContentProgress(104, true) > 0 && getVideoCardContentProgress(104, true) < 1);
+  assert.equal(getVideoCardContentProgress(120, true), 1);
+  assert.ok(getVideoCardContentProgress(120) < 1, "side branches finish their text fade a little later");
 });
 
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
