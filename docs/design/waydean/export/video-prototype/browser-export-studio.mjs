@@ -1,5 +1,5 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs";
-import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundOutputTimestamp, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, isVideoElementFrameRenderable, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-animation-clock-1";
+import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundOutputTimestamp, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, isVideoElementFrameRenderable, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-remove-eagle-1";
 import {
   chooseVideoBitrate,
   getBrowserVideoSupport,
