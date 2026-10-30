@@ -3,6 +3,12 @@
   box-shadow: 0 0 0 1px #d9ad5855, 0 0 20px #d5a84642, 0 7px 20px #000b;
 }
 
+.graph[data-lod="compact"] .person-node.my-self:not(.selected) {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
 .self-indicator {
   position: absolute;
   top: 6px;
