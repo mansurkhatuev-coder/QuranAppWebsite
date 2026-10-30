@@ -94,16 +94,15 @@ test('large zoom jumps may skip an intermediate visual level', () => {
   assert.equal(nextLodLevel('overview', 100), 'detail');
 });
 
-test('only people on the selected or active route retain compact labels', () => {
+test('selected-route classes remain available while compact people share marker styling', () => {
   const routePeople = new Set(['selected', 'parent']);
   assert.equal(compactRouteClass('selected', routePeople), ' route');
   assert.equal(compactRouteClass('parent', routePeople), ' route');
   assert.equal(compactRouteClass('sibling', routePeople), '');
-});
-
-test('medium zoom keeps the selected path card photo and dates expanded', () => {
-  assert.match(lodCss, /\.graph\[data-lod="compact"\] \.person-node\.route \.node-avatar\s*\{\s*display:\s*block\s*;/);
-  assert.match(lodCss, /\.graph\[data-lod="compact"\] \.person-node\.route \.node-copy small\s*\{\s*display:\s*block\s*;/);
-  assert.doesNotMatch(lodCss, /\.graph\[data-lod="overview"\] \.person-node\.route/,
-    'only the medium zoom level should keep full path details; far overview stays optimized');
+  assert.match(lodCss, /\\.graph\\[data-lod="compact"\\] \\.person-node > \\* \\{ display: none; \\}/,
+    'every compact person should hide card content');
+  assert.match(lodCss, /\\.graph\\[data-lod="compact"\\] \\.person-node::after/,
+    'every compact person should use the same marker');
+  assert.doesNotMatch(lodCss, /\\.graph\\[data-lod="compact"\\] \\.person-node\\.route/,
+    'route membership should not change compact card detail');
 });
