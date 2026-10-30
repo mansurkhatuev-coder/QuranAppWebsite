@@ -17,42 +17,42 @@
 }
 
 .graph[data-lod="compact"] .person-node {
-  border-color: #d7bd8055;
-  background: #091316ed;
-  box-shadow: none;
-}
-
-.graph[data-lod="compact"] .person-node .node-avatar,
-.graph[data-lod="compact"] .person-node .node-copy small {
-  display: none;
-}
-
-.graph[data-lod="compact"] .person-node .node-copy strong {
-  font-size: 11px;
-}
-
-.graph[data-lod="compact"] .person-node.dimmed { filter: none; opacity: .45; }
-
-.graph[data-lod="compact"] .person-node.selected {
-  border-color: #ffe18c;
-  box-shadow: 0 0 0 2px #dfa93a, 0 0 20px #ffc34c77, 0 12px 35px #000d;
-}
-
-.graph[data-lod="compact"] .person-node:not(.route) {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
   filter: none;
-  opacity: .58;
+  opacity: .82;
 }
 
-.graph[data-lod="compact"] .person-node:not(.route) .node-copy { display: none; }
-.graph[data-lod="compact"] .person-node:not(.route)::after { opacity: .82; transform: translate(-50%, -50%) scale(1); }
+.graph[data-lod="compact"] .person-node > * { display: none; }
+.graph[data-lod="compact"] .person-node::after { opacity: .82; transform: translate(-50%, -50%) scale(1); }
+.graph[data-lod="compact"] .person-node.selected { opacity: 1; }
+.graph[data-lod="compact"] .person-node.selected::after {
+  background: #f3d184;
+  border-color: #fff0c7;
+  box-shadow: 0 0 0 var(--overview-card-highlight-width, 2px) #f1c66e30, 0 0 12px #f3d184aa;
+  opacity: 1;
+}
+.graph[data-lod="compact"] .person-node.my-self:not(.selected)::after {
+  border-color: #e9cb7e;
+  box-shadow: 0 0 0 1px #d9ad5855, 0 0 8px #d5a84642;
+}
+.graph[data-lod="compact"] .person-node.dimmed { filter: none; opacity: .45; }
+.graph[data-lod="compact"] .person-node:hover,
+.graph[data-lod="compact"] .person-node:focus-visible {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+.graph[data-lod="compact"] .person-node:hover::after,
+.graph[data-lod="compact"] .person-node:focus-visible::after {
+  border-color: #ffe18c;
+  box-shadow: 0 0 8px #ffc34c99;
+  opacity: 1;
+}
 
-/* Keep the selected ancestry readable at medium zoom; side branches remain simplified. */
-.graph[data-lod="compact"] .person-node.route .node-avatar { display: block; }
-.graph[data-lod="compact"] .person-node.route .node-copy small { display: block; }
-.graph[data-lod="compact"] .person-node.route .node-copy strong { font-size: 12px; }
+/* Keep the same compact marker for every person; the selected lineage stays visible in its connectors. */
 
 .graph[data-lod="overview"] .person-node {
   width: var(--person-card-width, var(--tree-card-width)) !important;
