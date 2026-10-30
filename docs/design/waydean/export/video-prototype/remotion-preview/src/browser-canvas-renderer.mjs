@@ -16,7 +16,7 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261030-uniform-reveal-1";
+} from "./project-model.mjs?v=20261030-parent-search-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { normalizeVideoSpeed } from "./export-studio-model.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261030-uniform-video-cards-1";
@@ -401,6 +401,18 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     const presentation = getScenePresentation(shot.type); const scale = Math.min(canvas.width / framing.viewWidth, canvas.height / framing.viewHeight);
     const overviewMarkerRadius = getOverviewMarkerRadius(framing.scale, scale);
     const markerRadius = overview ? overviewMarkerRadius : 8;
+    const fullTreeCardDetailProgress = story.scopeType === "all"
+      ? getVideoCardDetailProgress(story.timeline.layout.cardWidth * framing.scale * scale)
+      : null;
+    const fullTreeReferenceGeometry = story.scopeType === "all"
+      ? getVideoCardRevealGeometry({
+        width: story.timeline.layout.cardWidth,
+        height: story.timeline.layout.cardHeight
+      }, fullTreeCardDetailProgress, overviewMarkerRadius)
+      : null;
+    const fullTreeContentProgress = fullTreeReferenceGeometry
+      ? getVideoCardContentProgress(fullTreeReferenceGeometry.width * framing.scale * scale)
+      : null;
     const offsetX = (canvas.width - framing.viewWidth * scale) / 2; const offsetY = (canvas.height - framing.viewHeight * scale) / 2;
     context.save(); context.translate(offsetX + framing.translateX * scale, offsetY + framing.translateY * scale); context.scale(framing.scale * scale, framing.scale * scale);
     const orthogonalTree = story.scopeType === "all";
@@ -414,10 +426,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const parentIsMarker = overview && (firstRevealShotByPerson.get(parent.id) ?? Infinity) > shotIndex;
       const childIsMarker = overview && (firstRevealShotByPerson.get(child.id) ?? Infinity) > shotIndex;
       const parentDetail = story.scopeType === "all"
-        ? getVideoCardDetailProgress(parent.width * framing.scale * scale)
+        ? fullTreeCardDetailProgress
         : parentIsMarker ? 0 : 1;
       const childDetail = story.scopeType === "all"
-        ? getVideoCardDetailProgress(child.width * framing.scale * scale)
+        ? fullTreeCardDetailProgress
         : childIsMarker ? 0 : 1;
       const generationProgress = story.scopeType === "all"
         ? getFullTreeEdgeRevealProgress(story, shotIndex, local, edge.key)
@@ -481,11 +493,8 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
       const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
       if (story.scopeType === "all") {
-        const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale);
-        const geometry = getVideoCardRevealGeometry(node, detailProgress, overviewMarkerRadius);
-        const visibleWidth = geometry.width * framing.scale * scale;
-        const contentProgress = getVideoCardContentProgress(visibleWidth);
-        drawAdaptiveCard(context, person, node, opacity, target, story.includeDates, contentProgress, geometry);
+        const geometry = getVideoCardRevealGeometry(node, fullTreeCardDetailProgress, overviewMarkerRadius);
+        drawAdaptiveCard(context, person, node, opacity, target, story.includeDates, fullTreeContentProgress, geometry);
         continue;
       }
       if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);
