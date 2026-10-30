@@ -5,7 +5,7 @@ import {
   easeCinematic,
   layoutFamilyTree,
   sampleCinematicTimeline
-} from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";
+} from "../../cinematic-timeline.mjs?v=20261030-uniform-video-cards-1";
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
