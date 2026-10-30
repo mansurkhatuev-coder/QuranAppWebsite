@@ -140,7 +140,7 @@ export function shouldRenderVideoPersonCard(story: StoryModel, shotIndex: number
 
 export function getFullTreeEdgeRevealProgress(story: StoryModel, shotIndex: number, localFrame: number, edgeKey: string): number;
 
-export function getVideoCardDetailProgress(renderedWidthPx: number, keepLineageDetailed?: boolean): number;
+export function getVideoCardDetailProgress(renderedWidthPx: number): number;
 
 export function getSceneEdgeEmphasis(story: StoryModel, shotIndex: number, localFrame: number, edgeKey: string): number;
 
