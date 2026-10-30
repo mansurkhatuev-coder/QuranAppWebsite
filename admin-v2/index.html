@@ -14,7 +14,7 @@
 <link rel="stylesheet" href="./terra-design.css?v=terra-palette-20261029-3">
 <link rel="stylesheet" href="./terra-production.css?v=terra-palette-20261029-3">
 <link rel="stylesheet" href="./figma-layout.css?v=figma-parity-20261029-3">
-<link rel="stylesheet" href="./figma-refinement.css?v=graphite-charts-tajweed-20261030-3">
+<link rel="stylesheet" href="./figma-refinement.css?v=liquid-glass-charts-20261030-1">
 </head>
 <body>
 <svg class="icons" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -86,10 +86,10 @@
   </header>
 
   <main class="main">
-   <section class="view is-active" id="view-overview" data-page="overview">
+   <section class="view is-active glass-preview-on" id="view-overview" data-glass-preview="on" data-page="overview">
     <div class="page-title-row">
      <div><p class="eyebrow">ЦЕНТР УПРАВЛЕНИЯ</p><h1>Обзор</h1><p class="subtitle">Приложение и контент</p></div>
-     <label class="select-label"><span>Период</span><select id="period"><option value="0" selected>За всё время</option><option value="30">За 30 дней</option><option value="7">За 7 дней</option></select></label>
+     <div class="overview-title-actions"><button type="button" class="glass-preview-toggle" id="glass-preview-toggle" aria-pressed="true" title="Включить или выключить стеклянный стиль обзора">Liquid Glass · включено</button><label class="select-label"><span>Период</span><select id="period"><option value="0" selected>За всё время</option><option value="30">За 30 дней</option><option value="7">За 7 дней</option></select></label></div>
     </div>
     <div class="overview-stats">
       <div class="stat"><span>УСТАНОВКИ</span><strong id="stat-installs">—</strong><small>За всё время</small></div>
@@ -101,7 +101,7 @@
      <section class="panel chart-panel">
       <div class="panel-heading"><div><h2>Использование приложения</h2><p>Дневная динамика по доступной истории</p></div><button type="button" class="text-action" data-view="analytics">Вся аналитика <svg><use href="#i-arrow"/></svg></button></div>
       <div class="chart-legend"><span><i class="legend-active"></i>Активные</span><span><i class="legend-new"></i>Новые</span><span class="coverage-label" id="overview-coverage">—</span></div>
-      <div class="chart-wrap"><svg id="overview-chart" viewBox="0 0 720 250" role="group" aria-label="График аналитики: выберите дату"></svg></div>
+      <div class="chart-wrap"><canvas id="overview-chart" class="admin-v2-chart-canvas" role="img" aria-label="Использование приложения: активные устройства и новые установки"></canvas><div class="chart-empty-state" id="overview-chart-empty" hidden>Нет данных за этот период</div></div>
       <div class="chart-detail" id="chart-detail" aria-live="polite"><span>Выберите точку на графике</span><strong>—</strong></div>
      </section>
      <section class="panel store-panel" id="overview-stores">
@@ -178,7 +178,7 @@
     <div class="page-title-row"><div><p class="eyebrow">АНАЛИТИКА</p><h1>Аналитика</h1><p class="subtitle">Пользователи, активность в приложении и источники установок</p></div><div class="analytics-page-actions"><label class="select-label"><span>Период</span><select id="analytics-range"><option value="0" selected>За всё время</option><option value="30">За 30 дней</option><option value="7">За 7 дней</option></select></label><button type="button" class="button subdued" id="analytics-refresh"><svg><use href="#i-refresh"/></svg>Обновить</button></div></div>
     <nav class="analytics-tabs" aria-label="Разделы аналитики"><button type="button" class="analytics-tab is-active" data-scroll-target="analytics-overview">Обзор</button><button type="button" class="analytics-tab" data-scroll-target="analytics-dynamics">Динамика</button><button type="button" class="analytics-tab" data-scroll-target="analytics-downloads">Скачивания и источники</button><button type="button" class="analytics-tab" data-scroll-target="analytics-breakdown-section">Детализация</button><button type="button" class="analytics-tab" data-scroll-target="analytics-courses">Курсы</button></nav>
     <section class="analytics-page-section" id="analytics-overview"><div class="analytics-section-heading"><h2>Пользователи</h2><span id="analytics-period-label">За всё время</span></div><div id="analytics-stats" class="analytics-note">Загрузка…</div><div id="analytics-metrics" class="analytics-metrics"></div></section>
-    <section class="analytics-page-section" id="analytics-dynamics"><div class="analytics-section-heading"><div><h2>Динамика</h2><p>Выберите столбец или дату, чтобы увидеть значения</p></div><span class="coverage-label" id="analytics-coverage">—</span></div><div class="panel chart-panel"><div class="chart-legend"><span><i class="legend-active"></i>Активные</span><span><i class="legend-new"></i>Новые</span></div><div class="chart-wrap"><svg id="analytics-chart" viewBox="0 0 720 250" role="group" aria-label="График аналитики: выберите дату"></svg></div><div class="chart-detail" id="analytics-detail"><span>Выберите дату</span><strong>—</strong></div></div></section>
+    <section class="analytics-page-section" id="analytics-dynamics"><div class="analytics-section-heading"><div><h2>Динамика</h2><p>Выберите столбец или дату, чтобы увидеть значения</p></div><span class="coverage-label" id="analytics-coverage">—</span></div><div class="panel chart-panel"><div class="chart-legend"><span><i class="legend-active"></i>Активные</span><span><i class="legend-new"></i>Новые</span></div><div class="chart-wrap"><canvas id="analytics-chart" class="admin-v2-chart-canvas" role="img" aria-label="Динамика активных устройств и новых установок"></canvas><div class="chart-empty-state" id="analytics-chart-empty" hidden>Нет данных за этот период</div></div><div class="chart-detail" id="analytics-detail"><span>Выберите дату</span><strong>—</strong></div></div></section>
     <section class="analytics-page-section" id="analytics-downloads"><div class="analytics-section-heading"><div><h2>Скачивания и источники</h2><p>Статистика магазинов отдельно от пользователей приложения</p></div></div><div class="panel store-panel"><div class="store-list" id="analytics-stores"><div class="store-row" data-store="apple"><span class="store-icon"><svg aria-hidden="true"><use href="#i-device"/></svg></span><span><strong>App Store</strong><small>iOS</small></span><b>—</b></div><div class="store-row" data-store="googleplay"><span class="store-icon play-mark"><svg aria-hidden="true"><use href="#i-play"/></svg></span><span><strong>Google Play</strong><small>Android</small></span><b>—</b></div><div class="store-row" data-store="rustore"><span class="store-icon ru-mark"><svg aria-hidden="true"><use href="#i-store"/></svg></span><span><strong>RuStore</strong><small>Android</small></span><b>—</b></div></div></div></section>
     <section class="analytics-page-section" id="analytics-breakdown-section"><div class="analytics-section-heading"><div><h2>Детализация активности</h2><p>Действия пользователей за выбранный период</p></div></div><div id="analytics-breakdown" class="analytics-details"></div></section>
     <section class="analytics-page-section" id="analytics-courses"><div class="analytics-section-heading"><h2>Курсы</h2><span>Прошли · бросили · учатся</span></div><div id="analytics-social" class="analytics-details"></div></section>
@@ -197,6 +197,7 @@
 <dialog id="banner-dialog"><form id="banner-form" method="dialog"><p class="eyebrow">ГЛАВНАЯ</p><h2 id="banner-dialog-title">Новый баннер</h2><label>Заголовок · русский<input name="titleRu" required></label><label>Текст · русский<textarea name="bodyRu" rows="3"></textarea></label><details><summary>Дополнительные поля</summary><label>Заголовок · English<input name="titleEn"></label><label>Текст · English<textarea name="bodyEn" rows="3"></textarea></label><label>Ссылка кнопки<input name="actionUrl" type="url"></label><label>Подпись кнопки<input name="actionLabelRu"></label><label>Показывать с<input name="startsAt" type="datetime-local"></label><label>Показывать до<input name="endsAt" type="datetime-local"></label></details><div class="dialog-actions"><button class="button subdued" value="cancel">Отмена</button><button class="button primary" value="save">Сохранить</button></div></form></dialog>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <dialog id="leave-dialog"><form method="dialog"><p class="eyebrow">НЕСОХРАНЁННЫЕ ПРАВКИ</p><h2>Сохранить изменения?</h2><p>Можно сохранить черновик, остаться здесь или перейти без сохранения.</p><div class="dialog-actions"><button class="button subdued" value="stay">Остаться</button><button class="button subdued" value="discard">Перейти без изменений</button><button class="button primary" value="save">Сохранить черновик</button></div></form></dialog>
+<dialog id="store-refresh-dialog" aria-labelledby="store-refresh-title" aria-describedby="store-refresh-description"><form method="dialog"><p class="eyebrow">СТАТИСТИКА МАГАЗИНОВ</p><h2 id="store-refresh-title">Обновить отчёты магазинов?</h2><p id="store-refresh-description">С момента последней проверки сегодня ещё не загружались новые отчёты.</p><ul id="store-refresh-list" class="store-refresh-list"></ul><div id="store-refresh-note" class="store-refresh-note"></div><div class="dialog-actions"><button class="button subdued" id="store-refresh-later" value="later">Напомнить позже</button><button class="button primary" id="store-refresh-now" type="button">Запросить обновление</button></div></form></dialog>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="../admin/supabase-config.js?v=6"></script>
 <script src="../admin/admin-supabase.js?v=analytics-counts-20261028"></script>
@@ -208,7 +209,10 @@
 <script src="./store-downloads-readonly.js?v=1"></script>
 <script src="../admin/store-analytics-data.js?v=1"></script>
 <script src="./analytics-dashboard-data.js?v=1"></script>
-<script src="./admin-analytics-v2.js?v=admin-v2-interactive-chart-segments-20261030-2"></script>
-<script src="./terra-admin.js?v=admin-v2-translation-preservation-20261030-9"></script>
+<script src="./vendor/chart.umd.min.js?v=4.6.1"></script>
+<script src="./chart-renderer.js?v=chartjs-20261030-1"></script>
+<script src="./store-refresh-policy.js?v=store-refresh-20261030-1"></script>
+<script src="./admin-analytics-v2.js?v=chartjs-20261030-1"></script>
+<script src="./terra-admin.js?v=chartjs-glass-refresh-20261030-1"></script>
 </body>
 </html>

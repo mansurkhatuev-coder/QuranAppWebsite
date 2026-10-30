@@ -17,7 +17,7 @@
     announcements: [], dailyAyahPool: [], dailyDuaPool: [], homeManifest: null,
     release: {}, currentPage: "overview", currentFilter: "all", currentRecord: null,
     currentRecordType: "dua", currentSectionFilter: "", currentSectionSelection: "", dirty: false, bannerEditingId: "", reviewRows: [],
-    analytics: null, storeSnapshot: null,
+    analytics: null, storeSnapshot: null, authenticated: false, storeRefreshPromptShown: false,
   };
   let toastTimer = 0;
   let tajweedSaveSequence = 0;
@@ -797,18 +797,11 @@
     updatePhone();
   }
 
-  const svgNS = "http://www.w3.org/2000/svg";
-  function svgElement(tag, attributes = {}) {
-    const node = document.createElementNS(svgNS, tag);
-    Object.entries(attributes).forEach(([key, value]) => node.setAttribute(key, String(value)));
-    return node;
-  }
-
   function drawChart(selector, detailSelector, data, coverageSelector) {
-    const svg = $(selector);
-    if (!svg) return;
-    svg.replaceChildren();
+    const canvas = $(selector);
+    if (!canvas) return;
     const detail = $(detailSelector);
+    const empty = $(selector.replace("-chart", "-chart-empty"));
     if (detail) {
       const label = $("span", detail);
       const value = $("strong", detail);
@@ -816,13 +809,7 @@
       if (value) value.textContent = "—";
     }
     const valid = (Array.isArray(data) ? data : []).filter((row) => row && (num(row.active_installs ?? row.active) != null || num(row.new_installs ?? row.fresh) != null));
-    if (!valid.length) {
-      const label = svgElement("text", { x: 360, y: 110, "text-anchor": "middle", class: "chart-empty" });
-      label.textContent = "Нет данных за этот период";
-      svg.append(label);
-      if (coverageSelector) $(coverageSelector).textContent = "";
-      return;
-    }
+    if (empty) empty.hidden = valid.length > 0;
     let points = valid;
     const monthlyInput = valid.every((row) => /^\d{4}-\d{2}$/.test(String(row.day || "")));
     let monthly = monthlyInput;
@@ -840,59 +827,16 @@
       });
       points = Array.from(buckets.values());
     }
-    const left = 48, right = 704, top = 18, bottom = 194;
-    const max = Math.max(1, ...points.flatMap((row) => [num(row.active_installs ?? row.active) || 0, num(row.new_installs ?? row.fresh) || 0]));
-    const gridMax = Math.ceil(max / Math.pow(10, Math.max(0, Math.floor(Math.log10(max)) - 1))) * Math.pow(10, Math.max(0, Math.floor(Math.log10(max)) - 1));
-    for (let i = 0; i <= 4; i += 1) {
-      const value = gridMax * i / 4;
-      const y = bottom - (value / gridMax) * (bottom - top);
-      svg.append(svgElement("line", { x1: left, y1: y, x2: right, y2: y, class: "chart-grid" }));
-      const axis = svgElement("text", { x: 0, y: y + 4, class: "chart-axis" });
-      axis.textContent = formatNumber(Math.round(value));
-      svg.append(axis);
-    }
-    const slot = (right - left) / points.length;
-    const barWidth = Math.max(1.5, Math.min(13, slot * .34));
-    const xAt = (index) => left + slot * (index + .5);
-    const yAt = (value) => bottom - ((Number(value) || 0) / gridMax) * (bottom - top);
-    points.forEach((row, index) => {
-      const x = xAt(index);
+    window.AdminV2Charts?.renderOverviewChart(canvas, points, (row) => {
+      if (!detail) return;
+      const rowMonthly = /^\d{4}-\d{2}$/.test(String(row.day || ""));
+      const day = window.AdminV2Charts?.dateLabel(row.day, rowMonthly) || row.day;
       const active = num(row.active_installs ?? row.active) || 0;
       const fresh = num(row.new_installs ?? row.fresh) || 0;
-      const rawDay = String(row.day || row.label || "");
-      const date = monthly ? new Date(`${rawDay}-01T00:00:00`) : new Date(`${rawDay.slice(0, 10)}T00:00:00`);
-      const day = Number.isNaN(date.getTime()) ? rawDay : date.toLocaleDateString("ru-RU", monthly ? { month: "short", year: "2-digit" } : { day: "numeric", month: "short" });
-      const accessibleLabel = `${day}: активных ${formatNumber(active)}, новых ${formatNumber(fresh)}`;
-      const group = svgElement("g", { class: "chart-day", role: "button", tabindex: "0", "aria-pressed": "false", "aria-label": accessibleLabel });
-      const title = svgElement("title");
-      title.textContent = `${day} · Активные: ${formatNumber(active)} · Новые: ${formatNumber(fresh)}`;
-      group.append(title);
-      const hit = svgElement("rect", { x: left + slot * index, y: top, width: slot, height: bottom - top + 5, class: "chart-day-hit" });
-      group.append(hit);
-      const activeHeight = Math.max(active > 0 ? 1.5 : 0, (active / gridMax) * (bottom - top));
-      const newHeight = Math.max(fresh > 0 ? 1.5 : 0, (fresh / gridMax) * (bottom - top));
-      group.append(svgElement("rect", { x: x - barWidth - 1, y: bottom - activeHeight, width: barWidth, height: activeHeight, rx: Math.min(2, barWidth / 2), class: "chart-bar-active" }));
-      group.append(svgElement("rect", { x: x + 1, y: bottom - newHeight, width: barWidth, height: newHeight, rx: Math.min(2, barWidth / 2), class: "chart-bar-new" }));
-      const select = () => {
-        $$(".chart-day", svg).forEach((node) => { node.classList.remove("is-selected"); node.setAttribute("aria-pressed", "false"); });
-        group.classList.add("is-selected");
-        group.setAttribute("aria-pressed", "true");
-        const detail = $(detailSelector);
-        if (detail) {
-          $("span", detail).textContent = monthly ? `${day} · месячная сводка` : day;
-          $("strong", detail).textContent = `${monthly ? "Активные · среднее за день" : "Активные"} ${formatNumber(active)} · Новые ${formatNumber(fresh)}`;
-        }
-      };
-      group.addEventListener("click", select);
-      group.addEventListener("keydown", (event) => { if (event.key === "Enter" || event.key === " ") { event.preventDefault(); select(); } });
-      svg.append(group);
-      if (points.length <= 14 || index % Math.ceil(points.length / 7) === 0) {
-        const label = svgElement("text", { x, y: 221, class: "chart-axis", "text-anchor": "middle" });
-        label.textContent = monthly ? day.replace(" г.", "") : (rawDay.length > 7 ? rawDay.slice(5) : rawDay);
-        svg.append(label);
-      }
+      $("span", detail).textContent = rowMonthly ? `${day} · месячная сводка` : day;
+      $("strong", detail).textContent = `${rowMonthly ? "Активные · среднее за день" : "Активные"} ${formatNumber(active)} · Новые ${formatNumber(fresh)}`;
     });
-    if (coverageSelector) $(coverageSelector).textContent = monthly ? `По месяцам · ${points.length} мес.${monthlyInput ? "" : ` · ${valid.length} доступных дней`}` : `Дней: ${valid.length}`;
+    if (coverageSelector) $(coverageSelector).textContent = !valid.length ? "" : monthly ? `По месяцам · ${points.length} мес.${monthlyInput ? "" : ` · ${valid.length} доступных дней`}` : `Дней: ${valid.length}`;
   }
 
   function setOverviewMetric(selector, value) {
@@ -912,6 +856,94 @@
       state.storeSnapshot = null;
       console.warn("store analytics", error);
       return null;
+    }
+  }
+
+  function resolveStoreRefreshPlan(snapshot) {
+    const policy = window.AdminV2StoreRefreshPolicy;
+    if (!policy) return null;
+    let freshnessSnapshot = snapshot;
+    try {
+      const localImports = window.AdminV2StoreCsv?.readSnapshot?.(window.localStorage, "quranapp-admin-v2-store-csv-imports:v1");
+      const localFetched = Date.parse(localImports?.rustore?.fetchedAt || "");
+      const remoteFetched = Date.parse(snapshot?.rustore?.fetchedAt || "");
+      if (Number.isFinite(localFetched) && (!Number.isFinite(remoteFetched) || localFetched > remoteFetched)) {
+        freshnessSnapshot = {
+          ...snapshot,
+          rustore: { ...snapshot?.rustore, fetchedAt: localImports.rustore.fetchedAt },
+        };
+      }
+    } catch { /* Local CSV storage may be unavailable; use the server's timestamps. */ }
+    return policy.resolvePlan(freshnessSnapshot);
+  }
+
+  function dismissedStoreRefreshDay() {
+    try { return window.localStorage.getItem("admin-v2-store-refresh-dismissed-day"); }
+    catch { return ""; }
+  }
+
+  function storeName(key) {
+    return ({ apple: "App Store", googleplay: "Google Play", rustore: "RuStore" })[key] || key;
+  }
+
+  function maybePromptStoreRefresh(snapshot) {
+    if (!IS_PRODUCTION || !state.authenticated || !snapshot || state.storeRefreshPromptShown) return;
+    state.storeRefreshPromptShown = true;
+    const policy = window.AdminV2StoreRefreshPolicy;
+    const plan = resolveStoreRefreshPlan(snapshot);
+    if (!plan || !policy.shouldPrompt(plan, dismissedStoreRefreshDay())) return;
+    const dialog = $("#store-refresh-dialog");
+    const list = $("#store-refresh-list");
+    const note = $("#store-refresh-note");
+    const action = $("#store-refresh-now");
+    if (!dialog || !list || !note || !action) return;
+    list.replaceChildren();
+    [...plan.automatic, ...plan.manual].forEach((key) => {
+      const item = document.createElement("li");
+      item.textContent = `${storeName(key)} · ${plan.automatic.includes(key) ? "можно запросить автоматически" : "нужен свежий CSV-отчёт"}`;
+      list.append(item);
+    });
+    note.textContent = plan.manual.includes("rustore")
+      ? "RuStore не отдаёт отчёты автоматически: файл можно загрузить в разделе «Аналитика → Скачивания и источники»."
+      : "Отчёты загружаются только после вашего подтверждения.";
+    action.textContent = plan.automatic.length ? "Запросить обновление" : "Открыть загрузку отчёта";
+    action.dataset.hasAutomatic = String(plan.automatic.length > 0);
+    action.dataset.dayKey = plan.dayKey;
+    action.dataset.stores = plan.automatic.join(",");
+    action.dataset.manualStores = plan.manual.join(",");
+    if (!dialog.open) dialog.showModal();
+  }
+
+  async function refreshStaleStores(button) {
+    const dialog = $("#store-refresh-dialog");
+    const dayKey = button.dataset.dayKey || "";
+    const automatic = String(button.dataset.stores || "").split(",").filter(Boolean);
+    const manual = String(button.dataset.manualStores || "").split(",").filter(Boolean);
+    try { window.localStorage.setItem("admin-v2-store-refresh-dismissed-day", dayKey); } catch { /* The open dialog remains one-shot for this page. */ }
+    dialog?.close("refresh");
+    if (!automatic.length) {
+      showPage("analytics");
+      document.querySelector("#analytics-downloads")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
+    button.disabled = true;
+    const completed = [];
+    const failures = [];
+    for (const key of automatic) {
+      try {
+        if (key === "apple") await window.AdminSupabase.refreshAppleDownloads();
+        if (key === "googleplay") await window.AdminSupabase.refreshGooglePlayDownloads();
+        completed.push(storeName(key));
+      } catch (error) {
+        failures.push(`${storeName(key)}: ${error?.message || "не удалось обновить"}`);
+      }
+    }
+    await loadOverview();
+    if (failures.length) toast(`Не всё обновилось · ${failures.join(" · ")}`);
+    else toast(`Запросы отправлены · ${completed.join(" · ")}${manual.length ? " · RuStore ждёт CSV" : ""}`);
+    if (manual.length) {
+      showPage("analytics");
+      document.querySelector("#analytics-downloads")?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
@@ -973,6 +1005,7 @@
       setOverviewMetric("#stat-active", period.active);
       const stores = storeTotals(snapshot, days);
       setOverviewMetric("#stat-store-downloads", stores.total);
+      maybePromptStoreRefresh(snapshot);
       chartSeries = Array.isArray(dashboard?.series) ? dashboard.series.map((row) => ({
         day: row.day, active_installs: num(row.active_installs), new_installs: num(row.new_installs),
       })) : [];
@@ -1613,6 +1646,22 @@
   }
 
   function bindEvents() {
+    const glassToggle = $("#glass-preview-toggle");
+    glassToggle?.addEventListener("click", () => {
+      const view = $("#view-overview");
+      const enabled = glassToggle.getAttribute("aria-pressed") !== "true";
+      view?.classList.toggle("glass-preview-on", enabled);
+      if (view) view.dataset.glassPreview = enabled ? "on" : "off";
+      glassToggle.setAttribute("aria-pressed", String(enabled));
+      glassToggle.textContent = `Liquid Glass · ${enabled ? "включено" : "выключено"}`;
+    });
+    const refreshDialog = $("#store-refresh-dialog");
+    refreshDialog?.addEventListener("close", () => {
+      if (refreshDialog.returnValue !== "later") return;
+      try { window.localStorage.setItem("admin-v2-store-refresh-dismissed-day", resolveStoreRefreshPlan(state.storeSnapshot)?.dayKey || ""); }
+      catch { /* Closing the dialog still suppresses it for this page. */ }
+    });
+    $("#store-refresh-now")?.addEventListener("click", (event) => void refreshStaleStores(event.currentTarget));
     document.addEventListener("click", (event) => {
       const sectionChoice = event.target.closest("[data-section-select]");
       if (sectionChoice) {
@@ -1767,6 +1816,7 @@
     if (window.ArabicInputTools) window.ArabicInputTools.mount(document);
     if (IS_PRODUCTION && window.AdminAnalytics) window.AdminAnalytics.bind({ $ });
     const session = IS_PRODUCTION ? await window.AdminSupabase?.getSession?.().catch(() => null) : null;
+    state.authenticated = Boolean(session?.user);
     if (session?.user?.email) $("#account-name").textContent = session.user.email.split("@")[0];
     const translationFrame = $("#translations-frame");
     if (translationFrame) translationFrame.src = DEMO_DATA ? "./ce-locale/?demo=1" : "./ce-locale/";

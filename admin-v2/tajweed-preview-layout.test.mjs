@@ -25,3 +25,17 @@ test("collapsed inspector panels remain reachable from the rule toolbar", () => 
   assert.match(css, /\.side-panels\s*\{[^}]*display:\s*none/s);
   assert.match(css, /\.side-panels\.is-open\s*\{[^}]*display:\s*grid/s);
 });
+
+test("availability controls live in the Tajweed header instead of below the editor", () => {
+  const topbar = html.match(/<header class="topbar">([\s\S]*?)<\/header>/)?.[1] || "";
+  assert.match(topbar, /class="availability-panel"/);
+  assert.match(topbar, /id="btnAvailability"/);
+  assert.match(topbar, /id="btnAvailabilityRefresh"/);
+  assert.doesNotMatch(html, /<\/header>\s*<section class="availability-panel"/);
+});
+
+test("wide preview places Arabic and transliteration inputs beside one another", () => {
+  assert.match(html, /<div class="source-fields">[\s\S]*?class="arabic-bar"[\s\S]*?class="translit-bar"[\s\S]*?<\/div>/);
+  assert.match(css, /\.source-fields\s*\{[^}]*display:\s*grid[^}]*grid-template-columns:\s*minmax\(/s);
+  assert.match(css, /@media\s*\(max-width:\s*(?:860|900)px\)[\s\S]*?\.source-fields\s*\{[^}]*grid-template-columns:\s*1fr/s);
+});

@@ -56,22 +56,21 @@
       </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden />
     </div>
+    <section class="availability-panel" aria-labelledby="availabilityTitle" aria-describedby="availabilityHint">
+      <div class="availability-copy">
+        <h2 id="availabilityTitle">Цветная транскрипция в приложении</h2>
+        <p id="availabilityHint">Для всех совместимых версий после проверки обновлений. Офлайн — после подключения. Черновик публикуется отдельно.</p>
+        <p id="availabilityStatus" class="availability-status" role="status" aria-live="polite">Проверяем состояние</p>
+      </div>
+      <div class="availability-actions">
+        <button type="button" id="btnAvailability" class="availability-switch" role="switch" aria-checked="false" aria-label="Цветная транскрипция в приложении" aria-describedby="availabilityStatus" hidden disabled>
+          <span class="switch-track" aria-hidden="true"><span></span></span>
+          <span id="availabilityValue">Выключено</span>
+        </button>
+        <button type="button" id="btnAvailabilityRefresh" class="btn ghost compact"><svg aria-hidden="true"><use href="#taj-refresh"/></svg>Проверить состояние</button>
+      </div>
+    </section>
   </header>
-
-  <section class="availability-panel" aria-labelledby="availabilityTitle" aria-describedby="availabilityHint">
-    <div class="availability-copy">
-      <h2 id="availabilityTitle">Цветная транскрипция в приложении</h2>
-      <p id="availabilityHint">Для всех совместимых версий после проверки обновлений. Офлайн — после подключения. Черновик публикуется отдельно.</p>
-      <p id="availabilityStatus" class="availability-status" role="status" aria-live="polite">Проверяем состояние</p>
-    </div>
-    <div class="availability-actions">
-      <button type="button" id="btnAvailability" class="availability-switch" role="switch" aria-checked="false" aria-label="Цветная транскрипция в приложении" aria-describedby="availabilityStatus" hidden disabled>
-        <span class="switch-track" aria-hidden="true"><span></span></span>
-        <span id="availabilityValue">Выключено</span>
-      </button>
-      <button type="button" id="btnAvailabilityRefresh" class="btn ghost compact"><svg aria-hidden="true"><use href="#taj-refresh"/></svg>Проверить состояние</button>
-    </div>
-  </section>
 
   <div class="library-bar">
     <label class="meta-field library-select-field">
@@ -102,6 +101,7 @@
     </div>
   </div>
 
+  <div class="source-fields">
   <div class="arabic-bar">
     <label class="meta-field grow">
       <span>Арабский оригинал</span>
@@ -118,6 +118,7 @@
         placeholder="Вставь сюда транслитерацию…&#10;Пример: Бисмилльах1иррохьманиррохьим."
       ></textarea>
     </label>
+  </div>
   </div>
 
   <section class="toolbar" aria-label="Правила таджвида">

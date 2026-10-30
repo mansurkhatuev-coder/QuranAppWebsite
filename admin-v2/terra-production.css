@@ -364,6 +364,7 @@ textarea { padding: 14px 15px; line-height: 1.8; }
 .admin-store-value { display: flex; align-items: baseline; flex-wrap: wrap; gap: 7px; }
 .admin-store-delta { font-size: 12px; }
 .admin-store-delta.is-up { color: #8ab99a; }
+.admin-store-delta.is-up { display: inline-flex; align-items: center; padding: 5px 9px; border-radius: 999px; font-size: 14px; font-weight: 750; line-height: 1.2; }
 .admin-store-delta.is-down { color: #e3978d; }
 .admin-analytics-sub { color: var(--muted); font-size: 11px; }
 .admin-analytics-compare,

@@ -20,6 +20,7 @@
   const RUSTORE_CONSOLE_URL = 'https://console.rustore.ru/apps/2063710429/statistics';
   const GOOGLE_PLAY_REPORTS_URL = 'https://console.cloud.google.com/storage/browser/pubsite_prod_5997333154759014155/stats/installs';
   const LOCAL_STORE_SNAPSHOT_KEY = 'quranapp-admin-v2-store-csv-imports:v1';
+  const pendingSeriesCharts = new Map();
 
   let allRows = [];
   let installations = [];
@@ -123,38 +124,11 @@
     });
     const numericValues = values.filter((value) => value != null);
     if (!numericValues.length) return '';
-    const max = Math.max(...numericValues, 1);
-    const left = 60;
-    const right = 748;
-    const top = 18;
-    const bottom = 148;
-    const x = (index) => rows.length < 2 ? (left + right) / 2 : left + (index * (right - left)) / (rows.length - 1);
-    const y = (value) => bottom - (value / max) * (bottom - top);
-    const segments = [];
-    let currentSegment = [];
-    values.forEach((value, index) => {
-      if (value == null) {
-        if (currentSegment.length) segments.push(currentSegment);
-        currentSegment = [];
-      } else currentSegment.push({ x: x(index), y: y(value), index, value });
-    });
-    if (currentSegment.length) segments.push(currentSegment);
-    const path = segments.map((segment) => `M ${segment.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' L ')}`).join(' ');
-    const areaPath = segments.filter((segment) => segment.length > 1).map((segment) =>
-      `M ${segment.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' L ')} L ${segment[segment.length - 1].x.toFixed(1)} ${bottom} L ${segment[0].x.toFixed(1)} ${bottom} Z`
-    ).join(' ');
     const labels = { active_installs: 'Активные устройства', new_installs: 'Новые установки', azkar: 'Завершения азкаров', downloads: 'Скачивания' };
     const colors = { active_installs: '#d5b66f', new_installs: '#94a2ad', azkar: '#86afbd' };
     const label = options.label || labels[key] || key;
     const color = options.color || colors[key] || '#d5b66f';
     const id = `analytics-series-${String(options.id || key).replace(/[^a-z0-9_-]/gi, '-')}`;
-    const ticks = [...new Set(Array.from({ length: 5 }, (_, index) => Math.round((max * index) / 4)))].map((value) => {
-      const tickY = y(value);
-      return `<g class="admin-analytics-chart-tick"><line x1="${left}" y1="${tickY}" x2="${right}" y2="${tickY}" /><text x="${left - 9}" y="${tickY + 4}" text-anchor="end">${new Intl.NumberFormat('ru-RU').format(value)}</text></g>`;
-    }).join('');
-    const labelIndexes = new Set([0, rows.length - 1]);
-    const labelStride = Math.max(1, Math.ceil((rows.length - 1) / 6));
-    for (let index = 0; index < rows.length; index += labelStride) labelIndexes.add(index);
     const dateLabel = (value) => {
       const text = String(value || '');
       const month = text.match(/^(\d{4})-(\d{2})$/);
@@ -162,15 +136,7 @@
       const day = text.match(/^(\d{4})-(\d{2})-(\d{2})/);
       return day ? `${day[3]}.${day[2]}` : text || '—';
     };
-    const dateTicks = [...labelIndexes].sort((a, b) => a - b).map((index) =>
-      `<text class="admin-analytics-chart-date" x="${x(index)}" y="174" text-anchor="${index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle'}">${escapeHtml(dateLabel(rows[index]?.day))}</text>`
-    ).join('');
-    const circles = values.map((value, index) => {
-      if (value == null) return '';
-      const day = dateLabel(rows[index]?.day);
-      const formattedValue = new Intl.NumberFormat('ru-RU').format(value);
-      return `<g class="admin-analytics-chart-point" role="button" tabindex="0" aria-pressed="false" data-x="${x(index)}" data-y="${y(value)}" data-day="${escapeHtml(day)}" data-value="${escapeHtml(formattedValue)}" data-label="${escapeHtml(label)}" aria-label="Выбрать ${escapeHtml(day)}: ${escapeHtml(label)} — ${escapeHtml(formattedValue)}"><circle class="admin-analytics-chart-point-hit" cx="${x(index)}" cy="${y(value)}" r="13" aria-hidden="true"/><circle class="admin-analytics-chart-point-visible" cx="${x(index)}" cy="${y(value)}" r="4.2"><title>${escapeHtml(day)}: ${escapeHtml(formattedValue)}</title></circle></g>`;
-    }).join('');
+    pendingSeriesCharts.set(id, { rows, key, label, color });
     const tableRows = rows.map((row) => {
       const raw = row?.[key];
       const value = raw == null || raw === '' || !Number.isFinite(Number(raw)) ? '—' : new Intl.NumberFormat('ru-RU').format(Number(raw));
@@ -178,57 +144,36 @@
     }).join('');
     return `<figure class="admin-analytics-chart-figure">
       <figcaption><i style="--series-color:${color}"></i>${escapeHtml(label)} <span>${rows.length} точек</span></figcaption>
-      <svg class="admin-analytics-chart-svg" viewBox="0 0 760 194" role="group" style="--series-color:${color}" aria-label="${escapeHtml(label)} · ${escapeHtml(options.period || 'последние 30 дней по данным сервера')}">
-        <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".24"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
-        ${ticks}<path d="${areaPath}" fill="url(#${id})"/><path class="admin-analytics-chart-line" d="${path}" style="--series-color:${color}"/>${circles}${dateTicks}
-      </svg>
+      <div class="admin-analytics-chart-frame"><canvas class="admin-analytics-chart-canvas" id="${id}" data-analytics-chart="true" role="img" aria-label="${escapeHtml(label)} · ${escapeHtml(options.period || 'последние 30 дней по данным сервера')}"></canvas></div>
       <div class="admin-analytics-chart-selection" aria-live="polite"><span>Выберите точку на графике</span><strong>—</strong></div>
       <details class="admin-analytics-chart-data"><summary>Таблица значений</summary><div><table><thead><tr><th scope="col">Дата</th><th scope="col">${escapeHtml(label)}</th></tr></thead><tbody>${tableRows}</tbody></table></div></details>
     </figure>`;
   }
 
-  function selectAnalyticsChartPoint(point) {
-    const figure = point?.closest('.admin-analytics-chart-figure');
-    if (!figure) return;
-    figure.querySelectorAll('.admin-analytics-chart-point').forEach((item) => {
-      const selected = item === point;
-      item.classList.toggle('is-selected', selected);
-      item.setAttribute('aria-pressed', String(selected));
-    });
-    const date = figure.querySelector('.admin-analytics-chart-selection span');
-    const value = figure.querySelector('.admin-analytics-chart-selection strong');
-    if (date) date.textContent = point.dataset.day || '—';
-    if (value) value.textContent = `${point.dataset.label || 'Значение'}: ${point.dataset.value || '—'}`;
+  function destroyAnalyticsCharts(root) {
+    root?.querySelectorAll?.('canvas[data-analytics-chart]').forEach((canvas) => global.AdminV2Charts?.destroy(canvas));
   }
 
-  document.addEventListener('click', (event) => {
-    let point = event.target instanceof Element ? event.target.closest('.admin-analytics-chart-point') : null;
-    if (!point && event.target instanceof Element) {
-      const svg = event.target.closest('.admin-analytics-chart-svg');
-      const matrix = svg?.getScreenCTM?.();
-      if (!svg || !matrix) return;
-      const cursor = svg.createSVGPoint();
-      cursor.x = event.clientX;
-      cursor.y = event.clientY;
-      const local = cursor.matrixTransform(matrix.inverse());
-      let nearestDistance = Infinity;
-      svg.querySelectorAll('.admin-analytics-chart-point').forEach((candidate) => {
-        const distance = Math.hypot(local.x - Number(candidate.dataset.x), local.y - Number(candidate.dataset.y));
-        if (distance < nearestDistance) {
-          nearestDistance = distance;
-          point = candidate;
-        }
+  function renderAnalyticsCharts(root = document) {
+    root?.querySelectorAll?.('canvas[data-analytics-chart]').forEach((canvas) => {
+      const model = pendingSeriesCharts.get(canvas.id);
+      if (!model) return;
+      const figure = canvas.closest('.admin-analytics-chart-figure');
+      const date = figure?.querySelector('.admin-analytics-chart-selection span');
+      const value = figure?.querySelector('.admin-analytics-chart-selection strong');
+      global.AdminV2Charts?.renderSeriesChart(canvas, model.rows, model.key, {
+        label: model.label,
+        color: model.color,
+        onSelect: (row) => {
+          const formattedDay = global.AdminV2Charts?.dateLabel(row?.day) || String(row?.day || '—');
+          const raw = row?.[model.key];
+          const formattedValue = raw == null || raw === '' || !Number.isFinite(Number(raw)) ? '—' : new Intl.NumberFormat('ru-RU').format(Number(raw));
+          if (date) date.textContent = formattedDay;
+          if (value) value.textContent = `${model.label}: ${formattedValue}`;
+        },
       });
-      if (nearestDistance > 40) return;
-    }
-    if (point) selectAnalyticsChartPoint(point);
-  });
-  document.addEventListener('keydown', (event) => {
-    const point = event.target instanceof Element ? event.target.closest('.admin-analytics-chart-point') : null;
-    if (!point || (event.key !== 'Enter' && event.key !== ' ')) return;
-    event.preventDefault();
-    selectAnalyticsChartPoint(point);
-  });
+    });
+  }
 
   function filteredRows() {
     if (!rangeDays) return allRows.slice();
@@ -400,6 +345,7 @@
         `
       : metricCard('Всего устройств', allTime, { hero: true });
 
+    destroyAnalyticsCharts(container);
     container.innerHTML = `
       <section class="admin-analytics-section">
         <div class="admin-analytics-social-head"><h3>Установки · ${escapeHtml(label)}</h3></div>
@@ -438,6 +384,7 @@
         ${platformNote}
       </section>` : ''}
     `;
+    renderAnalyticsCharts(container);
   }
 
   function renderBreakdown(container, title, pairs, labelFn, valueFn = null) {
@@ -1110,6 +1057,7 @@
         period: rangeDays > 0 ? rangeLabel(rangeDays) : storeHistoryComplete ? 'вся загруженная история отчётов' : 'часть загруженной истории',
       })).join('');
 
+    destroyAnalyticsCharts(container);
     container.innerHTML = `
       <div class="admin-analytics-social-head">
         <h3>Скачивания в сторах</h3>
@@ -1163,6 +1111,7 @@
       </section>
       <p class="admin-muted admin-analytics-note">Google Play публикует статистику с задержкой; значения обновляются после появления отчётов в Play Console.</p>
     `;
+    renderAnalyticsCharts(container);
   }
 
   async function applyStoreSnapshot(next, okMessage = '') {
