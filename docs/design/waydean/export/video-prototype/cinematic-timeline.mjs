@@ -18,8 +18,16 @@ const SHOT_SECONDS = {
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
 }
-function getPersonCardWidth(minimumWidth) {
-  return minimumWidth;
+function getPersonCardWidth(person, minimumWidth) {
+  const name = String(person?.name || "Без имени").trim();
+  const longestWord = Math.max(1, ...name.split(/\s+/).map(word => Array.from(word).length));
+  const fontSize = name.length > 18 ? 13 : 17;
+  const estimatedNameWidth = longestWord * fontSize * 0.68;
+  const born = person?.born == null ? "" : String(person.born);
+  const died = person?.died == null ? "" : String(person.died);
+  const dateLabel = born && died ? `${born} — ${died}` : born ? `род. ${born}` : died ? `ум. ${died}` : "";
+  const estimatedDateWidth = dateLabel.length * 6.2;
+  return Math.max(minimumWidth, Math.ceil(75 + Math.max(estimatedNameWidth, estimatedDateWidth) + 14));
 }
 
 export function easeCinematic(progress) {
@@ -56,7 +64,7 @@ export function layoutFamilyTree(people, {
   const rowGap = Math.max(48, Math.round(cardHeight * 0.53));
   const padY = cardHeight / 2 + 32;
   const rowStep = cardHeight + rowGap;
-  const cardWidths = new Map(records.map(person => [person.id, getPersonCardWidth(cardWidth)]));
+  const cardWidths = new Map(records.map(person => [person.id, getPersonCardWidth(person, cardWidth)]));
   const widestRow = Math.max(0, ...[...rows.values()].map(row =>
     row.reduce((sum, person) => sum + cardWidths.get(person.id), 0) + Math.max(0, row.length - 1) * columnGap
   ));
