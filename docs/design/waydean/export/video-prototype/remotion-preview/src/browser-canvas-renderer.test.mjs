@@ -264,7 +264,7 @@ test("card reveal geometry interpolates from a consistent dark mini-card to the 
   assert.deepEqual([end.width, end.height], [node.width, node.height]);
 });
 
-test("full-tree video keeps revealed path content visible at medium zoom and side branches compact", () => {
+test("full-tree video gives the selected lineage and side branches the same detail at equal widths", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -277,6 +277,7 @@ test("full-tree video keeps revealed path content visible at medium zoom and sid
   const story = buildRemotionStory({ people: branchPeople, selectedPersonId: "child-9", scopeType: "all" });
   const pathNode = story.timeline.layout.nodes.find(node => node.id === "child-9");
   const branchNode = story.timeline.layout.nodes.find(node => node.id === "child-1");
+  pathNode.width = branchNode.width;
   const frame = Array.from({ length: story.timeline.totalFrames }, (_, candidate) => candidate)
     .find(candidate => {
       const shot = story.timeline.shots.find(item => candidate >= item.startFrame && candidate < item.startFrame + item.durationFrames);
@@ -284,37 +285,35 @@ test("full-tree video keeps revealed path content visible at medium zoom and sid
       const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
       const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
       const branchProgress = getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale);
-      const pathContentProgress = getVideoCardContentProgress(pathNode.width * framing.scale * outputScale, true);
-      const pathDetailProgress = getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true);
-      return branchProgress > 0.2 && branchProgress < 0.8
-        && pathDetailProgress === 1
-        && pathContentProgress === 1;
+      const pathProgress = getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale);
+      return branchProgress > 0.2 && branchProgress < 0.8 && pathProgress === branchProgress;
     });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
 
-  assert.notEqual(frame, undefined, "the active generation should pass through medium zoom");
+  assert.notEqual(frame, undefined, "the selected generation should pass through medium zoom");
   createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
 
   const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
   const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
   const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
   const pathGeometry = browserCanvasRenderer.getVideoCardRevealGeometry(pathNode,
-    getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true), markerRadius);
+    getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale), markerRadius);
   const branchGeometry = browserCanvasRenderer.getVideoCardRevealGeometry(branchNode,
     getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale), markerRadius);
   const hasCardScale = geometry => context.calls.some(call => call[0] === "scale"
     && Math.abs(call[1] - geometry.scaleX) < 1e-6
     && Math.abs(call[2] - geometry.scaleY) < 1e-6);
 
-  assert.equal(pathGeometry.scaleX, 1, "a revealed selected-path card remains fully expanded");
-  assert.ok(branchGeometry.scaleX > 0 && branchGeometry.scaleX < 1,
-    "a side branch should grow smoothly from its compact marker");
+  assert.ok(pathGeometry.scaleX > 0 && pathGeometry.scaleX < 1);
+  assert.equal(pathGeometry.scaleX, branchGeometry.scaleX,
+    "equal-width lineage and side-branch cards should have the same reveal geometry");
   assert.ok(hasCardScale(pathGeometry));
   assert.ok(hasCardScale(branchGeometry));
   const pathName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 9");
-  assert.ok(pathName, "a revealed path card should render its name");
-  assert.ok(pathName.at(-1) > 0.99, "a revealed path card should keep its name fully visible at medium zoom");
+  const branchName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 1");
+  assert.equal(Boolean(pathName), Boolean(branchName),
+    "equal-width lineage and side-branch cards should reveal their text together");
 });
 
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
@@ -356,12 +355,6 @@ test("card text and avatars fade in only when there is enough screen space to re
   assert.equal(getVideoCardContentProgress(128), 1);
 });
 
-test("revealed lineage cards use an earlier content fade than compact side branches", () => {
-  assert.equal(getVideoCardContentProgress(87, true), 0);
-  assert.ok(getVideoCardContentProgress(104, true) > 0 && getVideoCardContentProgress(104, true) < 1);
-  assert.equal(getVideoCardContentProgress(120, true), 1);
-  assert.ok(getVideoCardContentProgress(120) < 1, "side branches finish their text fade a little later");
-});
 
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
   const branchPeople = [
