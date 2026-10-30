@@ -1,4 +1,4 @@
-import { buildRemotionStory } from "./project-model.mjs";
+import { buildRemotionStory } from "./project-model.mjs?v=20261030-parent-search-1";
 import {
   DEFAULT_FAMILY_HISTORY_PROPS,
   DEFAULT_VIDEO_ASPECT_RATIO,
