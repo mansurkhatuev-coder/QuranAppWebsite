@@ -7,7 +7,7 @@ const people = [{ id: "mansur", name: "Мансур", generation: 13, parent: nu
 test("video export preferences default to a valid background and preserve a selected background", () => {
   assert.equal(DEFAULT_EXPORT_SETTINGS.backgroundId, "towers");
   assert.equal(normalizeExportSettings({}, people).backgroundId, "towers");
-  assert.equal(normalizeExportSettings({ backgroundId: "eagle" }, people).backgroundId, "eagle");
+  assert.equal(normalizeExportSettings({ backgroundId: "village" }, people).backgroundId, "village");
 });
 
 test("invalid video background preference falls back to the default preset", () => {
