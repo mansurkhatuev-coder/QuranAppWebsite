@@ -12,7 +12,7 @@ import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } fr
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import {
   clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
-} from './waydean-preview-whoami.mjs?v=identity-storage-20261028-1';
+} from './waydean-preview-whoami.mjs?v=identity-storage-retain-20261030-1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -29,7 +29,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261029-cache-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-1';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 import {
   createWeatherController, normalizeAppearance, readAppearance, resolveSkyPeriod, writeAppearance
@@ -1222,7 +1222,6 @@ function refreshEditableModel() {
   const lostSelf = Boolean(myPersonId && !byId.has(myPersonId));
   if (lostSelf) {
     myPersonId = null;
-    clearWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
   }
   if (!byId.has(selectedId) && records.length) selectedId = records[0].id;
   childrenById = new Map(records.map(person => [person.id, []]));
@@ -2938,7 +2937,6 @@ function bindWaydeanFamilyLogin() {
       familySessionLockReason = '';
       storeFamilySession(familySessionStorage(), 'drewo', '');
       try {
-        clearWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
         localStorage.removeItem('drewo-view-session');
       } catch { /* Session logout must still complete if local preferences are unavailable. */ }
       const url = new URL(window.location.href);

@@ -267,6 +267,12 @@ export function getVideoCardContentProgress(renderedWidthPx, keepLineageDetailed
   return progress * progress * (3 - 2 * progress);
 }
 
+export function isSelectedLineagePerson(story, personId) {
+  return story?.scopeType === "all"
+    && Array.isArray(story?.timeline?.pathIds)
+    && story.timeline.pathIds.includes(personId);
+}
+
 export function getSceneEdgeEmphasis(story, shotIndex, localFrame, edgeKey) {
   const shots = story?.timeline?.shots ?? [];
   const current = shots[shotIndex];

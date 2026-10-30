@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v39';
+const CACHE_NAME = 'waydean-preview-shell-v40';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -30,7 +30,7 @@ const PRECACHE = [
   './waydean-preview-glass-cards.css?v=thin-glass-1',
   './waydean-preview-auth.css?v=family-auth-menu-dialog-20261029-1',
   './waydean-preview-appearance.css?v=weather-parity-20261028-1',
-  './waydean-preview.js?v=menu-video-lines-20261029-1',
+  './waydean-preview.js?v=lineage-whoami-retention-20261030-1',
   './waydean-preview-appearance.mjs?v=weather-parity-20261028-1',
   './waydean-preview-family-auth.mjs?v=family-auth-1',
   './waydean-preview-family-api.mjs?v=family-lock-2',
@@ -38,9 +38,9 @@ const PRECACHE = [
   './waydean-preview-admin-api.mjs?v=admin-push-20261028-1',
   './waydean-preview-admin-controls.mjs?v=account-admin-controls-1',
   './waydean-admin-identity.mjs?v=1',
-  './waydean-preview-whoami.mjs?v=identity-storage-20261028-1',
+  './waydean-preview-whoami.mjs?v=identity-storage-retain-20261030-1',
   './waydean-preview-account-history.mjs?v=1',
-  './waydean-preview-pwa.mjs?v=family-push-20261029-cache-2',
+  './waydean-preview-pwa.mjs?v=family-push-20261030-cache-1',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
   './waydean-preview-model.mjs?v=person-card-width-2',
   './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1',
