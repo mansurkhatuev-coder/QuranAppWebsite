@@ -1,4 +1,4 @@
-import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs";
+import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs?v=20261030-parent-search-1";
 import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundOutputTimestamp, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, isVideoElementFrameRenderable, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-remove-eagle-1";
 import {
   chooseVideoBitrate,
@@ -12,7 +12,7 @@ import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
-} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261030-uniform-reveal-1";
+} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261030-parent-search-1";
 import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261029-clean-card-speed-1";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
@@ -31,7 +31,12 @@ const DEMO_PEOPLE = [
   { id: "demo-3", name: "Продолжение рода", generation: 3, parent: "demo-2", born: 1934, died: null },
   { id: "demo-4", name: "Новая ветвь", generation: 4, parent: "demo-3", born: 1961, died: null }
 ];
-const people = handoff?.tree.people?.length ? handoff.tree.people : DEMO_PEOPLE;
+const sourcePeople = handoff?.tree.people?.length ? handoff.tree.people : DEMO_PEOPLE;
+// The preview handoff stores parentId; the video story/layout model reads parent.
+const people = sourcePeople.map(person => ({
+  ...person,
+  parent: person.parent ?? person.parentId ?? null
+}));
 const BACKGROUND_PREFERENCE_STORAGE_KEY = "waydean.video-export.background.v1";
 
 function readSavedSettings() {
@@ -209,8 +214,58 @@ function updatePreview(sourceFrameToPreserve = null) {
     : "Браузер сам выберет доступный формат файла.";
 }
 
+function normalizePersonSearch(value) {
+  return String(value ?? "")
+    .normalize("NFD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .toLocaleLowerCase("ru")
+    .trim();
+}
+
+function filterPersonOptions() {
+  const search = root.querySelector("#browser-export-person-search");
+  const select = root.querySelector("#browser-export-person");
+  const results = root.querySelector("#browser-export-person-results");
+  if (!search || !select) return;
+
+  const query = normalizePersonSearch(search.value);
+  const matches = people.filter(person => {
+    const searchable = normalizePersonSearch([
+      person.name,
+      person.id,
+      `поколение ${person.generation}`,
+      person.born,
+      person.died
+    ].filter(value => value != null).join(" "));
+    return !query || searchable.includes(query);
+  });
+  const selectedVisible = matches.some(person => person.id === settings.selectedPersonId);
+
+  select.replaceChildren();
+  if (!selectedVisible) {
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = matches.length ? "Выберите человека из результатов" : "Человек не найден";
+    placeholder.disabled = matches.length === 0;
+    placeholder.selected = true;
+    select.append(placeholder);
+  }
+  for (const person of matches) {
+    const option = document.createElement("option");
+    option.value = person.id;
+    option.textContent = `${person.name} · поколение ${person.generation}`;
+    select.append(option);
+  }
+  select.disabled = matches.length === 0;
+  if (selectedVisible) select.value = settings.selectedPersonId;
+  if (results) {
+    results.textContent = matches.length
+      ? `${matches.length} из ${people.length} человек`
+      : "Совпадений нет";
+  }
+}
+
 function renderShell() {
-  const options = people.map(person => `<option value="${escapeHtml(person.id)}"${person.id === settings.selectedPersonId ? " selected" : ""}>${escapeHtml(person.name)} · поколение ${escapeHtml(person.generation)}</option>`).join("");
   const formatButtons = Object.entries(VIDEO_FORMATS).map(([ratio, format]) => `
     <button type="button" data-ratio="${ratio}" aria-pressed="${settings.aspectRatio === ratio}">
       <strong>${ratio}</strong><small>${escapeHtml(format.label)}</small>
@@ -253,7 +308,9 @@ function renderShell() {
             <option value="path"${settings.scopeType === "path" ? " selected" : ""}>Мой путь</option>
             <option value="branch"${settings.scopeType === "branch" ? " selected" : ""}>Моя ветвь</option>
           </select></label>
-          <label class="browser-export-field">Центральный человек<select id="browser-export-person">${options}</select></label>
+          <label class="browser-export-field" for="browser-export-person-search">Найти человека<input id="browser-export-person-search" type="search" placeholder="Имя, дата или поколение" autocomplete="off" aria-controls="browser-export-person"></label>
+          <label class="browser-export-field">Кто ты в этом древе?<select id="browser-export-person" aria-describedby="browser-export-person-results"></select></label>
+          <p class="browser-export-person-results" id="browser-export-person-results" role="status" aria-live="polite"></p>
           <div class="browser-export-formats" role="group" aria-label="Формат кадра">${formatButtons}</div>
           <label class="browser-export-dates"><input id="browser-export-dates" type="checkbox"${settings.includeDates ? " checked" : ""}> Показывать даты в кадрах</label>
           <label class="browser-export-speed" for="browser-export-speed">
@@ -291,6 +348,7 @@ function renderShell() {
         <div class="browser-export-library-items"></div>
       </section>
     </div>`;
+  filterPersonOptions();
   bindEvents();
   updatePreview();
 }
@@ -298,7 +356,10 @@ function renderShell() {
 function bindEvents() {
   root.querySelector("#browser-export-title").addEventListener("input", event => update({ title: event.currentTarget.value }));
   root.querySelector("#browser-export-scope").addEventListener("change", event => update({ scopeType: event.currentTarget.value }));
-  root.querySelector("#browser-export-person").addEventListener("change", event => update({ selectedPersonId: event.currentTarget.value }));
+  root.querySelector("#browser-export-person-search").addEventListener("input", filterPersonOptions);
+  root.querySelector("#browser-export-person").addEventListener("change", event => {
+    if (event.currentTarget.value) update({ selectedPersonId: event.currentTarget.value });
+  });
   root.querySelector("#browser-export-dates").addEventListener("change", event => update({ includeDates: event.currentTarget.checked }));
   root.querySelector("#browser-export-speed").addEventListener("input", event => update({ speed: Number(event.currentTarget.value) }));
   root.querySelectorAll("[data-video-background]").forEach(button => button.addEventListener("click", () => {
