@@ -16,7 +16,7 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261029-lineage-content-medium-2";
+} from "./project-model.mjs?v=20261030-opaque-card-reveal-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { normalizeVideoSpeed } from "./export-studio-model.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261029-lineage-detail-medium-1";
@@ -341,6 +341,23 @@ export function getOverviewCardHalfHeight(markerRadius) {
   return getOverviewCardGeometry(markerRadius).height / 2;
 }
 
+export function getVideoCardRevealGeometry(node, detailProgress, markerRadius) {
+  const marker = getOverviewCardGeometry(markerRadius);
+  const progress = clamp(Number(detailProgress) || 0, 0, 1);
+  const width = marker.width + (node.width - marker.width) * progress;
+  const height = marker.height + (node.height - marker.height) * progress;
+  return { width, height, scaleX: width / node.width, scaleY: height / node.height };
+}
+
+function drawAdaptiveCard(context, person, node, alpha, isTarget, includeDates, contentAlpha, geometry) {
+  context.save();
+  context.translate(node.x, node.y);
+  context.scale(geometry.scaleX, geometry.scaleY);
+  context.translate(-node.x, -node.y);
+  drawCard(context, person, node, alpha, isTarget, includeDates, contentAlpha);
+  context.restore();
+}
+
 function drawCopy(context, story, shot, shotIndex, frame, width, height) {
   const local = Math.max(0, frame - shot.startFrame); const copyStart = getChapterCopyStartFrame(shot);
   const intro = shotIndex === 0 ? easeCinematic(clamp(local / Math.max(1, Math.min(24, shot.durationFrames - 1)), 0, 1)) : 1;
@@ -468,11 +485,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         const pathIsRevealed = pathPersonIds.has(person.id)
           && (firstRevealShotByPerson.get(person.id) ?? Infinity) <= shotIndex;
         const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale, pathIsRevealed);
-        if (detailProgress < 1) drawMarker(context, node, opacity * (1 - detailProgress), target, overviewMarkerRadius);
-        if (detailProgress > 0) {
-          const contentProgress = getVideoCardContentProgress(node.width * framing.scale * scale, pathIsRevealed);
-          drawCard(context, person, node, opacity * detailProgress, target, story.includeDates, contentProgress);
-        }
+        const geometry = getVideoCardRevealGeometry(node, detailProgress, overviewMarkerRadius);
+        const visibleWidth = geometry.width * framing.scale * scale;
+        const contentProgress = getVideoCardContentProgress(visibleWidth, pathIsRevealed);
+        drawAdaptiveCard(context, person, node, opacity, target, story.includeDates, contentProgress, geometry);
         continue;
       }
       if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);

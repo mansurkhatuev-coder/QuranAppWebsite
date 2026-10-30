@@ -36,7 +36,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261030-animation-clock-1"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261030-opaque-card-reveal-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -50,8 +50,8 @@ test("browser video export lets the user choose and preview transition sounds", 
 });
 
 test("smooth tree camera code uses fresh cache keys in the published module chain", () => {
-  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261029-lineage-content-medium-2/);
-  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261029-lineage-content-medium-2/);
+  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261030-opaque-card-reveal-1/);
+  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261030-opaque-card-reveal-1/);
   assert.match(canvasRendererSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
   assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
 });

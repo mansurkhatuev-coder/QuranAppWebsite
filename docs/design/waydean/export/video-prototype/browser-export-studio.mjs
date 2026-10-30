@@ -12,7 +12,7 @@ import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
-} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261029-lineage-content-medium-2";
+} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261030-opaque-card-reveal-1";
 import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261029-clean-card-speed-1";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
