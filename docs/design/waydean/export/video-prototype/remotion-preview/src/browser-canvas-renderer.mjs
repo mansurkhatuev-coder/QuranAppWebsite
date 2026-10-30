@@ -11,13 +11,12 @@ import {
   getTreeViewportOpacity,
   getVideoCardDetailProgress,
   getVideoCardContentProgress,
-  isSelectedLineagePerson,
   splitPersonName,
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261030-lineage-path-1";
+} from "./project-model.mjs?v=20261030-uniform-reveal-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
 import { normalizeVideoSpeed } from "./export-studio-model.mjs";
 import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261030-uniform-video-cards-1";
@@ -415,10 +414,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const parentIsMarker = overview && (firstRevealShotByPerson.get(parent.id) ?? Infinity) > shotIndex;
       const childIsMarker = overview && (firstRevealShotByPerson.get(child.id) ?? Infinity) > shotIndex;
       const parentDetail = story.scopeType === "all"
-        ? getVideoCardDetailProgress(parent.width * framing.scale * scale, isSelectedLineagePerson(story, parent.id))
+        ? getVideoCardDetailProgress(parent.width * framing.scale * scale)
         : parentIsMarker ? 0 : 1;
       const childDetail = story.scopeType === "all"
-        ? getVideoCardDetailProgress(child.width * framing.scale * scale, isSelectedLineagePerson(story, child.id))
+        ? getVideoCardDetailProgress(child.width * framing.scale * scale)
         : childIsMarker ? 0 : 1;
       const generationProgress = story.scopeType === "all"
         ? getFullTreeEdgeRevealProgress(story, shotIndex, local, edge.key)
@@ -482,11 +481,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
       const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
       if (story.scopeType === "all") {
-        const isSelectedLineage = isSelectedLineagePerson(story, person.id);
-        const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale, isSelectedLineage);
+        const detailProgress = getVideoCardDetailProgress(node.width * framing.scale * scale);
         const geometry = getVideoCardRevealGeometry(node, detailProgress, overviewMarkerRadius);
         const visibleWidth = geometry.width * framing.scale * scale;
-        const contentProgress = getVideoCardContentProgress(visibleWidth, isSelectedLineage);
+        const contentProgress = getVideoCardContentProgress(visibleWidth);
         drawAdaptiveCard(context, person, node, opacity, target, story.includeDates, contentProgress, geometry);
         continue;
       }
