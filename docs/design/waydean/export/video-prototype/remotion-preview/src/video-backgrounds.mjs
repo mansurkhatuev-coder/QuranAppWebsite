@@ -16,13 +16,6 @@ export const VIDEO_BACKGROUND_PRESETS = Object.freeze([
     muted: true
   }),
   Object.freeze({
-    id: "eagle",
-    label: "Полёт орла",
-    videoPath: "./remotion-preview/public/video-backgrounds/eagle-loop.mp4",
-    posterPath: "./remotion-preview/public/video-backgrounds/eagle-poster.jpg",
-    muted: true
-  }),
-  Object.freeze({
     id: "flow-chechen-village",
     label: "Башни и горное селение",
     videoPath: "./remotion-preview/public/video-backgrounds/flow-chechen-village.mp4",
