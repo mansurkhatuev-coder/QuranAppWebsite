@@ -9,7 +9,6 @@ import {
   getSceneEdgeEmphasis,
   getScenePersonEmphasis,
   getVideoCardDetailProgress,
-  isSelectedLineagePerson,
   shouldRenderVideoPersonCard,
   getTreeViewportOpacity
 } from "./project-model.mjs";
@@ -335,19 +334,13 @@ test("full-tree cards blend smoothly from overview markers to detailed cards", (
   assert.equal(getVideoCardDetailProgress(160), 1);
 });
 
-test("full-tree video expands a revealed lineage before background branch cards", () => {
-  assert.equal(getVideoCardDetailProgress(20, true), 0);
-  assert.ok(getVideoCardDetailProgress(30, true) > 0 && getVideoCardDetailProgress(30, true) < 1,
-    "the focused lineage should still transition smoothly out of the far overview");
-  assert.equal(getVideoCardDetailProgress(34, true), 1,
-    "lineage cards should be fully detailed by the medium zoom level");
-  const branchProgress = getVideoCardDetailProgress(80);
-  assert.ok(branchProgress > 0 && branchProgress < 1,
-    "background relatives should retain the cheaper smooth detail transition");
-  assert.equal(getVideoCardDetailProgress(80, true), 1);
+test("full-tree cards share one detail threshold across the selected lineage and side branches", () => {
+  assert.equal(getVideoCardDetailProgress(30), 0);
+  assert.ok(getVideoCardDetailProgress(80) > 0 && getVideoCardDetailProgress(80) < 1);
+  assert.equal(getVideoCardDetailProgress(160), 1);
 });
 
-test("full-tree rendering recognizes the entire selected lineage before each person's reveal scene", () => {
+test("full-tree keeps the selected lineage available for connector emphasis", () => {
   const people = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -358,12 +351,7 @@ test("full-tree rendering recognizes the entire selected lineage before each per
     }))
   ];
   const story = buildRemotionStory({ people, selectedPersonId: "child-9", scopeType: "all" });
-  const firstRevealShot = story.timeline.shots.findIndex(shot => shot.personIds.includes("child-9"));
-
-  assert.ok(firstRevealShot > 0, "the selected person is introduced after the opening scene");
-  assert.equal(isSelectedLineagePerson(story, "root"), true);
-  assert.equal(isSelectedLineagePerson(story, "child-9"), true);
-  assert.equal(isSelectedLineagePerson(story, "child-1"), false);
+  assert.deepEqual(story.timeline.pathIds, ["root", "child-9"]);
 });
 
 test("full-tree focus keeps the previous branch in frame during the camera approach", () => {
