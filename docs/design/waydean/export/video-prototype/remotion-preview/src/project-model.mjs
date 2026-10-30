@@ -62,10 +62,16 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
       childIds.push(childId);
       childrenByParent.set(parentId, childIds);
     }
-    const generationBranches = [...childrenByParent].map(([parentId, childIds]) => ({ parentId, childIds }));
     const groupCount = Math.ceil(generationIds.length / FULL_TREE_GENERATION_GROUP_SIZE);
     for (let start = 0; start < generationIds.length; start += FULL_TREE_GENERATION_GROUP_SIZE) {
       const part = generationIds.slice(start, start + FULL_TREE_GENERATION_GROUP_SIZE);
+      const partIds = new Set(part);
+      const branches = [...childrenByParent]
+        .map(([parentId, childIds]) => ({
+          parentId,
+          childIds: childIds.filter(childId => partIds.has(childId))
+        }))
+        .filter(branch => branch.childIds.length > 0);
       const partNumber = Math.floor(start / FULL_TREE_GENERATION_GROUP_SIZE) + 1;
       const hasParts = groupCount > 1;
       result.push({
@@ -78,7 +84,7 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
         groupTotal: generationIds.length,
         personIds: part,
         people: part.map(id => scenePeople.get(id) ?? peopleById.get(id)).filter(Boolean),
-        branches: start === 0 ? generationBranches : []
+        branches
       });
     }
   }
