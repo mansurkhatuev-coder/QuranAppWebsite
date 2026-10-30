@@ -1,5 +1,5 @@
 import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs";
-import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-flow-reels-1";
+import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundOutputTimestamp, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, isVideoElementFrameRenderable, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-animation-clock-1";
 import {
   chooseVideoBitrate,
   getBrowserVideoSupport,
@@ -94,18 +94,16 @@ function setBackgroundStatus(message) {
 }
 
 function getPreviewBackground() {
-  const playbackInSync = playbackRequestId === null
-    || Math.abs(Number(backgroundVideoElement?.playbackRate) - settings.speed) < 0.01;
-  return backgroundVideoElement?.readyState >= 2 && playbackInSync
+  return isVideoElementFrameRenderable(backgroundVideoElement)
     ? backgroundVideoElement
     : background ?? fallbackBackground;
 }
 
-function syncPreviewBackgroundToFrame(sourceFrame = frame) {
+function syncPreviewBackgroundToFrame() {
   const video = backgroundVideoElement;
   if (!video || !Number.isFinite(video.duration) || video.duration <= 0 || !previewPlan) return;
   if (playbackRequestId !== null) return;
-  const timestamp = getVideoBackgroundTimestamp(sourceFrame / previewPlan.sourceFps, video.duration, { loop: video.loop });
+  const timestamp = getVideoBackgroundTimestamp(getVideoBackgroundOutputTimestamp(frame, previewPlan.fps), video.duration, { loop: video.loop });
   const targetTime = video.loop ? timestamp : Math.min(timestamp, Math.max(0, video.duration - 1 / 24));
   if (video.seeking || Math.abs(video.currentTime - targetTime) < 0.04) return;
   try { video.currentTime = targetTime; } catch { /* Keep the poster until the media element can seek. */ }
@@ -142,7 +140,7 @@ function stopPreviewPlayback() {
 
 function paintPreviewFrame() {
   const sourceFrame = previewPlan ? getSourceFrameForBrowserExport(frame, previewPlan) : frame;
-  syncPreviewBackgroundToFrame(sourceFrame);
+  syncPreviewBackgroundToFrame();
   previewFrameRenderer?.(sourceFrame, getPreviewBackground());
   root.querySelector("#browser-export-scrub").value = String(frame);
 }
@@ -152,8 +150,8 @@ function startPreviewPlayback() {
   const lastFrame = previewPlan.totalFrames - 1;
   if (frame >= lastFrame) frame = 0;
   playbackStartFrame = frame;
-  syncPreviewBackgroundToFrame(getSourceFrameForBrowserExport(frame, previewPlan));
-  if (backgroundVideoElement) backgroundVideoElement.playbackRate = settings.speed;
+  syncPreviewBackgroundToFrame();
+  if (backgroundVideoElement) backgroundVideoElement.playbackRate = 1;
   void backgroundVideoElement?.play?.().catch?.(() => {});
   playbackStartedAt = performance.now();
   setPreviewPlaybackButton(true);
@@ -259,8 +257,8 @@ function renderShell() {
           <div class="browser-export-formats" role="group" aria-label="Формат кадра">${formatButtons}</div>
           <label class="browser-export-dates"><input id="browser-export-dates" type="checkbox"${settings.includeDates ? " checked" : ""}> Показывать даты в кадрах</label>
           <label class="browser-export-speed" for="browser-export-speed">
-            <span class="browser-export-speed-heading"><span>Скорость видео</span><output id="browser-export-speed-value">${settings.speed.toLocaleString("ru-RU")}× · ${timeLabel(preview.durationSeconds / settings.speed)}</output></span>
-            <input id="browser-export-speed" type="range" min="0.25" max="8" step="0.25" value="${settings.speed}" list="browser-export-speed-options" aria-label="Скорость видео" aria-valuetext="${settings.speed.toLocaleString("ru-RU")}×">
+            <span class="browser-export-speed-heading"><span>Скорость анимации древа</span><output id="browser-export-speed-value">${settings.speed.toLocaleString("ru-RU")}× · ${timeLabel(preview.durationSeconds / settings.speed)}</output></span>
+            <input id="browser-export-speed" type="range" min="0.25" max="8" step="0.25" value="${settings.speed}" list="browser-export-speed-options" aria-label="Скорость анимации древа" aria-valuetext="${settings.speed.toLocaleString("ru-RU")}×">
             <datalist id="browser-export-speed-options">${speedOptions}</datalist>
             <span class="browser-export-speed-range"><span>0,25× · медленно</span><span>8× · быстро</span></span>
           </label>
@@ -487,16 +485,11 @@ async function startExport() {
     }
 
     if (!backgroundReader && !timestampedMp4Supported) {
-      backgroundVideoElement.playbackRate = settings.speed;
-      const supportsRequestedBackgroundSpeed = Math.abs(backgroundVideoElement.playbackRate - settings.speed) < 0.01;
-      if (supportsRequestedBackgroundSpeed) {
-        realtimeVideoBackgroundActive = await startRealtimeVideoBackground(backgroundVideoElement);
-      }
+      backgroundVideoElement.playbackRate = 1;
+      realtimeVideoBackgroundActive = await startRealtimeVideoBackground(backgroundVideoElement);
       setBackgroundStatus(realtimeVideoBackgroundActive
-        ? "Используем нативное воспроизведение видеофона в реальном времени вместе с записью дерева."
-        : supportsRequestedBackgroundSpeed
-          ? "Видеофон недоступен; ролик будет собран с постером выбранной сцены."
-          : "Браузер не поддерживает выбранную скорость видеофона; используем постер, а скорость движения древа сохраним.");
+        ? "Фон идёт в обычном темпе; ускоряется только анимация древа."
+        : "Видеофон недоступен; ролик будет собран с постером выбранной сцены.");
     }
 
     const closeBackgroundReader = async () => {
@@ -508,7 +501,7 @@ async function startExport() {
       let backgroundSample = null;
       if (backgroundReader) {
         try {
-          backgroundSample = await backgroundReader.getSampleAt(outputFrame / plan.fps * plan.speed);
+          backgroundSample = await backgroundReader.getSampleAt(getVideoBackgroundOutputTimestamp(outputFrame, plan.fps));
         } catch (error) {
           if (renderController.signal.aborted) throw error;
           await closeBackgroundReader();
@@ -516,7 +509,9 @@ async function startExport() {
           setBackgroundStatus("Видеофон прервался при декодировании; завершаем ролик с выбранным постером.");
         }
       }
-      const nativeVideoFrame = realtimeVideoBackgroundActive ? backgroundVideoElement : null;
+      const nativeVideoFrame = realtimeVideoBackgroundActive && isVideoElementFrameRenderable(backgroundVideoElement)
+        ? backgroundVideoElement
+        : null;
       drawFrame(getSourceFrameForBrowserExport(outputFrame, plan), backgroundSample ?? nativeVideoFrame);
     };
     let recordedBlob;

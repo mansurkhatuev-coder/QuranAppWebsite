@@ -15,6 +15,7 @@ import {
   createBrowserCanvasFrameRenderer
 } from "./browser-canvas-renderer.mjs";
 import * as browserCanvasRenderer from "./browser-canvas-renderer.mjs";
+import { getVideoBackgroundOutputTimestamp } from "./video-backgrounds.mjs";
 
 const people = [
   { id: "root", name: "Куди", generation: 1, parent: null, born: 1000, died: null },
@@ -28,6 +29,7 @@ function fakeCanvasContext() {
   const context = {
     calls,
     globalAlpha: 1,
+    filter: "none",
     beginPath: () => calls.push(["begin"]),
     moveTo: (...args) => calls.push(["move", ...args]),
     lineTo: (...args) => calls.push(["line", ...args]),
@@ -39,7 +41,7 @@ function fakeCanvasContext() {
     stroke: () => calls.push(["stroke"]),
     arc: (...args) => calls.push(["arc", ...args]),
     fillRect: (...args) => calls.push(["fill-rect", ...args]),
-    drawImage: (...args) => calls.push(["image", ...args]),
+    drawImage: (...args) => calls.push(["image", ...args, context.filter]),
     fillText: (...args) => calls.push(["text", ...args, context.globalAlpha]),
     save: () => calls.push(["save"]),
     restore: () => calls.push(["restore"]),
@@ -84,9 +86,12 @@ test("browser render speed changes exported duration and source-frame sampling",
   assert.equal(fast.durationSeconds, normal.durationSeconds / 4);
   assert.equal(fast.totalFrames, Math.round(normal.totalFrames / 4));
   assert.equal(getSourceFrameForBrowserExport(24, fast), 120);
+  assert.equal(getVideoBackgroundOutputTimestamp(24, fast.fps), 1);
   assert.equal(slow.speed, 0.25);
   assert.equal(slow.durationSeconds, normal.durationSeconds * 4);
   assert.equal(getSourceFrameForBrowserExport(24, slow), 7);
+  assert.equal(getVideoBackgroundOutputTimestamp(24, slow.fps), 1,
+    "the background advances one output second regardless of animation speed");
 });
 
 test("browser canvas renderer draws a decoded background sample before the tree frame", () => {
@@ -110,6 +115,29 @@ test("browser canvas renderer draws a decoded background sample before the tree 
   const treeDrawIndex = context.calls.findIndex(call => call[0] === "round-rect");
   assert.ok(sampleDrawIndex >= 0, "a decoded video sample should be drawn instead of the still background");
   assert.ok(treeDrawIndex > sampleDrawIndex, "tree cards must be composited on top of the video background");
+});
+
+test("moving backgrounds are composited without a per-frame canvas filter", () => {
+  const story = buildRemotionStory({ people, selectedPersonId: "child-a" });
+  const frames = [
+    {
+      displayWidth: 1920,
+      displayHeight: 1080,
+      draw: (_context) => _context.calls.push(["video-filter", _context.filter])
+    },
+    { videoWidth: 1920, videoHeight: 1080 }
+  ];
+
+  for (const frame of frames) {
+    const context = fakeCanvasContext();
+    const canvas = { width: 1280, height: 720, getContext: () => context };
+    createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(0, frame);
+    if (typeof frame.draw === "function") {
+      assert.deepEqual(context.calls.find(call => call[0] === "video-filter"), ["video-filter", "none"]);
+    } else {
+      assert.equal(context.calls.find(call => call[0] === "image").at(-1), "none");
+    }
+  }
 });
 
 test("overview markers keep a readable radius in exported pixels at very small camera zoom", () => {

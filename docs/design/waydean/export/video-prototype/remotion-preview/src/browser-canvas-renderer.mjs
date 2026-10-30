@@ -242,14 +242,21 @@ function drawBackground(context, image, width, height, scale) {
   if (!sourceWidth || !sourceHeight) { context.fillStyle = "#070b0c"; context.fillRect(0, 0, width, height); return; }
   const cover = Math.max(width / sourceWidth, height / sourceHeight) * scale;
   const imageWidth = sourceWidth * cover; const imageHeight = sourceHeight * cover;
-  context.save(); context.filter = "brightness(0.66) saturate(0.78)";
+  const movingVideoFrame = typeof image.draw === "function" || Number(image.videoWidth) > 0;
+  context.save();
+  if (!movingVideoFrame) context.filter = "brightness(0.66) saturate(0.78)";
   if (typeof image.draw === "function") {
     const cropWidth = width / cover; const cropHeight = height / cover;
     image.draw(context, (sourceWidth - cropWidth) / 2, (sourceHeight - cropHeight) / 2, cropWidth, cropHeight, 0, 0, width, height);
   } else {
     context.drawImage(image, (width - imageWidth) / 2, (height - imageHeight) / 2, imageWidth, imageHeight);
   }
-  context.filter = "none";
+  if (movingVideoFrame) {
+    context.fillStyle = "rgba(3,7,8,0.34)";
+    context.fillRect(0, 0, width, height);
+  } else {
+    context.filter = "none";
+  }
   let gradient = context.createLinearGradient(0, 0, 0, height);
   gradient.addColorStop(0, "rgba(3,7,8,0.58)"); gradient.addColorStop(0.37, "rgba(4,8,8,0.13)"); gradient.addColorStop(1, "rgba(3,7,7,0.58)");
   context.fillStyle = gradient; context.fillRect(0, 0, width, height);
