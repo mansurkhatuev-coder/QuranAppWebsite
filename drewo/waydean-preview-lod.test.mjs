@@ -99,10 +99,10 @@ test('selected-route classes remain available while compact people share marker 
   assert.equal(compactRouteClass('selected', routePeople), ' route');
   assert.equal(compactRouteClass('parent', routePeople), ' route');
   assert.equal(compactRouteClass('sibling', routePeople), '');
-  assert.match(lodCss, /\\.graph\\[data-lod="compact"\\] \\.person-node > \\* \\{ display: none; \\}/,
+  assert.match(lodCss, /\.graph\[data-lod="compact"\\] \.person-node > \* \{ display: none; \}/,
     'every compact person should hide card content');
-  assert.match(lodCss, /\\.graph\\[data-lod="compact"\\] \\.person-node::after/,
+  assert.match(lodCss, /\.graph\[data-lod="compact"\\] \.person-node::after/,
     'every compact person should use the same marker');
-  assert.doesNotMatch(lodCss, /\\.graph\\[data-lod="compact"\\] \\.person-node\\.route/,
+  assert.doesNotMatch(lodCss, /\.graph\[data-lod="compact"\\] \.person-node\.route/,
     'route membership should not change compact card detail');
 });
