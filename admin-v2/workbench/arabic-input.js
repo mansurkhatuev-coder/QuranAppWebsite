@@ -104,7 +104,14 @@
     header.className = "ait-header";
     const title = doc.createElement("strong");
     title.textContent = "Арабская клавиатура";
-    const close = makeButton(doc, "×", "close", "ait-close");
+    const close = makeButton(doc, "", "close", "ait-close");
+    const closeIcon = doc.createElementNS("http://www.w3.org/2000/svg", "svg");
+    closeIcon.setAttribute("viewBox", "0 0 24 24");
+    closeIcon.setAttribute("aria-hidden", "true");
+    const closePath = doc.createElementNS("http://www.w3.org/2000/svg", "path");
+    closePath.setAttribute("d", "m6 6 12 12M18 6 6 18");
+    closeIcon.append(closePath);
+    close.replaceChildren(closeIcon);
     close.setAttribute("aria-label", "Закрыть клавиатуру");
     header.append(title, close);
 

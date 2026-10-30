@@ -27,10 +27,52 @@
     return { ...library, version: library?.version || 2, activeId: id, docs: nextDocs };
   }
 
+  function mergeDraftDocument(library, editedDocument) {
+    const id = String(editedDocument?.id || "");
+    if (!id) throw new Error("An edited Tajweed document needs a stable ID.");
+    const base = library && typeof library === "object" && !Array.isArray(library) ? library : {};
+    const documents = Array.isArray(base.docs) ? base.docs : [];
+    const index = documents.findIndex((doc) => String(doc?.id || "") === id);
+    const nextDocs = documents.slice();
+    const current = index >= 0 ? documents[index] : null;
+    const merged = current ? { ...current, ...editedDocument } : { ...editedDocument };
+    if (index >= 0) nextDocs[index] = merged;
+    else nextDocs.push(merged);
+    return {
+      ...base,
+      version: base.version || 2,
+      activeId: id,
+      docs: nextDocs,
+    };
+  }
+
+  async function saveEmbeddedDraftDocument(cloud, editedDocument) {
+    if (typeof cloud?.loadDraftLibrary !== "function" || typeof cloud?.saveDraftLibrary !== "function") {
+      throw new Error("Не удалось подключить безопасное чтение и сохранение черновика.");
+    }
+    const latest = await cloud.loadDraftLibrary();
+    let base;
+    if (latest == null) {
+      base = { version: 2, activeId: "", docs: [] };
+    } else if (latest.library && Array.isArray(latest.library.docs)) {
+      base = latest.library;
+    } else {
+      throw new Error("Не удалось проверить актуальный облачный черновик; сохранение отменено.");
+    }
+    const merged = mergeDraftDocument(base, editedDocument);
+    return cloud.saveDraftLibrary(merged);
+  }
+
   function addLocalDraftId(documentIds, documentId) {
     const id = String(documentId || "");
     return id ? [...new Set([...(Array.isArray(documentIds) ? documentIds : []).map(String), id])] : [...(Array.isArray(documentIds) ? documentIds : []).map(String)];
   }
 
-  window.AdminV2PreviewSelection = Object.freeze({ select, mergeSourceDocument, addLocalDraftId });
+  window.AdminV2PreviewSelection = Object.freeze({
+    select,
+    mergeSourceDocument,
+    mergeDraftDocument,
+    saveEmbeddedDraftDocument,
+    addLocalDraftId,
+  });
 })();

@@ -12,10 +12,10 @@ html[data-workbench-preview="true"] body {
 html[data-workbench-preview="true"] .topbar { order: 0; }
 html[data-workbench-preview="true"] .library-bar { order: 1; }
 html[data-workbench-preview="true"] .meta-bar { order: 2; }
-html[data-workbench-preview="true"] .toolbar { order: 3; }
-html[data-workbench-preview="true"] .stage { order: 4; }
-html[data-workbench-preview="true"] .arabic-bar { order: 5; }
-html[data-workbench-preview="true"] .translit-bar { order: 6; }
+html[data-workbench-preview="true"] .toolbar { order: 5; }
+html[data-workbench-preview="true"] .stage { order: 6; }
+html[data-workbench-preview="true"] .arabic-bar { order: 3; }
+html[data-workbench-preview="true"] .translit-bar { order: 4; }
 html[data-workbench-preview="true"] .availability-panel { order: 7; margin-top: 1rem; }
 
 html[data-workbench-preview="true"] .topbar {
@@ -60,8 +60,8 @@ html[data-workbench-preview="true"] #btnCloudPublish {
 html[data-workbench-preview="true"] .availability-panel {
   gap: 0.7rem;
   padding: 0.65rem clamp(0.85rem, 2vw, 1.5rem);
-  border-color: rgba(161, 192, 167, 0.15);
-  background: rgba(18, 32, 27, 0.42);
+  border-color: rgba(190, 190, 190, 0.15);
+  background: rgba(24, 26, 28, 0.72);
 }
 
 html[data-workbench-preview="true"] .library-bar,
@@ -103,7 +103,7 @@ html[data-workbench-preview="true"] .toolbar {
 
 html[data-workbench-preview="true"] .inspector-actions { display: flex; align-items: center; gap: 0.4rem; }
 html[data-workbench-preview="true"] .inspector-actions .btn { min-height: 36px; padding-inline: 0.72rem; border-color: rgba(166, 194, 168, 0.25); }
-html[data-workbench-preview="true"] .inspector-actions .btn[aria-expanded="true"] { border-color: rgba(142, 211, 170, 0.55); color: #bfe1c4; background: rgba(91, 148, 117, 0.16); }
+html[data-workbench-preview="true"] .inspector-actions .btn[aria-expanded="true"] { border-color: rgba(213, 182, 111, 0.55); color: #e4c77c; background: rgba(213, 182, 111, 0.12); }
 html:not([data-workbench-preview="true"]) .inspector-actions { display: none; }
 
 html[data-workbench-preview="true"] .toolbar-label {
@@ -285,6 +285,12 @@ html[data-workbench-preview="true"] body {
   background: radial-gradient(ellipse at 16% 0, rgba(65, 111, 77, .12), transparent 42rem), #0a1510;
   color: #e8eee5;
 }
+html[data-workbench-preview="true"] .atmosphere {
+  background:
+    radial-gradient(850px 420px at 12% -10%, rgba(213,188,120,.065), transparent 58%),
+    radial-gradient(700px 360px at 100% 0%, rgba(130,139,151,.035), transparent 55%),
+    #101214;
+}
 html[data-workbench-preview="true"] .topbar { border-color: rgba(187, 206, 184, .17); }
 html[data-workbench-preview="true"] .library-bar,
 html[data-workbench-preview="true"] .meta-bar,
@@ -381,4 +387,178 @@ html[data-workbench-preview="true"] .action-group {
 html[data-workbench-preview="true"] .toolbar {
   position: sticky;
   top: 0;
+}
+
+/* Figma graphite-and-gold shell for the embedded editor. Rule and keyboard
+   character colors stay semantic; this only replaces the surrounding chrome. */
+html[data-workbench-preview="true"] {
+  color-scheme: dark;
+  --ink: #101214;
+  --panel: #191c1f;
+  --line: rgba(211, 215, 216, .12);
+  --line-strong: rgba(211, 215, 216, .24);
+  --text: #e7e8e6;
+  --muted: #a0a3a6;
+  --paper-ink: #e7e8e6;
+  --paper-sel: rgba(213, 188, 120, .16);
+  --accent: #d5bc78;
+  --gold: #d5bc78;
+  --shadow: 0 18px 48px rgba(0, 0, 0, .32);
+}
+html[data-workbench-preview="true"] body {
+  background: radial-gradient(ellipse at 14% -8%, rgba(213,188,120,.055), transparent 42rem), #101214;
+  color: #e7e8e6;
+}
+html[data-workbench-preview="true"] .topbar { border-color: #2b2e32; background: #101214; }
+html[data-workbench-preview="true"] .brand h1 { color: #f0f0ee; }
+html[data-workbench-preview="true"] :is(.library-bar, .meta-bar, .arabic-bar, .translit-bar) {
+  border-color: #2b2e32;
+  background: #191c1f;
+}
+html[data-workbench-preview="true"] .meta-field > span,
+html[data-workbench-preview="true"] .toolbar-label,
+html[data-workbench-preview="true"] .field-note { color: #a9adaf; }
+html[data-workbench-preview="true"] :is(input, textarea, select) {
+  border-color: #383c40;
+  border-radius: 8px;
+  background-color: #14171a;
+  color: #e7e8e6;
+  color-scheme: dark;
+}
+html[data-workbench-preview="true"] select {
+  -webkit-appearance: none;
+  appearance: none;
+  padding-right: 36px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d5bc78' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 11px center;
+  background-size: 16px;
+}
+html[data-workbench-preview="true"] #docArabic {
+  border-color: #383c40;
+  background: #14171a;
+  color: #f2f0e9;
+}
+html[data-workbench-preview="true"] #docTranslit {
+  border-color: #383c40;
+  background: #14171a;
+  color: #e7e8e6;
+}
+html[data-workbench-preview="true"] .toolbar {
+  border-color: #34383c;
+  border-radius: 12px;
+  background: rgba(25,28,31,.98);
+  box-shadow: 0 12px 34px rgba(0,0,0,.34);
+}
+html[data-workbench-preview="true"] .btn,
+html[data-workbench-preview="true"] .icon-btn,
+html[data-workbench-preview="true"] .chip-btn { border-color: #3a3e42; background: #202327; color: #e4e5e2; }
+html[data-workbench-preview="true"] .btn:hover,
+html[data-workbench-preview="true"] .icon-btn:hover,
+html[data-workbench-preview="true"] .chip-btn:hover { border-color: #6d6145; background: #292a29; }
+html[data-workbench-preview="true"] .btn.primary { border-color: #d5bc78; background: #d5bc78; color: #211d14; }
+html[data-workbench-preview="true"] .rule-btn { border-color: #393d40; background: #15181a; }
+html[data-workbench-preview="true"] .rule-btn[aria-pressed="true"],
+html[data-workbench-preview="true"] .rule-btn.active { border-color: rgba(213,188,120,.62); box-shadow: inset 0 0 0 1px rgba(213,188,120,.18); }
+html[data-workbench-preview="true"] .paper-panel {
+  border-color: #34383c;
+  border-radius: 14px;
+  background: linear-gradient(155deg, #191c1f, #14171a 78%);
+}
+html[data-workbench-preview="true"] #markupCanvas { color: #f0f0e9; }
+html[data-workbench-preview="true"] .paper-hint,
+html[data-workbench-preview="true"] .side-reveal { color: #a0a3a6; }
+html[data-workbench-preview="true"] .side-card {
+  border-color: #34383c;
+  border-radius: 12px;
+  background: #191c1f;
+}
+html[data-workbench-preview="true"] .side-card-actions,
+html[data-workbench-preview="true"] .marks-list,
+html[data-workbench-preview="true"] .json-preview { border-color: #34383c; }
+html[data-workbench-preview="true"] details.side-card > summary.side-head::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23d5bc78' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m7 10 5 5 5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  transition: transform .18s ease;
+}
+html[data-workbench-preview="true"] details.side-card[open] > summary.side-head::after { transform: rotate(180deg); }
+html[data-workbench-preview="true"] .editor-icons { position: absolute; width: 0; height: 0; overflow: hidden; }
+html[data-workbench-preview="true"] .icon-btn svg,
+html[data-workbench-preview="true"] .btn svg,
+html[data-workbench-preview="true"] .chip-btn svg,
+html[data-workbench-preview="true"] .mark-item .del svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+html[data-workbench-preview="true"] .mark-item .del { display: grid; place-items: center; min-width: 36px; min-height: 36px; }
+html[data-workbench-preview="true"] :is(button, input, textarea, select, summary, #markupCanvas):focus-visible { outline-color: #d5bc78; }
+html[data-workbench-preview="true"] ::-webkit-scrollbar { width: 10px; height: 10px; }
+html[data-workbench-preview="true"] ::-webkit-scrollbar-track { background: #111315; }
+html[data-workbench-preview="true"] ::-webkit-scrollbar-thumb { border: 2px solid #111315; border-radius: 99px; background: #44494d; }
+html[data-workbench-preview="true"] * { scrollbar-color: #44494d #111315; scrollbar-width: thin; }
+@media (pointer: coarse) {
+  html[data-workbench-preview="true"] .icon-btn,
+  html[data-workbench-preview="true"] .toolbar .chip-btn,
+  html[data-workbench-preview="true"] .inspector-actions .btn { min-height: 44px; }
+  html[data-workbench-preview="true"] .icon-btn { width: 44px; }
+}
+
+/* Match the graphite-and-gold Admin V2 shell; Tajweed rule colors remain semantic. */
+html[data-workbench-preview="true"] .ait-panel { background:#191c1f; color:#e7e8e6; border-color:#383c40; }
+html[data-workbench-preview="true"] .ait-header { background:#202327; border-color:#383c40; }
+html[data-workbench-preview="true"] .ait-button { background:#22262a; color:#e7e8e6; border-color:#3b3f43; }
+html[data-workbench-preview="true"] .ait-button:hover { background:#2b2e31; border-color:#66583a; }
+html[data-workbench-preview="true"] .ait-panel label,
+html[data-workbench-preview="true"] .ait-key-group { color:#b7b6b0; }
+html[data-workbench-preview="true"] .ait-font-select,
+html[data-workbench-preview="true"] .ait-ayah-number { border-color:#3a3e42; background:#121416; color:#e7e8e6; color-scheme:dark; }
+html[data-workbench-preview="true"] .ait-range-control input { accent-color:#d5b66f; }
+html[data-workbench-preview="true"] .ait-range-control output { color:#dfc47e; }
+html[data-workbench-preview="true"] .ait-ayah-insert { border-color:#76633c; background:#30291d; color:#ead38f; }
+html[data-workbench-preview="true"] .ait-remove-mark { border-color:#5b3d39; background:#302321; color:#e5c0b9; }
+
+/* Put the primary Tajweed rules first; keep every save, import and cloud action below them. */
+html[data-workbench-preview="true"] .toolbar { order:0; position:sticky; top:0; z-index:50; width:100%; max-width:none; margin:0; padding:.38rem .65rem; gap:.34rem; flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain; border-radius:0 0 12px 12px; }
+html[data-workbench-preview="true"] .topbar { order:1; position:relative; top:auto; padding:.35rem .8rem .45rem; border:0; background:transparent; backdrop-filter:none; }
+html[data-workbench-preview="true"] .topbar .brand .eyebrow,
+html[data-workbench-preview="true"] .topbar .brand h1 { display:none; }
+html[data-workbench-preview="true"] .topbar .brand { display:block; flex:0 0 auto; }
+html[data-workbench-preview="true"] .topbar .save-pill { max-width:145px; }
+html[data-workbench-preview="true"] .top-actions { flex:1 1 auto; flex-wrap:wrap; justify-content:flex-start; gap:.3rem; }
+html[data-workbench-preview="true"] .action-group { gap:.22rem; }
+html[data-workbench-preview="true"] .action-group + .action-group { padding-left:.3rem; }
+html[data-workbench-preview="true"] .library-bar { order:2; }
+html[data-workbench-preview="true"] .meta-bar { order:3; }
+html[data-workbench-preview="true"] .arabic-bar { order:4; }
+html[data-workbench-preview="true"] .translit-bar { order:5; }
+html[data-workbench-preview="true"] .stage { order:6; }
+html[data-workbench-preview="true"] .availability-panel { order:7; }
+html[data-workbench-preview="true"] .toolbar-label { display:none; }
+html[data-workbench-preview="true"] .interdental-chip { flex:0 0 38px; width:38px; min-height:36px; padding:0; }
+html[data-workbench-preview="true"] .interdental-chip .label-full,
+html[data-workbench-preview="true"] .layer-group .label-full { display:none !important; }
+html[data-workbench-preview="true"] .interdental-chip .label-short,
+html[data-workbench-preview="true"] .layer-group .label-short { display:inline-flex !important; align-items:center; justify-content:center; }
+html[data-workbench-preview="true"] .rule-strip { flex:1 1 auto; flex-wrap:nowrap; min-width:max-content; gap:.28rem; overflow:visible; }
+html[data-workbench-preview="true"] .rule-btn { min-height:36px; padding:.32rem .48rem; border-radius:9px; gap:.32rem; }
+html[data-workbench-preview="true"] .rule-btn strong { font-size:.78rem; }
+html[data-workbench-preview="true"] .rule-btn small { font-size:.68rem; }
+html[data-workbench-preview="true"] .toolbar-sep { flex:none; margin:0 .08rem; }
+html[data-workbench-preview="true"] .layer-group { flex:none; gap:.22rem; }
+html[data-workbench-preview="true"] .layer-group .chip-btn { width:36px; min-width:36px; min-height:36px; height:36px; padding:0; border-radius:9px; }
+html[data-workbench-preview="true"] .layer-group .chip-btn svg { width:15px; height:15px; }
+html[data-workbench-preview="true"] .inspector-actions { flex:none; gap:.22rem; }
+html[data-workbench-preview="true"] .inspector-actions .btn { min-height:36px; padding:0 .48rem; font-size:.72rem; }
+html[data-workbench-preview="true"] .sel-pill { flex:0 1 125px; max-width:125px; margin-left:0; font-size:.7rem; }
+html[data-workbench-preview="true"] .save-pill.ok,
+html[data-workbench-preview="true"] .availability-status.ok { color:#d5b66f; }
+
+@media (max-width:700px) {
+  html[data-workbench-preview="true"] .toolbar { padding:.32rem .45rem; }
+  html[data-workbench-preview="true"] .rule-btn,
+  html[data-workbench-preview="true"] .layer-group .chip-btn,
+  html[data-workbench-preview="true"] .interdental-chip { min-height:44px; }
+  html[data-workbench-preview="true"] .rule-strip { flex:0 0 auto; }
+  html[data-workbench-preview="true"] .sel-pill { flex:0 0 auto; max-width:86px; }
+  html[data-workbench-preview="true"] .topbar { align-items:flex-start; }
+  html[data-workbench-preview="true"] .top-actions { gap:.25rem; }
 }

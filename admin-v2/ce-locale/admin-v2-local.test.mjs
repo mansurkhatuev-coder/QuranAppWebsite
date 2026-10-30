@@ -26,7 +26,11 @@ test('parent reports a CE draft saved only after the editor confirms a successfu
 test('new CE editor storage keys do not overlap the preserved legacy editor', async () => {
   const current = await readFile(new URL('./workbench.js', import.meta.url), 'utf8');
   const legacy = await readFile(new URL('../../admin/ce-locale/workbench.js', import.meta.url), 'utf8');
-  assert.match(current, /quranapp_admin_v2_ce_workbench_v1/);
+  const prefix = current.slice(current.indexOf("  const IS_LOCAL_HOST"), current.indexOf("  const HISTORY_LIMIT"));
+  const keyFor = (hostname, search) => vm.runInNewContext(prefix + '\nSTORE_KEY', {global: {location: {hostname, search}}, URLSearchParams});
+  assert.equal(keyFor('waydean.ru', ''), 'quranapp_admin_v2_ce_workbench_v1');
+  assert.equal(keyFor('127.0.0.1', '?demo=1'), 'quranapp_admin_v2_ce_workbench_demo_v1');
+  assert.equal(keyFor('waydean.ru', '?demo=1'), 'quranapp_admin_v2_ce_workbench_v1');
   assert.match(legacy, /quranapp_ce_workbench_v3/);
   assert.doesNotMatch(current, /quranapp_ce_workbench_v3/);
 });

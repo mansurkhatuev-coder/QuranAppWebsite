@@ -32,6 +32,7 @@
   let eventsWindowLimited = false;
   let dashboard = null;
   let dashboardError = '';
+  let demoPlatforms = null;
   let storeSnapshot = null;
   let storeError = '';
   let storeOk = '';
@@ -114,21 +115,38 @@
   function renderSparkline(series, key, options = {}) {
     const rows = Array.isArray(series) ? series : [];
     if (!rows.length) return '';
-    const values = rows.map((row) => Number(row[key]) || 0);
-    const max = Math.max(...values, 1);
+    const values = rows.map((row) => {
+      const raw = row?.[key];
+      if (raw == null || raw === '') return null;
+      const value = Number(raw);
+      return Number.isFinite(value) ? value : null;
+    });
+    const numericValues = values.filter((value) => value != null);
+    if (!numericValues.length) return '';
+    const max = Math.max(...numericValues, 1);
     const left = 60;
     const right = 748;
     const top = 18;
     const bottom = 148;
     const x = (index) => rows.length < 2 ? (left + right) / 2 : left + (index * (right - left)) / (rows.length - 1);
     const y = (value) => bottom - (value / max) * (bottom - top);
-    const points = values.map((value, index) => `${x(index).toFixed(1)},${y(value).toFixed(1)}`);
-    const path = `M ${points.join(' L ')}`;
-    const areaPath = `${path} L ${right} ${bottom} L ${left} ${bottom} Z`;
+    const segments = [];
+    let currentSegment = [];
+    values.forEach((value, index) => {
+      if (value == null) {
+        if (currentSegment.length) segments.push(currentSegment);
+        currentSegment = [];
+      } else currentSegment.push({ x: x(index), y: y(value), index, value });
+    });
+    if (currentSegment.length) segments.push(currentSegment);
+    const path = segments.map((segment) => `M ${segment.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' L ')}`).join(' ');
+    const areaPath = segments.filter((segment) => segment.length > 1).map((segment) =>
+      `M ${segment.map((point) => `${point.x.toFixed(1)},${point.y.toFixed(1)}`).join(' L ')} L ${segment[segment.length - 1].x.toFixed(1)} ${bottom} L ${segment[0].x.toFixed(1)} ${bottom} Z`
+    ).join(' ');
     const labels = { active_installs: 'Активные устройства', new_installs: 'Новые установки', azkar: 'Завершения азкаров', downloads: 'Скачивания' };
-    const colors = { active_installs: '#85c99a', new_installs: '#dcc37f', azkar: '#83bbcf' };
+    const colors = { active_installs: '#d5b66f', new_installs: '#94a2ad', azkar: '#86afbd' };
     const label = options.label || labels[key] || key;
-    const color = options.color || colors[key] || '#85c99a';
+    const color = options.color || colors[key] || '#d5b66f';
     const id = `analytics-series-${String(options.id || key).replace(/[^a-z0-9_-]/gi, '-')}`;
     const ticks = [...new Set(Array.from({ length: 5 }, (_, index) => Math.round((max * index) / 4)))].map((value) => {
       const tickY = y(value);
@@ -147,19 +165,70 @@
     const dateTicks = [...labelIndexes].sort((a, b) => a - b).map((index) =>
       `<text class="admin-analytics-chart-date" x="${x(index)}" y="174" text-anchor="${index === 0 ? 'start' : index === rows.length - 1 ? 'end' : 'middle'}">${escapeHtml(dateLabel(rows[index]?.day))}</text>`
     ).join('');
-    const circles = values.map((value, index) =>
-      `<circle cx="${x(index)}" cy="${y(value)}" r="3.2"><title>${escapeHtml(dateLabel(rows[index]?.day))}: ${new Intl.NumberFormat('ru-RU').format(value)}</title></circle>`
-    ).join('');
-    const tableRows = rows.map((row) => `<tr><th scope="row">${escapeHtml(dateLabel(row.day))}</th><td>${new Intl.NumberFormat('ru-RU').format(Number(row[key]) || 0)}</td></tr>`).join('');
+    const circles = values.map((value, index) => {
+      if (value == null) return '';
+      const day = dateLabel(rows[index]?.day);
+      const formattedValue = new Intl.NumberFormat('ru-RU').format(value);
+      return `<g class="admin-analytics-chart-point" role="button" tabindex="0" aria-pressed="false" data-x="${x(index)}" data-y="${y(value)}" data-day="${escapeHtml(day)}" data-value="${escapeHtml(formattedValue)}" data-label="${escapeHtml(label)}" aria-label="Выбрать ${escapeHtml(day)}: ${escapeHtml(label)} — ${escapeHtml(formattedValue)}"><circle class="admin-analytics-chart-point-hit" cx="${x(index)}" cy="${y(value)}" r="13" aria-hidden="true"/><circle class="admin-analytics-chart-point-visible" cx="${x(index)}" cy="${y(value)}" r="4.2"><title>${escapeHtml(day)}: ${escapeHtml(formattedValue)}</title></circle></g>`;
+    }).join('');
+    const tableRows = rows.map((row) => {
+      const raw = row?.[key];
+      const value = raw == null || raw === '' || !Number.isFinite(Number(raw)) ? '—' : new Intl.NumberFormat('ru-RU').format(Number(raw));
+      return `<tr><th scope="row">${escapeHtml(dateLabel(row.day))}</th><td>${escapeHtml(value)}</td></tr>`;
+    }).join('');
     return `<figure class="admin-analytics-chart-figure">
       <figcaption><i style="--series-color:${color}"></i>${escapeHtml(label)} <span>${rows.length} точек</span></figcaption>
-      <svg class="admin-analytics-chart-svg" viewBox="0 0 760 194" role="img" aria-label="${escapeHtml(label)} · ${escapeHtml(options.period || 'последние 30 дней по данным сервера')}">
+      <svg class="admin-analytics-chart-svg" viewBox="0 0 760 194" role="group" style="--series-color:${color}" aria-label="${escapeHtml(label)} · ${escapeHtml(options.period || 'последние 30 дней по данным сервера')}">
         <defs><linearGradient id="${id}" x1="0" x2="0" y1="0" y2="1"><stop offset="0" stop-color="${color}" stop-opacity=".24"/><stop offset="1" stop-color="${color}" stop-opacity="0"/></linearGradient></defs>
         ${ticks}<path d="${areaPath}" fill="url(#${id})"/><path class="admin-analytics-chart-line" d="${path}" style="--series-color:${color}"/>${circles}${dateTicks}
       </svg>
+      <div class="admin-analytics-chart-selection" aria-live="polite"><span>Выберите точку на графике</span><strong>—</strong></div>
       <details class="admin-analytics-chart-data"><summary>Таблица значений</summary><div><table><thead><tr><th scope="col">Дата</th><th scope="col">${escapeHtml(label)}</th></tr></thead><tbody>${tableRows}</tbody></table></div></details>
     </figure>`;
   }
+
+  function selectAnalyticsChartPoint(point) {
+    const figure = point?.closest('.admin-analytics-chart-figure');
+    if (!figure) return;
+    figure.querySelectorAll('.admin-analytics-chart-point').forEach((item) => {
+      const selected = item === point;
+      item.classList.toggle('is-selected', selected);
+      item.setAttribute('aria-pressed', String(selected));
+    });
+    const date = figure.querySelector('.admin-analytics-chart-selection span');
+    const value = figure.querySelector('.admin-analytics-chart-selection strong');
+    if (date) date.textContent = point.dataset.day || '—';
+    if (value) value.textContent = `${point.dataset.label || 'Значение'}: ${point.dataset.value || '—'}`;
+  }
+
+  document.addEventListener('click', (event) => {
+    let point = event.target instanceof Element ? event.target.closest('.admin-analytics-chart-point') : null;
+    if (!point && event.target instanceof Element) {
+      const svg = event.target.closest('.admin-analytics-chart-svg');
+      const matrix = svg?.getScreenCTM?.();
+      if (!svg || !matrix) return;
+      const cursor = svg.createSVGPoint();
+      cursor.x = event.clientX;
+      cursor.y = event.clientY;
+      const local = cursor.matrixTransform(matrix.inverse());
+      let nearestDistance = Infinity;
+      svg.querySelectorAll('.admin-analytics-chart-point').forEach((candidate) => {
+        const distance = Math.hypot(local.x - Number(candidate.dataset.x), local.y - Number(candidate.dataset.y));
+        if (distance < nearestDistance) {
+          nearestDistance = distance;
+          point = candidate;
+        }
+      });
+      if (nearestDistance > 40) return;
+    }
+    if (point) selectAnalyticsChartPoint(point);
+  });
+  document.addEventListener('keydown', (event) => {
+    const point = event.target instanceof Element ? event.target.closest('.admin-analytics-chart-point') : null;
+    if (!point || (event.key !== 'Enter' && event.key !== ' ')) return;
+    event.preventDefault();
+    selectAnalyticsChartPoint(point);
+  });
 
   function filteredRows() {
     if (!rangeDays) return allRows.slice();
@@ -635,6 +704,10 @@
   }
 
   function renderPlatformBreakdown(container) {
+    if (demoPlatforms) {
+      renderBreakdown(container, 'Платформы (ОС) · демо', demoPlatforms.map((item) => [item.platform, item.count]), (key) => String(key));
+      return;
+    }
     if (hasInstallationRegistry()) {
       const pairs = countBy(installations, (r) => r.platform || '—');
       const suffix = installationRowsTruncated === true
@@ -1016,7 +1089,7 @@
       ? `<p class="admin-store-ok">${escapeHtml(storeOk)}</p>`
       : '';
     const storeHistory = [
-      { id: 'rustore', label: 'RuStore · загрузки', color: '#85c99a', rows: rustore.rows },
+      { id: 'rustore', label: 'RuStore · загрузки', color: '#94a2ad', rows: rustore.rows },
       { id: 'app-store', label: 'App Store · загрузки', color: '#9eabed', rows: apple.rows },
       { id: 'google-play', label: 'Google Play · новые установки', color: '#dcc37f', rows: googlePlay.rows },
     ].map((store) => {
@@ -1237,6 +1310,34 @@
     renderCourseFunnel(breakdown, fullHistoryDetails ? details.course_funnel : null);
   }
 
+  function renderDemo(data = {}) {
+    const payload = data.dashboard ? data : { dashboard: data };
+    rangeDays = Number(payload.rangeDays ?? document.querySelector('#analytics-range')?.value) || 0;
+    dashboard = payload.dashboard || null;
+    demoPlatforms = Array.isArray(dashboard?.platforms) ? dashboard.platforms : null;
+    storeSnapshot = payload.storeSnapshot || {};
+    storeError = '';
+    storeOk = 'ДЕМО · условные значения, не статистика пользователей';
+    allRows = [];
+    installations = (dashboard?.platforms || []).map((row) => ({ platform: row.platform, app_version: '0.0-demo' }));
+    installationsTotal = Number(dashboard?.all_time_installs) || 0;
+    installationCounts = { rows: installations, allTime: installationsTotal, active: dashboard?.period?.active ?? null, newInstalls: dashboard?.period?.new_installs ?? null, truncated: false, limit: installations.length };
+    installationRowsTruncated = false;
+    installationsAvailable = true;
+    allTimeInstallCount = installationsTotal;
+    eventsWindowLimited = false;
+    dashboardError = '';
+    renderAll();
+    const stats = document.querySelector('#analytics-stats');
+    if (stats) stats.textContent = `ДЕМО · искусственные данные · ${rangeLabel(rangeDays)} · пользователи не подключены`;
+    document.querySelectorAll('#analytics-stores .admin-store-progress button').forEach((button) => {
+      button.disabled = true;
+      button.textContent = 'Импорт отключён в демо';
+      button.title = 'Демо-показатели заданы в локальном наборе';
+    });
+    document.querySelectorAll('#analytics-stores .admin-store-link').forEach((link) => { link.hidden = true; });
+  }
+
   function publishOverviewAnalytics(source = dashboard, sourceRange = rangeDays) {
     if (!global.parent || global.parent === global || typeof global.parent.postMessage !== 'function') return;
     const series = Array.isArray(source?.series) ? source.series.map((row) => ({
@@ -1255,6 +1356,7 @@
   async function loadDashboardForRange() {
     dashboard = null;
     dashboardError = '';
+    demoPlatforms = null;
     if (global.AdminV2Safety?.readOnly === true) return null;
     if (typeof global.AdminSupabase.loadAnalyticsDashboard !== 'function') return null;
     try {
@@ -1385,6 +1487,7 @@
     eventsWindowLimited = false;
     dashboard = null;
     dashboardError = '';
+    demoPlatforms = null;
 
     try {
       await loadDashboardForCurrentRange();
@@ -1468,6 +1571,7 @@
       installationsAvailable = false;
       eventsWindowLimited = false;
       dashboard = null;
+      demoPlatforms = null;
       if (stats) stats.textContent = 'Не удалось загрузить';
       metrics.innerHTML = `<p class="admin-error">${formatError(error)}</p>`;
       publishOverviewAnalytics();
@@ -1662,5 +1766,6 @@
     bind,
     loadAndRender,
     loadOverviewSeries,
+    renderDemo,
   };
 })(window);

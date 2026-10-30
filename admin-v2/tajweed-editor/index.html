@@ -11,10 +11,25 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css?v=remote-toggle1" />
-  <link id="workbenchPreviewStyles" rel="stylesheet" href="./workbench-preview.css?v=admin-v2-editorial" />
+  <link rel="stylesheet" href="./editor.css?v=figma-icons-20261029-1" />
+  <link id="workbenchPreviewStyles" rel="stylesheet" href="./workbench-preview.css?v=graphite-toolbar-top-20261030-4" />
 </head>
 <body>
+  <svg class="editor-icons" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="taj-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M5 9h8a7 7 0 0 1 0 14h-2"/></symbol>
+    <symbol id="taj-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M19 9h-8a7 7 0 0 0 0 14h2"/></symbol>
+    <symbol id="taj-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+    <symbol id="taj-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="taj-download" viewBox="0 0 24 24"><path d="M12 4v12m-5-5 5 5 5-5"/><path d="M5 18v2h14v-2"/></symbol>
+    <symbol id="taj-upload" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5"/><path d="M5 14v5h14v-5"/></symbol>
+    <symbol id="taj-save" viewBox="0 0 24 24"><path d="M5 4h12l3 3v13H4V4z"/><path d="M8 4v6h8V4M8 20v-6h8v6"/></symbol>
+    <symbol id="taj-copy" viewBox="0 0 24 24"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V5a1 1 0 0 0-1-1H5a1 1 0 0 0-1 1v10a1 1 0 0 0 1 1h3"/></symbol>
+    <symbol id="taj-trash" viewBox="0 0 24 24"><path d="M4 7h16M9 7V4h6v3m3 0-1 13H7L6 7m4 4v5m4-5v5"/></symbol>
+    <symbol id="taj-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.7 9a2.4 2.4 0 1 1 4.1 1.7c-1.2 1.1-1.8 1.4-1.8 3M12 17.5h.01"/></symbol>
+    <symbol id="taj-refresh" viewBox="0 0 24 24"><path d="M20 7v5h-5M4 17v-5h5"/><path d="M5.6 9a7 7 0 0 1 11.8-2L20 12M4 12l2.6 5a7 7 0 0 0 11.8-2"/></symbol>
+    <symbol id="taj-expand" viewBox="0 0 24 24"><path d="M8 4H4v4m12-4h4v4M4 16v4h4m12-4v4h-4"/></symbol>
+    <symbol id="taj-file" viewBox="0 0 24 24"><path d="M6 3h8l5 5v13H6z"/><path d="M14 3v5h5M9 13h7m-7 4h7"/></symbol>
+  </svg>
   <div class="atmosphere" aria-hidden="true"></div>
 
   <header class="topbar">
@@ -25,19 +40,19 @@
     </div>
     <div class="top-actions">
       <div class="action-group" role="group" aria-label="История">
-        <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z" aria-label="Отменить">↩</button>
-        <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z" aria-label="Повторить">↪</button>
+        <button type="button" class="icon-btn" id="btnUndo" title="Ctrl+Z" aria-label="Отменить"><svg aria-hidden="true"><use href="#taj-undo"/></svg></button>
+        <button type="button" class="icon-btn" id="btnRedo" title="Ctrl+Shift+Z" aria-label="Повторить"><svg aria-hidden="true"><use href="#taj-redo"/></svg></button>
       </div>
       <div class="action-group" role="group" aria-label="Черновик и прод">
-        <button type="button" class="btn ghost compact" id="btnCloudLoad" title="Загрузить локальный черновик с этого устройства"><span class="label-full">Черновик ↓</span><span class="label-short">↓лок.</span></button>
-        <button type="button" class="btn ghost compact" id="btnCloudSave" title="Сохранить черновик только в этом браузере"><span class="label-full">Сохранить черновик</span><span class="label-short">↑лок.</span></button>
-        <button type="button" class="btn ghost compact" id="btnCloudPull" title="Загрузить опубликованный пакет с waydean.ru в тестовую копию"><span class="label-full">Загрузить с прода</span><span class="label-short">Прод ↓</span></button>
-        <button type="button" class="btn primary compact" id="btnCloudPublish" aria-disabled="true" title="Публикация отключена в тестовой копии"><span class="label-full">Публикация · тест</span><span class="label-short">Pub · выкл.</span></button>
+        <button type="button" class="btn ghost compact" id="btnCloudLoad" title="Загрузить локальный черновик с этого устройства"><svg aria-hidden="true"><use href="#taj-download"/></svg><span class="label-full">Черновик</span><span class="label-short">Локально</span></button>
+        <button type="button" class="btn ghost compact" id="btnCloudSave" title="Сохранить черновик только в этом браузере"><svg aria-hidden="true"><use href="#taj-save"/></svg><span class="label-full">Сохранить черновик</span><span class="label-short">Сохранить</span></button>
+        <button type="button" class="btn ghost compact" id="btnCloudPull" title="Загрузить опубликованный пакет с waydean.ru в тестовую копию"><svg aria-hidden="true"><use href="#taj-download"/></svg><span class="label-full">Загрузить с прода</span><span class="label-short">Прод</span></button>
+        <button type="button" class="btn primary compact" id="btnCloudPublish" aria-disabled="true" title="Публикация отключена в тестовой копии"><svg aria-hidden="true"><use href="#taj-upload"/></svg><span class="label-full">Публикация · тест</span><span class="label-short">Публикация</span></button>
       </div>
       <div class="action-group" role="group" aria-label="Файл">
-        <button type="button" class="btn ghost compact" id="btnHelp"><span class="label-full">Справка</span><span class="label-short">?</span></button>
-        <button type="button" class="btn ghost compact" id="btnImport"><span class="label-full">Импорт</span><span class="label-short">↓</span></button>
-        <button type="button" class="btn ghost compact" id="btnExport"><span class="label-full">Этот JSON</span><span class="label-short">1 JSON</span></button>
+        <button type="button" class="btn ghost compact" id="btnHelp"><svg aria-hidden="true"><use href="#taj-help"/></svg><span class="label-full">Справка</span><span class="label-short">Справка</span></button>
+        <button type="button" class="btn ghost compact" id="btnImport"><svg aria-hidden="true"><use href="#taj-download"/></svg><span class="label-full">Импорт</span><span class="label-short">Импорт</span></button>
+        <button type="button" class="btn ghost compact" id="btnExport"><svg aria-hidden="true"><use href="#taj-file"/></svg><span class="label-full">Этот JSON</span><span class="label-short">JSON</span></button>
       </div>
       <input id="fileInput" type="file" accept="application/json,.json" hidden />
     </div>
@@ -54,7 +69,7 @@
         <span class="switch-track" aria-hidden="true"><span></span></span>
         <span id="availabilityValue">Выключено</span>
       </button>
-      <button type="button" id="btnAvailabilityRefresh" class="btn ghost compact">Проверить состояние</button>
+      <button type="button" id="btnAvailabilityRefresh" class="btn ghost compact"><svg aria-hidden="true"><use href="#taj-refresh"/></svg>Проверить состояние</button>
     </div>
   </section>
 
@@ -64,11 +79,11 @@
       <select id="docSelect" aria-label="Выбор документа"></select>
     </label>
     <div class="meta-actions library-actions">
-      <button type="button" class="btn ghost compact" id="btnSeedMissing" title="Добавить недостающие эталоны">+ Эталоны</button>
-      <button type="button" class="btn ghost compact" id="btnNew" title="Добавить документ в список">+ Добавить</button>
-      <button type="button" class="btn ghost compact" id="btnDuplicate" title="Копия текущего в список">Копия</button>
-      <button type="button" class="btn ghost compact" id="btnDeleteDoc" title="Удалить текущий">Удалить</button>
-      <button type="button" class="btn primary compact" id="btnExportAll" title="Скачать всю библиотеку"><span class="label-full">Экспорт всего</span><span class="label-short">Все JSON</span></button>
+      <button type="button" class="btn ghost compact" id="btnSeedMissing" title="Добавить недостающие эталоны"><svg aria-hidden="true"><use href="#taj-plus"/></svg>Эталоны</button>
+      <button type="button" class="btn ghost compact" id="btnNew" title="Добавить документ в список"><svg aria-hidden="true"><use href="#taj-plus"/></svg>Добавить</button>
+      <button type="button" class="btn ghost compact" id="btnDuplicate" title="Копия текущего в список"><svg aria-hidden="true"><use href="#taj-copy"/></svg>Копия</button>
+      <button type="button" class="btn ghost compact" id="btnDeleteDoc" title="Удалить текущий"><svg aria-hidden="true"><use href="#taj-trash"/></svg>Удалить</button>
+      <button type="button" class="btn primary compact" id="btnExportAll" title="Скачать всю библиотеку"><svg aria-hidden="true"><use href="#taj-file"/></svg><span class="label-full">Экспорт всего</span><span class="label-short">Все JSON</span></button>
     </div>
   </div>
 
@@ -107,17 +122,17 @@
 
   <section class="toolbar" aria-label="Правила таджвида">
     <div class="toolbar-label">Правило</div>
+    <button type="button" class="chip-btn interdental-chip" id="btnInterdental" aria-label="Межзубные ث ذ ظ" title="Клавиша 9 · ث ذ ظ — язык между зубами">
+      <span class="chip-swatch" aria-hidden="true"></span>
+      <span class="label-full">Межзубные ثذظ</span>
+      <span class="label-short">ثذظ</span>
+    </button>
     <div class="rule-strip" id="ruleGrid" role="toolbar"></div>
     <div class="toolbar-sep" aria-hidden="true"></div>
     <div class="layer-group" role="group" aria-label="Слои">
-      <button type="button" class="chip-btn interdental-chip" id="btnInterdental" title="Клавиша 9 · ث ذ ظ — язык между зубами">
-        <span class="chip-swatch" aria-hidden="true"></span>
-        <span class="label-full">Межзубные ثذظ</span>
-        <span class="label-short">ثذظ</span>
-      </button>
-      <button type="button" class="chip-btn" id="btnAccent" title="A"><span class="label-full">´ Ударение</span><span class="label-short">´</span></button>
-      <button type="button" class="chip-btn" id="btnHidden" title="H"><span class="label-full">⊘ Скрытый</span><span class="label-short">⊘</span></button>
-      <button type="button" class="chip-btn danger" id="btnClearSel"><span class="label-full">Очистить</span><span class="label-short">✕</span></button>
+      <button type="button" class="chip-btn" id="btnAccent" aria-label="Ударение" title="Ударение · клавиша A"><span class="label-full">´ Ударение</span><span class="label-short">´</span></button>
+      <button type="button" class="chip-btn" id="btnHidden" aria-label="Скрытый символ" title="Скрытый символ · клавиша H"><span class="label-full">⊘ Скрытый</span><span class="label-short">⊘</span></button>
+      <button type="button" class="chip-btn danger" id="btnClearSel" aria-label="Очистить разметку выделения" title="Очистить разметку выделения"><span class="label-full">Очистить</span><span class="label-short"><svg aria-hidden="true"><use href="#taj-close"/></svg></span></button>
     </div>
     <div class="inspector-actions" role="group" aria-label="Дополнительные панели">
       <button type="button" class="btn ghost compact" id="btnShowMarks" data-inspector-panel="marks-panel" aria-controls="marks-panel" aria-expanded="false">Метки <span id="inspectorMarkCount">0</span></button>
@@ -253,11 +268,11 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../../admin/supabase-config.js?v=6"></script>
   <script src="../../admin/admin-supabase.js?v=analytics-counts-20261028"></script>
-  <script src="./cloud.js?v=admin-v2-live-cloud-20261029"></script>
+  <script src="./cloud.js?v=admin-v2-demo-fixtures-20261029-1"></script>
   <script src="./suggest.js?v=2"></script>
   <script src="./catalog.js?v=2"></script>
   <script src="./preview-selection.js?v=admin-v2-workbench"></script>
   <script src="./normalization.js?v=admin-v2-recovery-20261027"></script>
-  <script src="./editor.js?v=admin-v2-production-20261029"></script>
+  <script src="./editor.js?v=admin-v2-demo-fixtures-20261029-1"></script>
 </body>
 </html>

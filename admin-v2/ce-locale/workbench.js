@@ -1,10 +1,13 @@
 (function initCeWorkbench(global) {
-  const STORE_KEY = 'quranapp_admin_v2_ce_workbench_v1';
-  const REVIEW_KEY = 'quranapp_admin_v2_ce_workbench_review_v1';
-  const PACK_KEY = 'quranapp_admin_v2_ce_workbench_pack_v1';
-  const UI_KEY = 'quranapp_admin_v2_ce_workbench_ui_v1';
-  const HISTORY_KEY = 'quranapp_admin_v2_ce_workbench_history_v1';
-  const ASSIGNEE_KEY = 'quranapp_admin_v2_ce_workbench_assignees_v1';
+  const IS_LOCAL_HOST = ['localhost', '127.0.0.1', '::1'].includes(global.location.hostname);
+  const DEMO_MODE = IS_LOCAL_HOST && new URLSearchParams(global.location.search).get('demo') === '1';
+  const DEMO_SUFFIX = DEMO_MODE ? '_demo_v1' : '_v1';
+  const STORE_KEY = `quranapp_admin_v2_ce_workbench${DEMO_SUFFIX}`;
+  const REVIEW_KEY = `quranapp_admin_v2_ce_workbench_review${DEMO_SUFFIX}`;
+  const PACK_KEY = `quranapp_admin_v2_ce_workbench_pack${DEMO_SUFFIX}`;
+  const UI_KEY = `quranapp_admin_v2_ce_workbench_ui${DEMO_SUFFIX}`;
+  const HISTORY_KEY = `quranapp_admin_v2_ce_workbench_history${DEMO_SUFFIX}`;
+  const ASSIGNEE_KEY = `quranapp_admin_v2_ce_workbench_assignees${DEMO_SUFFIX}`;
   const HISTORY_LIMIT = 120;
 
   const state = {
@@ -26,6 +29,39 @@
 
   function $(id) {
     return document.getElementById(id);
+  }
+
+  function createWorkbenchIcon(name) {
+    const paths = {
+      back: 'M19 12H5m7-7-7 7 7 7',
+      refresh: 'M20 7v5h-5M4 17v-5h5M5.6 9a7 7 0 0 1 11.5-2L20 12M4 12l2.9 5a7 7 0 0 0 11.5-2',
+      check: 'm5 12 4 4L19 6',
+      remove: 'M5 12h14',
+      next: 'M5 12h14m-5-5 5 5-5 5',
+      external: 'M14 4h6v6M20 4l-9 9M18 13v6a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6',
+    };
+    const pathData = paths[name];
+    if (!pathData) throw new Error(`Unknown workbench icon: ${name}`);
+
+    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('class', 'workbench-icon');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '1.8');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', pathData);
+    svg.append(path);
+    return svg;
+  }
+
+  function setWorkbenchButtonLabel(button, label, iconName) {
+    const text = document.createElement('span');
+    text.textContent = label;
+    button.replaceChildren(createWorkbenchIcon(iconName), text);
   }
 
   function grp(key) {
@@ -316,7 +352,7 @@
   function historyActionLabel(action) {
     switch (action) {
       case 'reviewed':
-        return 'Проверено ✓';
+        return 'Проверено';
       case 'uncertain':
         return 'Пересмотреть ?';
       case 'todo':
@@ -855,7 +891,7 @@
       copyRuBtn.addEventListener('click', () => {
         void copyText(row.ru);
       });
-      const yandexBtn = createToolButton('Яндекс ↗', 'Открыть Яндекс.Переводчик (ru → ce) с этим текстом');
+      const yandexBtn = createToolButton('Яндекс.Переводчик', 'Открыть Яндекс.Переводчик (ru → ce) с этим текстом', 'external');
       yandexBtn.classList.add('yandex');
       yandexBtn.addEventListener('click', () => {
         openYandexTranslate(row.ru);
@@ -918,7 +954,7 @@
         const unreviewedDupCount = dupSiblings.filter((item) => !isReviewed(item)).length;
         const spreadBtn = createToolButton(
           'На все',
-          `Поставить перевод в непроверенные ключи (${unreviewedDupCount} без ✓ из ${dupSiblings.length}). Проверенные пропускаются.`
+          `Поставить перевод в непроверенные ключи (${unreviewedDupCount} без отметки из ${dupSiblings.length}). Проверенные пропускаются.`
         );
         spreadBtn.classList.add('spread');
         if (!String(row.ce ?? '').trim()) spreadBtn.disabled = true;
@@ -926,7 +962,7 @@
           const { updated, skippedReviewed } = spreadCeToDuplicates(row);
           if (updated > 0) {
             const skip =
-              skippedReviewed > 0 ? ` · пропущено ${skippedReviewed} ✓` : '';
+              skippedReviewed > 0 ? ` · пропущено ${skippedReviewed} проверенных` : '';
             flash(`Обновлено ${updated}${skip}`);
           }
         });
@@ -940,7 +976,11 @@
       const reviewBtn = document.createElement('button');
       reviewBtn.type = 'button';
       reviewBtn.className = isReviewed(row) ? 'secondary' : 'primary';
-      reviewBtn.textContent = isReviewed(row) ? 'Снять ✓' : 'Проверено ✓';
+      setWorkbenchButtonLabel(
+        reviewBtn,
+        isReviewed(row) ? 'Снять отметку' : 'Проверено',
+        isReviewed(row) ? 'remove' : 'check'
+      );
       reviewBtn.addEventListener('click', () => {
         const prevStatus = row.status ?? 'todo';
         const prevCe = row.ce ?? '';
@@ -977,7 +1017,7 @@
       const nextBtn = document.createElement('button');
       nextBtn.type = 'button';
       nextBtn.className = 'secondary';
-      nextBtn.textContent = 'Далее →';
+      setWorkbenchButtonLabel(nextBtn, 'Далее', 'next');
       nextBtn.addEventListener('click', () => focusNext(row.key));
       actions.append(reviewBtn, uncertainBtn, nextBtn);
 
@@ -1066,11 +1106,17 @@
     return `https://translate.yandex.ru/?lang=ru-ce&text=${encodeURIComponent(trimmed)}`;
   }
 
-  function createToolButton(label, title) {
+  function createToolButton(label, title, iconName) {
     const btn = document.createElement('button');
     btn.type = 'button';
     btn.className = 'tool-btn';
-    btn.textContent = label;
+    if (iconName) {
+      const text = document.createElement('span');
+      text.textContent = label;
+      btn.append(createWorkbenchIcon(iconName), text);
+    } else {
+      btn.textContent = label;
+    }
     if (title) btn.title = title;
     return btn;
   }
@@ -1105,7 +1151,7 @@
     const unreviewed = siblings.filter((item) => !isReviewed(item)).length;
     let text = `${total} таких же`;
     if (unreviewed < total) {
-      text += ` · ${unreviewed} без ✓`;
+      text += ` · ${unreviewed} без отметки`;
     }
     if (ceVariants.size > 1) {
       const n = ceVariants.size;
@@ -1148,7 +1194,7 @@
     });
     if (conflicting.length) {
       const skipLine =
-        skippedReviewed > 0 ? `\n\nПроверенные (✓) не трогаем — пропустим ${skippedReviewed}.` : '';
+        skippedReviewed > 0 ? `\n\nПроверенные не затрагиваются — пропустим ${skippedReviewed}.` : '';
       const ok = global.confirm(
         `У ${conflicting.length} ключей другой перевод.\n\nЗаменить на:\n«${truncateText(ce, 80)}»${skipLine}`
       );
@@ -1517,6 +1563,7 @@
   }
 
   async function cloudPull(options = {}) {
+    if (DEMO_MODE) throw new Error('Облачная загрузка отключена в демо-режиме');
     if (!global.AdminSupabase?.loadCeLocaleDraft) {
       throw new Error('Облако не подключено');
     }
@@ -1554,6 +1601,7 @@
   }
 
   async function cloudSave() {
+    if (DEMO_MODE) throw new Error('Облачное сохранение отключено в демо-режиме');
     if (!global.AdminSupabase?.saveCeLocaleDraft) {
       throw new Error('Облако не подключено');
     }
@@ -1584,6 +1632,7 @@
   }
 
   async function refreshCloudSession(options = {}) {
+    if (DEMO_MODE) { state.cloudReady = false; state.cloudSession = null; return false; }
     const session = await global.AdminSupabase.getSession().catch(() => null);
     state.cloudSession = session;
     state.cloudReady = Boolean(session?.access_token);
@@ -1613,6 +1662,12 @@
   }
 
   async function initCloud() {
+    if (DEMO_MODE) {
+      state.cloudReady = false;
+      state.cloudSession = null;
+      setSaveFeedback('Демо · сохранение только в этом браузере', 'warn', 0);
+      return;
+    }
     if (!global.AdminSupabase?.isEnabled?.()) return;
     const client = global.AdminSupabase.getClient();
     client?.auth.onAuthStateChange((event) => {
@@ -1654,8 +1709,8 @@
 
       setSaveFeedback(
         options.markFocusedReviewed
-          ? 'Сохранено локально · синхронизация отключена в тестовой копии'
-          : 'Сохранено локально · production отключён в тестовой копии',
+          ? `Сохранено локально · ${DEMO_MODE ? 'демо-набор изолирован' : 'синхронизация отключена в тестовой копии'}`
+          : `Сохранено локально · ${DEMO_MODE ? 'демо-набор изолирован' : 'production отключён в тестовой копии'}`,
         'warn'
       );
       return true;
@@ -1751,9 +1806,19 @@
   }
 
   async function loadData() {
-    const response = await fetch('./data.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`data.json HTTP ${response.status}`);
-    const payload = await response.json();
+    let payload;
+    if (DEMO_MODE) {
+      try { payload = global.parent?.AdminV2DemoData?.translations; } catch { /* standalone preview */ }
+      if (!payload) {
+        const response = await fetch('../demo-translations.json', { cache: 'no-store' });
+        if (!response.ok) throw new Error(`demo-translations.json HTTP ${response.status}`);
+        payload = await response.json();
+      }
+    } else {
+      const response = await fetch('./data.json', { cache: 'no-store' });
+      if (!response.ok) throw new Error(`data.json HTTP ${response.status}`);
+      payload = await response.json();
+    }
     state.rows = Array.isArray(payload.rows) ? payload.rows : [];
     state.meta = payload.meta ?? state.meta;
     state.packProgress = payload.packProgress ?? [];

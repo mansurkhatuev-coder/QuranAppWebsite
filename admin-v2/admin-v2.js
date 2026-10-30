@@ -408,7 +408,7 @@
       if (!draft.lastSavedAt) return;
       const stamp = new Intl.DateTimeFormat("ru-RU", { dateStyle: "medium", timeStyle: "short" }).format(new Date(draft.lastSavedAt));
       const storage = isProduction && draft.storage === "production" ? "Черновик сохранён в production" : "Черновик сохранён локально";
-      target.innerHTML = `<span class="empty-glyph">✓</span><span><strong>${storage}</strong><small>${stamp} · источник: ${draft.source === "content" ? "редактор материалов" : "инструменты админки"}</small></span>`;
+      target.innerHTML = `<svg class="empty-glyph" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6" /></svg><span><strong>${storage}</strong><small>${stamp} · источник: ${draft.source === "content" ? "редактор материалов" : "инструменты админки"}</small></span>`;
     } catch { /* sample UI remains available */ }
   }
 

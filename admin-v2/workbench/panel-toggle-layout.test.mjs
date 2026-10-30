@@ -2,20 +2,10 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 
-test('Tajweed library and preview toggles stay outside the heading hidden in focus mode', async () => {
+test('retired workbench route offers navigation to the preserved admin', async () => {
   const html = await readFile(new URL('./index.html', import.meta.url), 'utf8');
-  const script = await readFile(new URL('./prototype.js', import.meta.url), 'utf8');
-  const heading = html.match(/<div class="document-heading">([\s\S]*?)<\/div>\s*<nav class="editor-tabs"/);
-  const tabs = html.match(/<nav class="content-tabs"[^>]*>([\s\S]*?)<\/nav>/);
-  const handlerStart = script.indexOf('$(".content-tabs").addEventListener("click"');
-  const handlerEnd = script.indexOf('$("#library-search")', handlerStart);
-  const handler = script.slice(handlerStart, handlerEnd);
-
-  assert.ok(heading && tabs && handlerStart >= 0 && handlerEnd > handlerStart, 'editor heading, sticky tabs, and click handler exist');
-  assert.doesNotMatch(heading[1], /id="focus-panel-tools"/);
-  assert.match(tabs[1], /id="focus-panel-tools"/);
-  assert.match(handler, /event\.target\.closest\("\[data-focus-panel\]"\)/);
-  assert.match(handler, /classList\.toggle\(key, active\)/);
+  assert.match(html, /window\.location\.replace\("\/admin\/"\)/);
+  assert.match(html, /href="\/admin\/"/);
 });
 
 test('embedded workbench stays below the persistent admin header while scrolling', async () => {

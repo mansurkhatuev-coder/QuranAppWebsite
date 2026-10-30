@@ -1,6 +1,8 @@
 (function (global) {
   const PASSWORD = 'гуно';
-  const SESSION_KEY = 'ce_workbench_gate_v1';
+  const IS_LOCAL_HOST = ['localhost', '127.0.0.1', '::1'].includes(global.location.hostname);
+  const DEMO_MODE = IS_LOCAL_HOST && new URLSearchParams(global.location.search).get('demo') === '1';
+  const SESSION_KEY = `ce_workbench_gate_v1${DEMO_MODE ? '_demo' : ''}`;
   const SCOPE = 'ce-workbench';
 
   function normalize(value) {
@@ -51,6 +53,10 @@
     }
 
     void (async () => {
+      if (DEMO_MODE) {
+        showApp();
+        return;
+      }
       if (isUnlocked()) {
         showApp();
         return;

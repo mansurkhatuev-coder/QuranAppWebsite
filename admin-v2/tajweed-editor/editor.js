@@ -1,8 +1,10 @@
 (() => {
   "use strict";
 
-  const previewVersion = new URLSearchParams(window.location.search).get("previewVersion");
-  const storageScope = previewVersion === "terra-preview" ? ":terra-preview" : "";
+  const previewParams = new URLSearchParams(window.location.search);
+  const previewVersion = previewParams.get("previewVersion");
+  const DEMO_MODE = ["localhost", "127.0.0.1", "::1"].includes(window.location.hostname) && previewParams.get("demo") === "1";
+  const storageScope = DEMO_MODE ? ":terra-demo" : previewVersion === "terra-preview" ? ":terra-preview" : "";
   const STORAGE_KEY = `quranapp-admin-v2-tajweed-editor-library:v1${storageScope}`;
   const STORAGE_BACKUP_KEY = `quranapp-admin-v2-tajweed-editor-library-backup:v1${storageScope}`;
   const PREVIEW_DOC_IDS_KEY = `quranapp-admin-v2-tajweed-editor-source-docs:v1${storageScope}`;
@@ -579,7 +581,7 @@
         .join("");
       item.innerHTML = `
         <div class="snippet">${escapeHtml(snippet || "∅")}</div>
-        <button type="button" class="del" data-del="${index}" title="Удалить">✕</button>
+        <button type="button" class="del" data-del="${index}" title="Удалить" aria-label="Удалить метку"><svg aria-hidden="true"><use href="#taj-close"/></svg></button>
         <div class="chips">${chips || `<span class="chip">пусто</span>`}</div>
         <div class="meta">[${m.start}, ${m.end})${m.note ? " · " + escapeHtml(m.note) : ""}</div>
       `;
@@ -816,6 +818,29 @@
     } catch (error) {
       els.saveStatus.textContent =
         error instanceof Error ? error.message : "Ошибка черновика";
+      els.saveStatus.classList.remove("ok");
+      return false;
+    }
+  }
+
+  async function cloudSaveEmbeddedDocument() {
+    if (!globalThis.TajweedCloud || !globalThis.AdminV2PreviewSelection?.saveEmbeddedDraftDocument) {
+      els.saveStatus.textContent = "Не удалось безопасно сохранить документ в облако";
+      els.saveStatus.classList.remove("ok");
+      return false;
+    }
+    els.saveStatus.textContent = "Проверяем облачный черновик…";
+    els.saveStatus.classList.remove("ok");
+    try {
+      const result = await globalThis.AdminV2PreviewSelection.saveEmbeddedDraftDocument(
+        globalThis.TajweedCloud,
+        normalizeDoc(doc),
+      );
+      els.saveStatus.textContent = `Черновик документа · ${result?.updatedBy || "сохранён"}`;
+      els.saveStatus.classList.add("ok");
+      return true;
+    } catch (error) {
+      els.saveStatus.textContent = error instanceof Error ? error.message : "Ошибка черновика";
       els.saveStatus.classList.remove("ok");
       return false;
     }
@@ -1393,6 +1418,18 @@
     if (btnCloudLoad) btnCloudLoad.addEventListener("click", () => performCloudOperation(cloudLoadDraft));
     if (btnCloudPublish) btnCloudPublish.addEventListener("click", () => performCloudOperation(cloudPublish));
     if (btnCloudPull) btnCloudPull.addEventListener("click", () => performCloudOperation(cloudPullLive));
+    if (DEMO_MODE) {
+      const eyebrow = document.querySelector(".eyebrow .eyebrow-full");
+      if (eyebrow) eyebrow.textContent = "ДЕМО · локальные тестовые данные";
+      const compactEyebrow = document.querySelector(".eyebrow .eyebrow-short");
+      if (compactEyebrow) compactEyebrow.textContent = "ДЕМО · локально";
+      els.saveStatus.textContent = "Демо-копия · локальный черновик";
+      for (const button of cloudButtons) {
+        if (!button) continue;
+        button.disabled = true;
+        button.title = "Облачные действия отключены в локальном демо";
+      }
+    }
     const toggle = $("btnAvailability");
     const refresh = $("btnAvailabilityRefresh");
     const controlStatus = $("availabilityStatus");
@@ -1407,7 +1444,12 @@
         controlStatus.classList.toggle("ok", state.phase === "published");
         refresh.disabled = state.busy;
         refresh.textContent = state.phase === "auth" ? "Войти и проверить" : "Проверить состояние";
-        for (const button of cloudButtons) if (button) button.disabled = state.busy;
+        for (const button of cloudButtons) if (button) button.disabled = state.busy || DEMO_MODE;
+        if (DEMO_MODE) {
+          controlStatus.textContent = "Демо · состояние публикации не запрашивается";
+          refresh.disabled = true;
+          refresh.title = "В локальном демо нет связи с рабочим сайтом";
+        }
       });
       refresh.addEventListener("click", () => { void globalThis.TajweedCloud.refreshControl(true).catch((error) => { controlStatus.textContent = error.message; }); });
       toggle.addEventListener("click", () => {
@@ -1566,7 +1608,7 @@
       void (async () => {
         let saved = flushLibrarySave();
         if (saved && event.data.saveCloudDraft === true && window.AdminV2Runtime?.isProduction === true) {
-          saved = await cloudSaveDraft();
+          saved = await cloudSaveEmbeddedDocument();
         }
         window.parent?.postMessage({
           type: "admin-v2:tajweed-save-result",

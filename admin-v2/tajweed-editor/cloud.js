@@ -6,10 +6,11 @@
   // Live writes are enabled only on the authenticated canonical Admin V2 route.
   // Local preview and every non-canonical origin remain test-only.
   const IS_PREVIEW = global.AdminV2Runtime?.isProduction !== true;
+  const DEMO_MODE = IS_PREVIEW && ["localhost", "127.0.0.1", "::1"].includes(global.location?.hostname) && new URLSearchParams(global.location?.search || "").get("demo") === "1";
   const SITE_ORIGIN = IS_PREVIEW ? 'https://waydean.ru' : (global.location?.origin || 'https://waydean.ru');
   const SITE_PACK_URL = `${SITE_ORIGIN}/data/azkar-tajweed-translit.json`;
   const SITE_MANIFEST_URL = `${SITE_ORIGIN}/data/remote-azkar-tajweed.manifest.json`;
-  const LOCAL_DRAFT_KEY = 'quranapp-admin-v2-tajweed-library';
+  const LOCAL_DRAFT_KEY = `quranapp-admin-v2-tajweed-library${DEMO_MODE ? ':terra-demo' : ''}`;
   let control = { manifest: null, publicManifest: null, phase: 'loading', message: 'Проверяем состояние', busy: false };
   const listeners = new Set();
   let latestManifest = null;
@@ -112,6 +113,10 @@
 
   async function refreshControl(interactive = false) {
     return runExclusive(async () => {
+      if (DEMO_MODE) {
+        updateControl({ manifest: null, publicManifest: null, phase: 'demo', message: 'Демо · состояние продакшена не запрашивается' });
+        return;
+      }
       updateControl({ phase: 'loading', message: 'Проверяем состояние' });
       try {
         if (IS_PREVIEW) {
@@ -244,6 +249,7 @@
   }
 
   async function fetchLivePack() {
+    if (DEMO_MODE) throw new Error('Загрузка с прода отключена в локальном демо');
     return fetchJson(SITE_PACK_URL);
   }
 

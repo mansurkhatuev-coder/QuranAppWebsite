@@ -7,8 +7,8 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <meta name="robots" content="noindex, nofollow" />
     <title>Чеченский UI — workbench</title>
-    <link rel="stylesheet" href="./workbench.css?v=18" />
-    <link rel="stylesheet" href="./admin-v2.css?v=1" />
+    <link rel="stylesheet" href="./workbench.css?v=19" />
+    <link rel="stylesheet" href="./admin-v2.css?v=2" />
   </head>
   <body>
     <div id="ce-gate" class="ce-gate" role="dialog" aria-modal="true" aria-labelledby="ce-gate-title">
@@ -36,13 +36,13 @@
             <p id="progress-headline" class="header-progress-line">Загрузка…</p>
           </div>
           <div class="top-links">
-            <a href="../index.html">← Админка</a>
+            <a href="../index.html"><svg class="workbench-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5m7-7-7 7 7 7" /></svg><span>Админка</span></a>
             <a href="./packs/">Пакеты</a>
           </div>
         </div>
 
         <div class="toolbar toolbar-main">
-          <button type="button" class="secondary refresh-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA">↻ Обновить</button>
+          <button type="button" class="secondary refresh-btn" id="refresh-app" title="Обновить страницу и сбросить кэш PWA"><svg class="workbench-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5M5.6 9a7 7 0 0 1 11.5-2L20 12M4 12l2.9 5a7 7 0 0 0 11.5-2" /></svg><span>Обновить</span></button>
           <select id="pack" class="small pack-select"></select>
           <input id="pack-assignee" class="assignee-input" placeholder="Ответственный" title="Ответственный за пакет" />
           <input id="q" class="search" placeholder="Поиск…" />
@@ -62,8 +62,8 @@
           </select>
           <button type="button" class="ghost" id="reset-filters" title="Сбросить поиск и фильтры">Сброс фильтров</button>
           <button type="button" class="secondary" id="save">Сохранить</button>
-          <button type="button" class="primary" id="save-reviewed">✓ проверено</button>
-          <button type="button" class="secondary" id="next-unreviewed">Далее →</button>
+          <button type="button" class="primary" id="save-reviewed"><svg class="workbench-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6" /></svg><span>Проверено</span></button>
+          <button type="button" class="secondary" id="next-unreviewed">Далее <svg class="workbench-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14m-5-5 5 5-5 5" /></svg></button>
           <span id="save-status" class="save-status" aria-live="polite"></span>
         </div>
       </div>
@@ -71,7 +71,7 @@
       <details class="header-extra">
         <summary>Прогресс и экспорт</summary>
         <p class="sub">
-          Список: вкладки → главное → академия в конце. Справа — mockup и глоссарий. «Переведено» ≠ копия ru.
+          Список: вкладки, главный экран, академия в конце. Справа — mockup и глоссарий. «Переведено» означает не копию ru.
         </p>
         <p id="pack-headline" class="hint pack-headline"></p>
 
@@ -139,7 +139,7 @@
         <section class="side-tab-panel glossary-panel" data-side-panel="glossary" hidden>
           <div class="panel-head">
             <h2>Глоссарий</h2>
-            <span class="hint">Клик → вставка</span>
+            <span class="hint">Нажмите для вставки</span>
           </div>
           <input id="glossary-q" class="glossary-search" placeholder="маор, куран…" />
           <div id="glossary-host" class="glossary-host"></div>
@@ -157,7 +157,7 @@
     </div>
 
     <div class="footerbar">
-      <span class="hint">Ctrl+S — сохранить · <button type="button" class="link-btn inline" id="refresh-app-footer">↻ Обновить</button> — после обновлений на сайте</span>
+      <span class="hint">Ctrl+S — сохранить · <button type="button" class="link-btn inline" id="refresh-app-footer"><svg class="workbench-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 7v5h-5M4 17v-5h5M5.6 9a7 7 0 0 1 11.5-2L20 12M4 12l2.9 5a7 7 0 0 0 11.5-2" /></svg><span>Обновить</span></button> — после обновлений на сайте</span>
       <div><span id="msg" class="hint"></span></div>
     </div>
 
@@ -181,9 +181,9 @@
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="../../admin/supabase-config.js?v=6"></script>
     <script src="../../admin/admin-supabase.js?v=analytics-counts-20261028"></script>
-    <script src="./gate.js?v=terra-prod-1"></script>
+    <script src="./gate.js?v=terra-demo-1"></script>
     <script src="./workbench-mockup.js?v=1"></script>
-    <script src="./workbench.js?v=20"></script>
+    <script src="./workbench.js?v=demo-fixtures-1"></script>
     <script src="./admin-v2-local.js?v=1"></script>
     <script>
       window.CeWorkbenchGate.mountGate(function () {
