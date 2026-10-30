@@ -36,7 +36,7 @@ test("browser video export header has a visible route back to the tree", () => {
 });
 
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261030-flow-reels-1"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261030-animation-clock-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -63,8 +63,10 @@ test("video export exposes the selectable video background presets and persists 
   assert.match(studioSource, /browser-export-backgrounds/);
   assert.match(studioSource, /openVideoBackgroundReader/);
   assert.match(studioSource, /startRealtimeVideoBackground\(backgroundVideoElement\)/);
-  assert.match(studioSource, /realtimeVideoBackgroundActive \? backgroundVideoElement : null/);
-  assert.match(studioSource, /await backgroundReader\.getSampleAt\(outputFrame \/ plan\.fps \* plan\.speed\)/);
+  assert.match(studioSource, /realtimeVideoBackgroundActive && isVideoElementFrameRenderable\(backgroundVideoElement\)/);
+  assert.match(studioSource, /await backgroundReader\.getSampleAt\(getVideoBackgroundOutputTimestamp\(outputFrame, plan\.fps\)\)/);
+  assert.match(studioSource, /isVideoElementFrameRenderable\(backgroundVideoElement\)/);
+  assert.doesNotMatch(studioSource, /playbackRate\s*=\s*settings\.speed/);
   assert.match(studioSource, /выбранным постером/);
 });
 
@@ -76,13 +78,15 @@ test("combined Flow background reels disclose their duration and play once in pr
   assert.match(studioSource, /loop: preset\.loop !== false/);
 });
 
-test("video export has a persistent 0.25x to 8x speed control that updates preview and final render", () => {
+test("video export speed control accelerates the tree animation while backgrounds remain at normal speed", () => {
   assert.match(studioSource, /id="browser-export-speed"/);
   assert.match(studioSource, /VIDEO_SPEED_OPTIONS/);
   assert.match(studioSource, /update\(\{ speed: Number\(event\.currentTarget\.value\) \}\)/);
   assert.match(studioSource, /settings\.speed/);
-  assert.match(studioSource, /outputFrame \/ plan\.fps \* plan\.speed/);
-  assert.match(studioSource, /playbackRate = settings\.speed/);
+  assert.match(studioSource, /Скорость анимации/);
+  assert.match(studioSource, /playbackRate = 1/);
+  assert.doesNotMatch(studioSource, /outputFrame \/ plan\.fps \* plan\.speed/);
+  assert.doesNotMatch(studioSource, /playbackRate = settings\.speed/);
   assert.match(studioSource, /timeLabel\(previewPlan\.durationSeconds\)/);
   assert.match(studioSource, /localStorage\.setItem\(EXPORT_SETTINGS_STORAGE_KEY, JSON\.stringify\(settings\)\)/);
   assert.match(studioCss, /\.browser-export-speed input/);

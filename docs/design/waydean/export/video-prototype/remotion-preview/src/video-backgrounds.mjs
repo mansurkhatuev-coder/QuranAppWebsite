@@ -60,6 +60,20 @@ export function getVideoBackgroundTimestamp(elapsedSeconds, durationSeconds, { l
   return ((elapsed % duration) + duration) % duration;
 }
 
+export function getVideoBackgroundOutputTimestamp(outputFrame, fps) {
+  const frame = Math.max(0, Number.isFinite(Number(outputFrame)) ? Number(outputFrame) : 0);
+  const frameRate = Math.max(1, Number.isFinite(Number(fps)) ? Number(fps) : 24);
+  return frame / frameRate;
+}
+
+export function isVideoElementFrameRenderable(video) {
+  return Boolean(video
+    && Number(video.readyState) >= 2
+    && !video.seeking
+    && Number(video.videoWidth) > 0
+    && Number(video.videoHeight) > 0);
+}
+
 function seekVideoElement(video, timestamp, timeoutMs) {
   if (Math.abs(Number(video.currentTime) - timestamp) < 0.04 && !video.seeking) return Promise.resolve(true);
   if (typeof video.addEventListener !== "function" || typeof video.removeEventListener !== "function") return Promise.resolve(false);

@@ -6,7 +6,9 @@ import {
   createLoopingVideoSampleReader,
   DEFAULT_VIDEO_BACKGROUND_ID,
   VIDEO_BACKGROUND_PRESETS,
+  getVideoBackgroundOutputTimestamp,
   getVideoBackgroundTimestamp,
+  isVideoElementFrameRenderable,
   startRealtimeVideoBackground
 } from "./video-backgrounds.mjs";
 
@@ -41,6 +43,20 @@ test("video background timestamps loop deterministically and handle negative off
   assert.equal(getVideoBackgroundTimestamp(-1, 16), 15);
   assert.equal(getVideoBackgroundTimestamp(42.5, 16, { loop: false }), 16);
   assert.equal(getVideoBackgroundTimestamp(-1, 16, { loop: false }), 0);
+});
+
+test("background clock follows output time while the tree animation speed changes", () => {
+  assert.equal(getVideoBackgroundOutputTimestamp(24, 24), 1);
+  assert.equal(getVideoBackgroundOutputTimestamp(48, 24), 2);
+});
+
+test("native video frames are only drawn while a decoded frame is ready", () => {
+  const video = { readyState: 2, videoWidth: 1280, videoHeight: 720, seeking: false };
+  assert.equal(isVideoElementFrameRenderable(video), true);
+  assert.equal(isVideoElementFrameRenderable({ ...video, seeking: true }), false);
+  assert.equal(isVideoElementFrameRenderable({ ...video, readyState: 1 }), false);
+  assert.equal(isVideoElementFrameRenderable({ ...video, videoWidth: 0 }), false);
+  assert.equal(isVideoElementFrameRenderable(null), false);
 });
 
 test("video sample reader follows output timestamps across loops and releases prior samples", async () => {
