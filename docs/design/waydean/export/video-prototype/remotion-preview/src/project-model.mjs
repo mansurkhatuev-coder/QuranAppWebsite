@@ -247,30 +247,20 @@ export function getFullTreeEdgeRevealProgress(story, shotIndex, localFrame, edge
   return linearProgress * linearProgress * (3 - 2 * linearProgress);
 }
 
-export function getVideoCardDetailProgress(renderedWidthPx, keepLineageDetailed = false) {
+export function getVideoCardDetailProgress(renderedWidthPx) {
   const width = Number(renderedWidthPx);
   if (!Number.isFinite(width)) return 0;
-  if (keepLineageDetailed === true) {
-    const lineageProgress = clamp((width - 26) / (34 - 26), 0, 1);
-    return lineageProgress * lineageProgress * (3 - 2 * lineageProgress);
-  }
   const progress = clamp((width - 36) / (160 - 36), 0, 1);
   return progress * progress * (3 - 2 * progress);
 }
 
-export function getVideoCardContentProgress(renderedWidthPx, keepLineageDetailed = false) {
+export function getVideoCardContentProgress(renderedWidthPx) {
   const width = Number(renderedWidthPx);
   if (!Number.isFinite(width)) return 0;
   const fadeStart = 88;
-  const fadeEnd = keepLineageDetailed ? 120 : 128;
+  const fadeEnd = 128;
   const progress = clamp((width - fadeStart) / (fadeEnd - fadeStart), 0, 1);
   return progress * progress * (3 - 2 * progress);
-}
-
-export function isSelectedLineagePerson(story, personId) {
-  return story?.scopeType === "all"
-    && Array.isArray(story?.timeline?.pathIds)
-    && story.timeline.pathIds.includes(personId);
 }
 
 export function getSceneEdgeEmphasis(story, shotIndex, localFrame, edgeKey) {
