@@ -16,27 +16,11 @@
     content: "";
     pointer-events: none;
   }
-
-  body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node.route,
-  body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node.selected {
-    border: 1px solid rgba(230, 235, 220, .32);
-    background: linear-gradient(135deg, rgba(14, 23, 21, .52), rgba(7, 13, 13, .34));
-    box-shadow: 0 6px 18px rgba(0, 0, 0, .23), inset 0 1px 0 rgba(255, 255, 255, .16);
-    -webkit-backdrop-filter: blur(2px);
-    backdrop-filter: blur(2px);
-  }
 }
 
 body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node:hover,
 body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node:focus-visible,
-body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node.route:hover,
-body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node.route:focus-visible {
-  border-color: rgba(255, 223, 138, .92);
-  box-shadow: 0 0 18px rgba(230, 184, 93, .40), 0 8px 24px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .2);
-}
-
-body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node.selected,
-body:not(.synthetic-fixture) .graph[data-lod="compact"] .person-node.selected {
+body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node.selected {
   border-color: rgba(255, 225, 140, .96);
   background: linear-gradient(135deg, rgba(27, 31, 25, .66), rgba(11, 16, 15, .46));
   box-shadow: 0 0 0 1px rgba(223, 169, 58, .68), 0 0 22px rgba(255, 195, 76, .42), 0 10px 30px rgba(0, 0, 0, .52), inset 0 1px 0 rgba(255, 255, 255, .2);
