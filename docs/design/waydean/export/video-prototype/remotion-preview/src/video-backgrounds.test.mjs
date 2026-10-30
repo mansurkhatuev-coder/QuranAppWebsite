@@ -14,7 +14,7 @@ import {
 
 test("video background presets retain the original scenes and add two combined Flow reels", () => {
   assert.deepEqual(VIDEO_BACKGROUND_PRESETS.map(preset => preset.id), [
-    "towers", "village", "eagle", "flow-chechen-village", "flow-argun-flight"
+    "towers", "village", "flow-chechen-village", "flow-argun-flight"
   ]);
   assert.equal(DEFAULT_VIDEO_BACKGROUND_ID, "towers");
   for (const preset of VIDEO_BACKGROUND_PRESETS) {
