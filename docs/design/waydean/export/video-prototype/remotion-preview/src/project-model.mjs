@@ -5,7 +5,7 @@ import {
   easeCinematic,
   layoutFamilyTree,
   sampleCinematicTimeline
-} from "../../cinematic-timeline.mjs?v=20261031-lineage-card-reveal-1";
+} from "../../cinematic-timeline.mjs?v=20261031-large-tree-path-camera-1";
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
@@ -30,7 +30,25 @@ function transitionProgress(shotCount, transitionFrames, localFrame) {
   return easeCinematic(clamp(localFrame / (transitionFrames - 1), 0, 1));
 }
 
-function groupFullTreeGenerationScenes(scenes, people, layout) {
+function getGenerationCameraPersonIds(part, generationIds, peopleById, xById, selectedLineageIds) {
+  const selectedIds = part.filter(id => selectedLineageIds.has(id));
+  if (!selectedIds.length) return [];
+  const cameraIds = new Set(selectedIds);
+  for (const selectedId of selectedIds) {
+    const parentId = peopleById.get(selectedId)?.parent;
+    if (!parentId) continue;
+    const selectedX = xById.get(selectedId) ?? 0;
+    const nearestSiblings = generationIds
+      .filter(id => id !== selectedId && peopleById.get(id)?.parent === parentId)
+      .sort((left, right) => Math.abs((xById.get(left) ?? 0) - selectedX) - Math.abs((xById.get(right) ?? 0) - selectedX))
+      .filter(id => part.includes(id))
+      .slice(0, 3);
+    nearestSiblings.forEach(id => cameraIds.add(id));
+  }
+  return [...cameraIds];
+}
+
+function groupFullTreeGenerationScenes(scenes, people, layout, selectedLineageIds) {
   const scenePeople = new Map(scenes.flatMap(scene => (scene.people ?? []).map(person => [person.id, person])));
   const peopleById = new Map(people.map(person => [person.id, person]));
   const xById = new Map(layout.nodes.map(node => [node.id, node.x]));
@@ -65,6 +83,13 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
     const groupCount = Math.ceil(generationIds.length / FULL_TREE_GENERATION_GROUP_SIZE);
     for (let start = 0; start < generationIds.length; start += FULL_TREE_GENERATION_GROUP_SIZE) {
       const part = generationIds.slice(start, start + FULL_TREE_GENERATION_GROUP_SIZE);
+      const cameraPersonIds = getGenerationCameraPersonIds(
+        part,
+        generationIds,
+        peopleById,
+        xById,
+        selectedLineageIds
+      );
       const branches = start === 0
         ? [...childrenByParent].map(([parentId, childIds]) => ({ parentId, childIds }))
         : [];
@@ -79,6 +104,7 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
         groupEnd: start + part.length,
         groupTotal: generationIds.length,
         personIds: part,
+        ...(cameraPersonIds.length ? { cameraPersonIds } : {}),
         people: part.map(id => scenePeople.get(id) ?? peopleById.get(id)).filter(Boolean),
         branches
       });
@@ -117,7 +143,11 @@ export function buildRemotionStory(options = {}) {
     : people.at(-1)?.id ?? "";
   if (scopeType === "all") {
     const layout = layoutFamilyTree(people);
-    scenes = groupFullTreeGenerationScenes(scenes, people, layout)
+    const selectedLineageIds = new Set(getStoryPeople(sourcePeople, {
+      scopeType: "path",
+      selectedPersonId: effectiveSelectedPersonId
+    }).map(person => person.id));
+    scenes = groupFullTreeGenerationScenes(scenes, people, layout, selectedLineageIds)
       .filter(scene => scene.type !== "branching");
   }
   const timeline = buildCinematicTimeline(people, scenes, {
@@ -403,7 +433,8 @@ export function sampleRemotionFrame(story, frame) {
 
 function getShotNodes(story, shot) {
   const nodesById = new Map((story?.timeline?.layout?.nodes ?? []).map(node => [node.id, node]));
-  return (shot?.personIds ?? []).map(id => nodesById.get(id)).filter(Boolean);
+  return (shot?.cameraPersonIds?.length ? shot.cameraPersonIds : shot?.personIds ?? [])
+    .map(id => nodesById.get(id)).filter(Boolean);
 }
 
 export function blendCinematicFraming(outgoing, incoming, progress) {

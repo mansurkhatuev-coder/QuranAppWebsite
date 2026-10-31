@@ -16,10 +16,10 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261031-lineage-card-reveal-1";
+} from "./project-model.mjs?v=20261031-large-tree-path-camera-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
-import { normalizeVideoSpeed } from "./export-studio-model.mjs?v=20261031-lineage-card-reveal-1";
-import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261031-lineage-card-reveal-1";
+import { normalizeVideoSpeed } from "./export-studio-model.mjs?v=20261031-large-tree-path-camera-1";
+import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261031-large-tree-path-camera-1";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 

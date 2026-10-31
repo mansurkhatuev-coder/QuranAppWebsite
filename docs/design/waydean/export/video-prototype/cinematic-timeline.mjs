@@ -242,7 +242,8 @@ export function buildCinematicTimeline(people, scenes, {
     const ids = scene.type === "opening" || scene.type === "finale"
       ? fullIds
       : [...(scene.personIds ?? [])];
-    const bounds = boundsForNodes(layout, ids);
+    const cameraIds = scene.cameraPersonIds?.length ? scene.cameraPersonIds : ids;
+    const bounds = boundsForNodes(layout, cameraIds);
     const cameraTo = cameraForBounds(bounds, scene.type, focusZoomLimit);
     const lineProgressTo = sceneLineProgress(scene, peopleById, rootGeneration, pathLength, previousLineProgress);
     const treeOffsetTo = scene.type === "opening" || scene.type === "finale" ? -100 : 0;
@@ -265,6 +266,7 @@ export function buildCinematicTimeline(people, scenes, {
       title: scene.title,
       caption: scene.caption ?? "",
       personIds: [...(scene.personIds ?? [])],
+      cameraPersonIds: scene.cameraPersonIds ? [...scene.cameraPersonIds] : undefined,
       startFrame,
       durationFrames,
       cameraFrom: { ...previousCamera },
