@@ -47,16 +47,30 @@ export function layoutFamilyTree(people, {
 
   const rows = new Map();
   const peopleById = new Map(records.map(person => [person.id, person]));
+  const layoutParentById = new Map();
   const childrenByParent = new Map();
   for (const person of records) {
     const generation = Number(person.generation ?? 0);
     const row = rows.get(generation) ?? [];
     row.push(person);
     rows.set(generation, row);
-    if (person.parent && peopleById.has(person.parent)) {
-      const children = childrenByParent.get(person.parent) ?? [];
+
+    let parentId = person.parent && peopleById.has(person.parent) ? person.parent : null;
+    const visitedParents = new Set([person.id]);
+    let ancestorId = parentId;
+    while (ancestorId && peopleById.has(ancestorId)) {
+      if (visitedParents.has(ancestorId)) {
+        parentId = null;
+        break;
+      }
+      visitedParents.add(ancestorId);
+      ancestorId = peopleById.get(ancestorId)?.parent ?? null;
+    }
+    layoutParentById.set(person.id, parentId);
+    if (parentId) {
+      const children = childrenByParent.get(parentId) ?? [];
       children.push(person);
-      childrenByParent.set(person.parent, children);
+      childrenByParent.set(parentId, children);
     }
   }
   const generations = [...rows.keys()].sort((a, b) => a - b);
@@ -65,48 +79,57 @@ export function layoutFamilyTree(people, {
   const padY = cardHeight / 2 + 32;
   const rowStep = cardHeight + rowGap;
   const cardWidths = new Map(records.map(person => [person.id, getPersonCardWidth(person, cardWidth)]));
-  const widestRow = Math.max(0, ...[...rows.values()].map(row =>
-    row.reduce((sum, person) => sum + cardWidths.get(person.id), 0) + Math.max(0, row.length - 1) * columnGap
-  ));
-  const layoutWidth = Math.max(width, widestRow + 108);
+  const subtreeLayouts = new Map();
+  function measureSubtree(person) {
+    if (subtreeLayouts.has(person.id)) return subtreeLayouts.get(person.id);
+    const children = childrenByParent.get(person.id) ?? [];
+    const childLayouts = children.map(measureSubtree);
+    const childrenWidth = childLayouts.reduce((sum, childLayout) => sum + childLayout.width, 0)
+      + Math.max(0, children.length - 1) * columnGap;
+    const personWidth = cardWidths.get(person.id) ?? cardWidth;
+    if (!children.length) {
+      const leafLayout = { width: personWidth, anchor: personWidth / 2, childOffset: 0 };
+      subtreeLayouts.set(person.id, leafLayout);
+      return leafLayout;
+    }
+
+    const lastChildOffset = childLayouts.slice(0, -1).reduce((sum, childLayout) => sum + childLayout.width + columnGap, 0);
+    const childrenCenter = (childLayouts[0].anchor + lastChildOffset + childLayouts.at(-1).anchor) / 2;
+    const leftExtent = Math.min(0, childrenCenter - personWidth / 2);
+    const rightExtent = Math.max(childrenWidth, childrenCenter + personWidth / 2);
+    const subtreeLayout = {
+      width: rightExtent - leftExtent,
+      anchor: childrenCenter - leftExtent,
+      childOffset: -leftExtent
+    };
+    subtreeLayouts.set(person.id, subtreeLayout);
+    return subtreeLayout;
+  }
+  const rootPeople = records.filter(person => !layoutParentById.get(person.id));
+  const forestWidth = rootPeople.reduce((sum, person) => sum + measureSubtree(person).width, 0)
+    + Math.max(0, rootPeople.length - 1) * columnGap;
+  const layoutWidth = Math.max(width, forestWidth + 108);
   const layoutHeight = Math.max(height, padY * 2 + Math.max(0, generations.length - 1) * rowStep);
   const generationRow = new Map(generations.map((generation, index) => [generation, index]));
-  const preliminaryX = new Map();
-  const visiting = new Set();
-  let nextLeaf = 0;
-  const positionSubtree = person => {
-    if (preliminaryX.has(person.id)) return preliminaryX.get(person.id);
-    if (visiting.has(person.id)) return nextLeaf++;
-    visiting.add(person.id);
-    const children = childrenByParent.get(person.id) ?? [];
-    let x;
-    if (!children.length) {
-      x = nextLeaf++;
-    } else {
-      const childPositions = children.map(positionSubtree);
-      x = (childPositions[0] + childPositions.at(-1)) / 2;
-    }
-    visiting.delete(person.id);
-    preliminaryX.set(person.id, x);
-    return x;
-  };
-  for (const person of records) {
-    if (!person.parent || !peopleById.has(person.parent)) positionSubtree(person);
-  }
-  for (const person of records) positionSubtree(person);
-
   const xById = new Map();
-  for (const row of rows.values()) {
-    const orderedRow = [...row].sort((a, b) => preliminaryX.get(a.id) - preliminaryX.get(b.id));
-    const rowWidth = orderedRow.reduce((sum, person) => sum + cardWidths.get(person.id), 0)
-      + Math.max(0, orderedRow.length - 1) * columnGap;
-    const startX = (layoutWidth - rowWidth) / 2;
-    let cursorX = startX;
-    orderedRow.forEach(person => {
-      const personWidth = cardWidths.get(person.id);
-      xById.set(person.id, cursorX + personWidth / 2);
-      cursorX += personWidth + columnGap;
-    });
+  function positionSubtree(person, left) {
+    const subtreeLayout = subtreeLayouts.get(person.id) ?? {
+      width: cardWidths.get(person.id) ?? cardWidth,
+      anchor: (cardWidths.get(person.id) ?? cardWidth) / 2,
+      childOffset: 0
+    };
+    xById.set(person.id, left + subtreeLayout.anchor);
+    const children = childrenByParent.get(person.id) ?? [];
+    let childLeft = left + subtreeLayout.childOffset;
+    for (const child of children) {
+      positionSubtree(child, childLeft);
+      childLeft += (subtreeLayouts.get(child.id)?.width ?? cardWidth) + columnGap;
+    }
+  }
+  let rootLeft = (layoutWidth - forestWidth) / 2;
+  for (const person of rootPeople) {
+    positionSubtree(person, rootLeft);
+    rootLeft += (subtreeLayouts.get(person.id)?.width ?? cardWidth) + columnGap;
   }
 
   const nodes = records.map(person => {
@@ -124,10 +147,10 @@ export function layoutFamilyTree(people, {
   });
   const ids = new Set(nodes.map(node => node.id));
   const edges = records
-    .filter(person => person.parent && ids.has(person.parent))
+    .filter(person => layoutParentById.get(person.id) && ids.has(layoutParentById.get(person.id)))
     .map(person => ({
-      key: `${person.parent}->${person.id}`,
-      parentId: person.parent,
+      key: `${layoutParentById.get(person.id)}->${person.id}`,
+      parentId: layoutParentById.get(person.id),
       childId: person.id
     }));
 

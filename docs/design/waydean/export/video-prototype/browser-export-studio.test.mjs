@@ -35,8 +35,18 @@ test("browser video export header has a visible route back to the tree", () => {
   assert.match(studioSource, /Назад к древу/);
 });
 
+test("central person search and list are one accessible searchable picker", () => {
+  assert.match(studioHtml, /browser-export-studio\.mjs\?v=20261031-search-and-aligned-lineage-1/);
+  assert.match(studioSource, /id="browser-export-person-search"[^>]*role="combobox"/);
+  assert.match(studioSource, /id="browser-export-person-results"[^>]*role="listbox"/);
+  assert.match(studioSource, /data-person-option/);
+  assert.match(studioSource, /aria-activedescendant/);
+  assert.doesNotMatch(studioSource, /id="browser-export-person"/);
+  assert.match(studioCss, /\.browser-export-person-picker/);
+});
+
 test("browser video export lets the user choose and preview transition sounds", () => {
-  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261030-lineage-path-1"\)/);
+  assert.match(studioHtml, /import\("\.\/browser-export-studio\.mjs\?v=20261031-search-and-aligned-lineage-1"\)/);
   assert.match(studioSource, /id="browser-export-sound"/);
   assert.match(studioSource, /value="click" selected/);
   assert.match(studioSource, /Приятный щелчок/);
@@ -50,10 +60,10 @@ test("browser video export lets the user choose and preview transition sounds", 
 });
 
 test("smooth tree camera code uses fresh cache keys in the published module chain", () => {
-  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261030-lineage-path-1/);
-  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261030-lineage-path-1/);
-  assert.match(canvasRendererSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
-  assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261029-lineage-detail-medium-1/);
+  assert.match(studioSource, /browser-canvas-renderer\.mjs\?v=20261031-aligned-family-layout-1/);
+  assert.match(canvasRendererSource, /project-model\.mjs\?v=20261031-aligned-family-layout-1/);
+  assert.match(canvasRendererSource, /cinematic-timeline\.mjs\?v=20261031-aligned-family-layout-1/);
+  assert.match(projectModelSource, /cinematic-timeline\.mjs\?v=20261031-aligned-family-layout-1/);
 });
 
 test("video export exposes the selectable video background presets and persists the chosen ID", () => {
