@@ -1,4 +1,4 @@
-import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs?v=20261030-parent-search-1";
+import { buildExportPreview, DEFAULT_EXPORT_SETTINGS, EXPORT_SETTINGS_STORAGE_KEY, normalizeExportSettings, VIDEO_SPEED_OPTIONS } from "./remotion-preview/src/export-studio-model.mjs?v=20261031-aligned-family-layout-1";
 import { DEFAULT_VIDEO_BACKGROUND_ID, getVideoBackgroundOutputTimestamp, getVideoBackgroundPreset, VIDEO_BACKGROUND_PRESETS, getVideoBackgroundTimestamp, isVideoElementFrameRenderable, startRealtimeVideoBackground } from "./remotion-preview/src/video-backgrounds.mjs?v=20261030-remove-eagle-1";
 import {
   chooseVideoBitrate,
@@ -12,10 +12,11 @@ import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
   getSourceFrameForBrowserExport
-} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261030-parent-search-1";
+} from "./remotion-preview/src/browser-canvas-renderer.mjs?v=20261031-aligned-family-layout-1";
 import { createTransitionAudioBuffer, createTransitionAudioTrack, getTransitionCueFrames } from "./browser-transition-sound.mjs?v=20261029-clean-card-speed-1";
 import { VIDEO_FORMATS } from "./remotion-preview/src/composition-config.mjs";
 import { getPreviewPlaybackFrame } from "./preview-playback.mjs?v=20261015-preview-play";
+import { searchVideoPeople } from "./person-search.mjs?v=20261031-person-picker-1";
 
 const root = document.getElementById("browser-export-root");
 const handoff = readVideoExportHandoff(window.sessionStorage);
@@ -33,9 +34,11 @@ const DEMO_PEOPLE = [
 ];
 const sourcePeople = handoff?.tree.people?.length ? handoff.tree.people : DEMO_PEOPLE;
 // The preview handoff stores parentId; the video story/layout model reads parent.
+const sourcePeopleById = new Map(sourcePeople.map(person => [person.id, person]));
 const people = sourcePeople.map(person => ({
   ...person,
-  parent: person.parent ?? person.parentId ?? null
+  parent: person.parent ?? person.parentId ?? null,
+  parentName: sourcePeopleById.get(person.parent ?? person.parentId)?.name ?? ""
 }));
 const BACKGROUND_PREFERENCE_STORAGE_KEY = "waydean.video-export.background.v1";
 
@@ -214,55 +217,114 @@ function updatePreview(sourceFrameToPreserve = null) {
     : "Браузер сам выберет доступный формат файла.";
 }
 
-function normalizePersonSearch(value) {
-  return String(value ?? "")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLocaleLowerCase("ru")
-    .trim();
+const PERSON_PICKER_OPTION_LIMIT = 36;
+let personPickerOpen = false;
+let personPickerActiveIndex = -1;
+
+function getPersonPickerLabel(person) {
+  return person ? `${person.name} · поколение ${person.generation}` : "Выберите человека";
 }
 
-function filterPersonOptions() {
+function setPersonPickerOpen(open) {
+  personPickerOpen = open;
+  const field = root.querySelector(".browser-export-person-field");
   const search = root.querySelector("#browser-export-person-search");
-  const select = root.querySelector("#browser-export-person");
   const results = root.querySelector("#browser-export-person-results");
-  if (!search || !select) return;
+  const toggle = root.querySelector("#browser-export-person-toggle");
+  if (!field || !search || !results || !toggle) return;
 
-  const query = normalizePersonSearch(search.value);
-  const matches = people.filter(person => {
-    const searchable = normalizePersonSearch([
-      person.name,
-      person.id,
-      `поколение ${person.generation}`,
-      person.born,
-      person.died
-    ].filter(value => value != null).join(" "));
-    return !query || searchable.includes(query);
+  results.hidden = !open;
+  search.setAttribute("aria-expanded", String(open));
+  toggle.setAttribute("aria-expanded", String(open));
+  field.classList.toggle("is-open", open);
+  if (!open) {
+    personPickerActiveIndex = -1;
+    search.removeAttribute("aria-activedescendant");
+  }
+}
+
+function setPersonPickerActive(index) {
+  const search = root.querySelector("#browser-export-person-search");
+  const options = [...root.querySelectorAll("[data-person-option]")];
+  if (!search || !options.length) {
+    personPickerActiveIndex = -1;
+    search?.removeAttribute("aria-activedescendant");
+    return;
+  }
+
+  personPickerActiveIndex = Math.max(0, Math.min(options.length - 1, index));
+  options.forEach((option, optionIndex) => option.classList.toggle("is-active", optionIndex === personPickerActiveIndex));
+  const activeOption = options[personPickerActiveIndex];
+  search.setAttribute("aria-activedescendant", activeOption.id);
+  activeOption.scrollIntoView?.({ block: "nearest" });
+}
+
+function renderPersonPickerResults(query = "") {
+  const results = root.querySelector("#browser-export-person-results");
+  const status = root.querySelector("#browser-export-person-status");
+  const search = root.querySelector("#browser-export-person-search");
+  if (!results || !status || !search) return;
+
+  const matches = searchVideoPeople(people, query, { limit: PERSON_PICKER_OPTION_LIMIT });
+  results.replaceChildren();
+  if (!matches.people.length) {
+    const empty = document.createElement("p");
+    empty.className = "browser-export-person-empty";
+    empty.textContent = "Не нашли такого человека. Попробуйте другое имя или дату.";
+    results.append(empty);
+  }
+
+  matches.people.forEach((person, index) => {
+    const option = document.createElement("button");
+    option.type = "button";
+    option.className = "browser-export-person-option";
+    option.id = `browser-export-person-option-${index}`;
+    option.dataset.personOption = person.id;
+    option.setAttribute("role", "option");
+    option.setAttribute("aria-selected", String(person.id === settings.selectedPersonId));
+
+    const name = document.createElement("strong");
+    name.textContent = person.name;
+    const details = document.createElement("small");
+    const dateLabel = person.born != null && person.died != null
+      ? `${person.born}–${person.died}`
+      : person.born != null ? `род. ${person.born}` : person.died != null ? `ум. ${person.died}` : "даты неизвестны";
+    details.textContent = `Поколение ${person.generation} · ${dateLabel}${person.parentName ? ` · родитель: ${person.parentName}` : ""}`;
+    option.append(name, details);
+    results.append(option);
   });
-  const selectedVisible = matches.some(person => person.id === settings.selectedPersonId);
 
-  select.replaceChildren();
-  if (!selectedVisible) {
-    const placeholder = document.createElement("option");
-    placeholder.value = "";
-    placeholder.textContent = matches.length ? "Выберите человека из результатов" : "Человек не найден";
-    placeholder.disabled = matches.length === 0;
-    placeholder.selected = true;
-    select.append(placeholder);
+  const shown = matches.people.length;
+  status.textContent = matches.total
+    ? shown < matches.total
+      ? `Показано ${shown} из ${matches.total} · уточните поиск, чтобы сузить список`
+      : `${matches.total} ${matches.total === 1 ? "человек" : "человек в списке"}`
+    : "Совпадений нет";
+  if (personPickerOpen && shown && personPickerActiveIndex >= 0) {
+    setPersonPickerActive(Math.min(personPickerActiveIndex, shown - 1));
+  } else search.removeAttribute("aria-activedescendant");
+  results.hidden = !personPickerOpen;
+}
+
+function selectPickerPerson(personId) {
+  const person = people.find(candidate => candidate.id === personId);
+  if (!person) return;
+  const search = root.querySelector("#browser-export-person-search");
+  if (search) {
+    search.value = "";
+    search.placeholder = getPersonPickerLabel(person);
   }
-  for (const person of matches) {
-    const option = document.createElement("option");
-    option.value = person.id;
-    option.textContent = `${person.name} · поколение ${person.generation}`;
-    select.append(option);
-  }
-  select.disabled = matches.length === 0;
-  if (selectedVisible) select.value = settings.selectedPersonId;
-  if (results) {
-    results.textContent = matches.length
-      ? `${matches.length} из ${people.length} человек`
-      : "Совпадений нет";
-  }
+  setPersonPickerOpen(false);
+  update({ selectedPersonId: person.id });
+  renderPersonPickerResults("");
+}
+
+function openPersonPicker() {
+  const search = root.querySelector("#browser-export-person-search");
+  if (!search) return;
+  search.value = "";
+  setPersonPickerOpen(true);
+  renderPersonPickerResults("");
 }
 
 function renderShell() {
@@ -308,9 +370,17 @@ function renderShell() {
             <option value="path"${settings.scopeType === "path" ? " selected" : ""}>Мой путь</option>
             <option value="branch"${settings.scopeType === "branch" ? " selected" : ""}>Моя ветвь</option>
           </select></label>
-          <label class="browser-export-field" for="browser-export-person-search">Найти человека<input id="browser-export-person-search" type="search" placeholder="Имя, дата или поколение" autocomplete="off" aria-controls="browser-export-person"></label>
-          <label class="browser-export-field">Кто ты в этом древе?<select id="browser-export-person" aria-describedby="browser-export-person-results"></select></label>
-          <p class="browser-export-person-results" id="browser-export-person-results" role="status" aria-live="polite"></p>
+          <div class="browser-export-person-field">
+            <label class="browser-export-field-label" for="browser-export-person-search">Центральный человек</label>
+            <div class="browser-export-person-picker">
+              <div class="browser-export-person-entry">
+                <input id="browser-export-person-search" type="search" role="combobox" aria-autocomplete="list" aria-haspopup="listbox" aria-expanded="false" aria-controls="browser-export-person-results" autocomplete="off" placeholder="${escapeHtml(getPersonPickerLabel(people.find(person => person.id === settings.selectedPersonId)))}">
+                <button id="browser-export-person-toggle" class="browser-export-person-toggle" type="button" aria-label="Показать список людей" aria-controls="browser-export-person-results" aria-expanded="false"><span aria-hidden="true">⌄</span></button>
+              </div>
+              <div id="browser-export-person-results" class="browser-export-person-results" role="listbox" aria-label="Результаты поиска человека" hidden></div>
+            </div>
+            <p class="browser-export-person-status" id="browser-export-person-status" role="status" aria-live="polite"></p>
+          </div>
           <div class="browser-export-formats" role="group" aria-label="Формат кадра">${formatButtons}</div>
           <label class="browser-export-dates"><input id="browser-export-dates" type="checkbox"${settings.includeDates ? " checked" : ""}> Показывать даты в кадрах</label>
           <label class="browser-export-speed" for="browser-export-speed">
@@ -348,7 +418,7 @@ function renderShell() {
         <div class="browser-export-library-items"></div>
       </section>
     </div>`;
-  filterPersonOptions();
+  renderPersonPickerResults("");
   bindEvents();
   updatePreview();
 }
@@ -356,9 +426,65 @@ function renderShell() {
 function bindEvents() {
   root.querySelector("#browser-export-title").addEventListener("input", event => update({ title: event.currentTarget.value }));
   root.querySelector("#browser-export-scope").addEventListener("change", event => update({ scopeType: event.currentTarget.value }));
-  root.querySelector("#browser-export-person-search").addEventListener("input", filterPersonOptions);
-  root.querySelector("#browser-export-person").addEventListener("change", event => {
-    if (event.currentTarget.value) update({ selectedPersonId: event.currentTarget.value });
+  const personSearch = root.querySelector("#browser-export-person-search");
+  const personResults = root.querySelector("#browser-export-person-results");
+  const personField = root.querySelector(".browser-export-person-field");
+  personSearch.addEventListener("focus", () => {
+    if (!personPickerOpen) openPersonPicker();
+  });
+  personSearch.addEventListener("input", event => {
+    personPickerActiveIndex = 0;
+    setPersonPickerOpen(true);
+    renderPersonPickerResults(event.currentTarget.value);
+  });
+  personSearch.addEventListener("keydown", event => {
+    const options = [...personResults.querySelectorAll("[data-person-option]")];
+    if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+      event.preventDefault();
+      if (!personPickerOpen) {
+        openPersonPicker();
+        const openedOptions = [...personResults.querySelectorAll("[data-person-option]")];
+        if (event.key === "ArrowUp" && openedOptions.length) setPersonPickerActive(openedOptions.length - 1);
+      } else if (options.length) {
+        const delta = event.key === "ArrowDown" ? 1 : -1;
+        const next = personPickerActiveIndex < 0
+          ? (delta > 0 ? 0 : options.length - 1)
+          : (personPickerActiveIndex + delta + options.length) % options.length;
+        setPersonPickerActive(next);
+      }
+    } else if (event.key === "Enter" && personPickerOpen && options[personPickerActiveIndex]) {
+      event.preventDefault();
+      selectPickerPerson(options[personPickerActiveIndex].dataset.personOption);
+    } else if (event.key === "Escape" && personPickerOpen) {
+      event.preventDefault();
+      personSearch.value = "";
+      setPersonPickerOpen(false);
+      renderPersonPickerResults("");
+    }
+  });
+  personResults.addEventListener("mousedown", event => {
+    if (event.target.closest("[data-person-option]")) event.preventDefault();
+  });
+  personResults.addEventListener("click", event => {
+    const option = event.target.closest("[data-person-option]");
+    if (option) selectPickerPerson(option.dataset.personOption);
+  });
+  root.querySelector("#browser-export-person-toggle").addEventListener("click", () => {
+    if (personPickerOpen) {
+      personSearch.value = "";
+      setPersonPickerOpen(false);
+      renderPersonPickerResults("");
+    } else {
+      openPersonPicker();
+      personSearch.focus();
+    }
+  });
+  root.addEventListener("pointerdown", event => {
+    if (!personField.contains(event.target) && personPickerOpen) {
+      personSearch.value = "";
+      setPersonPickerOpen(false);
+      renderPersonPickerResults("");
+    }
   });
   root.querySelector("#browser-export-dates").addEventListener("change", event => update({ includeDates: event.currentTarget.checked }));
   root.querySelector("#browser-export-speed").addEventListener("input", event => update({ speed: Number(event.currentTarget.value) }));

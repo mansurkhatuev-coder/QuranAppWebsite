@@ -5,7 +5,7 @@ import {
   easeCinematic,
   layoutFamilyTree,
   sampleCinematicTimeline
-} from "../../cinematic-timeline.mjs?v=20261030-uniform-video-cards-1";
+} from "../../cinematic-timeline.mjs?v=20261031-aligned-family-layout-1";
 import { DEFAULT_FAMILY_HISTORY_PROPS, REMOTION_COMPOSITION } from "./composition-config.mjs";
 
 const VALID_SCOPES = new Set(["all", "path", "branch"]);
@@ -65,13 +65,9 @@ function groupFullTreeGenerationScenes(scenes, people, layout) {
     const groupCount = Math.ceil(generationIds.length / FULL_TREE_GENERATION_GROUP_SIZE);
     for (let start = 0; start < generationIds.length; start += FULL_TREE_GENERATION_GROUP_SIZE) {
       const part = generationIds.slice(start, start + FULL_TREE_GENERATION_GROUP_SIZE);
-      const partIds = new Set(part);
-      const branches = [...childrenByParent]
-        .map(([parentId, childIds]) => ({
-          parentId,
-          childIds: childIds.filter(childId => partIds.has(childId))
-        }))
-        .filter(branch => branch.childIds.length > 0);
+      const branches = start === 0
+        ? [...childrenByParent].map(([parentId, childIds]) => ({ parentId, childIds }))
+        : [];
       const partNumber = Math.floor(start / FULL_TREE_GENERATION_GROUP_SIZE) + 1;
       const hasParts = groupCount > 1;
       result.push({
