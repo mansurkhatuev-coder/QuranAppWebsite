@@ -19,6 +19,7 @@ export type StoryScene = {
   title: string;
   caption?: string;
   personIds: string[];
+  cameraPersonIds?: string[];
   branches?: { parentId: string; childIds: string[] }[];
 };
 
@@ -45,6 +46,7 @@ export type StoryShot = {
   title: string;
   caption: string;
   personIds: string[];
+  cameraPersonIds?: string[];
   startFrame: number;
   durationFrames: number;
   treeOffsetFrom: number;

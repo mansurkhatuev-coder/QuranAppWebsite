@@ -315,6 +315,50 @@ test("full-tree video opens revealed selected-lineage cards at medium zoom", () 
     "the selected-lineage card should reveal its name once the medium-zoom card has readable space");
 });
 
+test("157-person full-tree video follows the selected lineage into a readable generation frame", () => {
+  const generationSizes = [1, 2, 2, 1, 4, 8, 2, 8, 13, 12, 12, 28, 40, 24];
+  const largeFamily = [];
+  let previousGeneration = [];
+  for (let generationIndex = 0; generationIndex < generationSizes.length; generationIndex += 1) {
+    const generation = generationIndex + 1;
+    const currentGeneration = Array.from({ length: generationSizes[generationIndex] }, (_, index) => {
+      const id = generation === 13 && index === 19 ? "mansur" : `generation-${generation}-person-${index + 1}`;
+      const parent = previousGeneration.length
+        ? previousGeneration[Math.floor(index * previousGeneration.length / generationSizes[generationIndex])]
+        : null;
+      return {
+        id,
+        name: id === "mansur" ? "Мансур" : `Человек ${generation}-${index + 1}`,
+        generation,
+        parent
+      };
+    });
+    largeFamily.push(...currentGeneration);
+    previousGeneration = currentGeneration.map(person => person.id);
+  }
+  const story = buildRemotionStory({ people: largeFamily, selectedPersonId: "mansur", scopeType: "all" });
+  const shot = story.timeline.shots.find(item => item.type === "generation"
+    && item.generation === 13 && item.personIds.includes("mansur"));
+  const frame = shot.startFrame + shot.durationFrames - 1;
+  const node = story.timeline.layout.nodes.find(item => item.id === "mansur");
+  const framing = getCinematicFramingForFrame(story, 1280, 720, frame);
+  const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
+  const renderedWidth = node.width * framing.scale * outputScale;
+  const context = fakeCanvasContext();
+  const canvas = { width: 1280, height: 720, getContext: () => context };
+
+  assert.equal(largeFamily.length, 157);
+  assert.equal(story.timeline.shots.length, 19, "the full-tree sequence should not gain extra slides");
+  assert.ok(shot.cameraPersonIds.includes("mansur"), "the generation shot should frame the selected lineage card");
+  assert.ok(renderedWidth >= 128,
+    `the selected card should have room for its label at ${renderedWidth.toFixed(1)}px`);
+  assert.equal(getVideoCardContentProgress(renderedWidth), 1);
+  createBrowserCanvasFrameRenderer({ canvas, story, backgroundImage: { width: 1600, height: 900 } })(frame);
+
+  assert.equal(context.calls.some(call => call[0] === "text" && call[1] === "Мансур"), true,
+    "the selected lineage card should be fully open in the large-tree generation scene");
+});
+
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
