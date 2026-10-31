@@ -1,4 +1,4 @@
-import { buildRemotionStory } from "./project-model.mjs?v=20261031-aligned-family-layout-1";
+import { buildRemotionStory } from "./project-model.mjs?v=20261031-lineage-card-reveal-1";
 import {
   DEFAULT_FAMILY_HISTORY_PROPS,
   DEFAULT_VIDEO_ASPECT_RATIO,
