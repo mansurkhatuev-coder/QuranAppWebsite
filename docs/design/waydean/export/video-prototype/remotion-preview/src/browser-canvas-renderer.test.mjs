@@ -264,7 +264,7 @@ test("card reveal geometry interpolates from a consistent dark mini-card to the 
   assert.deepEqual([end.width, end.height], [node.width, node.height]);
 });
 
-test("full-tree video gives the selected lineage and side branches the same detail at equal widths", () => {
+test("full-tree video opens revealed selected-lineage cards at medium zoom", () => {
   const branchPeople = [
     { id: "root", name: "Родоначальник", generation: 1, parent: null },
     ...Array.from({ length: 9 }, (_, index) => ({
@@ -285,8 +285,7 @@ test("full-tree video gives the selected lineage and side branches the same deta
       const framing = getCinematicFramingForFrame(story, 1280, 720, candidate);
       const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
       const branchProgress = getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale);
-      const pathProgress = getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale);
-      return branchProgress > 0.2 && branchProgress < 0.8 && pathProgress === branchProgress;
+      return branchProgress > 0.2 && branchProgress < 0.8;
     });
   const context = fakeCanvasContext();
   const canvas = { width: 1280, height: 720, getContext: () => context };
@@ -298,22 +297,22 @@ test("full-tree video gives the selected lineage and side branches the same deta
   const outputScale = Math.min(1280 / framing.viewWidth, 720 / framing.viewHeight);
   const markerRadius = browserCanvasRenderer.getOverviewMarkerRadius(framing.scale, outputScale);
   const pathGeometry = browserCanvasRenderer.getVideoCardRevealGeometry(pathNode,
-    getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale), markerRadius);
+    getVideoCardDetailProgress(pathNode.width * framing.scale * outputScale, true), markerRadius);
   const branchGeometry = browserCanvasRenderer.getVideoCardRevealGeometry(branchNode,
     getVideoCardDetailProgress(branchNode.width * framing.scale * outputScale), markerRadius);
   const hasCardScale = geometry => context.calls.some(call => call[0] === "scale"
     && Math.abs(call[1] - geometry.scaleX) < 1e-6
     && Math.abs(call[2] - geometry.scaleY) < 1e-6);
 
-  assert.ok(pathGeometry.scaleX > 0 && pathGeometry.scaleX < 1);
-  assert.equal(pathGeometry.scaleX, branchGeometry.scaleX,
-    "equal-width lineage and side-branch cards should have the same reveal geometry");
+  assert.equal(pathGeometry.scaleX, 1,
+    "a revealed selected-lineage card should open fully even before the camera reaches close-up");
+  assert.ok(branchGeometry.scaleX > 0 && branchGeometry.scaleX < 1,
+    "other cards should keep their smooth zoom-based reveal");
   assert.ok(hasCardScale(pathGeometry));
   assert.ok(hasCardScale(branchGeometry));
   const pathName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 9");
-  const branchName = context.calls.find(call => call[0] === "text" && call[1] === "Потомок 1");
-  assert.equal(Boolean(pathName), Boolean(branchName),
-    "equal-width lineage and side-branch cards should reveal their text together");
+  assert.equal(Boolean(pathName), true,
+    "the selected-lineage card should reveal its name once the medium-zoom card has readable space");
 });
 
 test("tiny tree cards keep their dark silhouette without rendering white text into blocks", () => {

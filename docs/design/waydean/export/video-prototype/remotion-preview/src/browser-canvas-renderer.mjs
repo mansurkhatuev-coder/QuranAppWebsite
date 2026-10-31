@@ -16,10 +16,10 @@ import {
   getScenePersonEmphasis,
   getScenePresentation,
   sampleRemotionFrame
-} from "./project-model.mjs?v=20261031-aligned-family-layout-1";
+} from "./project-model.mjs?v=20261031-lineage-card-reveal-1";
 import { REMOTION_COMPOSITION, VIDEO_FORMATS } from "./composition-config.mjs";
-import { normalizeVideoSpeed } from "./export-studio-model.mjs?v=20261031-aligned-family-layout-1";
-import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261031-aligned-family-layout-1";
+import { normalizeVideoSpeed } from "./export-studio-model.mjs?v=20261031-lineage-card-reveal-1";
+import { easeCinematic } from "../../cinematic-timeline.mjs?v=20261031-lineage-card-reveal-1";
 
 const clamp = (value, min, max) => Math.min(Math.max(value, min), max);
 
@@ -383,6 +383,7 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
   if (!context) throw new Error("Не удалось создать холст для видео.");
   const nodes = new Map(story.timeline.layout.nodes.map(node => [node.id, node]));
   const people = new Map(story.people.map(person => [person.id, person]));
+  const selectedLineagePersonIds = new Set(story.timeline.pathIds);
   const pathIndex = new Map(story.timeline.pathIds.slice(1).map((id, index) => [`${story.timeline.pathIds[index]}->${id}`, index]));
   const firstRevealShotByPerson = new Map();
   story.timeline.shots.forEach((shot, shotIndex) => {
@@ -413,6 +414,12 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
     const fullTreeContentProgress = fullTreeReferenceGeometry
       ? getVideoCardContentProgress(fullTreeReferenceGeometry.width * framing.scale * scale)
       : null;
+    const isRevealedSelectedLineagePerson = person => selectedLineagePersonIds.has(person.id)
+      && (firstRevealShotByPerson.get(person.id) ?? Infinity) <= shotIndex;
+    const getPersonDetailProgress = person => getVideoCardDetailProgress(
+      story.timeline.layout.cardWidth * framing.scale * scale,
+      isRevealedSelectedLineagePerson(person)
+    );
     const offsetX = (canvas.width - framing.viewWidth * scale) / 2; const offsetY = (canvas.height - framing.viewHeight * scale) / 2;
     context.save(); context.translate(offsetX + framing.translateX * scale, offsetY + framing.translateY * scale); context.scale(framing.scale * scale, framing.scale * scale);
     const orthogonalTree = story.scopeType === "all";
@@ -426,10 +433,10 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
       const parentIsMarker = overview && (firstRevealShotByPerson.get(parent.id) ?? Infinity) > shotIndex;
       const childIsMarker = overview && (firstRevealShotByPerson.get(child.id) ?? Infinity) > shotIndex;
       const parentDetail = story.scopeType === "all"
-        ? fullTreeCardDetailProgress
+        ? getPersonDetailProgress(parent)
         : parentIsMarker ? 0 : 1;
       const childDetail = story.scopeType === "all"
-        ? fullTreeCardDetailProgress
+        ? getPersonDetailProgress(child)
         : childIsMarker ? 0 : 1;
       const generationProgress = story.scopeType === "all"
         ? getFullTreeEdgeRevealProgress(story, shotIndex, local, edge.key)
@@ -493,8 +500,12 @@ export function createBrowserCanvasFrameRenderer({ canvas, story, backgroundImag
         : presentation.contextCardOpacity + (1 - presentation.contextCardOpacity) * emphasis;
       const opacity = getTreeViewportOpacity(story.scopeType, cardAlpha);
       if (story.scopeType === "all") {
-        const geometry = getVideoCardRevealGeometry(node, fullTreeCardDetailProgress, overviewMarkerRadius);
-        drawAdaptiveCard(context, person, node, opacity, target, story.includeDates, fullTreeContentProgress, geometry);
+        const detailProgress = getPersonDetailProgress(node);
+        const geometry = getVideoCardRevealGeometry(node, detailProgress, overviewMarkerRadius);
+        const contentProgress = isRevealedSelectedLineagePerson(person)
+          ? getVideoCardContentProgress(geometry.width * framing.scale * scale)
+          : fullTreeContentProgress;
+        drawAdaptiveCard(context, person, node, opacity, target, story.includeDates, contentProgress, geometry);
         continue;
       }
       if (isUnrevealedOverviewMarker) drawMarker(context, node, opacity, target, markerRadius);

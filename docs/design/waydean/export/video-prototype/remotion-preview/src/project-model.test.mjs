@@ -334,8 +334,10 @@ test("full-tree cards blend smoothly from overview markers to detailed cards", (
   assert.equal(getVideoCardDetailProgress(160), 1);
 });
 
-test("full-tree cards share one detail threshold across the selected lineage and side branches", () => {
+test("revealed selected-lineage cards open fully while side branches follow their screen size", () => {
   assert.equal(getVideoCardDetailProgress(30), 0);
+  assert.equal(getVideoCardDetailProgress(30, true), 1,
+    "revealed selected-lineage cards should stay fully open at medium and wide tree framing");
   assert.ok(getVideoCardDetailProgress(80) > 0 && getVideoCardDetailProgress(80) < 1);
   assert.equal(getVideoCardDetailProgress(160), 1);
 });
