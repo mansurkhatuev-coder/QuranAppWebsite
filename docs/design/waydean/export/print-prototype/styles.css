@@ -162,7 +162,7 @@ a { color: inherit; }
 .page-controls .fit-button { width: auto; padding: 0 9px; color: #d3c6a7; font-size: 9px; }
 .page-controls .zoom-value { min-width: 36px; color: #dfc47f; font-size: 9px; text-align: center; }
 .preview-workbench { display: grid; grid-template-columns: minmax(0, 1fr) 142px; min-height: 680px; overflow: hidden; border: 1px solid rgba(220,197,151,.16); border-radius: 14px; background: linear-gradient(145deg, rgba(23,32,33,.83), rgba(12,18,19,.72)); box-shadow: 0 22px 60px rgba(0,0,0,.2); }
-.paper-stage { display: block; min-width: 0; min-height: 680px; overflow: auto; padding: 28px; overscroll-behavior: contain; touch-action: none; cursor: grab; background-image: radial-gradient(rgba(202,180,133,.06) .65px, transparent .65px); background-size: 14px 14px; scrollbar-color: rgba(190,157,91,.62) rgba(255,255,255,.035); scrollbar-width: thin; }
+.paper-stage { display: block; min-width: 0; min-height: 680px; overflow: auto; padding: 28px; overscroll-behavior: auto; touch-action: none; cursor: grab; background-image: radial-gradient(rgba(202,180,133,.06) .65px, transparent .65px); background-size: 14px 14px; scrollbar-color: rgba(190,157,91,.62) rgba(255,255,255,.035); scrollbar-width: thin; }
 .paper-stage.is-panning { cursor: grabbing; user-select: none; }
 .paper-stage, .paper-stage * { -webkit-user-select: none; user-select: none; }
 .paper-sheet { position: relative; display: block; flex: none; width: min(100%, 690px); aspect-ratio: auto; overflow: visible; margin: 0; background: transparent; box-shadow: none; }
