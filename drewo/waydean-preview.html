@@ -31,7 +31,7 @@
   <link rel="stylesheet" href="waydean-preview-self.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-auth.css?v=family-auth-menu-dialog-20261029-1">
-  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=long-press-editor-1">
+  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=gesture-nav-fix-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
 </head>
 <body>
@@ -124,11 +124,11 @@
     </section>
 
     <nav class="mobile-nav" aria-label="Мобильная навигация">
-      <button class="active" data-nav="tree"><span>♧</span><small>Древо</small></button>
-      <button data-nav="people"><span>♙</span><small>Люди</small></button>
-      <button data-mode="branch"><span>♧</span><small>Ветви</small></button>
-      <button id="mobileStats"><span>▥</span><small>Статистика</small></button>
-      <button id="mobileMore"><span>···</span><small>Ещё</small></button>
+      <button class="active" data-nav="tree" type="button" aria-label="Показать всё древо" title="Показать всё древо"><span aria-hidden="true">♧</span><small>Древо</small></button>
+      <button data-nav="people" type="button" aria-label="Найти человека" title="Найти человека"><span aria-hidden="true">⌕</span><small>Поиск</small></button>
+      <button id="mobileWhoAmI" type="button" aria-label="Отметить себя в древе" title="Кто я?"><span aria-hidden="true">◎</span><small id="mobileWhoAmILabel">Кто я?</small></button>
+      <button id="mobileFilters" type="button" aria-label="Фильтры поколений и фото" title="Фильтры"><span aria-hidden="true">☷</span><small>Фильтры</small></button>
+      <button id="mobileMore" type="button" aria-label="Дополнительные действия" title="Ещё"><span aria-hidden="true">···</span><small>Ещё</small></button>
     </nav>
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
 
@@ -175,6 +175,7 @@
         <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Выбранный человек и его родные</small></button>
         <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
         <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
+        <button class="more-item" id="moreStats"><strong>Статистика</strong><small>Число людей и поколений в древе</small></button>
       </section>
       <section class="more-group" id="moreSectionAppearance" aria-labelledby="appearanceHeading">
         <h3 id="appearanceHeading">Оформление</h3>
@@ -348,7 +349,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=long-press-2');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=gesture-nav-fix-1');
     }
   </script>
 </body>

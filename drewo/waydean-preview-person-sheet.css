@@ -36,6 +36,7 @@
 .mock-edit-field textarea{width:100%;min-height:104px;resize:vertical;padding:10px;border:1px solid #cba55255;border-radius:7px;background:#071014;color:#f0e9d8;line-height:1.45}
 .mock-edit-field input[type="text"][inputmode="numeric"]{font-variant-numeric:tabular-nums}
 .mock-edit-field .field-clear{justify-self:start;min-height:34px;padding:5px 9px;border:1px solid #cba55255;border-radius:7px;background:#ffffff08;color:#d8c79f;font-size:11px}
+.graph-viewport{touch-action:none}
 .person-node.reparent-draggable{cursor:grab;touch-action:none}
 .person-node.reparent-draggable:active{cursor:grabbing}
 .person-node.reparent-source{opacity:.24!important;filter:grayscale(1)}

@@ -127,6 +127,7 @@ const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
 let suppressPersonClickTimer = 0;
+let resetCameraGestureState = () => {};
 let photoCropState = null;
 const scheduleMiniViewportUpdate = createFrameCoalescer(requestAnimationFrame, updateMiniViewport);
 let cameraMotionTimer = 0;
@@ -367,6 +368,7 @@ function openPhotoLightbox(person) {
 }
 
 function closePhotoLightbox() {
+  resetCameraGestureState();
   if (ui.photoLightboxImage) {
     ui.photoLightboxImage.removeAttribute('src');
     ui.photoLightboxImage.alt = '';
@@ -520,12 +522,22 @@ function loadMyPersonPreference() {
 
 function syncWhoAmIButton() {
   const button = $('#whoAmI');
-  if (!button) return;
   const hasSelf = Boolean(myPersonId && byId.has(myPersonId));
   const showingPath = mode === 'path' && hasSelf;
-  button.textContent = showingPath ? '◎ Всё древо' : hasSelf ? '◎ Мой путь' : '◎ Кто я?';
-  button.setAttribute('aria-label', showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь');
-  button.title = showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь';
+  if (button) {
+    button.textContent = showingPath ? '◎ Всё древо' : hasSelf ? '◎ Мой путь' : '◎ Кто я?';
+    button.setAttribute('aria-label', showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь');
+    button.title = showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь';
+  }
+  const mobileButton = $('#mobileWhoAmI');
+  if (mobileButton) {
+    const label = $('#mobileWhoAmILabel');
+    if (label) label.textContent = showingPath ? 'Всё древо' : hasSelf ? 'Мой путь' : 'Кто я?';
+    mobileButton.setAttribute('aria-label', showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя в древе');
+    mobileButton.title = showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя в древе';
+    mobileButton.setAttribute('aria-pressed', String(showingPath));
+    mobileButton.classList.toggle('active', showingPath);
+  }
 }
 
 function setSelfPerson(id) {
@@ -1063,6 +1075,7 @@ function renderPersonSheet(personId) {
 
 function openPersonSheet(personId) {
   if (!byId.has(personId) || !ui.personSheet) return;
+  resetCameraGestureState();
   personSheetId = personId;
   if (selectedId !== personId) {
     selectedId = personId;
@@ -1221,6 +1234,7 @@ async function openPhotoCrop(personId, file) {
 }
 
 function closePhotoCrop() {
+  resetCameraGestureState();
   const state = photoCropState;
   if (state?.processing) return;
   photoCropState = null;
@@ -2631,6 +2645,12 @@ function syncModeButtons(activeMode = mode) {
     button.classList.toggle('active', active);
     button.setAttribute('aria-pressed', String(active));
   });
+  $$('.nav-item[data-nav="tree"],.mobile-nav [data-nav="tree"]').forEach(button => {
+    button.classList.toggle('active', activeMode === 'all-tree');
+  });
+  $$('.nav-item[data-nav="people"],.mobile-nav [data-nav="people"]').forEach(button => {
+    button.classList.remove('active');
+  });
 }
 
 function resetGenerationFilters() {
@@ -2780,6 +2800,8 @@ function bindControls() {
   ui.personSheetClose.addEventListener('click', closePersonSheet);
   ui.personSheet.addEventListener('close', () => {
     const hadPerson = Boolean(personSheetId);
+    resetCameraGestureState();
+    if (personSheetId) suppressNextPersonClick(personSheetId);
     personSheetId = null;
     if (hadPerson) renderProfile(currentProfileTab);
   });
@@ -2810,9 +2832,11 @@ function bindControls() {
   $('#searchInput').addEventListener('input', event => updateSearch(event.target.value));
   $('#filtersOpen').addEventListener('click', () => openPopover(ui.filters));
   $('#moreFilters').addEventListener('click', () => openPopover(ui.filters));
+  $('#mobileFilters').addEventListener('click', () => openPopover(ui.filters));
+  $('#mobileWhoAmI').addEventListener('click', () => $('#whoAmI').click());
   $('#statsOpen').addEventListener('click', () => openPopover(ui.stats));
   $('#railStats').addEventListener('click', () => openPopover(ui.stats));
-  $('#mobileStats').addEventListener('click', () => openPopover(ui.stats));
+  $('#moreStats').addEventListener('click', () => openPopover(ui.stats));
   $('#moreOpen').addEventListener('click', () => openPopover(ui.more));
   $('#mobileMore').addEventListener('click', () => openPopover(ui.more));
   $('#morePwa').addEventListener('click', () => { openPopover(ui.pwa); renderPwaStatus(); });
@@ -2904,7 +2928,6 @@ function bindControls() {
   $$('.nav-item[data-mode],.more-item[data-mode],.rail-action[data-mode],.mobile-nav [data-mode]').forEach(button => button.addEventListener('click', () => setMode(button.dataset.mode)));
   $('#showFullTree').addEventListener('click', () => setMode('all-tree'));
   $$('.nav-item[data-nav],.mobile-nav [data-nav]').forEach(button => button.addEventListener('click', () => {
-    $$('.nav-item[data-nav],.mobile-nav [data-nav]').forEach(item => item.classList.toggle('active', item.dataset.nav === button.dataset.nav));
     if (button.dataset.nav === 'tree') setMode('all-tree');
     if (button.dataset.nav === 'people') openPopover(ui.search);
   }));
@@ -3107,6 +3130,20 @@ function bindCameraGestures() {
     document.querySelectorAll('.person-node.reparent-drop-target,.person-node.reparent-drop-invalid')
       .forEach(node => node.classList.remove('reparent-drop-target', 'reparent-drop-invalid'));
     if (pointer) { pointer.ghost = null; pointer.dropTargetId = null; }
+  };
+  resetCameraGestureState = () => {
+    for (const [pointerId, pointer] of pointers) {
+      cancelLongPress(pointer);
+      clearReparentDrag(pointer);
+      if (pointer.personId && (pointer.longPressFired || pointer.dragging || pointer.reparentDragging)) {
+        suppressNextPersonClick(pointer.personId);
+      }
+      try {
+        if (pointer.captureTarget?.hasPointerCapture(pointerId)) pointer.captureTarget.releasePointerCapture(pointerId);
+      } catch { /* The browser may already have canceled this pointer. */ }
+    }
+    pointers.clear();
+    pinchStart = null;
   };
   const startReparentDrag = (pointer, clientX, clientY) => {
     const sourceNode = pointer.captureTarget;
