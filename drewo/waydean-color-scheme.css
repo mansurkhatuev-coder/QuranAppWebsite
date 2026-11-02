@@ -335,6 +335,36 @@ html[data-color-scheme="light"] select,
 html[data-color-scheme="light"] textarea { accent-color: #9b6d25; }
 html[data-color-scheme="light"] :focus-visible { outline-color: #80591e; }
 
+/* Keep the landscape recognizable instead of covering it with a white veil. */
+html[data-color-scheme="light"] body[data-theme] .premium-sky .sky-veil {
+  background:
+    linear-gradient(180deg, rgba(244, 238, 223, .12), rgba(244, 238, 223, .06) 48%, rgba(244, 238, 223, .18)),
+    linear-gradient(90deg, rgba(244, 238, 223, .06), transparent 48%, rgba(244, 238, 223, .08));
+}
+
+html[data-color-scheme="light"] body[data-sky] .tree-stage::before {
+  background:
+    linear-gradient(180deg, rgba(244, 238, 223, .07), rgba(244, 238, 223, .16)),
+    linear-gradient(90deg, rgba(244, 238, 223, .06), transparent 42%, rgba(244, 238, 223, .08));
+}
+
+html[data-color-scheme="light"] body[data-sky] .stage-wash {
+  background: radial-gradient(ellipse at 50% 40%, transparent 28%, rgba(234, 225, 207, .17) 100%);
+}
+
+/* A firmer edge lets the ivory cards read cleanly over either day or night art. */
+html[data-color-scheme="light"] body[data-theme] .person-btn {
+  border-color: rgba(116, 83, 35, .78) !important;
+  background: linear-gradient(155deg, rgba(255, 253, 247, .99), rgba(239, 231, 214, .98)) !important;
+  box-shadow: 0 5px 14px rgba(23, 29, 27, .22), inset 0 1px 0 rgba(255, 255, 255, .94) !important;
+}
+
+html[data-color-scheme="light"] body[data-theme] .graph .person-node {
+  border-color: rgba(116, 83, 35, .82);
+  background: linear-gradient(155deg, rgba(255, 253, 247, .99), rgba(239, 231, 214, .98));
+  box-shadow: 0 5px 14px rgba(23, 29, 27, .22), inset 0 1px 0 rgba(255, 255, 255, .94);
+}
+
 @media (prefers-reduced-transparency: reduce) {
   html[data-color-scheme="light"] .topbar,
   html[data-color-scheme="light"] .profile-panel,
