@@ -13,6 +13,19 @@
   <meta name="theme-color" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: light)" content="#0d1a22">
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
+  <script>
+    try {
+      var savedColorScheme = localStorage.getItem('drewo-color-scheme') === 'light' ? 'light' : 'dark';
+      document.documentElement.setAttribute('data-color-scheme', savedColorScheme);
+      document.documentElement.style.colorScheme = savedColorScheme;
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', savedColorScheme);
+      document.querySelectorAll('meta[name="theme-color"]').forEach(function (meta) {
+        meta.setAttribute('content', savedColorScheme === 'light' ? '#f4f0e7' : '#0d1a22');
+      });
+    } catch (err) {
+      document.documentElement.setAttribute('data-color-scheme', 'dark');
+    }
+  </script>
   <link rel="preload" as="image" href="bg.jpg" fetchpriority="low">
   <link rel="preload" as="image" href="bg-night.jpg" fetchpriority="low">
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2349,6 +2362,7 @@
     }
 
   </style>
+  <link rel="stylesheet" href="waydean-color-scheme.css?v=light-theme-20261102-1">
 </head>
 <body class="view-locked" data-theme="premium" data-sky="day">
 
@@ -2486,6 +2500,13 @@
           <select id="theme-select" aria-label="Стиль оформления">
             <option value="classic">Классика</option>
             <option value="premium" selected="">Премиум</option>
+          </select>
+        </label>
+        <label class="style-pick">
+          Цвет интерфейса
+          <select id="color-scheme-select" aria-label="Цветовая тема интерфейса">
+            <option value="dark">Тёмная</option>
+            <option value="light">Светлая</option>
           </select>
         </label>
         <label class="style-pick sky-mode-pick">
@@ -3187,6 +3208,7 @@
       var linksSvg = document.getElementById('links');
       var themeSelect = document.getElementById('theme-select');
       var skyModeSelect = document.getElementById('sky-mode-select');
+      var colorSchemeSelect = document.getElementById('color-scheme-select');
       var skyLayerA = document.getElementById('sky-a');
       var skyLayerB = document.getElementById('sky-b');
       var fireflyCanvas = document.getElementById('firefly-canvas');
@@ -3460,10 +3482,15 @@
           showSkyImage(SKY_DAY_IMAGES[skyDayIndex % SKY_DAY_IMAGES.length], immediate !== false);
           startSkyRotate();
         }
-        var bar = period === 'night' ? '#030910' : '#0d1a22';
+        var colorScheme = document.documentElement.getAttribute('data-color-scheme') === 'light' ? 'light' : 'dark';
+        var bar = colorScheme === 'light' ? '#f4f0e7' : period === 'night' ? '#030910' : '#0d1a22';
         document.documentElement.style.backgroundColor = bar;
+        document.documentElement.style.colorScheme = colorScheme;
         document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
           el.setAttribute('content', bar);
+        });
+        document.querySelectorAll('meta[name="color-scheme"]').forEach(function (el) {
+          el.setAttribute('content', colorScheme);
         });
         if (period === 'night') startFireflies();
         else stopFireflies();
@@ -3495,7 +3522,8 @@
         var next = theme === 'premium' ? 'premium' : 'classic';
         document.body.setAttribute('data-theme', next);
         var period = resolvedSkyPeriod();
-        var bar = next === 'premium' ? (period === 'night' ? '#030910' : '#0d1a22') : '#12262f';
+        var colorScheme = document.documentElement.getAttribute('data-color-scheme') === 'light' ? 'light' : 'dark';
+        var bar = colorScheme === 'light' ? '#f4f0e7' : next === 'premium' ? (period === 'night' ? '#030910' : '#0d1a22') : '#12262f';
         document.documentElement.style.backgroundColor = bar;
         document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
           el.setAttribute('content', bar);
@@ -3510,6 +3538,26 @@
         if (next !== 'premium') stopFireflies();
         if (layoutMeta && layoutMeta.nodes && Object.keys(layoutMeta.nodes).length) {
           redrawLinks();
+        }
+      }
+      function setColorScheme(scheme, persist) {
+        var next = scheme === 'light' ? 'light' : 'dark';
+        document.documentElement.setAttribute('data-color-scheme', next);
+        document.documentElement.style.colorScheme = next;
+        var period = resolvedSkyPeriod();
+        var bar = next === 'light' ? '#f4f0e7' : document.body.getAttribute('data-theme') === 'premium'
+          ? period === 'night' ? '#030910' : '#0d1a22'
+          : '#12262f';
+        document.documentElement.style.backgroundColor = bar;
+        document.querySelectorAll('meta[name="theme-color"]').forEach(function (el) {
+          el.setAttribute('content', bar);
+        });
+        document.querySelectorAll('meta[name="color-scheme"]').forEach(function (el) {
+          el.setAttribute('content', next);
+        });
+        if (colorSchemeSelect) colorSchemeSelect.value = next;
+        if (persist !== false) {
+          try { localStorage.setItem('drewo-color-scheme', next); } catch (err) {}
         }
       }
       var editLinksBtn = document.getElementById('edit-links');
@@ -7086,6 +7134,11 @@
           setSkyMode(skyModeSelect.value);
         });
       }
+      if (colorSchemeSelect) {
+        colorSchemeSelect.addEventListener('change', function () {
+          setColorScheme(colorSchemeSelect.value);
+        });
+      }
 
       if (passwordForm) {
         passwordForm.addEventListener('submit', function (e) {
@@ -7889,9 +7942,11 @@
               'premium',
             false
           );
+          setColorScheme(localStorage.getItem('drewo-color-scheme') || 'dark', false);
         } catch (err) {
           setSkyMode('auto', false);
           setTheme('premium', false);
+          setColorScheme('dark', false);
         }
         startSkyWatch();
         loadTreeStatus();

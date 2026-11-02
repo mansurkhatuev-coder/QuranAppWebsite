@@ -1,5 +1,6 @@
 export const APPEARANCE_THEME_KEY = 'drewo-theme';
 export const APPEARANCE_SKY_KEY = 'drewo-sky-mode';
+export const APPEARANCE_COLOR_SCHEME_KEY = 'drewo-color-scheme';
 export const WEATHER_CACHE_KEY = 'drewo-weather-cache';
 export const WEATHER_CACHE_MAX_AGE_MS = 45 * 60 * 1000;
 
@@ -41,6 +42,29 @@ export function writeAppearance(storage, value) {
   } catch {
     // Keep the current page usable if storage is unavailable or full.
     return { ...appearance, persisted: false };
+  }
+}
+
+export function normalizeColorScheme(value) {
+  return value === 'light' ? 'light' : 'dark';
+}
+
+export function readColorScheme(storage) {
+  try {
+    return normalizeColorScheme(storage?.getItem(APPEARANCE_COLOR_SCHEME_KEY));
+  } catch {
+    return 'dark';
+  }
+}
+
+export function writeColorScheme(storage, value) {
+  const colorScheme = normalizeColorScheme(value);
+  try {
+    if (!storage || typeof storage.setItem !== 'function') return { colorScheme, persisted: false };
+    storage.setItem(APPEARANCE_COLOR_SCHEME_KEY, colorScheme);
+    return { colorScheme, persisted: true };
+  } catch {
+    return { colorScheme, persisted: false };
   }
 }
 

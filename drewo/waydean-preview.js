@@ -32,8 +32,8 @@ import {
 import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-1';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 import {
-  createWeatherController, normalizeAppearance, readAppearance, resolveSkyPeriod, writeAppearance
-} from './waydean-preview-appearance.mjs?v=weather-parity-20261028-1';
+  createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveSkyPeriod, writeAppearance, writeColorScheme
+} from './waydean-preview-appearance.mjs?v=light-theme-20261102-1';
 import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, storeFamilySession, verifyFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
@@ -3932,19 +3932,27 @@ async function initialize() {
 function initializeAppearanceControls() {
   const themeSelect = $('#appearanceTheme');
   const skySelect = $('#appearanceSky');
-  if (!themeSelect || !skySelect) return;
+  const colorSchemeSelect = $('#appearanceColorScheme');
+  if (!themeSelect || !skySelect || !colorSchemeSelect) return;
 
   let storage = null;
   try { storage = window.localStorage; } catch { /* private browsing can deny storage access */ }
   const initial = readAppearance(storage);
+  const initialColorScheme = readColorScheme(storage);
   themeSelect.value = initial.theme;
   skySelect.value = initial.skyMode;
+  colorSchemeSelect.value = initialColorScheme;
 
   const apply = ({ persist = false } = {}) => {
     const selected = normalizeAppearance({ theme: themeSelect.value, skyMode: skySelect.value });
-    const persisted = persist ? writeAppearance(storage, selected).persisted : null;
+    const colorScheme = normalizeColorScheme(colorSchemeSelect.value);
+    const appearancePersisted = persist ? writeAppearance(storage, selected).persisted : null;
+    const schemePersisted = persist ? writeColorScheme(storage, colorScheme).persisted : null;
+    const persisted = persist ? appearancePersisted && schemePersisted : null;
     const appearance = selected;
     const period = resolveSkyPeriod(appearance.skyMode, new Date(), weatherSunTimes);
+    document.documentElement.dataset.colorScheme = colorScheme;
+    document.documentElement.style.colorScheme = colorScheme;
     document.body.dataset.theme = appearance.theme;
     document.body.dataset.sky = period;
     const styleName = appearance.theme === 'premium' ? 'Премиум' : 'Классика';
@@ -3960,16 +3968,20 @@ function initializeAppearanceControls() {
         ? `Выбор применён, но браузер не сохранил его · ${skyName}`
         : `Выбор действует на этом устройстве · ${skyName}`;
     }
-    const themeColor = appearance.theme === 'classic'
-      ? period === 'day' ? '#172326' : '#081114'
-      : period === 'day' ? '#17201d' : '#071014';
+    const themeColor = colorScheme === 'light'
+      ? '#f4f0e7'
+      : appearance.theme === 'classic'
+        ? period === 'day' ? '#172326' : '#081114'
+        : period === 'day' ? '#17201d' : '#071014';
     document.querySelectorAll('meta[name="theme-color"]').forEach(meta => meta.setAttribute('content', themeColor));
+    document.querySelectorAll('meta[name="color-scheme"]').forEach(meta => meta.setAttribute('content', colorScheme));
   };
 
   applyAppearancePreferences = apply;
 
   themeSelect.addEventListener('change', () => apply({ persist: true }));
   skySelect.addEventListener('change', () => apply({ persist: true }));
+  colorSchemeSelect.addEventListener('change', () => apply({ persist: true }));
   document.addEventListener('visibilitychange', () => {
     if (!document.hidden && skySelect.value === 'auto') apply();
   });
