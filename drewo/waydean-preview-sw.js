@@ -1,11 +1,12 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v46';
+const CACHE_NAME = 'waydean-preview-shell-v50';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
   './waydean-preview.html?state=all-tree',
   './waydean-preview.webmanifest',
   './family-tree.json',
+  './bg-day-2.jpg',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
@@ -14,7 +15,7 @@ const PRECACHE = [
   './waydean-preview.css',
   './waydean-preview-camera.css?v=camera-motion-20261029-1',
   './waydean-preview-master.css?v=person-card-width-1',
-  './waydean-preview-lod.css?v=lineage-cards-medium-20261029-1',
+  './waydean-preview-lod.css?v=uniform-markers-20261030-1',
   './waydean-preview-edit.css',
   './waydean-preview-readiness.css',
   './waydean-preview-main-polish.css?v=6',
@@ -26,14 +27,14 @@ const PRECACHE = [
   './waydean-preview-history.css?v=local-history-1',
   './waydean-preview-pwa.css?v=dialog-close-20261102-1',
   './waydean-preview-video.css?v=video-local-1',
-  './waydean-preview-self.css?v=self-person-20261028-1',
-  './waydean-preview-glass-cards.css?v=thin-glass-1',
+  './waydean-preview-self.css?v=uniform-markers-20261030-1',
+  './waydean-preview-glass-cards.css?v=uniform-markers-20261030-1',
   './waydean-preview-auth.css?v=dialog-close-20261102-1',
   './waydean-preview-person-sheet.css?v=editor-actions-20261102-1',
   './waydean-preview-appearance.css?v=weather-parity-20261028-1',
-  './waydean-color-scheme.css?v=light-theme-20261102-2',
-  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=light-theme-20261102-1',
-  './waydean-preview-appearance.mjs?v=light-theme-20261102-1',
+  './waydean-color-scheme.css?v=light-theme-20261102-5',
+  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=light-theme-20261102-2',
+  './waydean-preview-appearance.mjs?v=light-theme-20261102-2',
   './waydean-preview-family-auth.mjs?v=family-auth-1',
   './waydean-preview-family-api.mjs?v=family-lock-2',
   './waydean-preview-publish.mjs?v=admin-save-1',
@@ -42,7 +43,7 @@ const PRECACHE = [
   './waydean-admin-identity.mjs?v=1',
   './waydean-preview-whoami.mjs?v=identity-storage-retain-20261030-1',
   './waydean-preview-account-history.mjs?v=1',
-  './waydean-preview-pwa.mjs?v=family-push-20261030-cache-1',
+  './waydean-preview-pwa.mjs?v=family-push-20261030-cache-2',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
   './waydean-preview-model.mjs?v=person-card-width-2',
   './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1',

@@ -81,6 +81,14 @@ export function resolveSkyPeriod(mode, now = new Date(), sunTimes = null) {
   return hour < 6 || hour >= 20 ? 'night' : 'day';
 }
 
+// A paper-light UI needs a daylight canvas for reliable contrast.  Without this
+// guard, an automatic or manually selected night sky turns the light treatment
+// into a disconnected ivory overlay rather than a coherent theme.
+export function resolveColorSchemeSkyPeriod(colorScheme, mode, now = new Date(), sunTimes = null) {
+  if (normalizeColorScheme(colorScheme) === 'light') return 'day';
+  return resolveSkyPeriod(mode, now, sunTimes);
+}
+
 export function weatherCondition(code) {
   if (code === null || code === undefined || code === '') return 'погода';
   return WEATHER_LABELS.get(Number(code)) || 'погода';
