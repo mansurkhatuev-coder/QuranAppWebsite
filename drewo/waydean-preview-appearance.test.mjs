@@ -7,6 +7,7 @@ import {
   APPEARANCE_COLOR_SCHEME_KEY,
   normalizeAppearance,
   readAppearance,
+  resolveColorSchemeSkyPeriod,
   resolveSkyPeriod,
   writeAppearance
 } from './waydean-preview-appearance.mjs';
@@ -73,6 +74,14 @@ test('automatic sky prefers cached local sunrise and sunset when available', () 
   assert.equal(resolveSkyPeriod('auto', afterSunset, sunTimes), 'night');
   assert.equal(resolveSkyPeriod('day', beforeSunrise, sunTimes), 'day');
   assert.equal(resolveSkyPeriod('night', new Date('2026-10-28T15:00:00.000Z'), sunTimes), 'night');
+});
+
+test('light scheme always uses the day landscape instead of mixing ivory UI with a night sky', () => {
+  const late = new Date(2026, 0, 1, 23, 0);
+  assert.equal(resolveColorSchemeSkyPeriod('light', 'auto', late), 'day');
+  assert.equal(resolveColorSchemeSkyPeriod('light', 'night', late), 'day');
+  assert.equal(resolveColorSchemeSkyPeriod('dark', 'night', late), 'night');
+  assert.equal(resolveColorSchemeSkyPeriod('dark', 'day', late), 'day');
 });
 
 test('weather conditions use readable Russian labels', () => {

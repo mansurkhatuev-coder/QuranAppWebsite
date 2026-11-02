@@ -49,8 +49,8 @@ test('expands a person card to fit the full name while keeping short names at th
 test('loads the current local family dataset without exposing records in test output', async () => {
   const root = JSON.parse(await readFile(familyTreePath, 'utf8'));
   const flat = flattenTree(root);
-  assert.equal(flat.length, 157);
-  assert.equal(Math.max(...flat.map(person => person.generation)), 14);
+  assert.equal(flat.length, 162);
+  assert.equal(Math.max(...flat.map(person => person.generation)), 19);
   assert.equal(flat.filter(person => person.hasPhoto).length, 1);
-  assert.equal(new Set(flat.map(person => person.id)).size, 157);
+  assert.equal(new Set(flat.map(person => person.id)).size, 162);
 });

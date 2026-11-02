@@ -29,11 +29,11 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-2';
 import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
 import {
-  createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveSkyPeriod, writeAppearance, writeColorScheme
-} from './waydean-preview-appearance.mjs?v=light-theme-20261102-1';
+  createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
+} from './waydean-preview-appearance.mjs?v=light-theme-20261102-2';
 import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, storeFamilySession, verifyFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
@@ -3950,13 +3950,18 @@ function initializeAppearanceControls() {
     const schemePersisted = persist ? writeColorScheme(storage, colorScheme).persisted : null;
     const persisted = persist ? appearancePersisted && schemePersisted : null;
     const appearance = selected;
-    const period = resolveSkyPeriod(appearance.skyMode, new Date(), weatherSunTimes);
+    const period = resolveColorSchemeSkyPeriod(colorScheme, appearance.skyMode, new Date(), weatherSunTimes);
     document.documentElement.dataset.colorScheme = colorScheme;
     document.documentElement.style.colorScheme = colorScheme;
     document.body.dataset.theme = appearance.theme;
     document.body.dataset.sky = period;
     const styleName = appearance.theme === 'premium' ? 'Премиум' : 'Классика';
-    const skyName = appearance.skyMode === 'auto' ? 'автоматически' : period === 'day' ? 'днём' : 'ночью';
+    const lightScheme = colorScheme === 'light';
+    skySelect.disabled = lightScheme;
+    skySelect.title = lightScheme ? 'Светлая тема использует дневной фон для читаемости.' : '';
+    const skyName = lightScheme
+      ? 'дневной фон'
+      : appearance.skyMode === 'auto' ? 'автоматически' : period === 'day' ? 'днём' : 'ночью';
     const badge = $('#appearanceBadge');
     if (badge) {
       badge.textContent = `♛ Стиль: ${styleName}`;

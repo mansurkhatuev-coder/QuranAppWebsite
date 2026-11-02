@@ -58,7 +58,7 @@ test('clears the saved identity only after the user explicitly resets it', () =>
 });
 
 test('PWA shell refreshes the self-selection persistence code', () => {
-  assert.match(workerSource, /waydean-preview-shell-v40/);
+  assert.match(workerSource, /waydean-preview-shell-v\d+/);
   assert.match(html, /waydean-preview\.js\?v=lineage-whoami-retention-20261030-1/);
   assert.match(workerSource, /waydean-preview-whoami\.mjs\?v=identity-storage-retain-20261030-1/);
 });

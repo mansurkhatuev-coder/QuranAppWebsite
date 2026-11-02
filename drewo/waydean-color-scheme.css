@@ -373,3 +373,184 @@ html[data-color-scheme="light"] body[data-theme] .graph .person-node {
   html[data-color-scheme="light"] .mini-map,
   html[data-color-scheme="light"] .tree-controls { backdrop-filter: none; }
 }
+
+/*
+ * Light theme rework — "daylit parchment".
+ *
+ * This is intentionally not a white skin laid over the dark composition.
+ * The interface uses a warm paper palette while the tree remains on a visible
+ * daylight landscape.  It keeps cards and links readable without whitening
+ * the canvas or turning the right/left rails into large blank rectangles.
+ */
+html[data-color-scheme="light"] {
+  --ink: #f4eee2;
+  --ink-2: #e9deca;
+  --panel: rgba(253, 249, 240, .9);
+  --panel-soft: rgba(244, 236, 221, .82);
+  --line: rgba(104, 78, 35, .32);
+  --gold: #967236;
+  --gold-bright: #6e4f1c;
+  --gold-dim: #866936;
+  --text: #20302c;
+  --muted: #62665e;
+  --shadow: 0 14px 34px rgba(63, 49, 25, .16);
+  background: #e9deca;
+}
+
+html[data-color-scheme="light"] body,
+html[data-color-scheme="light"] body[data-theme] {
+  background: #e9deca !important;
+  color: #20302c;
+}
+
+html[data-color-scheme="light"] body[data-theme] #view-gate {
+  background:
+    radial-gradient(ellipse at 50% 18%, rgba(255, 250, 238, .92), transparent 52%),
+    linear-gradient(180deg, #eee1cb 0%, #d8c3a0 100%);
+}
+
+html[data-color-scheme="light"] body[data-theme] #view-gate .view-gate-card {
+  background: linear-gradient(150deg, rgba(255, 253, 247, .98), rgba(239, 228, 207, .98));
+  border-color: rgba(108, 79, 30, .42);
+  box-shadow: 0 18px 42px rgba(72, 53, 20, .18);
+}
+
+html[data-color-scheme="light"] body[data-theme] #view-gate .view-gate-card input {
+  background: #fffaf0;
+  color: #20302c;
+  border-color: rgba(108, 79, 30, .4);
+}
+
+html[data-color-scheme="light"] body[data-theme] #gate-submit {
+  background: linear-gradient(135deg, #9b7130, #76521d);
+  color: #fffaf0;
+}
+
+/* Legacy tree: preserve the daytime scene — the old .82 white viewport veil
+   was responsible for the washed-out "fog" visible in the old implementation. */
+html[data-color-scheme="light"] body[data-theme] .premium-sky {
+  filter: saturate(.88) brightness(1.05) contrast(.98);
+}
+
+html[data-color-scheme="light"] body[data-theme] .premium-sky .sky-veil {
+  background:
+    linear-gradient(180deg, rgba(255, 251, 241, .05), rgba(244, 232, 206, .08) 46%, rgba(220, 201, 164, .18)),
+    linear-gradient(90deg, rgba(255, 252, 245, .10), transparent 48%, rgba(231, 213, 180, .12));
+}
+
+html[data-color-scheme="light"] body[data-theme] .header,
+html[data-color-scheme="light"] body[data-theme] .nav-panel,
+html[data-color-scheme="light"] body[data-theme] .profile-panel {
+  background: linear-gradient(135deg, rgba(255, 252, 246, .94), rgba(242, 232, 213, .9));
+  border-color: rgba(110, 80, 31, .34);
+  box-shadow: 0 8px 24px rgba(70, 54, 25, .12);
+}
+
+html[data-color-scheme="light"] body[data-theme] #viewport {
+  background:
+    linear-gradient(180deg, rgba(255, 252, 245, .045), rgba(238, 222, 191, .13)) !important;
+  border-color: rgba(108, 82, 37, .42);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, .54), 0 14px 32px rgba(66, 48, 19, .16);
+}
+
+html[data-color-scheme="light"] body[data-theme] .person-btn,
+html[data-color-scheme="light"] body[data-theme] .graph .person-node {
+  background: linear-gradient(145deg, rgba(255, 253, 247, .88), rgba(237, 224, 195, .9)) !important;
+  border-color: rgba(106, 78, 29, .72) !important;
+  box-shadow: 0 4px 12px rgba(52, 39, 17, .18), inset 0 1px 0 rgba(255, 255, 255, .78) !important;
+}
+
+html[data-color-scheme="light"] body[data-theme] .person-btn.is-leaf.my-branch,
+html[data-color-scheme="light"] body[data-theme] .person-btn.is-leaf.my-self {
+  background: linear-gradient(145deg, #f6e4b7, #e9c982) !important;
+  border-color: #896025 !important;
+  box-shadow: 0 0 0 2px rgba(146, 103, 32, .22), 0 5px 15px rgba(52, 39, 17, .2) !important;
+}
+
+html[data-color-scheme="light"] body[data-theme] #links path,
+html[data-color-scheme="light"] body[data-theme] #links line { stroke: #88682e; }
+
+html[data-color-scheme="light"] body[data-theme] #links path.my-link,
+html[data-color-scheme="light"] body[data-theme] #links line.my-link { stroke: #5f4419; }
+
+/* Workspace tree: daylight canvas with low-contrast paper surfaces, not white blocks. */
+html[data-color-scheme="light"] .app-shell {
+  background: radial-gradient(ellipse at 50% 0%, #fffaf0 0%, #f0e5d0 62%, #dfcdb0 100%);
+}
+
+html[data-color-scheme="light"] .topbar,
+html[data-color-scheme="light"] .preview-notice,
+html[data-color-scheme="light"] .rail,
+html[data-color-scheme="light"] .profile-panel,
+html[data-color-scheme="light"] .popover,
+html[data-color-scheme="light"] .person-sheet-dialog,
+html[data-color-scheme="light"] .photo-crop-dialog,
+html[data-color-scheme="light"] .photo-lightbox-dialog,
+html[data-color-scheme="light"] .account-admin-password-dialog,
+html[data-color-scheme="light"] .pwa-push-dialog,
+html[data-color-scheme="light"] .tree-loading-card {
+  background: linear-gradient(150deg, rgba(255, 252, 246, .96), rgba(241, 231, 211, .94));
+  border-color: rgba(109, 79, 29, .34);
+  box-shadow: 0 10px 26px rgba(68, 49, 18, .14);
+}
+
+html[data-color-scheme="light"] .tree-stage {
+  background: #a6afa4 url('bg-day-2.jpg') center 50% / cover no-repeat;
+}
+
+html[data-color-scheme="light"] body[data-sky="day"] .tree-stage::before {
+  background:
+    linear-gradient(180deg, rgba(255, 251, 241, .035), rgba(241, 222, 187, .12)),
+    linear-gradient(90deg, rgba(250, 241, 223, .08), transparent 48%, rgba(222, 200, 161, .12));
+}
+
+html[data-color-scheme="light"] body[data-sky="day"] .stage-wash {
+  background: radial-gradient(ellipse at 50% 42%, transparent 26%, rgba(63, 74, 58, .16) 100%);
+}
+
+html[data-color-scheme="light"] .tree-line {
+  stroke: #89692e;
+  opacity: .75;
+  filter: none;
+}
+
+html[data-color-scheme="light"] .tree-line.active {
+  stroke: #604517;
+  filter: drop-shadow(0 0 2px rgba(214, 166, 68, .34));
+}
+
+html[data-color-scheme="light"] body[data-theme] .graph .person-node {
+  color: #22302b;
+  border-radius: 10px;
+}
+
+html[data-color-scheme="light"] .node-avatar {
+  background: radial-gradient(ellipse at 50% 34%, #dfd0ad, #a99b78 70%);
+  border-color: #92713a;
+}
+
+html[data-color-scheme="light"] .node-copy strong { color: #21302b; }
+html[data-color-scheme="light"] .node-copy small { color: #695122; }
+
+html[data-color-scheme="light"] .tree-controls,
+html[data-color-scheme="light"] .mini-map {
+  background: rgba(255, 251, 242, .9);
+  border-color: rgba(101, 75, 30, .4);
+  box-shadow: 0 7px 18px rgba(49, 37, 17, .18);
+}
+
+html[data-color-scheme="light"] .tree-controls button {
+  background: rgba(255, 253, 248, .78);
+  border-color: rgba(109, 79, 29, .34);
+}
+
+html[data-color-scheme="light"] .mobile-nav {
+  background: linear-gradient(180deg, rgba(255, 252, 246, .98), rgba(241, 231, 211, .98));
+  border-color: rgba(109, 79, 29, .34);
+}
+
+html[data-color-scheme="light"] .appearance-controls select:disabled {
+  color: #7a705e;
+  background: #eee3cf;
+  cursor: not-allowed;
+}
