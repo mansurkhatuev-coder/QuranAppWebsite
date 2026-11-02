@@ -1556,8 +1556,20 @@ elements.paperStage.addEventListener("pointercancel", event => {
   }
 });
 elements.paperStage.addEventListener("wheel", event => {
-  event.preventDefault();
   const deltaY = event.deltaMode === 1 ? event.deltaY * 16 : event.deltaMode === 2 ? event.deltaY * elements.paperStage.clientHeight : event.deltaY;
+  if (!event.ctrlKey && !event.metaKey) {
+    if (event.shiftKey || Math.abs(event.deltaX) > Math.abs(deltaY)) return;
+    const pageScroller = document.scrollingElement;
+    const pageMaxScroll = Math.max(0, pageScroller.scrollHeight - pageScroller.clientHeight);
+    const pageCanScroll = deltaY > 0
+      ? pageScroller.scrollTop < pageMaxScroll - 1
+      : pageScroller.scrollTop > 1;
+    if (!pageCanScroll) return;
+    event.preventDefault();
+    pageScroller.scrollTop = clamp(pageScroller.scrollTop + deltaY, 0, pageMaxScroll);
+    return;
+  }
+  event.preventDefault();
   const factor = Math.exp(-deltaY * .001);
   queueWorkspaceZoom(factor, event.clientX, event.clientY);
 }, { passive: false });
