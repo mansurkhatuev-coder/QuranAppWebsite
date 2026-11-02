@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v51';
+const CACHE_NAME = 'waydean-preview-shell-v52';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -32,8 +32,8 @@ const PRECACHE = [
   './waydean-preview-auth.css?v=dialog-close-20261102-1',
   './waydean-preview-person-sheet.css?v=editor-actions-20261102-1',
   './waydean-preview-appearance.css?v=weather-parity-20261028-1',
-  './waydean-color-scheme.css?v=readable-light-theme-20261102-9',
-  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=light-theme-20261102-2',
+  './waydean-color-scheme.css?v=light-theme-finish-20261102-10',
+  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=light-theme-20261102-2&header-badge-removed=20261102-1',
   './waydean-preview-appearance.mjs?v=light-theme-20261102-2',
   './waydean-preview-family-auth.mjs?v=family-auth-1',
   './waydean-preview-family-api.mjs?v=family-lock-2',

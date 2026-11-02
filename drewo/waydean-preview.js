@@ -3955,18 +3955,12 @@ function initializeAppearanceControls() {
     document.documentElement.style.colorScheme = colorScheme;
     document.body.dataset.theme = appearance.theme;
     document.body.dataset.sky = period;
-    const styleName = appearance.theme === 'premium' ? 'Премиум' : 'Классика';
     const lightScheme = colorScheme === 'light';
     skySelect.disabled = lightScheme;
     skySelect.title = lightScheme ? 'Светлая тема использует дневной фон для читаемости.' : '';
     const skyName = lightScheme
       ? 'дневной фон'
       : appearance.skyMode === 'auto' ? 'автоматически' : period === 'day' ? 'днём' : 'ночью';
-    const badge = $('#appearanceBadge');
-    if (badge) {
-      badge.textContent = `♛ Стиль: ${styleName}`;
-      badge.setAttribute('aria-label', `Текущее оформление: ${styleName}`);
-    }
     const summary = $('#appearanceSummary');
     if (summary) {
       summary.textContent = persisted === false

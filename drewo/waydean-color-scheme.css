@@ -161,7 +161,6 @@ html[data-color-scheme="light"] .tree-loading-card {
 html[data-color-scheme="light"] .topbar { background: linear-gradient(90deg, #fbf9f4, #f1ecdf); }
 html[data-color-scheme="light"] .brand { color: #252c29; }
 html[data-color-scheme="light"] .brand strong,
-html[data-color-scheme="light"] .premium,
 html[data-color-scheme="light"] .popover-head,
 html[data-color-scheme="light"] .profile-person h1,
 html[data-color-scheme="light"] .appearance-heading strong,
@@ -559,9 +558,9 @@ html[data-color-scheme="light"] .appearance-controls select:disabled {
    light palette changed, leaving text almost invisible on pale surfaces. */
 html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node {
   color: #17231f !important;
-  background: #fffdf7 !important;
-  border-color: #70552c !important;
-  box-shadow: 0 4px 14px rgba(39, 35, 27, .22), inset 0 1px 0 #fff !important;
+  background: linear-gradient(145deg, #faf5e8, #ede1ca) !important;
+  border-color: #816943 !important;
+  box-shadow: 0 5px 16px rgba(43, 35, 20, .2), inset 0 1px 0 rgba(255, 255, 255, .86) !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy,
@@ -571,45 +570,47 @@ html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy strong {
-  font-weight: 700 !important;
+  font-weight: 600 !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy small {
-  color: #493b23 !important;
-  font-weight: 600 !important;
+  color: #5c492b !important;
+  font-weight: 500 !important;
   text-shadow: none !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-avatar {
-  background: linear-gradient(145deg, #eee4cf, #d8c8a8) !important;
-  border-color: #8c6b31 !important;
+  background: linear-gradient(145deg, #e8dcc2, #d1c09d) !important;
+  border-color: #987a46 !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-avatar svg {
-  fill: #514631 !important;
+  fill: #5a4e37 !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .tree-line {
-  stroke: #59451e !important;
-  stroke-width: 1.5px;
+  stroke: #765b2c !important;
+  stroke-width: 1.6px;
   opacity: .92 !important;
+  filter: drop-shadow(0 1px 1px rgba(255, 248, 229, .45));
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .tree-line.active {
-  stroke: #422f12 !important;
+  stroke: #9a702b !important;
+  stroke-width: 2.2px;
   opacity: 1 !important;
 }
 
-html[data-color-scheme="light"] body[data-theme="premium"] #appearanceBadge {
-  background: #f2e5cb !important;
-  border: 1px solid #94702f !important;
-  color: #4c3817 !important;
-  text-shadow: none !important;
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node.selected {
+  background: linear-gradient(145deg, #f6e8c8, #e7d2a8) !important;
+  border-color: #98702d !important;
+  box-shadow: 0 0 0 2px rgba(144, 102, 34, .24), 0 8px 20px rgba(43, 35, 20, .24) !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls,
 html[data-color-scheme="light"] body[data-theme="premium"] .mini-map {
-  background: #fffdf7 !important;
+  background: linear-gradient(150deg, #f6f0e3, #eae0cd) !important;
+  border-color: rgba(120, 93, 48, .48) !important;
   color: #25312c !important;
 }
 
@@ -619,6 +620,11 @@ html[data-color-scheme="light"] body[data-theme="premium"] .mini-map strong,
 html[data-color-scheme="light"] body[data-theme="premium"] .mini-map span {
   color: #25312c !important;
   text-shadow: none !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls button {
+  background: rgba(255, 252, 244, .78) !important;
+  border-color: rgba(120, 93, 48, .28) !important;
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls #whoAmI {
@@ -671,7 +677,7 @@ html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .self-
 }
 
 html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .mock-editor-summary {
-  background: #f1e5cc !important;
+  background: #f0e5d0 !important;
   border-color: #9c7840 !important;
   color: #493719 !important;
   font-size: 12px;
