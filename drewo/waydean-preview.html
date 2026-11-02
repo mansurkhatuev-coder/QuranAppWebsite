@@ -7,8 +7,20 @@
   <meta name="waydean-local-build" content="release-candidate-2026-11-02-editor-actions-1">
   <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
+  <meta name="color-scheme" content="dark">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    try {
+      const scheme = localStorage.getItem('drewo-color-scheme') === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.colorScheme = scheme;
+      document.documentElement.style.colorScheme = scheme;
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', scheme === 'light' ? '#f4f0e7' : '#081116');
+    } catch {
+      document.documentElement.dataset.colorScheme = 'dark';
+    }
+  </script>
   <title>Waydean — семейное древо</title>
   <link rel="manifest" href="./waydean-preview.webmanifest">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
@@ -33,6 +45,7 @@
   <link rel="stylesheet" href="waydean-preview-auth.css?v=dialog-close-20261102-1">
   <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=editor-actions-20261102-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
+  <link rel="stylesheet" href="waydean-color-scheme.css?v=light-theme-20261102-1">
 </head>
 <body>
   <main class="app-shell">
@@ -185,6 +198,11 @@
           <select id="appearanceTheme" aria-label="Стиль оформления">
             <option value="classic">Классика</option>
             <option value="premium">Премиум</option>
+          </select>
+          <label for="appearanceColorScheme">Цвет интерфейса</label>
+          <select id="appearanceColorScheme" aria-label="Цветовая тема интерфейса">
+            <option value="dark">Тёмная</option>
+            <option value="light">Светлая</option>
           </select>
           <label for="appearanceSky">День и ночь</label>
           <select id="appearanceSky" aria-label="Режим дня и ночи">
@@ -351,7 +369,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=light-theme-20261102-1');
     }
   </script>
 </body>

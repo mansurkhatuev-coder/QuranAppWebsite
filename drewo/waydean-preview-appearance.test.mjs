@@ -4,6 +4,7 @@ import * as appearance from './waydean-preview-appearance.mjs';
 import {
   APPEARANCE_THEME_KEY,
   APPEARANCE_SKY_KEY,
+  APPEARANCE_COLOR_SCHEME_KEY,
   normalizeAppearance,
   readAppearance,
   resolveSkyPeriod,
@@ -25,6 +26,19 @@ function jsonResponse(value) {
 
 test('appearance defaults to premium with automatic local day and night', () => {
   assert.deepEqual(readAppearance(memoryStorage()), { theme: 'premium', skyMode: 'auto' });
+});
+
+test('color scheme defaults to dark and only accepts the light option', () => {
+  assert.equal(appearance.readColorScheme(memoryStorage()), 'dark');
+  assert.equal(appearance.normalizeColorScheme('light'), 'light');
+  assert.equal(appearance.normalizeColorScheme('sepia'), 'dark');
+});
+
+test('color scheme preference is stored separately from card style and sky mode', () => {
+  const storage = memoryStorage({ [APPEARANCE_THEME_KEY]: 'classic', [APPEARANCE_SKY_KEY]: 'night' });
+  assert.deepEqual(appearance.writeColorScheme(storage, 'light'), { colorScheme: 'light', persisted: true });
+  assert.equal(storage.getItem(APPEARANCE_COLOR_SCHEME_KEY), 'light');
+  assert.deepEqual(readAppearance(storage), { theme: 'classic', skyMode: 'night' });
 });
 
 test('reads the existing production preference keys', () => {
