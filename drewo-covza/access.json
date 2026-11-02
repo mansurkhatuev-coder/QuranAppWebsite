@@ -1,10 +1,10 @@
 {
   "passwordHash": "388c067ec79132bac90be5716a09521557cd1a262c28414fee7f22d0acdc064d",
-  "locked": false,
-  "lockedReason": "",
+  "locked": true,
+  "lockedReason": "Древо удалено из каталога",
   "pinnedBackups": [],
   "visitCount": 0,
-  "deletedAt": null,
+  "deletedAt": "2026-11-02T11:00:27.308Z",
   "billing": {
     "plan": "family_half_year",
     "status": "disabled",
