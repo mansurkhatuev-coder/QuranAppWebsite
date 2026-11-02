@@ -38,11 +38,17 @@ export function generateUniquePersonId(tree) {
 function normalizeLifeYear(value) {
   if (value == null) return null;
   if (typeof value === 'string' && value.trim() === '') return null;
-  const text = String(value);
-  if (!/^\d+$/.test(text)) throw new Error('Year must use decimal digits only');
+  const text = String(value).trim();
+  if (!/^\d{3,4}$/.test(text)) throw new Error('Укажите год числом от 1000 до 2100');
   const year = Number(text);
-  if (!Number.isSafeInteger(year)) throw new Error('Year must use decimal digits only');
+  if (!Number.isSafeInteger(year) || year < 1000 || year > 2100) throw new Error('Укажите год числом от 1000 до 2100');
   return year;
+}
+
+function normalizeBio(value) {
+  const bio = String(value ?? '').trim();
+  if (bio.length > 800) throw new Error('Биография не может быть длиннее 800 символов');
+  return bio;
 }
 
 export function updatePerson(tree, id, fields) {
@@ -53,12 +59,13 @@ export function updatePerson(tree, id, fields) {
     if (Object.hasOwn(fields, key)) {
       next[key] = key === 'name' ? String(fields[key] || '').trim()
         : key === 'teip' ? String(fields[key] || '').trim().slice(0, 80)
+          : key === 'bio' ? normalizeBio(fields[key])
           : fields[key];
     }
   }
-  if (!next.name) throw new Error('Name is required');
+  if (!next.name) throw new Error('Имя не может быть пустым');
   for (const key of ['born', 'died']) if (Object.hasOwn(fields, key)) next[key] = normalizeLifeYear(next[key]);
-  if (next.born != null && next.died != null && next.born > next.died) throw new Error('Birth year must not be later than death year');
+  if (next.born != null && next.died != null && next.born > next.died) throw new Error('Год смерти не может быть раньше года рождения');
   Object.assign(person, next);
   return person;
 }

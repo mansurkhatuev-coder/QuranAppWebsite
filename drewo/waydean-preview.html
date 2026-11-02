@@ -31,6 +31,7 @@
   <link rel="stylesheet" href="waydean-preview-self.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-auth.css?v=family-auth-menu-dialog-20261029-1">
+  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=long-press-editor-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
 </head>
 <body>
@@ -271,6 +272,36 @@
         <div class="pwa-push-dialog-actions"><button class="primary-action" id="pwaPushSubmit" type="submit">Продолжить</button><button class="secondary-action" id="pwaPushCancel" type="button">Отмена</button></div>
       </form>
     </dialog>
+    <dialog class="person-sheet-dialog" id="personSheetDialog" aria-labelledby="personSheetTitle">
+      <section class="person-sheet-shell">
+        <header class="person-sheet-heading">
+          <div><small>КАРТОЧКА ЧЕЛОВЕКА</small><strong id="personSheetTitle">Человек</strong></div>
+          <button class="person-sheet-close" id="personSheetClose" type="button" aria-label="Закрыть карточку">×</button>
+        </header>
+        <div class="person-sheet-content" id="personSheetContent"></div>
+      </section>
+    </dialog>
+    <dialog class="photo-crop-dialog" id="photoCropDialog" aria-labelledby="photoCropTitle">
+      <section class="photo-crop-shell">
+        <header class="person-sheet-heading">
+          <div><small>ФОТОГРАФИЯ</small><strong id="photoCropTitle">Кадрирование</strong></div>
+          <button class="person-sheet-close" id="photoCropClose" type="button" aria-label="Закрыть кадрирование">×</button>
+        </header>
+        <p class="photo-crop-hint">Передвигайте фото, чтобы выбрать кадр. Масштаб меняется жестом, колёсиком или ползунком.</p>
+        <div class="photo-crop-stage"><canvas id="photoCropCanvas" width="640" height="640" aria-label="Предварительный просмотр кадрирования"></canvas></div>
+        <label class="photo-crop-zoom-label" for="photoCropZoom">Масштаб <output id="photoCropZoomValue">1×</output></label>
+        <input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+        <p class="photo-crop-status" id="photoCropStatus" role="status" aria-live="polite"></p>
+        <div class="person-sheet-actions"><button class="primary-action" id="photoCropApply" type="button">Применить фото</button><button class="secondary-action" id="photoCropCancel" type="button">Отмена</button></div>
+      </section>
+    </dialog>
+    <dialog class="photo-lightbox-dialog" id="photoLightboxDialog" aria-labelledby="photoLightboxTitle">
+      <section class="photo-lightbox-shell">
+        <header class="person-sheet-heading"><div><small>ФОТОГРАФИЯ</small><strong id="photoLightboxTitle">Фото</strong></div><button class="person-sheet-close" id="photoLightboxClose" type="button" aria-label="Закрыть фото">×</button></header>
+        <div class="photo-lightbox-frame"><img id="photoLightboxImage" alt=""></div>
+        <p class="photo-lightbox-status" id="photoLightboxStatus" role="status" aria-live="polite"></p>
+      </section>
+    </dialog>
     <div class="backdrop" id="popoverBackdrop" hidden></div>
     <div class="load-error" id="loadError" hidden>
       <strong id="loadErrorTitle">Не удалось загрузить дерево</strong>
@@ -317,7 +348,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-          import('./waydean-preview.js?v=photo-webp-20261102-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=long-press-2');
     }
   </script>
 </body>

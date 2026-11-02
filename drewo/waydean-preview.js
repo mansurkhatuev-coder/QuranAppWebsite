@@ -23,7 +23,7 @@ import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
 } from './waydean-preview-route.mjs?v=family-route-5';
-import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=child-id-1';
+import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-edit-validation-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
@@ -39,6 +39,7 @@ import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSessio
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
+const PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos/drewo';
 const FIXTURE_PHOTOS = new Map([
   ['demo-01', '../docs/design/waydean/assets/demo/waydean-demo-elder-portrait.jpg'],
   ['demo-03', '../docs/design/waydean/assets/demo/waydean-demo-middle-aged-portrait.jpg']
@@ -54,7 +55,13 @@ const ui = {
   profile: $('#profilePanel'), summary: $('#datasetSummary'), railCount: $('#railCount'), mode: $('#modeLabel'),
   empty: $('#emptyState'), search: $('#searchPopover'), filters: $('#filtersPopover'), stats: $('#statsPopover'),
   more: $('#morePopover'), history: $('#historyPopover'), backups: $('#backupsPopover'), pwa: $('#pwaPopover'),
-  backdrop: $('#popoverBackdrop'), toast: $('#toast'), error: $('#loadError')
+  backdrop: $('#popoverBackdrop'), toast: $('#toast'), error: $('#loadError'),
+  personSheet: $('#personSheetDialog'), personSheetTitle: $('#personSheetTitle'), personSheetContent: $('#personSheetContent'),
+  personSheetClose: $('#personSheetClose'), photoCrop: $('#photoCropDialog'), photoCropTitle: $('#photoCropTitle'),
+  photoCropCanvas: $('#photoCropCanvas'), photoCropZoom: $('#photoCropZoom'), photoCropZoomValue: $('#photoCropZoomValue'),
+  photoCropStatus: $('#photoCropStatus'), photoCropApply: $('#photoCropApply'), photoCropCancel: $('#photoCropCancel'), photoCropClose: $('#photoCropClose'),
+  photoLightbox: $('#photoLightboxDialog'), photoLightboxTitle: $('#photoLightboxTitle'),
+  photoLightboxImage: $('#photoLightboxImage'), photoLightboxStatus: $('#photoLightboxStatus'), photoLightboxClose: $('#photoLightboxClose')
 };
 
 let records = [];
@@ -105,6 +112,8 @@ let editStatus = 'clean';
 let nextSaveFails = false;
 let editDisclosureOpen = false;
 let currentProfileTab = 'info';
+let personSheetId = null;
+let relationshipDragEnabled = false;
 let rawDraftDirty = false;
 let localDraftKey = '';
 let localDraftRevision = 0;
@@ -113,9 +122,12 @@ let localMediaStatus = '';
 let pwaController = null;
 let pwaPushAction = 'subscribe';
 const localPhotoUrls = new Map();
+const localPhotoFullUrls = new Map();
 const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
+let suppressPersonClickTimer = 0;
+let photoCropState = null;
 const scheduleMiniViewportUpdate = createFrameCoalescer(requestAnimationFrame, updateMiniViewport);
 let cameraMotionTimer = 0;
 
@@ -123,6 +135,15 @@ function markCameraMoving() {
   ui.graph.classList.add('camera-moving');
   clearTimeout(cameraMotionTimer);
   cameraMotionTimer = window.setTimeout(() => ui.graph.classList.remove('camera-moving'), 150);
+}
+
+function suppressNextPersonClick(personId) {
+  const targetId = String(personId);
+  suppressPersonClick = targetId;
+  clearTimeout(suppressPersonClickTimer);
+  suppressPersonClickTimer = window.setTimeout(() => {
+    if (suppressPersonClick === targetId) suppressPersonClick = null;
+  }, 700);
 }
 
 function renderTreeConnectors() {
@@ -282,23 +303,76 @@ function preparePreviewRecords(root) {
 
 function photoSource(person) {
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
-  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-') && localPhotoUrls.has(person.id)) {
-    return localPhotoUrls.get(person.id);
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
+    return localPhotoUrls.get(person.id) || null;
   }
-  return person.hasPhoto ? `photos/${encodeURIComponent(person.id)}-thumb.webp` : null;
+  return person.hasPhoto
+    ? `photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(String(person.photoKey || '1'))}`
+    : null;
+}
+
+function fullPhotoSource(person) {
+  if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
+    return localPhotoFullUrls.get(person.id) || null;
+  }
+  return person.hasPhoto
+    ? `photos/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`
+    : null;
+}
+
+function jpegFallbackSource(source) {
+  if (!source) return null;
+  const url = new URL(source, window.location.href);
+  if (!url.pathname.endsWith('.webp')) return null;
+  url.pathname = `${url.pathname.slice(0, -5)}.jpg`;
+  return url.href;
 }
 
 async function restoreLocalPhotoUrls() {
   for (const url of localPhotoUrls.values()) URL.revokeObjectURL(url);
+  for (const url of localPhotoFullUrls.values()) URL.revokeObjectURL(url);
   localPhotoUrls.clear();
+  localPhotoFullUrls.clear();
   const photos = await listLocalTreePhotos(localDraftKey);
   for (const photo of photos) {
     if (photo.thumb instanceof Blob) localPhotoUrls.set(photo.personId, URL.createObjectURL(photo.thumb));
+    if (photo.full instanceof Blob) localPhotoFullUrls.set(photo.personId, URL.createObjectURL(photo.full));
   }
 }
 
 function hasDisplayPhoto(person) {
   return Boolean(photoSource(person));
+}
+
+function openPhotoLightbox(person) {
+  if (!person || !ui.photoLightbox || !ui.photoLightboxImage) return;
+  const source = fullPhotoSource(person);
+  if (!source) return;
+  ui.photoLightboxTitle.textContent = person.name || 'Фото';
+  ui.photoLightboxImage.alt = `Полное фото: ${person.name || 'человек'}`;
+  ui.photoLightboxStatus.textContent = '';
+  ui.photoLightboxImage.dataset.photoFallback = '';
+  ui.photoLightboxImage.onerror = () => {
+    if (ui.photoLightboxImage.dataset.photoFallback === 'remote'
+      || source.startsWith('blob:') || syntheticFixture) {
+      ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
+      return;
+    }
+    ui.photoLightboxImage.dataset.photoFallback = 'remote';
+    ui.photoLightboxImage.src = `${PHOTO_FALLBACK_BASE}/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`;
+  };
+  ui.photoLightboxImage.src = source;
+  if (!ui.photoLightbox.open) ui.photoLightbox.showModal();
+}
+
+function closePhotoLightbox() {
+  if (ui.photoLightboxImage) {
+    ui.photoLightboxImage.removeAttribute('src');
+    ui.photoLightboxImage.alt = '';
+    ui.photoLightboxImage.onerror = null;
+  }
+  if (ui.photoLightbox?.open) ui.photoLightbox.close();
 }
 
 function editableDraftRoot() {
@@ -485,7 +559,7 @@ function clearSelfPerson() {
 
 function createAvatar(person, className = 'avatar') {
   const src = photoSource(person);
-  const fallbackSrc = src?.endsWith('.webp') ? `${src.slice(0, -5)}.jpg` : null;
+  const fallbackSrc = jpegFallbackSource(src);
   const wrapper = document.createElement('span');
   wrapper.className = `${className} ${src ? 'has-photo' : 'is-empty'}`;
   wrapper.setAttribute('aria-hidden', 'true');
@@ -636,6 +710,7 @@ function drawTree() {
     const card = document.createElement('button');
     card.type = 'button';
     card.className = `person-node${person.id === selectedId ? ' selected' : ''}${person.id === myPersonId ? ' my-self' : ''}${compactRouteClass(person.id, labelRoute)}${related && !related.has(person.id) ? ' dimmed' : ''}`;
+    if (relationshipDragEnabled && canEditDraft() && person.id !== fixtureRoot?.id) card.classList.add('reparent-draggable');
     card.dataset.personId = person.id;
     card.setAttribute('aria-label', `${person.name}, ${formatYears(person)}, поколение ${person.generation}${person.id === myPersonId ? ', это вы' : ''}`);
     card.title = `${person.name} · ${formatYears(person)}`;
@@ -675,6 +750,7 @@ function drawTree() {
     card.addEventListener('click', () => {
       if (suppressPersonClick === person.id) {
         suppressPersonClick = null;
+        clearTimeout(suppressPersonClickTimer);
         return;
       }
       selectPerson(person.id, { preserveContext: true });
@@ -792,6 +868,9 @@ function renderProfile(tab = 'info') {
       const dd = document.createElement('dd'); dd.textContent = value;
       row.append(dt, dd); facts.append(row);
     }
+    const bio = document.createElement('p');
+    bio.className = `person-sheet-bio${String(person.bio || '').trim() ? '' : ' is-empty'}`;
+    bio.textContent = String(person.bio || '').trim() || 'Краткой биографии пока нет.';
     const branch = document.createElement('button');
     branch.type = 'button'; branch.className = 'branch-button'; branch.textContent = 'Показать ветвь　›';
     branch.addEventListener('click', () => setMode('branch'));
@@ -833,7 +912,7 @@ function renderProfile(tab = 'info') {
     const selfNote = document.createElement('small');
     selfNote.className = 'self-person-note';
     selfNote.textContent = isSelf ? 'Теперь «Мой путь» ведёт от предков к этой карточке.' : 'Отметка хранится отдельно для HOTI и демонстрационного дерева.';
-    body.append(facts, branch);
+    body.append(facts, bio, branch);
     if (addSonAction) body.append(addSonAction);
     body.append(selfAction, selfNote);
     if (canEditDraft()) body.append(buildEditControls(person));
@@ -857,7 +936,11 @@ function renderProfile(tab = 'info') {
   } else {
     const media = document.createElement('div'); media.className = 'media-state';
     if (hasDisplayPhoto(person)) {
-      media.append(createAvatar(person, 'media-avatar'));
+      const photo = document.createElement('button'); photo.type = 'button'; photo.className = 'media-photo-open';
+      photo.setAttribute('aria-label', `Открыть фото: ${person.name}`);
+      photo.append(createAvatar(person, 'media-avatar'));
+      photo.addEventListener('click', () => openPhotoLightbox(person));
+      media.append(photo);
     } else {
       media.append(createAvatar(person, 'media-avatar'));
       const title = document.createElement('strong'); title.textContent = 'Нет фотографий';
@@ -886,72 +969,363 @@ function renderProfile(tab = 'info') {
     }
     focusTarget?.focus({ preventScroll: true });
   }
+  if (ui.personSheet?.open && personSheetId) renderPersonSheet(personSheetId);
+}
+
+function renderPersonSheet(personId) {
+  const person = byId.get(personId);
+  if (!person || !ui.personSheetContent) return;
+  const focusKey = ui.personSheetContent.contains(document.activeElement)
+    ? document.activeElement.dataset.profileFocus || null
+    : null;
+  const parent = person.parentId ? byId.get(person.parentId) : null;
+  const children = childrenById.get(person.id) || [];
+  const lineage = ancestors(person.id).map(id => byId.get(id)).filter(Boolean).reverse();
+  const branchAnchor = lineage.find(item => item.generation === Math.min(2, fullDataDepth));
+
+  const summary = document.createElement('section');
+  summary.className = 'person-sheet-summary';
+  const photoButton = document.createElement('button');
+  photoButton.type = 'button';
+  photoButton.className = 'person-sheet-photo-button';
+  photoButton.setAttribute('aria-label', hasDisplayPhoto(person) ? `Открыть фото: ${person.name}` : `Фото не добавлено: ${person.name}`);
+  const photo = createAvatar(person, 'person-sheet-photo');
+  photoButton.append(photo);
+  photoButton.disabled = !hasDisplayPhoto(person);
+  photoButton.addEventListener('click', () => openPhotoLightbox(person));
+  const copy = document.createElement('div');
+  copy.className = 'person-sheet-summary-copy';
+  const name = document.createElement('strong'); name.textContent = person.name;
+  const dates = document.createElement('span'); dates.textContent = `${formatYears(person)} · поколение ${person.generation}`;
+  const branch = document.createElement('span'); branch.textContent = branchAnchor ? `Линия ${branchAnchor.name}` : 'Основная линия';
+  copy.append(name, dates, branch);
+  summary.append(photoButton, copy);
+
+  const facts = document.createElement('dl'); facts.className = 'person-sheet-facts';
+  const values = [
+    ['Отец', parent?.name || 'Не указан'],
+    ['Сыновья', children.length ? children.map(child => child.name).join(', ') : 'Нет'],
+    ['Тейп', String(person.teip ?? '').trim() || 'Не указан']
+  ];
+  for (const [label, value] of values) {
+    const row = document.createElement('div');
+    const term = document.createElement('dt'); term.textContent = label;
+    const detail = document.createElement('dd'); detail.textContent = value;
+    row.append(term, detail); facts.append(row);
+  }
+
+  const bio = document.createElement('p');
+  bio.className = `person-sheet-bio${String(person.bio || '').trim() ? '' : ' is-empty'}`;
+  bio.textContent = String(person.bio || '').trim() || 'Краткой биографии пока нет.';
+
+  const selfButton = document.createElement('button');
+  selfButton.type = 'button'; selfButton.className = 'person-sheet-self';
+  const isSelf = person.id === myPersonId;
+  selfButton.setAttribute('aria-pressed', String(isSelf));
+  selfButton.textContent = isSelf ? '✓ Это вы · сбросить отметку' : 'Отметить как меня';
+  selfButton.addEventListener('click', () => isSelf ? clearSelfPerson() : setSelfPerson(person.id));
+
+  const sections = [summary, facts, bio, selfButton];
+  if (canEditDraft()) {
+    const editorSection = document.createElement('section'); editorSection.className = 'person-sheet-section';
+    const editorTitle = document.createElement('h3'); editorTitle.textContent = 'Изменить данные';
+    const editor = buildEditControls(person); editor.open = true;
+    editorSection.append(editorTitle, editor);
+    sections.push(editorSection);
+  }
+  if (localTreeDraft) {
+    const mediaSection = document.createElement('section'); mediaSection.className = 'person-sheet-section';
+    const mediaTitle = document.createElement('h3'); mediaTitle.textContent = 'Фотография';
+    mediaSection.append(mediaTitle, buildLocalPhotoControls(person));
+    sections.push(mediaSection);
+  }
+
+  const actions = document.createElement('div'); actions.className = 'person-sheet-actions';
+  const relatives = document.createElement('button'); relatives.type = 'button'; relatives.className = 'person-sheet-link';
+  relatives.textContent = 'Открыть родственников и связи';
+  relatives.addEventListener('click', () => {
+    closePersonSheet();
+    selectedId = person.id;
+    renderProfile('relatives');
+    if (window.matchMedia('(max-width: 700px)').matches) ui.app.classList.add('profile-open');
+  });
+  actions.append(relatives);
+  sections.push(actions);
+
+  ui.personSheetTitle.textContent = person.name || 'Человек';
+  ui.personSheetContent.replaceChildren(...sections);
+  if (focusKey) {
+    const focusTarget = [...ui.personSheetContent.querySelectorAll('[data-profile-focus]')]
+      .find(candidate => candidate.dataset.profileFocus === focusKey && !candidate.disabled && !candidate.hidden);
+    focusTarget?.focus({ preventScroll: true });
+  }
+}
+
+function openPersonSheet(personId) {
+  if (!byId.has(personId) || !ui.personSheet) return;
+  personSheetId = personId;
+  if (selectedId !== personId) {
+    selectedId = personId;
+    ui.nodes.querySelectorAll('.person-node.selected').forEach(node => node.classList.remove('selected'));
+    ui.nodes.querySelector(`[data-person-id="${CSS.escape(personId)}"]`)?.classList.add('selected');
+    if (currentConnectorLayout) currentConnectorLayout.selectedRoute = new Set(ancestors(personId));
+    renderTreeConnectors();
+    renderProfile(currentProfileTab);
+  }
+  renderPersonSheet(personId);
+  if (!ui.personSheet.open) ui.personSheet.showModal();
+}
+
+function closePersonSheet() {
+  if (ui.personSheet?.open) { ui.personSheet.close(); return; }
+  personSheetId = null;
+  renderProfile(currentProfileTab);
 }
 
 function addField(form, labelText, name, value = '', type = 'text') {
   const label = document.createElement('label'); label.className = 'mock-edit-field'; label.append(document.createTextNode(labelText));
-  const input = document.createElement('input'); input.name = name; input.type = type; input.value = value == null ? '' : String(value);
+  const input = name === 'bio' ? document.createElement('textarea') : document.createElement('input');
+  if (input instanceof HTMLInputElement) input.type = type;
+  input.name = name; input.value = value == null ? '' : String(value);
   input.dataset.profileFocus = `field:${name}`;
-  if (name === 'born' || name === 'died') input.inputMode = 'numeric';
+  if (name === 'bio') { input.maxLength = 800; input.rows = 4; }
+  if (name === 'born' || name === 'died') {
+    input.inputMode = 'numeric'; input.maxLength = 4; input.pattern = '[0-9]{3,4}';
+  }
   label.append(input); form.append(label); return input;
 }
 
-function squarePhotoBlob(source, size, quality, mimeType) {
-  const side = Math.min(source.width, source.height);
-  const sx = Math.floor((source.width - side) / 2);
-  const sy = Math.floor((source.height - side) / 2);
+function addYearClearButton(form, fieldName, input) {
+  const button = document.createElement('button');
+  button.type = 'button'; button.className = 'field-clear'; button.textContent = 'Очистить год';
+  button.setAttribute('aria-label', `Очистить поле: ${fieldName === 'born' ? 'год рождения' : 'год смерти'}`);
+  button.addEventListener('click', () => {
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  });
+  input.parentElement.append(button);
+  return button;
+}
+
+function squarePhotoBlob(source, size, quality, mimeType, crop = {}) {
+  const cropSize = crop.cropSize || 640;
+  const baseScale = Math.max(cropSize / source.width, cropSize / source.height);
+  const zoom = Math.max(1, Math.min(3, Number(crop.zoom) || 1));
+  const imageWidth = source.width * baseScale * zoom;
+  const imageHeight = source.height * baseScale * zoom;
+  const maxOx = Math.max(0, (imageWidth - cropSize) / 2);
+  const maxOy = Math.max(0, (imageHeight - cropSize) / 2);
+  const ox = Math.max(-maxOx, Math.min(maxOx, Number(crop.ox) || 0));
+  const oy = Math.max(-maxOy, Math.min(maxOy, Number(crop.oy) || 0));
+  const outputScale = size / cropSize;
+  const drawnWidth = imageWidth * outputScale;
+  const drawnHeight = imageHeight * outputScale;
+  const dx = ((cropSize - imageWidth) / 2 + ox) * outputScale;
+  const dy = ((cropSize - imageHeight) / 2 + oy) * outputScale;
   const canvas = document.createElement('canvas');
   canvas.width = size;
   canvas.height = size;
   const context = canvas.getContext('2d', { alpha: false });
   if (!context) return Promise.reject(new Error('Не удалось подготовить изображение.'));
-  context.drawImage(source, sx, sy, side, side, 0, 0, size, size);
+  context.drawImage(source, dx, dy, drawnWidth, drawnHeight);
   return new Promise((resolve, reject) => canvas.toBlob(blob => {
     if (blob) resolve(blob);
     else reject(new Error('Не удалось сжать фотографию.'));
   }, mimeType, quality));
 }
 
-function squareJpegBlob(source, size, quality) {
-  return squarePhotoBlob(source, size, quality, 'image/jpeg');
+function squareJpegBlob(source, size, quality, crop) {
+  return squarePhotoBlob(source, size, quality, 'image/jpeg', crop);
 }
 
-function squareWebpBlob(source, size, quality) {
-  return squarePhotoBlob(source, size, quality, 'image/webp');
+function squareWebpBlob(source, size, quality, crop) {
+  return squarePhotoBlob(source, size, quality, 'image/webp', crop);
 }
 
-async function localPhotoVariants(file) {
-  if (!file?.type?.startsWith('image/')) throw new Error('Выберите файл изображения.');
-  if (file.size > 20 * 1024 * 1024) throw new Error('Размер фотографии должен быть меньше 20 МБ.');
-  if (!globalThis.createImageBitmap) throw new Error('Этот браузер не поддерживает обработку фотографий.');
-  const bitmap = await createImageBitmap(file);
+function clampPhotoCrop(state) {
+  if (!state?.bitmap) return;
+  const cropSize = ui.photoCropCanvas.width;
+  const scale = Math.max(cropSize / state.bitmap.width, cropSize / state.bitmap.height) * state.zoom;
+  const maxOx = Math.max(0, (state.bitmap.width * scale - cropSize) / 2);
+  const maxOy = Math.max(0, (state.bitmap.height * scale - cropSize) / 2);
+  state.ox = Math.max(-maxOx, Math.min(maxOx, state.ox));
+  state.oy = Math.max(-maxOy, Math.min(maxOy, state.oy));
+}
+
+function renderPhotoCrop() {
+  const state = photoCropState;
+  const canvas = ui.photoCropCanvas;
+  const context = canvas?.getContext('2d');
+  if (!state?.bitmap || !context) return;
+  clampPhotoCrop(state);
+  const size = canvas.width;
+  const scale = Math.max(size / state.bitmap.width, size / state.bitmap.height) * state.zoom;
+  const width = state.bitmap.width * scale;
+  const height = state.bitmap.height * scale;
+  context.clearRect(0, 0, size, size);
+  context.fillStyle = '#050b0e';
+  context.fillRect(0, 0, size, size);
+  context.drawImage(state.bitmap, (size - width) / 2 + state.ox, (size - height) / 2 + state.oy, width, height);
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, size, size);
+  context.arc(size / 2, size / 2, size * 0.46, 0, Math.PI * 2, true);
+  context.fillStyle = 'rgba(3, 9, 16, 0.58)';
+  context.fill('evenodd');
+  context.restore();
+  context.beginPath();
+  context.arc(size / 2, size / 2, size * 0.46, 0, Math.PI * 2);
+  context.strokeStyle = '#e8d0a0';
+  context.lineWidth = Math.max(2, size * 0.004);
+  context.stroke();
+  ui.photoCropZoom.value = String(state.zoom);
+  ui.photoCropZoomValue.textContent = `${state.zoom.toFixed(1)}×`;
+}
+
+async function localPhotoVariants(bitmap, crop) {
+  const [fullWebp, thumbWebp] = await Promise.all([
+    squareWebpBlob(bitmap, 800, 0.82, crop),
+    squareWebpBlob(bitmap, 320, 0.8, crop)
+  ]);
+  if (fullWebp.type === 'image/webp' && thumbWebp.type === 'image/webp') return { full: fullWebp, thumb: thumbWebp };
+
+  // Unsupported WebP encoders return another format; keep the preview usable with JPEG.
+  const [full, thumb] = await Promise.all([
+    squareJpegBlob(bitmap, 800, 0.84, crop),
+    squareJpegBlob(bitmap, 320, 0.82, crop)
+  ]);
+  return { full, thumb };
+}
+
+async function openPhotoCrop(personId, file) {
+  if (!localTreeDraft || !file) return;
+  if (!file.type?.startsWith('image/')) { announce('Выберите файл изображения.'); return; }
+  if (file.size > 20 * 1024 * 1024) { announce('Размер фотографии должен быть меньше 20 МБ.'); return; }
+  if (!globalThis.createImageBitmap) { announce('Этот браузер не поддерживает обработку фотографий.'); return; }
   try {
-    const [fullWebp, thumbWebp] = await Promise.all([
-      squareWebpBlob(bitmap, 800, 0.82),
-      squareWebpBlob(bitmap, 320, 0.8)
-    ]);
-    if (fullWebp.type === 'image/webp' && thumbWebp.type === 'image/webp') {
-      return { full: fullWebp, thumb: thumbWebp };
-    }
-
-    // Unsupported WebP encoders return another format; keep the preview usable with JPEG.
-    const [full, thumb] = await Promise.all([
-      squareJpegBlob(bitmap, 800, 0.84),
-      squareJpegBlob(bitmap, 320, 0.82)
-    ]);
-    return { full, thumb };
-  } finally {
-    bitmap.close?.();
+    photoCropState?.bitmap?.close?.();
+    const bitmap = await createImageBitmap(file);
+    const person = byId.get(personId);
+    if (!person) { bitmap.close?.(); return; }
+    photoCropState = { personId, bitmap, zoom: 1, ox: 0, oy: 0, pointers: new Map(), pinchStart: null };
+    ui.photoCropTitle.textContent = `Кадрирование · ${person.name}`;
+    ui.photoCropStatus.textContent = '';
+    ui.photoCropClose.disabled = false;
+    ui.photoCropCancel.disabled = false;
+    ui.photoCropApply.disabled = false;
+    renderPhotoCrop();
+    if (!ui.photoCrop.open) ui.photoCrop.showModal();
+  } catch (error) {
+    announce(error?.message || 'Не удалось открыть фотографию.');
   }
 }
 
-async function stageLocalPersonPhoto(personId, file) {
-  if (!localTreeDraft || !file) return;
+function closePhotoCrop() {
+  const state = photoCropState;
+  if (state?.processing) return;
+  photoCropState = null;
+  state?.bitmap?.close?.();
+  if (ui.photoCrop?.open) ui.photoCrop.close();
+}
+
+async function applyPhotoCrop() {
+  const state = photoCropState;
+  if (!state?.bitmap || !localTreeDraft) return;
+  state.processing = true;
+  ui.photoCropClose.disabled = true;
+  ui.photoCropCancel.disabled = true;
+  ui.photoCropApply.disabled = true;
+  ui.photoCropStatus.textContent = 'Подготавливаем фото…';
   try {
-    const photo = await localPhotoVariants(file);
+    const photo = await localPhotoVariants(state.bitmap, { zoom: state.zoom, ox: state.ox, oy: state.oy, cropSize: ui.photoCropCanvas.width });
+    const personId = state.personId;
+    state.processing = false;
+    closePhotoCrop();
+    await stageLocalPersonPhoto(personId, photo);
+  } catch (error) {
+    state.processing = false;
+    ui.photoCropClose.disabled = false;
+    ui.photoCropCancel.disabled = false;
+    ui.photoCropApply.disabled = false;
+    ui.photoCropStatus.textContent = error?.message || 'Не удалось подготовить фотографию.';
+  }
+}
+
+function bindPhotoCropControls() {
+  ui.photoCropZoom.addEventListener('input', () => {
+    if (!photoCropState) return;
+    photoCropState.zoom = Math.max(1, Math.min(3, Number(ui.photoCropZoom.value) || 1));
+    renderPhotoCrop();
+  });
+  ui.photoCropCanvas.addEventListener('pointerdown', event => {
+    if (!photoCropState?.bitmap) return;
+    ui.photoCropCanvas.setPointerCapture(event.pointerId);
+    photoCropState.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (photoCropState.pointers.size === 1) {
+      photoCropState.lastPointer = { x: event.clientX, y: event.clientY };
+      ui.photoCropCanvas.classList.add('is-dragging');
+    } else if (photoCropState.pointers.size === 2) {
+      const [a, b] = [...photoCropState.pointers.values()];
+      photoCropState.pinchStart = { distance: Math.hypot(a.x - b.x, a.y - b.y) || 1, zoom: photoCropState.zoom };
+      photoCropState.lastPointer = null;
+      ui.photoCropCanvas.classList.remove('is-dragging');
+    }
+    event.preventDefault();
+  });
+  ui.photoCropCanvas.addEventListener('pointermove', event => {
+    const state = photoCropState;
+    if (!state?.pointers.has(event.pointerId)) return;
+    state.pointers.set(event.pointerId, { x: event.clientX, y: event.clientY });
+    if (state.pointers.size >= 2 && state.pinchStart) {
+      const [a, b] = [...state.pointers.values()];
+      state.zoom = Math.max(1, Math.min(3, state.pinchStart.zoom * Math.hypot(a.x - b.x, a.y - b.y) / state.pinchStart.distance));
+    } else if (state.pointers.size === 1 && state.lastPointer) {
+      const ratio = ui.photoCropCanvas.width / Math.max(1, ui.photoCropCanvas.getBoundingClientRect().width);
+      state.ox += (event.clientX - state.lastPointer.x) * ratio;
+      state.oy += (event.clientY - state.lastPointer.y) * ratio;
+      state.lastPointer = { x: event.clientX, y: event.clientY };
+    }
+    renderPhotoCrop();
+    event.preventDefault();
+  });
+  const endCropPointer = event => {
+    if (!photoCropState) return;
+    photoCropState.pointers.delete(event.pointerId);
+    if (photoCropState.pointers.size === 1) {
+      const remaining = [...photoCropState.pointers.values()][0];
+      photoCropState.lastPointer = { ...remaining };
+      photoCropState.pinchStart = null;
+      ui.photoCropCanvas.classList.add('is-dragging');
+    } else {
+      photoCropState.lastPointer = null;
+      photoCropState.pinchStart = null;
+      ui.photoCropCanvas.classList.remove('is-dragging');
+    }
+  };
+  ui.photoCropCanvas.addEventListener('pointerup', endCropPointer);
+  ui.photoCropCanvas.addEventListener('pointercancel', endCropPointer);
+  ui.photoCropCanvas.addEventListener('wheel', event => {
+    if (!photoCropState) return;
+    event.preventDefault();
+    photoCropState.zoom = Math.max(1, Math.min(3, photoCropState.zoom + (event.deltaY < 0 ? 0.08 : -0.08)));
+    renderPhotoCrop();
+  }, { passive: false });
+  ui.photoCropApply.addEventListener('click', () => void applyPhotoCrop());
+  ui.photoCropCancel.addEventListener('click', closePhotoCrop);
+  ui.photoCropClose.addEventListener('click', closePhotoCrop);
+  ui.photoCrop.addEventListener('cancel', event => { event.preventDefault(); closePhotoCrop(); });
+  ui.photoCrop.addEventListener('click', event => { if (event.target === ui.photoCrop) closePhotoCrop(); });
+}
+
+async function stageLocalPersonPhoto(personId, photo) {
+  if (!localTreeDraft || !photo) return;
+  try {
     const oldUrl = localPhotoUrls.get(personId);
     if (oldUrl) URL.revokeObjectURL(oldUrl);
+    const oldFullUrl = localPhotoFullUrls.get(personId);
+    if (oldFullUrl) URL.revokeObjectURL(oldFullUrl);
     localPhotoUrls.set(personId, URL.createObjectURL(photo.thumb));
+    localPhotoFullUrls.set(personId, URL.createObjectURL(photo.full));
     pendingLocalPhotoWrites.set(personId, { personId, ...photo });
     pendingLocalPhotoDeletes.delete(personId);
     setPersonPhotoKey(editableDraftRoot(), personId, `local-${Date.now()}`);
@@ -974,7 +1348,10 @@ function removeLocalPersonPhoto(person) {
   if (!window.confirm(`Удалить фотографию ${person.name} из ${hasRemoteTreeWriteAccess() ? 'черновика древа' : 'локального черновика'}?`)) return;
   const oldUrl = localPhotoUrls.get(person.id);
   if (oldUrl) URL.revokeObjectURL(oldUrl);
+  const oldFullUrl = localPhotoFullUrls.get(person.id);
+  if (oldFullUrl) URL.revokeObjectURL(oldFullUrl);
   localPhotoUrls.delete(person.id);
+  localPhotoFullUrls.delete(person.id);
   pendingLocalPhotoWrites.delete(person.id);
   pendingLocalPhotoDeletes.add(person.id);
   setPersonPhotoKey(editableDraftRoot(), person.id, null);
@@ -1005,7 +1382,7 @@ function buildLocalPhotoControls(person) {
   choose.addEventListener('click', () => input.click());
   input.addEventListener('change', () => {
     const [file] = input.files || [];
-    void stageLocalPersonPhoto(person.id, file);
+    void openPhotoCrop(person.id, file);
     input.value = '';
   });
   actions.append(input, choose);
@@ -1073,10 +1450,13 @@ function buildEditControls(person) {
   title.textContent = syntheticFixture ? 'Редактировать демо-запись'
     : hasRemoteTreeWriteAccess() ? 'Редактировать данные древа' : 'Редактировать данные в локальном черновике'; section.append(title);
   const form = document.createElement('form'); form.className = 'mock-edit-form';
-  addField(form, 'Имя', 'name', person.name);
+  const nameInput = addField(form, 'Полное имя', 'name', person.name);
+  nameInput.required = true;
   addField(form, 'Тейп', 'teip', person.teip || '');
-  addField(form, 'Год рождения', 'born', person.born, 'text');
-  addField(form, 'Год смерти', 'died', person.died, 'text');
+  const bornInput = addField(form, 'Год рождения', 'born', person.born, 'text');
+  addYearClearButton(form, 'born', bornInput);
+  const diedInput = addField(form, 'Год смерти', 'died', person.died, 'text');
+  addYearClearButton(form, 'died', diedInput);
   addField(form, 'Биография', 'bio', person.bio || '');
   if (syntheticFixture) {
     const failureLabel = document.createElement('label'); failureLabel.className = 'mock-edit-failure';
@@ -1132,6 +1512,22 @@ function buildEditControls(person) {
 function buildRelationshipControls(person) {
   const section = document.createElement('section'); section.className = 'mock-editor';
   const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : hasRemoteTreeWriteAccess() ? 'Связи семейного древа' : 'Связи локальной копии'; section.append(title);
+  const dragToggle = document.createElement('button'); dragToggle.type = 'button';
+  dragToggle.textContent = relationshipDragEnabled ? 'Завершить перенос перетаскиванием' : 'Включить перенос карточек';
+  dragToggle.setAttribute('aria-pressed', String(relationshipDragEnabled));
+  dragToggle.addEventListener('click', () => {
+    relationshipDragEnabled = !relationshipDragEnabled;
+    drawTree();
+    renderProfile('relatives');
+    announce(relationshipDragEnabled
+      ? 'Режим переноса включён. Перетащите карточку на нового отца и подтвердите связь.'
+      : 'Режим переноса выключен.');
+  });
+  const dragNote = document.createElement('p'); dragNote.className = 'reparent-mode-note';
+  dragNote.textContent = relationshipDragEnabled
+    ? 'Карточки можно переносить только после проверки новой связи. Корень переносить нельзя; самого человека и его потомка нельзя назначить новым отцом.'
+    : 'Перетаскивание включается отдельно, чтобы случайно не изменить связь при перемещении древа.';
+  section.append(dragToggle, dragNote);
   const addForm = document.createElement('form'); addForm.className = 'mock-edit-form';
   addForm.dataset.addChildForm = 'true';
   const idNote = document.createElement('p'); idNote.className = 'mock-edit-status';
@@ -1208,7 +1604,10 @@ function buildRelationshipControls(person) {
       if (localTreeDraft && removedPerson?.hasPhoto) {
         const oldUrl = localPhotoUrls.get(target.value);
         if (oldUrl) URL.revokeObjectURL(oldUrl);
+        const oldFullUrl = localPhotoFullUrls.get(target.value);
+        if (oldFullUrl) URL.revokeObjectURL(oldFullUrl);
         localPhotoUrls.delete(target.value);
+        localPhotoFullUrls.delete(target.value);
         pendingLocalPhotoWrites.delete(target.value);
         pendingLocalPhotoDeletes.add(target.value);
       }
@@ -1511,7 +1910,9 @@ async function resetFixture() {
       pendingLocalPhotoDeletes.clear();
       localMediaStatus = '';
       for (const url of localPhotoUrls.values()) URL.revokeObjectURL(url);
+      for (const url of localPhotoFullUrls.values()) URL.revokeObjectURL(url);
       localPhotoUrls.clear();
+      localPhotoFullUrls.clear();
     } catch (error) {
       editStatus = error?.code === 'LOCAL_DRAFT_CONFLICT' ? 'conflict' : 'error';
       localDraftPersistenceError = error?.message || '';
@@ -2375,6 +2776,17 @@ function populateGenerationFilters() {
 }
 
 function bindControls() {
+  bindPhotoCropControls();
+  ui.personSheetClose.addEventListener('click', closePersonSheet);
+  ui.personSheet.addEventListener('close', () => {
+    const hadPerson = Boolean(personSheetId);
+    personSheetId = null;
+    if (hadPerson) renderProfile(currentProfileTab);
+  });
+  ui.personSheet.addEventListener('click', event => { if (event.target === ui.personSheet) closePersonSheet(); });
+  ui.photoLightboxClose.addEventListener('click', closePhotoLightbox);
+  ui.photoLightbox.addEventListener('cancel', event => { event.preventDefault(); closePhotoLightbox(); });
+  ui.photoLightbox.addEventListener('click', event => { if (event.target === ui.photoLightbox) closePhotoLightbox(); });
   ui.miniMapToggle.addEventListener('click', () => {
     setMiniMapCollapsed(!ui.miniMap.classList.contains('collapsed'));
   });
@@ -2545,6 +2957,7 @@ function bindControls() {
   });
   document.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
+    if (ui.personSheet.open || ui.photoCrop.open || ui.photoLightbox.open) return;
     if (ui.app.classList.contains('profile-open')) {
       ui.app.classList.remove('profile-open');
       ui.mobileSelected.focus();
@@ -2655,6 +3068,13 @@ function bindCameraGestures() {
   };
   const beginPinch = () => {
     if (pointers.size < 2) return;
+    for (const pointer of pointers.values()) {
+      clearTimeout(pointer.longPressTimer);
+      pointer.longPressTimer = 0;
+      clearReparentDrag(pointer);
+      pointer.reparentDragging = false;
+      pointer.dragging = true;
+    }
     markCameraMoving();
     const start = pair();
     const bounds = ui.viewport.getBoundingClientRect();
@@ -2676,30 +3096,135 @@ function bindCameraGestures() {
       layout: { ...currentCameraLayout }
     };
   };
+  const cancelLongPress = pointer => {
+    clearTimeout(pointer?.longPressTimer);
+    if (pointer) pointer.longPressTimer = 0;
+  };
+  const clearReparentDrag = pointer => {
+    pointer?.ghost?.remove();
+    pointer?.sourceNode?.classList.remove('reparent-source');
+    pointer?.sourceNode?.classList.remove('reparent-drop-target', 'reparent-drop-invalid');
+    document.querySelectorAll('.person-node.reparent-drop-target,.person-node.reparent-drop-invalid')
+      .forEach(node => node.classList.remove('reparent-drop-target', 'reparent-drop-invalid'));
+    if (pointer) { pointer.ghost = null; pointer.dropTargetId = null; }
+  };
+  const startReparentDrag = (pointer, clientX, clientY) => {
+    const sourceNode = pointer.captureTarget;
+    if (!sourceNode?.isConnected) return;
+    const bounds = sourceNode.getBoundingClientRect();
+    const ghost = sourceNode.cloneNode(true);
+    ghost.classList.remove('selected', 'reparent-draggable');
+    ghost.classList.add('person-reparent-ghost');
+    ghost.style.left = `${clientX}px`;
+    ghost.style.top = `${clientY}px`;
+    ghost.style.width = `${bounds.width}px`;
+    ghost.style.height = `${bounds.height}px`;
+    document.body.append(ghost);
+    sourceNode.classList.add('reparent-source');
+    pointer.sourceNode = sourceNode;
+    pointer.ghost = ghost;
+    pointer.reparentDragging = true;
+  };
+  const updateReparentDrag = (pointer, clientX, clientY) => {
+    if (!pointer.ghost) return;
+    pointer.ghost.style.left = `${clientX}px`;
+    pointer.ghost.style.top = `${clientY}px`;
+    document.querySelectorAll('.person-node.reparent-drop-target,.person-node.reparent-drop-invalid')
+      .forEach(node => node.classList.remove('reparent-drop-target', 'reparent-drop-invalid'));
+    pointer.dropTargetId = null;
+    const target = document.elementFromPoint(clientX, clientY)?.closest('.person-node');
+    if (!target || target.dataset.personId === pointer.personId || !editableDraftRoot()) return;
+    if (byId.get(pointer.personId)?.parentId === target.dataset.personId) return;
+    try {
+      reparentPerson(cloneTree(editableDraftRoot()), pointer.personId, target.dataset.personId);
+      target.classList.add('reparent-drop-target');
+      pointer.dropTargetId = target.dataset.personId;
+    } catch {
+      target.classList.add('reparent-drop-invalid');
+    }
+  };
+  const applyReparentDrop = (personId, parentId) => {
+    const child = byId.get(personId);
+    const oldParent = child?.parentId ? byId.get(child.parentId) : null;
+    const newParent = byId.get(parentId);
+    if (!child || !newParent || !editableDraftRoot() || child.parentId === parentId) return;
+    try {
+      reparentPerson(cloneTree(editableDraftRoot()), personId, parentId);
+    } catch (error) {
+      announce(error?.message || 'Нельзя применить эту родственную связь.');
+      return;
+    }
+    const preview = `Предпросмотр переноса:\n«${child.name}»\nОтец: ${oldParent?.name || 'не указан'} → ${newParent.name}.`;
+    if (!window.confirm(`${preview}\n\nПрименить новую связь?`)) return;
+    try {
+      reparentPerson(editableDraftRoot(), personId, parentId);
+      markRelationshipDirty();
+    } catch (error) {
+      announce(error?.message || 'Не удалось перенести карточку.');
+    }
+  };
   ui.viewport.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;
     suppressPersonClick = null;
+    clearTimeout(suppressPersonClickTimer);
     const personNode = event.target.closest('.person-node');
     const captureTarget = personNode || ui.viewport;
-    pointers.set(event.pointerId, {
+    const pointer = {
       x: event.clientX, y: event.clientY,
       startX: event.clientX, startY: event.clientY,
       dragging: false,
       personId: personNode?.dataset.personId || null,
+      longPressFired: false,
+      reparentCandidate: Boolean(personNode && relationshipDragEnabled && canEditDraft() && personNode.dataset.personId !== fixtureRoot?.id),
       captureTarget
-    });
+    };
+    pointers.set(event.pointerId, pointer);
+    if (pointer.personId) {
+      pointer.longPressTimer = window.setTimeout(() => {
+        if (pointers.get(event.pointerId) !== pointer || pointer.dragging || pointers.size !== 1) return;
+        pointer.longPressTimer = 0;
+        pointer.longPressFired = true;
+        suppressNextPersonClick(pointer.personId);
+        try { navigator.vibrate?.(12); } catch { /* vibration is optional */ }
+        openPersonSheet(pointer.personId);
+      }, 750);
+    }
     captureTarget.setPointerCapture(event.pointerId);
     if (pointers.size === 2) beginPinch();
+  });
+  ui.viewport.addEventListener('contextmenu', event => {
+    const personNode = event.target.closest('.person-node');
+    if (!personNode) return;
+    event.preventDefault();
+    event.stopPropagation();
+    suppressNextPersonClick(personNode.dataset.personId);
+    openPersonSheet(personNode.dataset.personId);
   });
   ui.viewport.addEventListener('pointermove', event => {
     const previous = pointers.get(event.pointerId);
     if (!previous) return;
     if (pointers.size === 1) {
       const distance = Math.hypot(event.clientX - previous.startX, event.clientY - previous.startY);
-      if (!previous.dragging && distance >= 5) {
+      if (!previous.dragging && distance > 18) {
+        cancelLongPress(previous);
+        if (previous.reparentCandidate) {
+          startReparentDrag(previous, event.clientX, event.clientY);
+          previous.dragging = true;
+          previous.x = event.clientX;
+          previous.y = event.clientY;
+          updateReparentDrag(previous, event.clientX, event.clientY);
+          event.preventDefault();
+          return;
+        }
         previous.dragging = true;
         markCameraMoving();
         ui.viewport.scrollBy({ left: previous.startX - event.clientX, top: previous.startY - event.clientY, behavior: 'instant' });
+      } else if (previous.reparentDragging) {
+        updateReparentDrag(previous, event.clientX, event.clientY);
+        previous.x = event.clientX;
+        previous.y = event.clientY;
+        event.preventDefault();
+        return;
       } else if (previous.dragging) {
         markCameraMoving();
         ui.viewport.scrollBy({ left: previous.x - event.clientX, top: previous.y - event.clientY, behavior: 'instant' });
@@ -2707,7 +3232,12 @@ function bindCameraGestures() {
       previous.x = event.clientX;
       previous.y = event.clientY;
     } else {
-      for (const pointer of pointers.values()) pointer.dragging = true;
+      for (const pointer of pointers.values()) {
+        cancelLongPress(pointer);
+        clearReparentDrag(pointer);
+        pointer.reparentDragging = false;
+        pointer.dragging = true;
+      }
       markCameraMoving();
       previous.x = event.clientX;
       previous.y = event.clientY;
@@ -2724,12 +3254,12 @@ function bindCameraGestures() {
   });
   const endPan = event => {
     const pointer = pointers.get(event.pointerId);
-    if (pointer?.dragging && pointer.personId) {
-      suppressPersonClick = pointer.personId;
-      window.setTimeout(() => {
-        if (suppressPersonClick === pointer.personId) suppressPersonClick = null;
-      }, 450);
-    }
+    cancelLongPress(pointer);
+    if (pointer?.reparentDragging && event.type === 'pointerup') updateReparentDrag(pointer, event.clientX, event.clientY);
+    const wasReparentDragging = Boolean(pointer?.reparentDragging);
+    const dropTargetId = pointer?.dropTargetId || null;
+    if ((pointer?.dragging && pointer.personId) || wasReparentDragging || pointer?.longPressFired) suppressNextPersonClick(pointer.personId);
+    clearReparentDrag(pointer);
     const wasPinching = pointers.size >= 2;
     if (pointer?.dragging || wasPinching) markCameraMoving();
     if (wasPinching) pinchUpdates.flush();
@@ -2738,6 +3268,7 @@ function bindCameraGestures() {
     else if (pointers.size < 2) pinchStart = null;
     const captureTarget = pointer?.captureTarget || ui.viewport;
     if (captureTarget.hasPointerCapture(event.pointerId)) captureTarget.releasePointerCapture(event.pointerId);
+    if (wasReparentDragging && event.type === 'pointerup' && dropTargetId) applyReparentDrop(pointer.personId, dropTargetId);
   };
   ui.viewport.addEventListener('pointerup', endPan);
   ui.viewport.addEventListener('pointercancel', endPan);
