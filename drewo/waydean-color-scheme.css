@@ -776,21 +776,21 @@ html[data-color-scheme="light"] .rail-stat-copy small {
 /* SVG strokes otherwise shrink with the canvas transform and fade on photo detail. */
 html[data-color-scheme="light"] body[data-theme] .graph .tree-line {
   vector-effect: non-scaling-stroke;
-  stroke: #9b6d25 !important;
-  stroke-width: 2px !important;
+  stroke: #c18a2e !important;
+  stroke-width: 4px !important;
   stroke-linecap: round;
   stroke-linejoin: round;
-  opacity: .96 !important;
-  filter: drop-shadow(0 0 1px rgba(255, 248, 227, .94)) drop-shadow(0 0 2px rgba(37, 28, 14, .72)) !important;
+  opacity: .98 !important;
+  filter: drop-shadow(0 0 3px rgba(17, 21, 19, .98)) drop-shadow(0 0 1px rgba(255, 249, 229, .98)) !important;
 }
 
 html[data-color-scheme="light"] body[data-theme] .graph .tree-line.active,
 html[data-color-scheme="light"] body[data-theme] .graph .tree-line.lod-route {
-  stroke: #a87522 !important;
-  stroke-width: 2.8px !important;
+  stroke: #f3cf78 !important;
+  stroke-width: 5.25px !important;
   opacity: 1 !important;
 }
 
 html[data-color-scheme="light"] body[data-theme] .graph .tree-line.dimmed {
-  opacity: .46 !important;
+  opacity: .8 !important;
 }
