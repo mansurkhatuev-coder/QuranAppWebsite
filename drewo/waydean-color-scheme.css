@@ -554,3 +554,135 @@ html[data-color-scheme="light"] .appearance-controls select:disabled {
   background: #eee3cf;
   cursor: not-allowed;
 }
+
+/* Readability pass: premium cards kept their cream typography after the
+   light palette changed, leaving text almost invisible on pale surfaces. */
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node {
+  color: #17231f !important;
+  background: #fffdf7 !important;
+  border-color: #70552c !important;
+  box-shadow: 0 4px 14px rgba(39, 35, 27, .22), inset 0 1px 0 #fff !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy,
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy strong {
+  color: #17231f !important;
+  text-shadow: none !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy strong {
+  font-weight: 700 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-copy small {
+  color: #493b23 !important;
+  font-weight: 600 !important;
+  text-shadow: none !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-avatar {
+  background: linear-gradient(145deg, #eee4cf, #d8c8a8) !important;
+  border-color: #8c6b31 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .graph .person-node .node-avatar svg {
+  fill: #514631 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-line {
+  stroke: #59451e !important;
+  stroke-width: 1.5px;
+  opacity: .92 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-line.active {
+  stroke: #422f12 !important;
+  opacity: 1 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] #appearanceBadge {
+  background: #f2e5cb !important;
+  border: 1px solid #94702f !important;
+  color: #4c3817 !important;
+  text-shadow: none !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls,
+html[data-color-scheme="light"] body[data-theme="premium"] .mini-map {
+  background: #fffdf7 !important;
+  color: #25312c !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls button,
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls span,
+html[data-color-scheme="light"] body[data-theme="premium"] .mini-map strong,
+html[data-color-scheme="light"] body[data-theme="premium"] .mini-map span {
+  color: #25312c !important;
+  text-shadow: none !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .tree-controls #whoAmI {
+  background: #f1dfbb !important;
+  border-color: #8e6828 !important;
+  color: #4b3818 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel,
+html[data-color-scheme="light"] body[data-theme="premium"] .rail,
+html[data-color-scheme="light"] body[data-theme="premium"] .popover {
+  color: #202923;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .facts dt,
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .profile-person small,
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .profile-note,
+html[data-color-scheme="light"] body[data-theme="premium"] .rail small,
+html[data-color-scheme="light"] body[data-theme="premium"] .popover small,
+html[data-color-scheme="light"] body[data-theme="premium"] .appearance-heading small,
+html[data-color-scheme="light"] body[data-theme="premium"] .appearance-controls label {
+  color: #4c514b !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .facts dd,
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .profile-person p,
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel button,
+html[data-color-scheme="light"] body[data-theme="premium"] .rail button,
+html[data-color-scheme="light"] body[data-theme="premium"] .popover button,
+html[data-color-scheme="light"] body[data-theme="premium"] .topbar .nav-item,
+html[data-color-scheme="light"] body[data-theme="premium"] .topbar .top-action {
+  color: #202923 !important;
+  text-shadow: none !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .branch-button {
+  background: linear-gradient(135deg, #9a712f, #78551e) !important;
+  border-color: #654715 !important;
+  color: #fffdf7 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .profile-close {
+  background: #f2e7d0 !important;
+  border-color: #927344 !important;
+  color: #42351f !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .self-person-note {
+  color: #454b45 !important;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel .mock-editor-summary {
+  background: #f1e5cc !important;
+  border-color: #9c7840 !important;
+  color: #493719 !important;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+html[data-color-scheme="light"] body[data-theme="premium"] .profile-panel button:disabled,
+html[data-color-scheme="light"] body[data-theme="premium"] .rail button:disabled,
+html[data-color-scheme="light"] body[data-theme="premium"] .popover button:disabled {
+  background: #e8e1d4 !important;
+  border-color: #b8ad9a !important;
+  color: #5d5b54 !important;
+  opacity: 1;
+}
