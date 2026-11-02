@@ -285,7 +285,7 @@ function photoSource(person) {
   if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-') && localPhotoUrls.has(person.id)) {
     return localPhotoUrls.get(person.id);
   }
-  return person.hasPhoto ? `photos/${encodeURIComponent(person.id)}-thumb.jpg` : null;
+  return person.hasPhoto ? `photos/${encodeURIComponent(person.id)}-thumb.webp` : null;
 }
 
 async function restoreLocalPhotoUrls() {
@@ -485,6 +485,7 @@ function clearSelfPerson() {
 
 function createAvatar(person, className = 'avatar') {
   const src = photoSource(person);
+  const fallbackSrc = src?.endsWith('.webp') ? `${src.slice(0, -5)}.jpg` : null;
   const wrapper = document.createElement('span');
   wrapper.className = `${className} ${src ? 'has-photo' : 'is-empty'}`;
   wrapper.setAttribute('aria-hidden', 'true');
@@ -495,11 +496,16 @@ function createAvatar(person, className = 'avatar') {
     image.decoding = 'async';
     image.src = src;
     image.addEventListener('error', () => {
+      if (fallbackSrc && image.dataset.photoFallback !== 'jpeg') {
+        image.dataset.photoFallback = 'jpeg';
+        image.src = fallbackSrc;
+        return;
+      }
       image.remove();
       wrapper.classList.remove('has-photo');
       wrapper.classList.add('is-empty');
       wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
-    }, { once: true });
+    });
     wrapper.append(image);
   } else {
     wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
@@ -890,7 +896,7 @@ function addField(form, labelText, name, value = '', type = 'text') {
   label.append(input); form.append(label); return input;
 }
 
-function squareJpegBlob(source, size, quality) {
+function squarePhotoBlob(source, size, quality, mimeType) {
   const side = Math.min(source.width, source.height);
   const sx = Math.floor((source.width - side) / 2);
   const sy = Math.floor((source.height - side) / 2);
@@ -903,7 +909,15 @@ function squareJpegBlob(source, size, quality) {
   return new Promise((resolve, reject) => canvas.toBlob(blob => {
     if (blob) resolve(blob);
     else reject(new Error('Не удалось сжать фотографию.'));
-  }, 'image/jpeg', quality));
+  }, mimeType, quality));
+}
+
+function squareJpegBlob(source, size, quality) {
+  return squarePhotoBlob(source, size, quality, 'image/jpeg');
+}
+
+function squareWebpBlob(source, size, quality) {
+  return squarePhotoBlob(source, size, quality, 'image/webp');
 }
 
 async function localPhotoVariants(file) {
@@ -912,6 +926,15 @@ async function localPhotoVariants(file) {
   if (!globalThis.createImageBitmap) throw new Error('Этот браузер не поддерживает обработку фотографий.');
   const bitmap = await createImageBitmap(file);
   try {
+    const [fullWebp, thumbWebp] = await Promise.all([
+      squareWebpBlob(bitmap, 800, 0.82),
+      squareWebpBlob(bitmap, 320, 0.8)
+    ]);
+    if (fullWebp.type === 'image/webp' && thumbWebp.type === 'image/webp') {
+      return { full: fullWebp, thumb: thumbWebp };
+    }
+
+    // Unsupported WebP encoders return another format; keep the preview usable with JPEG.
     const [full, thumb] = await Promise.all([
       squareJpegBlob(bitmap, 800, 0.84),
       squareJpegBlob(bitmap, 320, 0.82)
@@ -932,9 +955,10 @@ async function stageLocalPersonPhoto(personId, file) {
     pendingLocalPhotoWrites.set(personId, { personId, ...photo });
     pendingLocalPhotoDeletes.delete(personId);
     setPersonPhotoKey(editableDraftRoot(), personId, `local-${Date.now()}`);
+    const formatStatus = photo.full.type === 'image/webp' ? 'Фото подготовлено в WebP.' : 'Фото подготовлено в JPEG.';
     localMediaStatus = hasRemoteTreeWriteAccess()
-      ? 'Фото подготовлено. Сохраните черновик, затем опубликуйте изменения в древо.'
-      : 'Фото подготовлено. Нажмите «Сохранить локально», чтобы оставить его в браузере.';
+      ? `${formatStatus} Сохраните черновик, затем опубликуйте изменения в древо.`
+      : `${formatStatus} Нажмите «Сохранить локально», чтобы оставить его в браузере.`;
     editStatus = 'dirty';
     rawDraftDirty = false;
     refreshEditableModel();
@@ -1250,6 +1274,18 @@ function blobToDataUrl(blob) {
   });
 }
 
+async function blobToJpegDataUrl(blob, size, quality) {
+  if (blob?.type === 'image/jpeg') return blobToDataUrl(blob);
+  if (!globalThis.createImageBitmap) throw new Error('Этот браузер не поддерживает подготовку фото для публикации.');
+  const bitmap = await createImageBitmap(blob);
+  try {
+    const jpeg = await squareJpegBlob(bitmap, size, quality);
+    return await blobToDataUrl(jpeg);
+  } finally {
+    bitmap.close?.();
+  }
+}
+
 async function collectAccountPhotoChanges() {
   if (!accountBaseTree || !editableDraftRoot()) throw new Error('Не удалось определить исходную версию фото.');
   const before = new Map(flattenTree(accountBaseTree).map(person => [person.id, person]));
@@ -1266,8 +1302,9 @@ async function collectAccountPhotoChanges() {
     }
     photos.push({
       personId,
-      full: await blobToDataUrl(stored.full),
-      thumb: await blobToDataUrl(stored.thumb)
+      // The current publish endpoint writes .jpg files; convert local WebP only at that boundary.
+      full: await blobToJpegDataUrl(stored.full, 800, 0.84),
+      thumb: await blobToJpegDataUrl(stored.thumb, 320, 0.82)
     });
   }
 
