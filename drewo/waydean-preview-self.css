@@ -53,46 +53,7 @@
   line-height: 1.45;
 }
 
-.profile-add-son {
-  display: grid;
-  gap: 7px;
-  margin: 12px 0 8px;
-  padding: 11px;
-  border: 1px solid #d8ad594d;
-  border-radius: 9px;
-  background: linear-gradient(135deg, #d9ad5814, #ffffff05 72%);
-}
-
-.profile-add-son > strong {
-  color: #f1d38b;
-  font-size: 12px;
-}
-
-.profile-add-son > small {
-  color: #a89d84;
-  font-size: 10px;
-  line-height: 1.45;
-}
-
-.profile-add-son-button {
-  width: 100%;
-  min-height: 42px;
-  padding: 9px 12px;
-  border: 1px solid #e1b655;
-  border-radius: 7px;
-  background: linear-gradient(110deg, #8c642b, #2d2517);
-  color: #fff0c4;
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.profile-add-son-button:hover {
-  filter: brightness(1.16);
-}
-
 @media (max-width: 700px) {
   .self-person-button { min-height: 34px; margin-top: 7px; padding: 7px 9px; font-size: 11px; }
   .self-person-note { margin-top: 4px; font-size: 9px; }
-  .profile-add-son { margin: 8px 0 6px; padding: 9px; }
-  .profile-add-son-button { min-height: 44px; }
 }

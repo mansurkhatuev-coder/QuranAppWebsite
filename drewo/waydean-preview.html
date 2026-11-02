@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="robots" content="noindex,nofollow">
-  <meta name="waydean-local-build" content="release-candidate-2026-10-29-lineage-cards-1">
+  <meta name="waydean-local-build" content="release-candidate-2026-11-02-editor-actions-1">
   <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -26,12 +26,12 @@
   <link rel="stylesheet" href="waydean-preview-minimap.css?v=4">
   <link rel="stylesheet" href="waydean-preview-editorial.css?v=cards-dock-5-person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-history.css?v=local-history-1">
-  <link rel="stylesheet" href="waydean-preview-pwa.css?v=account-push-20261028-1">
+  <link rel="stylesheet" href="waydean-preview-pwa.css?v=dialog-close-20261102-1">
   <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
   <link rel="stylesheet" href="waydean-preview-self.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=uniform-markers-20261030-1">
-  <link rel="stylesheet" href="waydean-preview-auth.css?v=family-auth-menu-dialog-20261029-1">
-  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=gesture-nav-fix-1">
+  <link rel="stylesheet" href="waydean-preview-auth.css?v=dialog-close-20261102-1">
+  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=editor-actions-20261102-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
 </head>
 <body>
@@ -230,7 +230,7 @@
     </section>
     <dialog class="account-admin-password-dialog" id="accountAdminPasswordDialog" aria-labelledby="accountAdminPasswordTitle">
       <form id="accountAdminPasswordForm" autocomplete="off">
-        <div class="account-admin-dialog-heading"><small>УПРАВЛЕНИЕ ДОСТУПОМ</small><strong id="accountAdminPasswordTitle">Новый пароль семейного входа</strong></div>
+        <div class="account-admin-dialog-heading"><div><small>УПРАВЛЕНИЕ ДОСТУПОМ</small><strong id="accountAdminPasswordTitle">Новый пароль семейного входа</strong></div><button class="person-sheet-close dialog-close" id="accountAdminPasswordClose" type="button" aria-label="Закрыть окно">×</button></div>
         <p>После смены пароля людям понадобится войти заново.</p>
         <label for="accountAdminNewPassword">Новый пароль</label>
         <input id="accountAdminNewPassword" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
@@ -265,7 +265,7 @@
     </section>
     <dialog class="pwa-push-dialog" id="pwaPushDialog" aria-labelledby="pwaPushDialogTitle">
       <form id="pwaPushForm">
-        <strong id="pwaPushDialogTitle">Пароль редактора</strong>
+        <div class="pwa-push-dialog-heading"><strong id="pwaPushDialogTitle">Пароль редактора</strong><button class="person-sheet-close dialog-close" id="pwaPushClose" type="button" aria-label="Закрыть окно">×</button></div>
         <p id="pwaPushDialogHelp">Подтвердите доступ, чтобы изменить подписку этого устройства на уведомления дерева.</p>
         <label for="pwaPushPassword">Пароль для правок</label>
         <input id="pwaPushPassword" type="password" autocomplete="current-password" required>
@@ -288,12 +288,14 @@
           <div><small>ФОТОГРАФИЯ</small><strong id="photoCropTitle">Кадрирование</strong></div>
           <button class="person-sheet-close" id="photoCropClose" type="button" aria-label="Закрыть кадрирование">×</button>
         </header>
-        <p class="photo-crop-hint">Передвигайте фото, чтобы выбрать кадр. Масштаб меняется жестом, колёсиком или ползунком.</p>
-        <div class="photo-crop-stage"><canvas id="photoCropCanvas" width="640" height="640" aria-label="Предварительный просмотр кадрирования"></canvas></div>
-        <label class="photo-crop-zoom-label" for="photoCropZoom">Масштаб <output id="photoCropZoomValue">1×</output></label>
-        <input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1">
-        <p class="photo-crop-status" id="photoCropStatus" role="status" aria-live="polite"></p>
-        <div class="person-sheet-actions"><button class="primary-action" id="photoCropApply" type="button">Применить фото</button><button class="secondary-action" id="photoCropCancel" type="button">Отмена</button></div>
+        <div class="photo-crop-content">
+          <p class="photo-crop-hint">Передвигайте фото, чтобы выбрать кадр. Масштаб меняется жестом, колёсиком или ползунком.</p>
+          <div class="photo-crop-stage"><canvas id="photoCropCanvas" width="640" height="640" aria-label="Предварительный просмотр кадрирования"></canvas></div>
+          <label class="photo-crop-zoom-label" for="photoCropZoom">Масштаб <output id="photoCropZoomValue">1×</output></label>
+          <input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+          <p class="photo-crop-status" id="photoCropStatus" role="status" aria-live="polite"></p>
+          <div class="person-sheet-actions"><button class="primary-action" id="photoCropApply" type="button">Применить фото</button><button class="secondary-action" id="photoCropCancel" type="button">Отмена</button></div>
+        </div>
       </section>
     </dialog>
     <dialog class="photo-lightbox-dialog" id="photoLightboxDialog" aria-labelledby="photoLightboxTitle">
@@ -349,7 +351,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (new URLSearchParams(window.location.search).get('view') !== 'video-export') {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=gesture-nav-fix-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1');
     }
   </script>
 </body>
