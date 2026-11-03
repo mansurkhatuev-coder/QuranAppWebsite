@@ -1,5 +1,6 @@
 import { PROTOTYPE_PEOPLE } from "../../fixtures/prototype-people.mjs";
 import { loadLocalTreeDraft, listLocalTreePhotos } from "../../../../../drewo/waydean-preview-storage.mjs?v=2";
+import { readExportWorkshopHandoff } from "../workshop-model.mjs?v=shared-export-1";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const mayReadHoti = typeof window !== "undefined" && LOOPBACK_HOSTS.has(window.location.hostname);
@@ -80,6 +81,33 @@ async function loadLocalHotiPeople() {
 
 const HOTI_PEOPLE = await loadLocalHotiPeople();
 
+function loadWorkshopPeople() {
+  if (typeof window === "undefined") return null;
+  try {
+    const handoff = readExportWorkshopHandoff(window.sessionStorage);
+    if (!handoff) return null;
+    return {
+      treeId: handoff.treeId,
+      people: handoff.printPeople.map(person => ({
+        ...person,
+        parent: person.parentId ?? null,
+        photo: person.hasPhoto,
+        photoUrl: person.hasPhoto
+          ? new URL(`../../../../../drewo/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(person.photoKey || "1")}`, import.meta.url).href
+          : null
+      }))
+    };
+  } catch {
+    return null;
+  }
+}
+
+const WORKSHOP_SNAPSHOT = loadWorkshopPeople();
+const WORKSHOP_HOTI_PEOPLE = WORKSHOP_SNAPSHOT?.treeId === "hoti" ? WORKSHOP_SNAPSHOT.people : [];
+const WORKSHOP_DEMO_PEOPLE = WORKSHOP_SNAPSHOT?.treeId === "demo" ? WORKSHOP_SNAPSHOT.people : [];
+const AVAILABLE_HOTI_PEOPLE = WORKSHOP_HOTI_PEOPLE.length ? WORKSHOP_HOTI_PEOPLE : HOTI_PEOPLE;
+const AVAILABLE_DEMO_PEOPLE = WORKSHOP_DEMO_PEOPLE.length ? WORKSHOP_DEMO_PEOPLE : PROTOTYPE_PEOPLE;
+
 const DEMO_BRANCH_LABELS = Object.freeze({
   main: "Основная линия",
   west: "Западная ветвь",
@@ -96,7 +124,7 @@ function getParentLinkCount(people) {
 }
 
 function getBranchLabels(people, source) {
-  if (source === "hoti") {
+  if (source === "hoti" || !people.some(person => person.branch)) {
     const parentIds = new Set(people.map(person => person.parent).filter(Boolean));
     return Object.fromEntries(people
       .filter(person => parentIds.has(person.id))
@@ -136,10 +164,14 @@ function createSource(id, people, label, rawTree = null) {
 }
 
 const SOURCES = Object.freeze({
-  demo: createSource("demo", PROTOTYPE_PEOPLE, "Демонстрационное дерево · 12 человек"),
-  hoti: createSource("hoti", HOTI_PEOPLE, hotiDraftLoaded ? "HOTI · сохранённая локальная версия" : "HOTI · локальная копия", HOTI_RAW_TREE)
+  demo: createSource("demo", AVAILABLE_DEMO_PEOPLE, WORKSHOP_DEMO_PEOPLE.length
+    ? "Демонстрация · снимок этой сессии"
+    : "Демонстрационное дерево · 12 человек"),
+  hoti: createSource("hoti", AVAILABLE_HOTI_PEOPLE, WORKSHOP_HOTI_PEOPLE.length
+    ? "Текущее дерево · снимок этой сессии"
+    : hotiDraftLoaded ? "HOTI · сохранённая локальная версия" : "HOTI · локальная копия", HOTI_RAW_TREE)
 });
 
 export function getPrintTreeSource(id = "demo") {
-  return id === "hoti" && HOTI_PEOPLE.length ? SOURCES.hoti : SOURCES.demo;
+  return id === "hoti" && AVAILABLE_HOTI_PEOPLE.length ? SOURCES.hoti : SOURCES.demo;
 }

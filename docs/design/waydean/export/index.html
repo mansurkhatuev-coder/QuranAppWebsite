@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#080d0e">
+  <title>Waydean — мастерская экспорта</title>
+  <script>document.documentElement.classList.add("waydean-export-workshop");</script>
+  <link rel="stylesheet" href="./workshop.css?v=shared-export-1">
+</head>
+<body>
+  <div class="workshop-shell">
+    <header class="workshop-header">
+      <a class="workshop-brand" href="/drewo/waydean-preview.html?state=all-tree" target="_top" aria-label="Waydean — семейное древо">
+        <span class="workshop-brand-mark" aria-hidden="true">♧</span>
+        <span><strong>WAYDEAN</strong><small>СЕМЕЙНОЕ ДРЕВО</small></span>
+      </a>
+      <div class="workshop-heading">
+        <span class="workshop-eyebrow">ЕДИНОЕ РАБОЧЕЕ ПРОСТРАНСТВО</span>
+        <h1>Мастерская экспорта</h1>
+        <p id="workshop-context">Загружаем текущее древо…</p>
+      </div>
+      <a class="workshop-back" id="workshop-back" href="/drewo/waydean-preview.html?state=all-tree" target="_top"><span aria-hidden="true">←</span> К древу</a>
+    </header>
+    <div class="workshop-modebar">
+      <p>Выберите, как подготовить семейную историю</p>
+      <nav class="workshop-tabs" role="tablist" aria-label="Тип экспорта" hidden>
+        <button id="workshop-tab-video" type="button" role="tab" aria-controls="workshop-frame" aria-selected="false" tabindex="-1" data-mode="video">
+          <span class="workshop-tab-icon" aria-hidden="true">▶</span><span><strong>Видео</strong><small>История рода в движении</small></span>
+        </button>
+        <button id="workshop-tab-print" type="button" role="tab" aria-controls="workshop-frame" aria-selected="true" tabindex="0" data-mode="print">
+          <span class="workshop-tab-icon" aria-hidden="true">▤</span><span><strong>Печать</strong><small>Плакат, SVG и PDF</small></span>
+        </button>
+      </nav>
+    </div>
+    <main class="workshop-stage">
+      <iframe id="workshop-frame" title="Экспорт семейного древа" loading="eager"></iframe>
+      <p class="workshop-error" id="workshop-error" role="alert" hidden></p>
+    </main>
+    <div class="workshop-announcer" id="workshop-announcer" aria-live="polite" aria-atomic="true"></div>
+  </div>
+  <script type="module" src="./workshop.mjs?v=shared-export-1"></script>
+</body>
+</html>

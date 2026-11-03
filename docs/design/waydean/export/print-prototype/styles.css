@@ -41,6 +41,11 @@ button:focus-visible, a:focus-visible, select:focus-visible, input:focus-visible
 a { color: inherit; }
 
 .studio-shell { width: min(1600px, 100%); min-height: 100vh; margin: 0 auto; padding: 0 34px 18px; }
+html.in-export-workshop .studio-header { display: none; }
+html.in-export-workshop .studio-shell { width: min(1760px, 100%); padding: 0 clamp(12px, 2vw, 26px) 18px; }
+html.in-export-workshop .scope-card > .field-label[for="treeSource"],
+html.in-export-workshop #treeSource,
+html.in-export-workshop #treeSourceHint { display: none; }
 .studio-header {
   display: grid;
   grid-template-columns: minmax(205px, 1fr) minmax(280px, 1.4fr) minmax(220px, 1fr);

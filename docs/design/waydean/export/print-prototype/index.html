@@ -5,7 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
   <title>Waydean — Print Studio</title>
-  <link rel="stylesheet" href="./styles.css?v=workspace-23">
+  <script>if (new URLSearchParams(location.search).get("workshop") === "1") document.documentElement.classList.add("in-export-workshop");</script>
+  <link rel="stylesheet" href="./styles.css?v=workspace-27">
 </head>
 <body>
   <div class="studio-shell">
@@ -173,6 +174,6 @@
   </div>
 
   <div id="printPages" aria-hidden="true"></div>
-  <script type="module" src="./app.mjs?v=workspace-26"></script>
+  <script type="module" src="./app.mjs?v=workspace-27"></script>
 </body>
 </html>
