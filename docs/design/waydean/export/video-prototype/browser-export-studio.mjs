@@ -62,6 +62,7 @@ let settings = normalizeExportSettings({
   backgroundId: readBackgroundPreference(),
   ...(handoff?.settings ?? {})
 }, people);
+syncWorkshopSelection();
 let preview = buildExportPreview(settings, people);
 let frame = 0;
 let previewPlan = null;
@@ -523,12 +524,18 @@ function update(patch) {
     ? getSourceFrameForBrowserExport(frame, previewPlan)
     : null;
   settings = normalizeExportSettings({ ...settings, ...patch }, people);
+  syncWorkshopSelection();
   try { window.localStorage.setItem(EXPORT_SETTINGS_STORAGE_KEY, JSON.stringify(settings)); } catch { /* Preference persistence is optional in private browsing. */ }
   if (Object.hasOwn(patch, "backgroundId")) {
     try { window.localStorage.setItem(BACKGROUND_PREFERENCE_STORAGE_KEY, settings.backgroundId); } catch { /* Preference persistence is optional in private browsing. */ }
     loadSelectedVideoBackground(settings.backgroundId);
   }
   clearVideo(); updatePreview(sourceFrameToPreserve);
+}
+
+function syncWorkshopSelection() {
+  root.dataset.scopeType = settings.scopeType;
+  root.dataset.selectedPersonId = settings.selectedPersonId;
 }
 
 function showError(message) {

@@ -30,7 +30,7 @@ import {
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
 import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-2';
-import { createBrowserVideoHandoff, VIDEO_HANDOFF_KEY } from './waydean-preview-video-handoff.mjs?v=browser-export-1';
+import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-1';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=light-theme-20261102-2';
@@ -2080,59 +2080,38 @@ function selectPerson(id, { preserveContext = false } = {}) {
   if (filterResult.changed) announce('Фильтр расширен, чтобы показать выбранного человека.');
 }
 
-function openPrintStudio() {
-  const printUrl = new URL('../docs/design/waydean/export/print-prototype/', window.location.href);
-  const source = syntheticFixture ? 'demo' : 'hoti';
-  printUrl.searchParams.set('tree', source);
-  const handoff = { tree: source, scope: 'all' };
-
-  if (source === 'demo') {
-    printUrl.searchParams.set('scope', 'all');
-  } else if (mode === 'all-tree') {
-    printUrl.searchParams.set('scope', 'all');
-  } else {
-    printUrl.searchParams.set('scope', 'person');
-    handoff.scope = 'person';
-    handoff.personId = mode === 'path' ? myPersonId : selectedId;
-    handoff.direction = mode === 'path' ? 'ancestors' : 'both';
-    handoff.depth = mode === 'path' ? fullDataDepth : Math.min(5, fullDataDepth);
-    printUrl.searchParams.set('direction', handoff.direction);
-    printUrl.searchParams.set('depth', String(handoff.depth));
-  }
-
-  try {
-    window.sessionStorage.setItem('waydean.print-handoff.v1', JSON.stringify(handoff));
-  } catch {
-    // Print Studio falls back to the full local tree if tab storage is unavailable.
-  }
-  window.location.assign(printUrl);
-}
-
-function openVideoStudio() {
-  const scopeType = mode === 'path' || mode === 'branch' ? mode : 'all';
-  const selectedPersonId = scopeType === 'path' ? (myPersonId || selectedId) : selectedId;
-  const handoff = createBrowserVideoHandoff(records, {
-    scopeType,
-    selectedPersonId,
-    title: 'История рода',
-    includeDates: true,
-    aspectRatio: window.matchMedia('(max-width: 700px)').matches ? '9:16' : '16:9'
-  });
-
-  try {
-    window.sessionStorage.setItem(VIDEO_HANDOFF_KEY, JSON.stringify(handoff));
-  } catch {
-    announce('Браузер не разрешил временно подготовить видео. Проверьте свободную память и повторите.');
+function openExportWorkshop(initialMode = 'print') {
+  if (!Array.isArray(records) || records.length === 0) {
+    announce('Древо ещё загружается. Повторите через несколько секунд.');
     return;
   }
-
-  // Keep the top-level URL inside the installed PWA scope. The exporter is
-  // embedded by waydean-preview.html, so its same-origin frame can read this
-  // tab's sessionStorage handoff instead of opening outside the PWA in Safari.
-  const videoUrl = new URL('./waydean-preview.html?state=all-tree&view=video-export', location.href);
-  closePopovers();
-  window.location.assign(videoUrl.href);
+  const treeId = syntheticFixture ? 'demo' : 'hoti';
+  const scopeType = mode === 'path' || mode === 'branch' ? mode : 'all';
+  const selectedPersonId = scopeType === 'path' ? (myPersonId || selectedId) : selectedId;
+  const returnContext = accountPreview ? 'account' : familyPreview ? 'family' : 'preview';
+  try {
+    const handoff = createExportWorkshopHandoff(records, {
+      treeId,
+      scopeType,
+      selectedPersonId,
+      returnContext,
+      returnView: mode === 'all' ? 'all-tree' : mode,
+      returnPersonId: selectedId,
+      depth: scopeType === 'path' ? fullDataDepth : Math.min(5, fullDataDepth),
+      aspectRatio: window.matchMedia('(max-width: 700px)').matches ? '9:16' : '16:9'
+    });
+    writeExportWorkshopHandoff(window.sessionStorage, handoff);
+    const workshopUrl = new URL('./waydean-preview.html?view=export-workshop', window.location.href);
+    workshopUrl.searchParams.set('mode', initialMode === 'video' ? 'video' : 'print');
+    closePopovers();
+    window.location.assign(workshopUrl.href);
+  } catch {
+    announce('Браузер не разрешил подготовить снимок древа. Освободите память браузера и повторите.');
+  }
 }
+
+function openPrintStudio() { openExportWorkshop('print'); }
+function openVideoStudio() { openExportWorkshop('video'); }
 
 function openPopover(popover) {
   if (window.matchMedia('(max-width: 700px)').matches) ui.app.classList.remove('profile-open');
@@ -3894,10 +3873,31 @@ async function initialize() {
     childrenById = new Map(records.map(person => [person.id, []]));
     for (const person of records) if (person.parentId) childrenById.get(person.parentId)?.push(person);
     loadMyPersonPreference();
+    const workshopReturn = params.get('workshopReturn') === '1'
+      ? readExportWorkshopHandoff(window.sessionStorage)
+      : null;
+    const expectedReturnContext = accountPreview ? 'account' : familyPreview ? 'family' : 'preview';
+    const workshopReturnId = workshopReturn?.returnContext === expectedReturnContext
+      && workshopReturn.treeId === (syntheticFixture ? 'demo' : 'hoti')
+      && byId.has(workshopReturn.returnPersonId)
+      ? workshopReturn.returnPersonId
+      : null;
+    if (workshopReturn?.returnContext === expectedReturnContext
+      && workshopReturn.treeId === (syntheticFixture ? 'demo' : 'hoti')) {
+      mode = ['path', 'branch', 'all-tree'].includes(workshopReturn.returnView)
+        ? workshopReturn.returnView
+        : 'all-tree';
+      syncModeButtons(mode);
+      const returnUrl = new URL(window.location.href);
+      returnUrl.searchParams.delete('workshopReturn');
+      window.history.replaceState(window.history.state, '', returnUrl);
+    }
     const initial = records.find(person => person.generation === 3) || records[0];
     const requestedPerson = params.get('person');
     const fixturePerson = syntheticFixture ? masterFixtureFocus(window.innerWidth) : null;
-    selectedId = mode === 'path' && myPersonId
+    selectedId = workshopReturnId
+      ? workshopReturnId
+      : mode === 'path' && myPersonId
       ? myPersonId
       : requestedPerson && byId.has(requestedPerson)
       ? requestedPerson
