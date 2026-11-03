@@ -12,7 +12,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <script>
     try {
-      const scheme = localStorage.getItem('drewo-color-scheme') === 'light' ? 'light' : 'dark';
+      const scheme = localStorage.getItem('drewo-color-scheme-v2') === 'light' ? 'light' : 'dark';
       document.documentElement.dataset.colorScheme = scheme;
       document.documentElement.style.colorScheme = scheme;
       document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
@@ -45,7 +45,7 @@
   <link rel="stylesheet" href="waydean-preview-auth.css?v=dialog-close-20261102-1">
   <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=editor-actions-20261102-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=weather-parity-20261028-1">
-  <link rel="stylesheet" href="waydean-color-scheme.css?v=light-theme-contrast-20261102-14">
+  <link rel="stylesheet" href="waydean-color-scheme.css?v=dark-default-20261103-1">
 </head>
 <body>
   <main class="app-shell">
@@ -375,7 +375,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=light-theme-20261102-2&header-badge-removed=20261102-1&export-workshop=20261103-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1');
     }
   </script>
 </body>

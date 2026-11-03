@@ -15,7 +15,7 @@
   <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0d1a22">
   <script>
     try {
-      var savedColorScheme = localStorage.getItem('drewo-color-scheme') === 'light' ? 'light' : 'dark';
+      var savedColorScheme = localStorage.getItem('drewo-color-scheme-v2') === 'light' ? 'light' : 'dark';
       document.documentElement.setAttribute('data-color-scheme', savedColorScheme);
       document.documentElement.style.colorScheme = savedColorScheme;
       document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', savedColorScheme);
@@ -2362,7 +2362,7 @@
     }
 
   </style>
-  <link rel="stylesheet" href="waydean-color-scheme.css?v=light-theme-20261102-5">
+  <link rel="stylesheet" href="waydean-color-scheme.css?v=dark-default-20261103-1">
 </head>
 <body class="view-locked" data-theme="premium" data-sky="day">
 
@@ -3560,7 +3560,7 @@
         });
         if (colorSchemeSelect) colorSchemeSelect.value = next;
         if (persist !== false) {
-          try { localStorage.setItem('drewo-color-scheme', next); } catch (err) {}
+          try { localStorage.setItem('drewo-color-scheme-v2', next); } catch (err) {}
         }
         applySky(true);
       }
@@ -7946,7 +7946,7 @@
               'premium',
             false
           );
-          setColorScheme(localStorage.getItem('drewo-color-scheme') || 'dark', false);
+          setColorScheme(localStorage.getItem('drewo-color-scheme-v2') || 'dark', false);
         } catch (err) {
           setSkyMode('auto', false);
           setTheme('premium', false);

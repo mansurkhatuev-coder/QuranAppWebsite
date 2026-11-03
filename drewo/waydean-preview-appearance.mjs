@@ -1,6 +1,6 @@
 export const APPEARANCE_THEME_KEY = 'drewo-theme';
 export const APPEARANCE_SKY_KEY = 'drewo-sky-mode';
-export const APPEARANCE_COLOR_SCHEME_KEY = 'drewo-color-scheme';
+export const APPEARANCE_COLOR_SCHEME_KEY = 'drewo-color-scheme-v2';
 export const WEATHER_CACHE_KEY = 'drewo-weather-cache';
 export const WEATHER_CACHE_MAX_AGE_MS = 45 * 60 * 1000;
 
