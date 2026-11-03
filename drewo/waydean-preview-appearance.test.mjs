@@ -35,10 +35,16 @@ test('color scheme defaults to dark and only accepts the light option', () => {
   assert.equal(appearance.normalizeColorScheme('sepia'), 'dark');
 });
 
+test('legacy saved light choice no longer overrides the new dark default', () => {
+  const storage = memoryStorage({ 'drewo-color-scheme': 'light' });
+  assert.equal(appearance.readColorScheme(storage), 'dark');
+});
+
 test('color scheme preference is stored separately from card style and sky mode', () => {
   const storage = memoryStorage({ [APPEARANCE_THEME_KEY]: 'classic', [APPEARANCE_SKY_KEY]: 'night' });
   assert.deepEqual(appearance.writeColorScheme(storage, 'light'), { colorScheme: 'light', persisted: true });
   assert.equal(storage.getItem(APPEARANCE_COLOR_SCHEME_KEY), 'light');
+  assert.equal(appearance.readColorScheme(storage), 'light');
   assert.deepEqual(readAppearance(storage), { theme: 'classic', skyMode: 'night' });
 });
 

@@ -33,7 +33,7 @@ import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-p
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-1';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
-} from './waydean-preview-appearance.mjs?v=light-theme-20261102-2';
+} from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
 import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, storeFamilySession, verifyFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
