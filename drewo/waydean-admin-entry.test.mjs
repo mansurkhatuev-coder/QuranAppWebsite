@@ -6,9 +6,11 @@ const treePage = await readFile(new URL('./index.html', import.meta.url), 'utf8'
 const previewPage = await readFile(new URL('./waydean-preview.html', import.meta.url), 'utf8');
 const previewScript = await readFile(new URL('./waydean-preview.js', import.meta.url), 'utf8');
 
-test('main tree offers the read-only Waydean preview to every visitor', () => {
-  assert.ok(/<button[^>]*id="waydean-premium-open"[^>]*>Waydean · предпросмотр<\/button>/.test(treePage), 'the visible entry link must be present');
-  assert.ok(/waydeanPremiumOpenBtn\.addEventListener\('click',[\s\S]*?window\.location\.assign\('waydean-preview\.html\?source=account&state=all-tree'\)/.test(treePage), 'the entry must open account preview');
+test('legacy tree offers an optional new interface using its existing family session', () => {
+  assert.ok(/<button[^>]*id="waydean-premium-open"[^>]*>Открыть новый интерфейс<\/button>/.test(treePage), 'the visible entry link must be present');
+  assert.ok(/waydeanPremiumOpenBtn\.addEventListener\('click',[\s\S]*?window\.location\.assign\('waydean-preview\.html\?source=family&state=all-tree'\)/.test(treePage), 'the entry must open the family-session route');
+  assert.ok(/var NEK_SESSION_KEY = 'nek-session:' \+ TREE_DIR/.test(treePage), 'the legacy tree must keep its signed session in the shared same-tab storage key');
+  assert.ok(/readFamilySession\(familySessionStorage\(\), 'drewo'\)/.test(previewScript), 'the new interface must read the same signed family session');
   assert.ok(!/if \(sessionRole !== 'super'\) return;\s*setNavMenuOpen\(false\);\s*window\.location\.assign/.test(treePage), 'the entry must not require the family super-role');
 });
 
