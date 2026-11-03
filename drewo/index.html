@@ -2483,8 +2483,8 @@
         <button type="button" id="logout-btn">Выйти</button>
       </div>
       <p class="nav-label">Новая версия</p>
-      <div class="action-cluster" role="group" aria-label="Предпросмотр Waydean">
-        <button type="button" id="waydean-premium-open">Waydean · предпросмотр</button>
+      <div class="action-cluster" role="group" aria-label="Новый интерфейс Waydean">
+        <button type="button" id="waydean-premium-open">Открыть новый интерфейс</button>
       </div>
       <p class="nav-label">Правки</p>
       <div class="action-cluster" role="group" aria-label="Правки">
@@ -7117,7 +7117,7 @@
         updateWaydeanPremiumEntry();
         waydeanPremiumOpenBtn.addEventListener('click', function () {
           setNavMenuOpen(false);
-          window.location.assign('waydean-preview.html?source=account&state=all-tree');
+          window.location.assign('waydean-preview.html?source=family&state=all-tree');
         });
       }
       if (navBackdrop) {
