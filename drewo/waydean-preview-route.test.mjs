@@ -187,7 +187,7 @@ test('the local offline cache precaches the current preview entry modules', () =
     assert.ok(worker.includes(`'./${module}'`), `offline cache should precache the current module URL: ${module}`);
   }
   assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-5'"));
-  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-1'"));
+  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-2'"));
   assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v\d+'/);
 });
 

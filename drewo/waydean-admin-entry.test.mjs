@@ -14,6 +14,13 @@ test('legacy tree offers an optional new interface using its existing family ses
   assert.ok(!/if \(sessionRole !== 'super'\) return;\s*setNavMenuOpen\(false\);\s*window\.location\.assign/.test(treePage), 'the entry must not require the family super-role');
 });
 
+test('a remembered legacy viewer can open the published tree snapshot without enabling server actions', () => {
+  assert.ok(/readLegacyTreeViewSession\(window\.localStorage\)/.test(previewScript), 'the preview must detect the remembered person from the old tree');
+  assert.ok(/resolveFamilyPreviewAccess\([\s\S]*?legacyViewSession/.test(previewScript), 'the preview must allow the remembered identity fallback when its signed token is unavailable');
+  assert.ok(/else if \(familyPreview && !familyLegacyReadOnly\)/.test(previewScript), 'only an authenticated family session may load the server snapshot');
+  assert.ok(/allowServerPush: accountPreview \|\| \(familyPreview && !familyLegacyReadOnly\)/.test(previewScript), 'the fallback must not enable server push actions');
+});
+
 test('account preview reuses the admin Supabase client and contains an email/password form', () => {
   assert.ok(/\.\.\/admin\/supabase-config\.js/.test(previewPage), 'the preview must load the existing public Supabase config');
   assert.ok(/\.\.\/admin\/admin-supabase\.js/.test(previewPage), 'the preview must reuse the admin auth client');

@@ -72,6 +72,20 @@ export function storeFamilySession(storage, treeDir = DEFAULT_TREE_DIR, token = 
   }
 }
 
+export function readLegacyTreeViewSession(storage, now = Date.now()) {
+  try {
+    const value = JSON.parse(String(storage?.getItem('drewo-view-session') || ''));
+    const personId = String(value?.personId || '').trim();
+    const savedAt = Number(value?.at || 0);
+    if (!personId || !Number.isFinite(savedAt) || savedAt <= 0 || now - savedAt > 30 * 24 * 60 * 60 * 1000) {
+      return null;
+    }
+    return { personId };
+  } catch {
+    return null;
+  }
+}
+
 export function consumeFamilyTokenFromUrl(href) {
   try {
     const url = new URL(href);
@@ -119,6 +133,32 @@ export async function verifyFamilySession({ endpoint, treeDir = DEFAULT_TREE_DIR
     throw error;
   }
   return data;
+}
+
+export async function resolveFamilyPreviewAccess({
+  endpoint,
+  treeDir = DEFAULT_TREE_DIR,
+  token,
+  legacyViewSession = null,
+  fetcher = fetch
+}) {
+  const canUseLegacyReadOnly = Boolean(String(legacyViewSession?.personId || '').trim());
+  if (!String(token || '').trim() && canUseLegacyReadOnly) {
+    return { authenticated: false, legacyReadOnly: true, session: null };
+  }
+
+  try {
+    const session = await verifyFamilySession({ endpoint, treeDir, token, fetcher });
+    return { authenticated: true, legacyReadOnly: false, session };
+  } catch (error) {
+    if (canUseLegacyReadOnly && (
+      error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED'
+      || error?.code === 'WAYDEAN_FAMILY_AUTH_UNAVAILABLE'
+    )) {
+      return { authenticated: false, legacyReadOnly: true, session: null };
+    }
+    throw error;
+  }
 }
 
 export async function loginFamilySession({

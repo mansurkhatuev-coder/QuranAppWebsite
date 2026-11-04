@@ -34,7 +34,7 @@ import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWork
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, storeFamilySession, verifyFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-1';
+import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-2';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
@@ -82,6 +82,8 @@ let fullDataDepth = 1;
 let syntheticFixture = false;
 let accountPreview = false;
 let familyPreview = false;
+let familyLegacyReadOnly = false;
+let familyLegacyViewPersonId = '';
 let familySessionTokenMemory = '';
 let familySessionRole = '';
 let familySessionLocked = false;
@@ -3639,15 +3641,21 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
     storeFamilySession(familySessionStorage(), 'drewo', fromUrl.token);
   }
   let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), 'drewo');
-  if (!token) {
-    const error = new Error('Войдите по семейному логину и паролю, чтобы открыть это древо.');
-    error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
-    throw error;
-  }
-
+  let legacyViewSession = null;
+  try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
   setLoadingText('Проверяем семейный доступ');
   try {
-    const session = await verifyFamilySession({ endpoint: familyEndpoint(), treeDir: 'drewo', token });
+    const access = await resolveFamilyPreviewAccess({
+      endpoint: familyEndpoint(), treeDir: 'drewo', token, legacyViewSession
+    });
+    if (access.legacyReadOnly) {
+      familyLegacyReadOnly = true;
+      familyLegacyViewPersonId = legacyViewSession.personId;
+      familySessionTokenMemory = '';
+      familySessionRole = '';
+      return true;
+    }
+    const session = access.session;
     familySessionTokenMemory = session.sessionToken;
     familySessionRole = String(session.role || '').trim();
     storeFamilySession(familySessionStorage(), 'drewo', session.sessionToken);
@@ -3681,6 +3689,8 @@ async function initialize() {
     accountPreview = params.get('source') === 'account';
     familyPreview = familyRoute.enabled;
     familySessionLocked = familyPreview;
+    familyLegacyReadOnly = false;
+    familyLegacyViewPersonId = '';
     familySessionLockReason = '';
     $('#familyLogout').hidden = true;
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
@@ -3736,9 +3746,9 @@ async function initialize() {
     $('#localBackupHeading').textContent = remoteEditor ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
     $('#createLocalBackup').textContent = remoteEditor ? 'Создать снимок черновика' : 'Создать снимок сейчас';
     document.body.classList.toggle('local-tree-draft', localTreeDraft);
-    $('#familyLogout').hidden = !familyPreview;
+    $('#familyLogout').hidden = !familyPreview || familyLegacyReadOnly;
     pwaController = createWaydeanPwaController(renderPwaStatus, {
-      allowServerPush: accountPreview || familyPreview,
+      allowServerPush: accountPreview || (familyPreview && !familyLegacyReadOnly),
       accountAdminAction: accountPreview && accountAdminAccess
         ? (action, payload) => callWaydeanAdminAction(action, payload, accountAdminAccess)
         : null,
@@ -3779,7 +3789,7 @@ async function initialize() {
       accountBaseTree = cloneTree(root);
       accountBaseFingerprint = accountServerFingerprint;
       accountBaseActivityJson = accountServerActivityJson;
-    } else if (familyPreview) {
+    } else if (familyPreview && !familyLegacyReadOnly) {
       const serverSnapshot = await callFamilyTreeAction('family-load', {}, {
         endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
       });
@@ -3867,6 +3877,11 @@ async function initialize() {
       }
     }
     records = preparePreviewRecords(syntheticFixture || localTreeDraft ? fixtureRoot : root);
+    if (familyLegacyReadOnly && !records.some(person => String(person.id) === familyLegacyViewPersonId)) {
+      const error = new Error('Сохранённый профиль старого древа больше не найден.');
+      error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
+      throw error;
+    }
     $('#moreVideo').hidden = !(localTreeDraft || accountPreview);
     fullDataDepth = Math.max(...records.map(person => person.generation));
     byId = new Map(records.map(person => [person.id, person]));
