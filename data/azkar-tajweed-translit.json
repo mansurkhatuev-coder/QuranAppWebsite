@@ -9179,8 +9179,139 @@
       "azkarIds": [
         "morning-10"
       ],
-      "transliteration": "АллохIумма, инни ас-алю-ка Iильман нафиIан, ва ризкъан тIоййибан ва Iамалян мутакъоббалян",
-      "marks": []
+      "transliteration": "АллохIумма, инни ас-алю-ка Iильман нафиIан, ва ризкъон тIоййибан ва Iамалян мутакъоббалян.",
+      "marks": [
+        {
+          "start": 2,
+          "end": 3,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 7,
+          "end": 8,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 13,
+          "end": 14,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 14,
+          "end": 15,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 15,
+          "end": 16,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 33,
+          "end": 34,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 35,
+          "end": 36,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 36,
+          "end": 37,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 56,
+          "end": 57,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 55,
+          "end": 56,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 57,
+          "end": 58,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        }
+      ]
     },
     {
       "id": "azkar-morning-11",
@@ -9189,8 +9320,269 @@
       "azkarIds": [
         "morning-11"
       ],
-      "transliteration": "АллохIумма иннии асбахьту ушхIидука, ва ушхIиду хьамалата Iаршика, ва малáикатака, ва джами́Iа холкъика, аннака анталлóхIу лá илáхIа иллá Анта вахьдака лá шари́ка лака, ва анна Мухьаммадан Iабдука ва расýлука.",
-      "marks": []
+      "transliteration": "АллохIумма инни асбахьту ушхIидука, ва ушхIиду хьамалата Iаршика, ва малаикатака, ва джамиIа холкъика, аннака анталлохIу ла илахIа илла Анта вахьдака ла шарика лака, ва анна Мухьаммадан Iабдука ва росулук.",
+      "marks": [
+        {
+          "start": 2,
+          "end": 3,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 3,
+          "end": 4,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 8,
+          "end": 9,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 7,
+          "end": 8,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 12,
+          "end": 13,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 13,
+          "end": 14,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 14,
+          "end": 15,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 72,
+          "end": 73,
+          "rules": [
+            "madd45"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 89,
+          "end": 90,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 93,
+          "end": 94,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 94,
+          "end": 95,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 104,
+          "end": 105,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 105,
+          "end": 106,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 111,
+          "end": 112,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 115,
+          "end": 116,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 116,
+          "end": 117,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 122,
+          "end": 123,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 134,
+          "end": 135,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 137,
+          "end": 138,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 151,
+          "end": 152,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 156,
+          "end": 157,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 170,
+          "end": 171,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 171,
+          "end": 172,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 179,
+          "end": 180,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 180,
+          "end": 181,
+          "rules": [
+            "ghunna"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 200,
+          "end": 201,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        }
+      ]
     },
     {
       "id": "azkar-morning-12",
@@ -9359,8 +9751,49 @@
       "azkarIds": [
         "morning-subhanallahi-wa-bihamdihi-100"
       ],
-      "transliteration": "СубхьáналлóхIи ва бихьамдихIи.",
-      "marks": []
+      "transliteration": "СубхьаналлохIи ва бихьамдихI.",
+      "marks": [
+        {
+          "start": 2,
+          "end": 3,
+          "rules": [
+            "qalqala"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 5,
+          "end": 6,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 9,
+          "end": 10,
+          "rules": [
+            "tafkheem"
+          ],
+          "accent": false,
+          "hidden": false,
+          "note": ""
+        },
+        {
+          "start": 10,
+          "end": 11,
+          "rules": [
+            "madd2"
+          ],
+          "accent": true,
+          "hidden": false,
+          "note": ""
+        }
+      ]
     },
     {
       "id": "azkar-quran-dua-1",
@@ -9573,5 +10006,5 @@
       "marks": []
     }
   ],
-  "publishedAt": "2026-11-04T18:01:18.031Z"
+  "publishedAt": "2026-11-04T18:08:14.971Z"
 }
