@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v57';
+const CACHE_NAME = 'waydean-preview-shell-v58';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -33,9 +33,9 @@ const PRECACHE = [
   './waydean-preview-person-sheet.css?v=editor-actions-20261102-1',
   './waydean-preview-appearance.css?v=weather-parity-20261028-1',
   './waydean-color-scheme.css?v=dark-default-20261103-1',
-  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1',
+  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1',
   './waydean-preview-appearance.mjs?v=dark-default-20261103-1',
-  './waydean-preview-family-auth.mjs?v=family-auth-1',
+  './waydean-preview-family-auth.mjs?v=family-auth-2',
   './waydean-preview-family-api.mjs?v=family-lock-2',
   './waydean-preview-publish.mjs?v=admin-save-1',
   './waydean-preview-admin-api.mjs?v=admin-push-20261028-1',

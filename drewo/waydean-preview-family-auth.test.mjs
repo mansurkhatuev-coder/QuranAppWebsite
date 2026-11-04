@@ -4,8 +4,10 @@ import {
   consumeFamilyTokenFromUrl,
   familySessionKey,
   loginFamilySession,
+  readLegacyTreeViewSession,
   readFamilySession,
   resolveFamilyInvite,
+  resolveFamilyPreviewAccess,
   storeFamilySession,
   verifyFamilySession
 } from './waydean-preview-family-auth.mjs';
@@ -32,6 +34,52 @@ test('stores family sessions in tab-scoped storage under the legacy tree key', (
   assert.equal(readFamilySession(storage, 'another-tree'), '');
   assert.equal(storeFamilySession(storage, 'drewo', ''), true);
   assert.equal(readFamilySession(storage, 'drewo'), '');
+});
+
+test('recognizes the still-valid remembered identity from the legacy tree', () => {
+  const storage = memoryStorage();
+  const now = 1_800_000_000_000;
+  storage.setItem('drewo-view-session', JSON.stringify({ personId: 'mansur', at: now - 29 * 24 * 60 * 60 * 1000 }));
+
+  assert.deepEqual(readLegacyTreeViewSession(storage, now), { personId: 'mansur' });
+
+  storage.setItem('drewo-view-session', JSON.stringify({ personId: 'mansur', at: now - 31 * 24 * 60 * 60 * 1000 }));
+  assert.equal(readLegacyTreeViewSession(storage, now), null);
+  storage.setItem('drewo-view-session', '{broken');
+  assert.equal(readLegacyTreeViewSession(storage, now), null);
+});
+
+test('opens a remembered legacy tree as read-only when its server session has expired', async () => {
+  const result = await resolveFamilyPreviewAccess({
+    endpoint: 'https://example.test/functions/publish-drewo',
+    treeDir: 'drewo',
+    token: 'expired-token',
+    legacyViewSession: { personId: 'mansur' },
+    fetcher: async () => jsonResponse({ error: 'Сессия истекла' }, 401)
+  });
+
+  assert.deepEqual(result, { authenticated: false, legacyReadOnly: true, session: null });
+});
+
+test('uses the old tree remembered identity when its tab-scoped token is unavailable', async () => {
+  const result = await resolveFamilyPreviewAccess({
+    endpoint: 'https://example.test/functions/publish-drewo',
+    treeDir: 'drewo',
+    token: '',
+    legacyViewSession: { personId: 'mansur' },
+    fetcher: async () => { throw new Error('No request should be needed'); }
+  });
+
+  assert.deepEqual(result, { authenticated: false, legacyReadOnly: true, session: null });
+});
+
+test('does not silently open the family tree without a valid legacy view session', async () => {
+  await assert.rejects(resolveFamilyPreviewAccess({
+    endpoint: 'https://example.test/functions/publish-drewo',
+    treeDir: 'drewo',
+    token: '',
+    legacyViewSession: null
+  }), error => error.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED');
 });
 
 test('consumes a signed invite token from the URL without leaving it in navigation history', () => {
