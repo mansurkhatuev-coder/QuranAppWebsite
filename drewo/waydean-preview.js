@@ -3724,6 +3724,7 @@ async function initialize() {
       setLoadingText('Проверяем доступ к данным');
       accountAdminAccess = await requireWaydeanAdminAccess('drewo');
     }
+    $('#moreTreesCabinet').hidden = !accountAdminAccess;
     if (familyPreview && !(await requireFamilyPreviewSession(params, setLoadingText))) return;
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname)
       || (familyPreview && canEditFamilyTreeRole(familySessionRole)));

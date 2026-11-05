@@ -233,7 +233,7 @@
       </section>
       <section class="more-group" id="moreSectionAccount" aria-labelledby="moreAccountHeading">
         <h3 id="moreAccountHeading">Аккаунт и доступ</h3>
-        <button class="more-item" id="moreTreesCabinet" type="button"><strong>Кабинет деревьев</strong><small>Управление семьями, доступом и аккаунтом</small></button>
+        <button class="more-item" id="moreTreesCabinet" type="button" hidden><strong>Кабинет деревьев</strong><small>Управление семьями, доступом и аккаунтом</small></button>
         <button class="more-item family-logout-action" id="familyLogout" type="button" hidden><strong>Выйти из семейного входа</strong><small>Завершить сессию в этой вкладке</small></button>
         <section class="account-admin-tools" id="accountAdminPanel" hidden aria-label="Управление доступом к древу">
           <div class="account-admin-tools-heading"><small>АДМИНИСТРИРОВАНИЕ</small><strong>Доступ к древу</strong></div>
@@ -375,7 +375,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1');
     }
   </script>
 </body>
