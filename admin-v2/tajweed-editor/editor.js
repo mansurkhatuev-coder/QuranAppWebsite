@@ -71,6 +71,15 @@
     publishList: $("publishList"),
     publishHint: $("publishHint"),
     publishSummary: $("publishSummary"),
+    repeatDialog: $("repeatMarkupDialog"),
+    repeatSource: $("repeatMarkupSource"),
+    repeatRuleSummary: $("repeatMarkupRuleSummary"),
+    repeatExactCount: $("repeatExactCount"),
+    repeatExactResults: $("repeatExactResults"),
+    repeatSimilarCount: $("repeatSimilarCount"),
+    repeatSimilarResults: $("repeatSimilarResults"),
+    repeatSummary: $("repeatMarkupSummary"),
+    repeatApply: $("btnApplyRepeatMarkup"),
   };
 
   let library = { version: LIBRARY_VERSION, activeId: "", docs: [] };
@@ -83,6 +92,7 @@
   const localPreviewDocumentIds = new Set();
   let saveTimer = null;
   let pendingPublishSelection = null;
+  let repeatMarkupSession = null;
   /** Per-doc: true after «Предложить цвета» — next press clears marks. */
   const suggestToggleByDoc = new Map();
 
@@ -490,6 +500,145 @@
       .replace(/</g, "&lt;")
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;");
+  }
+
+  function hasVisualMark(mark) {
+    return Boolean((Array.isArray(mark.rules) && mark.rules.length) || mark.accent || mark.hidden);
+  }
+
+  function isSourceOccurrence(match) {
+    return Array.isArray(match.wordPairs) && match.wordPairs.length > 0 && match.wordPairs.every(({ sourceToken, targetToken }) =>
+      sourceToken.start === targetToken.start && sourceToken.end === targetToken.end,
+    );
+  }
+
+  function renderRepeatMatch(match) {
+    const text = doc.transliteration;
+    const ranges = match.wordPairs
+      .map((pair) => pair.targetToken)
+      .sort((a, b) => a.start - b.start);
+    let cursor = match.start;
+    let html = "";
+    for (const range of ranges) {
+      if (range.start < cursor || range.end > match.end) continue;
+      html += escapeHtml(text.slice(cursor, range.start));
+      html += `<mark class="repeat-match-word">${escapeHtml(text.slice(range.start, range.end))}</mark>`;
+      cursor = range.end;
+    }
+    html += escapeHtml(text.slice(cursor, match.end));
+    return html;
+  }
+
+  function repeatMatchRow(match, kind, index) {
+    const detail = kind === "similar"
+      ? `Совпало слов: ${match.matchedWords}`
+      : `Совпадение ${index + 1}`;
+    return `
+      <label class="repeat-markup-row">
+        <input type="checkbox" data-target-kind="${kind}" data-target-index="${index}" />
+        <span class="repeat-markup-row-body">
+          <span class="repeat-markup-snippet">${renderRepeatMatch(match)}</span>
+          <small>${detail}</small>
+        </span>
+      </label>`;
+  }
+
+  function renderRepeatMatchList(container, matches, kind, emptyText) {
+    if (!matches.length) {
+      container.innerHTML = `<p class="repeat-markup-empty">${escapeHtml(emptyText)}</p>`;
+      return;
+    }
+    container.innerHTML = matches.map((match, index) => repeatMatchRow(match, kind, index)).join("");
+  }
+
+  function renderRepeatRuleSummary(marks) {
+    const rules = [...new Set(marks.flatMap((mark) => Array.isArray(mark.rules) ? mark.rules : []))]
+      .map((id) => RULE_MAP[id])
+      .filter(Boolean)
+      .map((rule) => `<span class="repeat-markup-rule" style="--repeat-rule-color:${rule.color}">${escapeHtml(rule.label)}</span>`);
+    if (marks.some((mark) => mark.accent)) rules.push('<span class="repeat-markup-layer">Ударение</span>');
+    if (marks.some((mark) => mark.hidden)) rules.push('<span class="repeat-markup-layer">Скрытый</span>');
+    els.repeatRuleSummary.innerHTML = rules.join("");
+  }
+
+  function updateRepeatMarkupSummary() {
+    const selected = els.repeatDialog.querySelectorAll('input[data-target-kind]:checked');
+    const exact = els.repeatDialog.querySelectorAll('input[data-target-kind="exact"]:checked').length;
+    const similar = els.repeatDialog.querySelectorAll('input[data-target-kind="similar"]:checked').length;
+    els.repeatApply.disabled = selected.length === 0;
+    els.repeatSummary.textContent = selected.length
+      ? `Будет обновлено мест: ${selected.length} · точных: ${exact}, похожих: ${similar}.`
+      : "Отметь места для применения.";
+  }
+
+  function openRepeatMarkupDialog() {
+    if (!selection || selection.end <= selection.start) {
+      els.selMeta.textContent = "Сначала выдели размеченное слово или фразу";
+      return;
+    }
+    const sourceRange = { start: selection.start, end: selection.end };
+    const sourceMarks = doc.marks.filter((mark) =>
+      mark.start < sourceRange.end && mark.end > sourceRange.start && hasVisualMark(mark),
+    );
+    if (!sourceMarks.length) {
+      els.selMeta.textContent = "Сначала выдели слово или фразу с цветной разметкой";
+      return;
+    }
+    const helper = globalThis.AdminV2TajweedReapplyMarkup;
+    if (!helper) {
+      els.selMeta.textContent = "Инструмент повтора разметки не загрузился";
+      return;
+    }
+
+    const exactMatches = helper.findExactMatches(doc.transliteration, sourceRange.start, sourceRange.end)
+      .filter((match) => !isSourceOccurrence(match));
+    const similarMatches = helper.findSimilarCandidates(doc.transliteration, sourceRange.start, sourceRange.end);
+    repeatMarkupSession = { sourceRange, exactMatches, similarMatches };
+    els.repeatSource.textContent = doc.transliteration.slice(sourceRange.start, sourceRange.end);
+    renderRepeatRuleSummary(sourceMarks);
+    els.repeatExactCount.textContent = String(exactMatches.length);
+    els.repeatSimilarCount.textContent = String(similarMatches.length);
+    renderRepeatMatchList(els.repeatExactResults, exactMatches, "exact", "Точных совпадений нет.");
+    renderRepeatMatchList(els.repeatSimilarResults, similarMatches, "similar", "Похожих фраз нет.");
+    updateRepeatMarkupSummary();
+    els.repeatDialog.showModal();
+  }
+
+  function applyRepeatMarkupTargets() {
+    if (!repeatMarkupSession) return;
+    const selectedTargets = [...els.repeatDialog.querySelectorAll('input[data-target-kind]:checked')]
+      .map((input) => {
+        const list = input.dataset.targetKind === "similar"
+          ? repeatMarkupSession.similarMatches
+          : repeatMarkupSession.exactMatches;
+        return list[Number(input.dataset.targetIndex)];
+      })
+      .filter(Boolean);
+    if (!selectedTargets.length) return;
+
+    const helper = globalThis.AdminV2TajweedReapplyMarkup;
+    const result = helper.applyToTargets(
+      doc.transliteration,
+      doc.marks,
+      repeatMarkupSession.sourceRange,
+      selectedTargets,
+    );
+    if (!result.appliedTargets || JSON.stringify(result.marks) === JSON.stringify(doc.marks)) {
+      els.repeatSummary.textContent = result.skippedTargets
+        ? `Не удалось безопасно сопоставить ${result.skippedTargets} мест. Проверь похожие фразы.`
+        : "В выбранных местах разметка уже такая же.";
+      return;
+    }
+
+    pushHistory();
+    doc.marks = result.marks;
+    selection = null;
+    activeMarkIndex = -1;
+    els.repeatDialog.close();
+    repeatMarkupSession = null;
+    renderAll();
+    const skipped = result.skippedTargets ? ` · пропущено: ${result.skippedTargets}` : "";
+    els.selMeta.textContent = `Разметка применена к местам: ${result.appliedTargets}${skipped}`;
   }
 
   function renderRulesUi() {
@@ -1463,6 +1612,22 @@
     }
     const btnSuggest = $("btnSuggestMarks");
     if (btnSuggest) btnSuggest.addEventListener("click", applySuggestedMarks);
+    $("btnRepeatMarkup")?.addEventListener("click", openRepeatMarkupDialog);
+    $("btnSelectAllExact")?.addEventListener("click", () => {
+      for (const input of els.repeatExactResults.querySelectorAll('input[type="checkbox"]')) input.checked = true;
+      updateRepeatMarkupSummary();
+    });
+    $("btnClearRepeatTargets")?.addEventListener("click", () => {
+      for (const input of els.repeatDialog.querySelectorAll('input[data-target-kind]')) input.checked = false;
+      updateRepeatMarkupSummary();
+    });
+    els.repeatDialog?.addEventListener("change", (event) => {
+      if (event.target?.matches?.('input[data-target-kind]')) updateRepeatMarkupSummary();
+    });
+    els.repeatDialog?.addEventListener("close", () => {
+      repeatMarkupSession = null;
+    });
+    els.repeatApply?.addEventListener("click", applyRepeatMarkupTargets);
     const btnPubReady = $("btnPublishSelectReady");
     const btnPubAll = $("btnPublishSelectAll");
     const btnPubNone = $("btnPublishSelectNone");

@@ -11,7 +11,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Mono:wght@400;500&family=Literata:opsz,wght@7..72,500;7..72,600;7..72,700&family=Sora:wght@400;500;600;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="./editor.css?v=figma-icons-20261029-1" />
+  <link rel="stylesheet" href="./editor.css?v=repeat-markup-20261105-1" />
   <link id="workbenchPreviewStyles" rel="stylesheet" href="./workbench-preview.css?v=graphite-toolbar-top-20261030-4" />
 </head>
 <body>
@@ -97,6 +97,7 @@
     </label>
     <div class="meta-actions">
       <button type="button" class="btn ghost compact" id="btnSuggestMarks" title="Подсказки по орфографии (´ х1 рр нн къ). Повторное нажатие — очистить"><span class="label-full">Предложить цвета</span><span class="label-short">Цвета</span></button>
+        <button type="button" class="btn ghost compact" id="btnRepeatMarkup" title="Повторить цветную разметку для этого слова или фразы"><span class="label-full">Повторить разметку</span><span class="label-short">Повтор</span></button>
       <button type="button" class="btn ghost compact" id="btnEditPlain"><span class="label-full">Большое окно</span><span class="label-short">Окно</span></button>
     </div>
   </div>
@@ -216,6 +217,38 @@
     </form>
   </dialog>
 
+  <dialog id="repeatMarkupDialog" class="modal repeat-markup-dialog">
+    <form method="dialog" class="modal-card repeat-markup-card">
+      <h2>Повторить разметку</h2>
+      <p class="hint">Выбери, куда перенести цветные правила. Похожие фразы проверяются вручную; изменившиеся слова не перекрашиваются.</p>
+      <div class="repeat-markup-source">
+        <span>Образец</span>
+        <strong id="repeatMarkupSource"></strong>
+        <div id="repeatMarkupRuleSummary" class="repeat-markup-rules" aria-label="Разметка образца"></div>
+      </div>
+      <section class="repeat-markup-group" aria-labelledby="repeatExactTitle">
+        <div class="repeat-markup-group-head">
+          <h3 id="repeatExactTitle">Точные совпадения <span id="repeatExactCount">0</span></h3>
+          <button type="button" class="btn ghost compact" id="btnSelectAllExact">Все точные</button>
+        </div>
+        <div id="repeatExactResults" class="repeat-markup-results" role="group" aria-label="Точные совпадения"></div>
+      </section>
+      <section class="repeat-markup-group" aria-labelledby="repeatSimilarTitle">
+        <div class="repeat-markup-group-head">
+          <h3 id="repeatSimilarTitle">Похожие фразы <span id="repeatSimilarCount">0</span></h3>
+          <span class="repeat-markup-note">проверь перед применением</span>
+        </div>
+        <div id="repeatSimilarResults" class="repeat-markup-results" role="group" aria-label="Похожие фразы"></div>
+      </section>
+      <p id="repeatMarkupSummary" class="repeat-markup-summary" aria-live="polite">Отметь места для применения.</p>
+      <div class="modal-actions repeat-markup-actions">
+        <button type="button" class="btn ghost" id="btnClearRepeatTargets">Снять выбор</button>
+        <button type="submit" class="btn ghost" value="cancel" formnovalidate>Отмена</button>
+        <button type="button" class="btn primary" id="btnApplyRepeatMarkup" disabled>Применить разметку</button>
+      </div>
+    </form>
+  </dialog>
+
   <dialog id="publishDialog" class="modal">
     <form method="dialog" class="modal-card publish-card" id="publishForm">
       <h2>Публикация на прод</h2>
@@ -252,6 +285,7 @@
         <li><strong>Публикация</strong> — отключена в этой тестовой копии; отправка на сайт и в приложение заблокирована.</li>
         <li><strong>Загрузить с прода</strong> — копирует опубликованный пакет в тестовый редактор. Это действие доступно только для чтения.</li>
         <li><strong>Предложить цвета</strong> — черновые метки по эталонам + орфографии; правьте вручную, Undo откатывает. Не публикует.</li>
+        <li><strong>Повторить разметку</strong> — перенесите цвета на точные совпадения или вручную выбранные похожие слова в этом материале. Одно нажатие «Отменить» отменяет всю операцию.</li>
         <li><strong>Автосейв</strong> — локальный черновик в этом браузере.</li>
         <li><strong>Привязка к приложению</strong> — по полю <code>azkarIds</code>, не по названию. Title можно менять свободно.</li>
         <li><strong>Бэкап</strong> — резервная копия хранится в браузере. Если основной черновик повреждён, она откроется автоматически; её также можно скачать и при необходимости импортировать.</li>
@@ -274,6 +308,7 @@
   <script src="./catalog.js?v=2"></script>
   <script src="./preview-selection.js?v=admin-v2-workbench"></script>
   <script src="./normalization.js?v=admin-v2-recovery-20261027"></script>
-  <script src="./editor.js?v=admin-v2-demo-fixtures-20261029-1"></script>
+  <script src="./reapply-markup.js?v=repeat-markup-20261105-1"></script>
+  <script src="./editor.js?v=repeat-markup-20261105-1"></script>
 </body>
 </html>
