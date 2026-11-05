@@ -4,6 +4,18 @@
 
   if (typeof LINKS === 'undefined') return;
 
+  document.querySelectorAll('[data-project-link]').forEach(function (card) {
+    var key = card.getAttribute('data-project-link');
+    var url = LINKS.projects && LINKS.projects[key];
+    if (!url) {
+      card.remove();
+      return;
+    }
+    card.href = url;
+    card.target = '_blank';
+    card.rel = 'noopener noreferrer';
+  });
+
   var rustoreBtn = document.getElementById('btn-rustore');
   var apkBtn = document.getElementById('btn-apk');
   var appStoreBtn = document.getElementById('btn-appstore');

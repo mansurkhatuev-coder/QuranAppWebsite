@@ -15,6 +15,12 @@ const LINKS = {
   yandexMetrikaId: '110287110',
   /** JavaScript goal identifier for the share button in Metrika. */
   yandexMetrikaGoal: 'share_site',
+  projects: {
+    drewo: 'https://waydean.ru/drewo/',
+    khatuevSite: 'https://mansurkhatuev-coder.github.io/KhatuevSite/index.html',
+    mansGame: 'https://mansgame-match.onrender.com/debug/',
+    halalInstallments: 'https://halal-rass.vercel.app/dashboard',
+  },
 };
 
 if (typeof module !== 'undefined' && module.exports) {
