@@ -196,9 +196,15 @@
     return Boolean((Array.isArray(mark.rules) && mark.rules.length) || mark.accent || mark.hidden || mark.note);
   }
 
+  function tokenAtOffset(tokens, expected) {
+    if (!expected) return null;
+    return tokens.find((token) => token.start === expected.start && token.end === expected.end) || null;
+  }
+
   function applyToTargets(text, marks, sourceRange, targetRanges) {
     const value = String(text || "");
-    const sourceTokens = selectedTokens(tokenize(value), sourceRange?.start, sourceRange?.end);
+    const documentTokens = tokenize(value);
+    const sourceTokens = selectedTokens(documentTokens, sourceRange?.start, sourceRange?.end);
     const sourceMarks = Array.isArray(marks) ? marks : [];
     const targets = Array.isArray(targetRanges) ? targetRanges : [];
     if (!sourceTokens.length || !targets.length) {
@@ -207,17 +213,45 @@
 
     const clearRanges = [];
     const copiedMarks = [];
+    const acceptedTargets = [];
     let appliedTargets = 0;
     let skippedTargets = 0;
 
     for (const target of targets) {
+      const targetStart = Number(target?.start);
+      const targetEnd = Number(target?.end);
+      const overlapsSource = targetStart < sourceRange.end && targetEnd > sourceRange.start;
+      const overlapsAcceptedTarget = acceptedTargets.some((accepted) =>
+        targetStart < accepted.end && targetEnd > accepted.start,
+      );
+      if (!Number.isFinite(targetStart) || !Number.isFinite(targetEnd) || targetEnd <= targetStart || overlapsSource || overlapsAcceptedTarget) {
+        skippedTargets += 1;
+        continue;
+      }
+
       const pairs = Array.isArray(target.wordPairs) ? target.wordPairs : [];
       let safePairs = 0;
       let skippedPair = false;
       for (const pair of pairs) {
         const sourceToken = pair.sourceToken;
         const targetToken = pair.targetToken;
-        if (!sourceToken || !targetToken || sourceToken.end - sourceToken.start !== targetToken.end - targetToken.start) {
+        const currentSourceToken = tokenAtOffset(documentTokens, sourceToken);
+        const currentTargetToken = tokenAtOffset(documentTokens, targetToken);
+        const belongsToSource = sourceTokens.some((token) =>
+          token.start === sourceToken?.start && token.end === sourceToken?.end,
+        );
+        if (
+          !sourceToken
+          || !targetToken
+          || !currentSourceToken
+          || !currentTargetToken
+          || !belongsToSource
+          || currentSourceToken.raw !== sourceToken.raw
+          || currentTargetToken.raw !== targetToken.raw
+          || currentSourceToken.key !== sourceToken.key
+          || currentTargetToken.key !== targetToken.key
+          || sourceToken.end - sourceToken.start !== targetToken.end - targetToken.start
+        ) {
           skippedPair = true;
           continue;
         }
@@ -241,7 +275,10 @@
           ));
         }
       }
-      if (safePairs) appliedTargets += 1;
+      if (safePairs) {
+        appliedTargets += 1;
+        acceptedTargets.push({ start: targetStart, end: targetEnd });
+      }
       if (skippedPair || !safePairs) skippedTargets += 1;
     }
 

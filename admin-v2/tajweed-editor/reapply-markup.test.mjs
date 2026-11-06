@@ -74,6 +74,26 @@ test('replaces marks only inside a target token and preserves crossing mark frag
   ]);
 });
 
+test('skips source-overlapping and mutually overlapping targets', async () => {
+  const helper = await loadHelper();
+  const text = 'a a a a a';
+  const matches = helper.findExactMatches(text, 0, 3);
+  const sourceMarks = [
+    { start: 0, end: 1, rules: ['source-first'], accent: false, hidden: false },
+    { start: 2, end: 3, rules: ['source-second'], accent: false, hidden: false },
+  ];
+
+  const result = helper.applyToTargets(text, sourceMarks, { start: 0, end: 3 }, matches);
+
+  assert.equal(result.appliedTargets, 1);
+  assert.equal(result.skippedTargets, 3);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.marks)), [
+    ...sourceMarks,
+    { start: 4, end: 5, rules: ['source-first'], accent: false, hidden: false },
+    { start: 6, end: 7, rules: ['source-second'], accent: false, hidden: false },
+  ]);
+});
+
 test('does not change different words in an approved similar candidate', async () => {
   const helper = await loadHelper();
   const text = 'Allahumma ighfir lahu warhamhu. Allahumma ighfir lana warhamna.';
@@ -107,4 +127,20 @@ test('skips an NFC-equivalent token when original character offsets cannot be ma
     { start: 0, end: 1, rules: ['ghunna'], accent: false, hidden: false },
   ]);
   assert.equal(text, 'é x e\u0301 y');
+});
+
+test('skips stale target offsets when the document tokens changed', async () => {
+  const helper = await loadHelper();
+  const originalText = 'a b. a b.';
+  const staleTarget = helper.findExactMatches(originalText, 0, 3)[1];
+  const currentText = 'x y. x y.';
+  const marks = [
+    { start: 0, end: 1, rules: ['source'], accent: false, hidden: false },
+  ];
+
+  const result = helper.applyToTargets(currentText, marks, { start: 0, end: 3 }, [staleTarget]);
+
+  assert.equal(result.appliedTargets, 0);
+  assert.equal(result.skippedTargets, 1);
+  assert.deepEqual(JSON.parse(JSON.stringify(result.marks)), marks);
 });

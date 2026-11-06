@@ -50,7 +50,7 @@ For each target, align identical tokens in order and transfer only visible mark 
 
 Run `node --test admin-v2/tajweed-editor/reapply-markup.test.mjs`.
 
-Expected: local checks (24 tests, JavaScript syntax, diff whitespace) passed. Manual selection/apply/undo in the browser remains unverified because the local preview did not deliver text selection to the editor.
+Expected: local checks (133 Admin V2 tests, JavaScript syntax, diff whitespace) passed. Manual selection/apply/undo in the browser remains unverified because the local preview did not deliver text selection to the editor.
 
 ## Task 2: Add the review dialog and editor integration
 

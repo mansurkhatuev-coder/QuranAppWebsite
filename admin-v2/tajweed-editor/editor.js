@@ -512,6 +512,23 @@
     );
   }
 
+  function withoutOverlappingMatches(matches, protectedRange) {
+    const accepted = [];
+    for (const match of matches) {
+      if (match.start < protectedRange.end && match.end > protectedRange.start) continue;
+      if (accepted.some((previous) => match.start < previous.end && match.end > previous.start)) continue;
+      accepted.push(match);
+    }
+    return accepted;
+  }
+
+  function isRepeatMarkupSessionCurrent() {
+    return Boolean(repeatMarkupSession)
+      && repeatMarkupSession.documentId === doc.id
+      && repeatMarkupSession.transliteration === doc.transliteration
+      && repeatMarkupSession.marksSnapshot === JSON.stringify(doc.marks);
+  }
+
   function renderRepeatMatch(match) {
     const text = doc.transliteration;
     const ranges = match.wordPairs
@@ -590,10 +607,20 @@
       return;
     }
 
-    const exactMatches = helper.findExactMatches(doc.transliteration, sourceRange.start, sourceRange.end)
-      .filter((match) => !isSourceOccurrence(match));
+    const exactMatches = withoutOverlappingMatches(
+      helper.findExactMatches(doc.transliteration, sourceRange.start, sourceRange.end)
+        .filter((match) => !isSourceOccurrence(match)),
+      sourceRange,
+    );
     const similarMatches = helper.findSimilarCandidates(doc.transliteration, sourceRange.start, sourceRange.end);
-    repeatMarkupSession = { sourceRange, exactMatches, similarMatches };
+    repeatMarkupSession = {
+      documentId: doc.id,
+      transliteration: doc.transliteration,
+      marksSnapshot: JSON.stringify(doc.marks),
+      sourceRange,
+      exactMatches,
+      similarMatches,
+    };
     els.repeatSource.textContent = doc.transliteration.slice(sourceRange.start, sourceRange.end);
     renderRepeatRuleSummary(sourceMarks);
     els.repeatExactCount.textContent = String(exactMatches.length);
@@ -606,6 +633,12 @@
 
   function applyRepeatMarkupTargets() {
     if (!repeatMarkupSession) return;
+    if (!isRepeatMarkupSessionCurrent()) {
+      els.repeatDialog.close();
+      repeatMarkupSession = null;
+      els.selMeta.textContent = "Документ изменился. Открой повтор разметки заново.";
+      return;
+    }
     const selectedTargets = [...els.repeatDialog.querySelectorAll('input[data-target-kind]:checked')]
       .map((input) => {
         const list = input.dataset.targetKind === "similar"
@@ -1691,6 +1724,11 @@
     });
 
     document.addEventListener("keydown", (e) => {
+      if (els.repeatDialog?.open) {
+        const key = String(e.key || "").toLowerCase();
+        if ((e.ctrlKey || e.metaKey) && (key === "z" || key === "y")) e.preventDefault();
+        return;
+      }
       const tag = (e.target && e.target.tagName) || "";
       const typing = tag === "INPUT" || tag === "TEXTAREA" || e.target.isContentEditable;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "z") {
