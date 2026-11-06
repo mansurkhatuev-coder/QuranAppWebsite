@@ -113,3 +113,129 @@ body[data-sky="night"] .topbar { background: linear-gradient(90deg, rgba(3, 9, 1
   .appearance-controls { padding: 11px; }
   .appearance-controls select { min-height: 42px; font-size: 13px; }
 }
+
+/* Clearer appearance controls and a quieter scrollbar in the More drawer. */
+#morePopover {
+  overscroll-behavior-y: contain;
+  scrollbar-gutter: stable;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(205, 174, 110, .76) rgba(255, 255, 255, .045);
+}
+
+#morePopover::-webkit-scrollbar { width: 10px; }
+#morePopover::-webkit-scrollbar-track {
+  margin-block: 8px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .045);
+}
+#morePopover::-webkit-scrollbar-thumb {
+  min-height: 42px;
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(226, 199, 139, .80), rgba(155, 121, 60, .66)) padding-box;
+}
+#morePopover::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(244, 220, 167, .94), rgba(181, 143, 72, .86)) padding-box;
+}
+
+#morePopover .appearance-controls {
+  gap: 8px;
+  padding: 14px;
+  border-color: rgba(205, 174, 110, .40);
+  border-radius: 16px;
+  background:
+    radial-gradient(ellipse 90% 46% at 0% 0%, rgba(218, 183, 111, .10), transparent 78%),
+    linear-gradient(145deg, rgba(20, 33, 34, .96), rgba(8, 16, 19, .98));
+  box-shadow: 0 8px 20px rgba(0, 0, 0, .16), inset 0 1px rgba(255, 255, 255, .065);
+}
+
+#morePopover .appearance-heading { gap: 4px; margin-bottom: 3px; }
+#morePopover .appearance-heading strong { font-size: 14px; }
+#morePopover .appearance-heading small { max-width: 44ch; font-size: 10px; line-height: 1.45; }
+#morePopover .appearance-controls label {
+  margin-top: 4px;
+  color: #c9c2b2;
+  font-size: 10px;
+  letter-spacing: .025em;
+}
+
+#morePopover .appearance-controls select {
+  min-height: 44px;
+  padding: 0 40px 0 13px;
+  appearance: none;
+  border: 1px solid rgba(211, 185, 128, .34);
+  border-radius: 11px;
+  background-color: rgba(7, 15, 18, .94);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24'%3E%3Cpath d='m7 10 5 5 5-5' fill='none' stroke='%23dfbf78' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(145deg, rgba(255, 255, 255, .035), rgba(255, 255, 255, .008));
+  background-position: right 13px center, 0 0;
+  background-repeat: no-repeat;
+  background-size: 16px 16px, auto;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .045), 0 3px 9px rgba(0, 0, 0, .12);
+  color: #f0eadb;
+  font-size: 12px;
+  font-weight: 600;
+  transition: border-color .16s ease, background-color .16s ease, box-shadow .16s ease;
+  cursor: pointer;
+}
+
+#morePopover .appearance-controls select:hover:not(:disabled) {
+  border-color: rgba(225, 193, 126, .62);
+  background-color: rgba(15, 26, 28, .98);
+}
+
+#morePopover .appearance-controls select:focus-visible {
+  outline: 2px solid rgba(222, 184, 109, .38);
+  outline-offset: 2px;
+  border-color: rgba(236, 202, 132, .82);
+  box-shadow: 0 0 0 4px rgba(201, 158, 76, .12), inset 0 1px rgba(255, 255, 255, .08);
+}
+
+#morePopover .appearance-controls select:disabled { opacity: .62; cursor: not-allowed; }
+#morePopover .appearance-controls select option { background: #101a1c; color: #f0eadb; }
+
+html[data-color-scheme="light"] #morePopover {
+  scrollbar-color: rgba(133, 101, 49, .68) rgba(92, 75, 45, .075);
+}
+
+html[data-color-scheme="light"] #morePopover::-webkit-scrollbar-track { background: rgba(92, 75, 45, .075); }
+html[data-color-scheme="light"] #morePopover::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(194, 159, 96, .72), rgba(139, 101, 42, .58)) padding-box;
+}
+html[data-color-scheme="light"] #morePopover::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, rgba(179, 137, 66, .88), rgba(119, 83, 31, .80)) padding-box;
+}
+
+html[data-color-scheme="light"] #morePopover .appearance-controls {
+  border-color: rgba(145, 111, 56, .28);
+  background:
+    radial-gradient(ellipse 90% 46% at 0% 0%, rgba(255, 255, 255, .95), transparent 78%),
+    linear-gradient(145deg, rgba(250, 248, 241, .98), rgba(234, 227, 211, .96));
+  box-shadow: 0 8px 20px rgba(54, 45, 30, .08), inset 0 1px rgba(255, 255, 255, .98);
+}
+
+html[data-color-scheme="light"] #morePopover .appearance-controls label { color: #565348; }
+
+html[data-color-scheme="light"] #morePopover .appearance-controls select {
+  border-color: rgba(129, 98, 46, .34);
+  background-color: rgba(255, 255, 251, .94);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24'%3E%3Cpath d='m7 10 5 5 5-5' fill='none' stroke='%2376541f' stroke-width='1.8' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(145deg, rgba(255, 255, 255, .68), rgba(232, 225, 210, .42));
+  color: #2b332e;
+  box-shadow: inset 0 1px rgba(255, 255, 255, .98), 0 3px 9px rgba(54, 45, 30, .07);
+}
+
+html[data-color-scheme="light"] #morePopover .appearance-controls select:hover:not(:disabled) {
+  border-color: rgba(123, 89, 34, .62);
+  background-color: #fffefa;
+}
+
+html[data-color-scheme="light"] #morePopover .appearance-controls select:focus-visible {
+  outline-color: rgba(151, 109, 41, .30);
+  border-color: rgba(132, 94, 33, .72);
+  box-shadow: 0 0 0 4px rgba(154, 112, 44, .10), inset 0 1px rgba(255, 255, 255, .98);
+}
+
+html[data-color-scheme="light"] #morePopover .appearance-controls select option { background: #fffefa; color: #2b332e; }

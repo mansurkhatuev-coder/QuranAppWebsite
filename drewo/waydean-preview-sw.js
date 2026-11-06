@@ -31,7 +31,7 @@ const PRECACHE = [
   './waydean-preview-glass-cards.css?v=uniform-markers-20261030-1',
   './waydean-preview-auth.css?v=dialog-close-20261102-1',
   './waydean-preview-person-sheet.css?v=editor-actions-20261102-1',
-  './waydean-preview-appearance.css?v=weather-parity-20261028-1',
+  './waydean-preview-appearance.css?v=dropdown-polish-20261106-1',
   './waydean-color-scheme.css?v=dark-default-20261103-1',
   './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1',
   './waydean-preview-appearance.mjs?v=dark-default-20261103-1',
