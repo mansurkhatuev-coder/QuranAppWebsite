@@ -29,7 +29,7 @@
   <link rel="stylesheet" href="waydean-preview-camera.css?v=camera-motion-20261029-1">
   <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
   <link rel="stylesheet" href="waydean-preview-lod.css?v=uniform-markers-20261030-1">
-  <link rel="stylesheet" href="waydean-preview-edit.css">
+  <link rel="stylesheet" href="waydean-preview-edit.css?v=person-actions-20261108-1">
   <link rel="stylesheet" href="waydean-preview-readiness.css">
   <link rel="stylesheet" href="waydean-preview-main-polish.css?v=6">
   <link rel="stylesheet" href="waydean-preview-desktop-controls.css">
@@ -43,7 +43,7 @@
   <link rel="stylesheet" href="waydean-preview-self.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=uniform-markers-20261030-1">
   <link rel="stylesheet" href="waydean-preview-auth.css?v=dialog-close-20261102-1">
-  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=editor-actions-20261102-1">
+  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=person-actions-20261108-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=dropdown-polish-20261106-1">
   <link rel="stylesheet" href="waydean-color-scheme.css?v=dark-default-20261103-1">
 </head>
@@ -153,6 +153,7 @@
       <div class="popover-head"><strong>Фильтры древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
       <label>Поколения от <select id="minGeneration"></select></label><label>до <select id="maxGeneration"></select></label>
       <label class="check-row"><span>Только с фото</span><input id="photosOnly" type="checkbox"></label>
+      <label class="check-row"><span>Показывать женщин</span><input id="showWomen" type="checkbox"></label>
       <div class="popover-actions"><button class="primary-action" id="applyFilters">Применить</button><button class="secondary-action" id="resetFilters">Сбросить</button></div>
     </section>
     <section class="popover stats-popover" id="statsPopover" hidden aria-label="Статистика древа">
@@ -375,7 +376,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1');
     }
   </script>
 </body>

@@ -4,6 +4,7 @@ import {
   buildWaydeanPublishPayload,
   buildWaydeanPublishActivity
 } from './waydean-preview-publish.mjs';
+import * as publish from './waydean-preview-publish.mjs';
 
 const baseTree = {
   id: 'root', name: 'Род', born: 1900, died: null, sons: [
@@ -72,4 +73,28 @@ test('rejects invalid tree snapshots and malformed base activity', () => {
     baseFingerprint: 'fp'
   });
   assert.equal(JSON.parse(payload.activityJson).length, 0);
+});
+
+test('keeps gender in published JSON and records gender changes and child additions', () => {
+  const before = { id: 'root', name: 'Род', sons: [{ id: 'a', name: 'А', gender: 'male', sons: [] }] };
+  const after = { id: 'root', name: 'Род', sons: [
+    { id: 'a', name: 'А', gender: 'female', sons: [] },
+    { id: 'b', name: 'Б', gender: 'female', sons: [] }
+  ] };
+  const payload = buildWaydeanPublishPayload({ baseTree: before, draftTree: after, at: '2026-11-08T00:00:00.000Z' });
+  const published = JSON.parse(payload.treeJson);
+  const activity = JSON.parse(payload.activityJson);
+
+  assert.equal(published.sons[0].gender, 'female');
+  assert.equal(published.sons[1].gender, 'female');
+  assert.ok(activity.some(row => row.type === 'gender' && row.sonId === 'a' && row.gender === 'female'));
+  assert.ok(activity.some(row => row.type === 'add' && row.sonId === 'b' && row.gender === 'female'));
+  assert.equal(typeof publish.accountPublishButtonState, 'function');
+});
+
+test('shows the publish cue only for a saved changed draft with publish access', () => {
+  assert.deepEqual(publish.accountPublishButtonState({ editStatus: 'dirty', hasChanges: true, canPublish: true, hasBaseFingerprint: true }), { visible: false, disabled: true });
+  assert.deepEqual(publish.accountPublishButtonState({ editStatus: 'saved', hasChanges: true, canPublish: true, hasBaseFingerprint: true }), { visible: true, disabled: false });
+  assert.deepEqual(publish.accountPublishButtonState({ editStatus: 'saved', hasChanges: true, canPublish: false, hasBaseFingerprint: true }), { visible: false, disabled: true });
+  assert.deepEqual(publish.accountPublishButtonState({ editStatus: 'saved', hasChanges: true, canPublish: true, hasBaseFingerprint: false }), { visible: false, disabled: true });
 });

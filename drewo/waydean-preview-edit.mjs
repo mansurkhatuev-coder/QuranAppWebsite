@@ -63,6 +63,11 @@ export function updatePerson(tree, id, fields) {
           : fields[key];
     }
   }
+  if (Object.hasOwn(fields, 'gender')) {
+    const gender = String(fields.gender || 'male');
+    if (!['male', 'female'].includes(gender)) throw new Error('Пол должен быть «сын» или «дочь»');
+    next.gender = gender;
+  }
   if (!next.name) throw new Error('Имя не может быть пустым');
   for (const key of ['born', 'died']) if (Object.hasOwn(fields, key)) next[key] = normalizeLifeYear(next[key]);
   if (next.born != null && next.died != null && next.born > next.died) throw new Error('Год смерти не может быть раньше года рождения');
@@ -82,7 +87,9 @@ export function addChild(tree, parentId, fields) {
   if (!parent) throw new Error('Parent not found');
   const id = String(fields.id || '').trim();
   if (!id || allIds(tree).has(id)) throw new Error('Child ID must be unique');
-  const child = { id, name: String(fields.name || '').trim(), born: fields.born ?? null, died: fields.died ?? null, bio: String(fields.bio || ''), teip: String(fields.teip || '').trim().slice(0, 80), sons: [] };
+  const gender = String(fields.gender || 'male');
+  if (!['male', 'female'].includes(gender)) throw new Error('Пол должен быть «сын» или «дочь»');
+  const child = { id, name: String(fields.name || '').trim(), gender, born: fields.born ?? null, died: fields.died ?? null, bio: String(fields.bio || ''), teip: String(fields.teip || '').trim().slice(0, 80), sons: [] };
   if (!child.name) throw new Error('Name is required');
   for (const key of ['born', 'died']) child[key] = normalizeLifeYear(child[key]);
   if (child.born != null && child.died != null && child.born > child.died) throw new Error('Birth year must not be later than death year');

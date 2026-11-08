@@ -26,7 +26,7 @@ export type MergeStats = {
   skippedDeletes: Array<{ id: unknown; field?: string }>;
 };
 
-const MERGE_FIELDS = ['name', 'born', 'died', 'bio', 'photo'] as const;
+const MERGE_FIELDS = ['name', 'born', 'died', 'bio', 'photo', 'gender'] as const;
 
 type FieldName = (typeof MERGE_FIELDS)[number];
 
@@ -194,6 +194,7 @@ export function mergeConcurrentEdits(
     applyLocalField(serverNode, localNode, 'died', stats, {});
     applyLocalField(serverNode, localNode, 'bio', stats, {});
     applyLocalField(serverNode, localNode, 'photo', stats, {});
+    applyLocalField(serverNode, localNode, 'gender', stats, {});
     applyLocalField(serverNode, localNode, 'name', stats, { onlyIfServerEmpty: true });
   });
 

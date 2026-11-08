@@ -2,6 +2,7 @@ const activityTitles = Object.freeze({
   add: 'Добавлен человек',
   delete: 'Удалён человек',
   rename: 'Изменено имя',
+  gender: 'Изменён пол',
   reparent: 'Изменена родственная связь',
   year: 'Изменена дата',
   bio: 'Изменена биография',

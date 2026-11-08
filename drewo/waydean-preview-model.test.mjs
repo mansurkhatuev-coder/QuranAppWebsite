@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { flattenTree, getCardWidthForName } from './waydean-preview-model.mjs';
+import * as model from './waydean-preview-model.mjs';
 
 const familyTreePath = fileURLToPath(new URL('./family-tree.json', import.meta.url));
 
@@ -32,6 +33,24 @@ test('flattens parent links, generations, dates, photo flags, and child counts',
 test('rejects duplicate or missing person IDs', () => {
   assert.throws(() => flattenTree({ id: 'same', name: 'Root', sons: [{ id: 'same', name: 'Duplicate' }] }), /duplicate/i);
   assert.throws(() => flattenTree({ name: 'Missing ID' }), /id/i);
+});
+
+test('normalizes legacy people to male and filters women with their descendants', () => {
+  const flat = flattenTree({
+    id: 'root', name: 'Род', sons: [
+      { id: 'daughter', name: 'Дочь', gender: 'female', sons: [
+        { id: 'grandson', name: 'Внук', sons: [] }
+      ] },
+      { id: 'son', name: 'Сын', sons: [] }
+    ]
+  });
+  assert.equal(flat.find(person => person.id === 'root').gender, 'male');
+  assert.equal(flat.find(person => person.id === 'daughter').gender, 'female');
+  assert.equal(typeof model.filterPeopleByWomen, 'function');
+  assert.deepEqual(model.filterPeopleByWomen(flat, false).map(person => person.id), ['root', 'son']);
+  assert.deepEqual(model.filterPeopleByWomen(flat, true).map(person => person.id), ['root', 'daughter', 'grandson', 'son']);
+  assert.equal(model.womenFilterStorageKey('root'), model.womenFilterStorageKey('root'));
+  assert.notEqual(model.womenFilterStorageKey('root'), model.womenFilterStorageKey('other-tree'));
 });
 
 test('expands a person card to fit the full name while keeping short names at the base width', () => {

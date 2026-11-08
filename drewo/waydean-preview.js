@@ -1,4 +1,4 @@
-import { flattenTree, getCardWidthForName } from './waydean-preview-model.mjs?v=person-card-width-2';
+import { flattenTree, filterPeopleByWomen, womenFilterStorageKey, getCardWidthForName } from './waydean-preview-model.mjs?v=person-card-gender-20261108-1';
 import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
   createLatestFrameCoalescer, clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
@@ -7,7 +7,7 @@ import {
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
 import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
 import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
-import { buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=admin-save-1';
+import { accountPublishButtonState, buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import {
@@ -23,7 +23,7 @@ import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
 } from './waydean-preview-route.mjs?v=family-route-5';
-import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-edit-validation-1';
+import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
@@ -76,6 +76,7 @@ let allowUnsavedExit = false;
 let mode = 'all';
 let zoom = 1;
 let filters = { min: 1, max: Infinity, photosOnly: false };
+let showWomen = false;
 let lastFocus = null;
 let toastTimer = 0;
 let fullDataDepth = 1;
@@ -115,6 +116,9 @@ let nextSaveFails = false;
 let editDisclosureOpen = false;
 let currentProfileTab = 'info';
 let personSheetId = null;
+let addChildFormOpenForPerson = null;
+let personSheetEditOpen = false;
+let pendingChildUndo = null;
 let relationshipDragEnabled = false;
 let rawDraftDirty = false;
 let localDraftKey = '';
@@ -133,6 +137,7 @@ let resetCameraGestureState = () => {};
 let photoCropState = null;
 const scheduleMiniViewportUpdate = createFrameCoalescer(requestAnimationFrame, updateMiniViewport);
 let cameraMotionTimer = 0;
+let publishCueCounter = 0;
 
 function markCameraMoving() {
   ui.graph.classList.add('camera-moving');
@@ -465,16 +470,86 @@ function buildDraftRecoveryActions({ resetText = null } = {}) {
 
 function appendAccountPublishButton(container) {
   if (!hasRemoteTreeWriteAccess()) return null;
+  const wrapper = document.createElement('div');
+  wrapper.className = 'account-publish-wrap';
   const button = document.createElement('button');
   button.type = 'button';
-  button.textContent = editStatus === 'saving' ? 'Публикуем…' : 'Опубликовать в древо';
+  button.className = 'account-publish-button';
+  const indicator = document.createElement('span');
+  indicator.className = 'account-publish-indicator';
+  indicator.setAttribute('aria-hidden', 'true');
+  indicator.textContent = '●';
+  const label = document.createElement('span');
+  label.className = 'account-publish-label';
+  button.append(indicator, label);
   button.dataset.profileFocus = 'action:publish';
-  button.hidden = !['saved', 'clean'].includes(editStatus) || !hasAccountPublishChanges();
-  button.disabled = editStatus === 'saving' || editStatus === 'conflict'
-    || !hasRemoteTreeWriteAccess() || !accountBaseFingerprint || !hasAccountPublishChanges();
+  const guidance = document.createElement('small');
+  guidance.className = 'account-publish-guidance';
+  guidance.id = `publish-guidance-${++publishCueCounter}`;
+  guidance.textContent = 'Черновик сохранён. Нажмите, чтобы опубликовать изменения на сайте.';
+  button.setAttribute('aria-describedby', guidance.id);
+  wrapper.append(button, guidance);
   button.addEventListener('click', () => void publishAccountDraft());
-  container.append(button);
+  button._publishGuidance = guidance;
+  wrapper._publishButton = button;
+  container.append(wrapper);
+  syncAccountPublishButton(button);
   return button;
+}
+
+function syncAccountPublishButton(button) {
+  if (!button) return;
+  const state = accountPublishButtonState({
+    editStatus,
+    hasChanges: hasAccountPublishChanges(),
+    canPublish: hasRemoteTreeWriteAccess(),
+    hasBaseFingerprint: Boolean(accountBaseFingerprint)
+  });
+  button.hidden = !state.visible;
+  button.disabled = state.disabled;
+  button.classList.toggle('publish-ready', state.visible);
+  const wrapper = button.closest('.account-publish-wrap');
+  if (wrapper) wrapper.hidden = !state.visible;
+  const label = button.querySelector('.account-publish-label');
+  if (label) label.textContent = editStatus === 'saving' ? 'Публикуем…' : 'Опубликовать в древо';
+  if (button._publishGuidance) button._publishGuidance.hidden = !state.visible;
+}
+
+function buildDraftActionsPanel() {
+  const panel = document.createElement('section');
+  panel.className = 'mock-editor draft-action-panel';
+  const title = document.createElement('strong'); title.textContent = 'Сохранение изменений'; panel.append(title);
+  const actions = document.createElement('div'); actions.className = 'mock-edit-actions';
+  const save = document.createElement('button'); save.type = 'button';
+  save.textContent = editStatus === 'saving' ? 'Сохраняется…'
+    : syntheticFixture ? 'Сохранить демо-черновик'
+      : hasRemoteTreeWriteAccess() ? 'Сохранить черновик' : 'Сохранить локально';
+  save.hidden = !['dirty', 'saving'].includes(editStatus);
+  save.disabled = editStatus === 'saving' || editStatus === 'conflict';
+  save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
+  const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить сохранение';
+  retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry';
+  retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
+  const reload = document.createElement('button'); reload.type = 'button';
+  reload.textContent = hasRemoteTreeWriteAccess() && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию';
+  reload.hidden = editStatus !== 'conflict'; reload.dataset.profileFocus = 'action:reload-saved';
+  reload.addEventListener('click', () => hasRemoteTreeWriteAccess() && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
+  const publish = appendAccountPublishButton(actions);
+  const status = document.createElement('p');
+  status.className = `mock-edit-status status-${editStatus}`;
+  status.setAttribute('role', 'status'); status.setAttribute('aria-live', 'polite');
+  status.textContent = editStatus === 'conflict'
+    ? 'На сайте появилась новая версия. Черновик сохранён отдельно; загрузите текущую версию перед продолжением.'
+    : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить. Можно повторить.'
+      : editStatus === 'dirty' ? hasRemoteTreeWriteAccess() ? 'Сначала сохраните черновик на этом устройстве. Публикация появится после сохранения.' : 'Есть несохранённые изменения.'
+        : editStatus === 'saving' ? 'Сохраняю изменения…'
+          : hasRemoteTreeWriteAccess() && !accountBaseFingerprint ? localDraftPersistenceError || 'Не удалось проверить исходную версию сайта. Перезагрузите древо перед публикацией.'
+          : hasAccountPublishChanges() ? 'Черновик сохранён в этом браузере, но ещё не опубликован на сайте.'
+            : 'Черновик сохранён.';
+  actions.prepend(save, retry, reload);
+  panel.append(actions, status);
+  syncAccountPublishButton(publish);
+  return panel;
 }
 
 function draftSubject() {
@@ -549,11 +624,31 @@ function currentRecords() {
   if (mode === 'all' && masterMobileOverview) {
     candidates = masterFixtureVisibleRecords(candidates, { viewportWidth: window.innerWidth });
   }
-  return candidates.filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photosOnly || hasDisplayPhoto(person)));
+  return filterPeopleByWomen(candidates, showWomen)
+    .filter(person => person.generation >= filters.min && person.generation <= filters.max && (!filters.photosOnly || hasDisplayPhoto(person)));
 }
 
 function browserStorage() {
   try { return window.localStorage; } catch { return null; }
+}
+
+function womenPreferenceKey() {
+  const rootId = records.find(person => person.parentId == null)?.id || fixtureRoot?.id || 'tree';
+  return womenFilterStorageKey(rootId);
+}
+
+function loadWomenPreference() {
+  try { showWomen = browserStorage()?.getItem(womenPreferenceKey()) === '1'; }
+  catch { showWomen = false; }
+  const toggle = $('#showWomen');
+  if (toggle) toggle.checked = showWomen;
+}
+
+function setWomenVisibility(visible) {
+  showWomen = Boolean(visible);
+  const toggle = $('#showWomen');
+  if (toggle) toggle.checked = showWomen;
+  try { browserStorage()?.setItem(womenPreferenceKey(), showWomen ? '1' : '0'); } catch {}
 }
 
 function loadMyPersonPreference() {
@@ -812,7 +907,7 @@ function drawTree() {
       const addChild = document.createElement('button');
       addChild.type = 'button';
       addChild.className = 'person-add-child';
-      addChild.textContent = '+';
+      addChild.textContent = '+ Ребёнок';
       addChild.setAttribute('aria-label', `Добавить ребёнка к ${person.name}`);
       addChild.title = `Добавить ребёнка к ${person.name}`;
       addChild.style.left = `${point.centerX}px`;
@@ -926,8 +1021,8 @@ function renderProfile(tab = 'info') {
     facts.className = 'facts';
     const values = [
       ['Поколение', String(person.generation)],
-      ['Отец', parent?.name || 'Не указан'],
-      ['Сыновья', `${children.length} человек`],
+      [parent?.gender === 'female' ? 'Мать' : 'Отец', parent?.name || 'Не указан'],
+      ['Дети', `${children.length} человек`],
       ['Ветвь', branchAnchor ? `Линия ${branchAnchor.name}` : 'Основная линия'],
       ['Тейп', String(person.teip ?? '').trim() || 'Не указан']
     ];
@@ -973,7 +1068,20 @@ function renderProfile(tab = 'info') {
       }
       body.append(list);
     }
-    if (canEditDraft()) body.append(buildRelationshipControls(person));
+    if (canEditDraft()) {
+      const add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'person-sheet-link add-child-entry';
+      add.textContent = '+ Добавить ребёнка';
+      add.addEventListener('click', () => openAddChildEditor(person.id));
+      body.append(add);
+    }
+    if (canEditDraft()) {
+      body.append(buildRelationshipControls(person));
+      if (['dirty', 'saving', 'error', 'conflict'].includes(editStatus) || hasAccountPublishChanges()) {
+        body.append(buildDraftActionsPanel());
+      }
+    }
   } else {
     const media = document.createElement('div'); media.className = 'media-state';
     if (hasDisplayPhoto(person)) {
@@ -1015,15 +1123,81 @@ function renderProfile(tab = 'info') {
 
 function openAddChildEditor(personId) {
   if (!canEditDraft() || !byId.has(personId)) return;
-  if (selectedId !== personId) selectPerson(personId, { preserveContext: true });
-  renderProfile('relatives');
-  if (window.matchMedia('(max-width: 700px)').matches) ui.app.classList.add('profile-open');
+  personSheetEditOpen = false;
+  openPersonSheet(personId);
+  addChildFormOpenForPerson = String(personId);
+  renderPersonSheet(personId);
   requestAnimationFrame(() => {
-    const form = ui.profile.querySelector('[data-add-child-form]');
+    const form = ui.personSheetContent.querySelector('[data-add-child-form]');
     const nameInput = form?.querySelector('input[name="name"]');
     form?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     nameInput?.focus({ preventScroll: true });
   });
+}
+
+function buildAddChildForm(person) {
+  const form = document.createElement('form');
+  form.className = 'mock-edit-form add-child-form';
+  form.dataset.addChildForm = 'true';
+  const parentNote = document.createElement('p');
+  parentNote.className = 'mock-edit-status';
+  parentNote.textContent = `Новая запись будет добавлена к «${person.name}».`;
+  form.append(parentNote);
+  const name = addField(form, 'Имя', 'name');
+  name.required = true;
+  addGenderField(form, 'male', 'Пол ребёнка');
+  addField(form, 'Год рождения', 'born', '', 'text');
+  const extra = document.createElement('details');
+  extra.className = 'add-child-extra';
+  const summary = document.createElement('summary'); summary.textContent = 'Дополнительные данные';
+  const extraFields = document.createElement('div'); extraFields.className = 'add-child-extra-fields';
+  addField(extraFields, 'Тейп', 'teip');
+  addField(extraFields, 'Краткая биография', 'bio');
+  extra.append(summary, extraFields);
+  form.append(extra);
+  const submit = document.createElement('button');
+  submit.type = 'submit'; submit.className = 'add-child-submit';
+  submit.textContent = 'Добавить в черновик';
+  submit.dataset.profileFocus = 'action:submit-child';
+  const status = document.createElement('p');
+  status.className = 'mock-edit-status'; status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  form.append(submit, status);
+  form.addEventListener('submit', event => {
+    event.preventDefault();
+    const before = cloneTree(editableDraftRoot());
+    const values = Object.fromEntries(new FormData(form).entries());
+    values.id = generateUniquePersonId(editableDraftRoot());
+    try {
+      const womenVisibleBefore = showWomen;
+      const child = addChild(editableDraftRoot(), person.id, values);
+      pendingChildUndo = { tree: before, parentId: person.id, childId: child.id, name: child.name, womenVisibleBefore };
+      addChildFormOpenForPerson = null;
+      if (child.gender === 'female') setWomenVisibility(true);
+      markRelationshipDirty({ preserveChildUndo: true });
+      announce(`«${child.name}» добавлен(а) в черновик. Публикация остаётся отдельным шагом.`);
+    } catch (error) {
+      status.textContent = error?.message || 'Не удалось добавить запись.';
+      status.classList.add('status-error');
+    }
+  });
+  return form;
+}
+
+function undoLastChildAddition() {
+  if (!pendingChildUndo || !canEditDraft()) return;
+  const { tree, parentId, name, womenVisibleBefore } = pendingChildUndo;
+  fixtureRoot = cloneTree(tree);
+  pendingChildUndo = null;
+  setWomenVisibility(womenVisibleBefore);
+  addChildFormOpenForPerson = null;
+  personSheetEditOpen = false;
+  rawDraftDirty = false;
+  editStatus = isDirty(originalFixtureRoot, fixtureRoot) ? 'dirty' : 'clean';
+  refreshEditableModel();
+  renderProfile(currentProfileTab);
+  if (ui.personSheet?.open) renderPersonSheet(parentId);
+  announce(`Добавление «${name}» отменено.`);
 }
 
 function renderPersonSheet(personId) {
@@ -1073,8 +1247,8 @@ function renderPersonSheet(personId) {
 
   const facts = document.createElement('dl'); facts.className = 'person-sheet-facts';
   const values = [
-    ['Отец', parent?.name || 'Не указан'],
-    ['Сыновья', children.length ? children.map(child => child.name).join(', ') : 'Нет'],
+    [parent?.gender === 'female' ? 'Мать' : 'Отец', parent?.name || 'Не указан'],
+    ['Дети', children.length ? children.map(child => child.name).join(', ') : 'Нет'],
     ['Тейп', String(person.teip ?? '').trim() || 'Не указан']
   ];
   for (const [label, value] of values) {
@@ -1095,11 +1269,52 @@ function renderPersonSheet(personId) {
   selfButton.textContent = isSelf ? '✓ Это вы · сбросить отметку' : 'Отметить как меня';
   selfButton.addEventListener('click', () => isSelf ? clearSelfPerson() : setSelfPerson(person.id));
 
-  const sections = [summary, facts, bio, selfButton];
+  const sections = [summary, facts, bio];
+  const actions = document.createElement('div');
+  actions.className = 'person-sheet-actions person-sheet-primary-actions';
   if (canEditDraft()) {
+    const add = document.createElement('button');
+    add.type = 'button'; add.className = 'person-sheet-link person-sheet-primary-action';
+    add.textContent = '+ Добавить ребёнка';
+    add.dataset.profileFocus = 'action:add-child';
+    add.addEventListener('click', () => {
+      addChildFormOpenForPerson = person.id;
+      personSheetEditOpen = false;
+      renderPersonSheet(person.id);
+      requestAnimationFrame(() => ui.personSheetContent.querySelector('[data-add-child-form] input[name="name"]')?.focus({ preventScroll: true }));
+    });
+    const edit = document.createElement('button');
+    edit.type = 'button'; edit.className = 'person-sheet-link';
+    edit.textContent = 'Редактировать данные';
+    edit.dataset.profileFocus = 'action:edit-person';
+    edit.addEventListener('click', () => {
+      personSheetEditOpen = true;
+      renderPersonSheet(person.id);
+      requestAnimationFrame(() => ui.personSheetContent.querySelector('.person-sheet-section input[name="name"]')?.focus({ preventScroll: true }));
+    });
+    actions.append(add, edit);
+  }
+  actions.append(selfButton);
+  sections.push(actions);
+  if (addChildFormOpenForPerson === person.id && canEditDraft()) {
+    sections.push(buildAddChildForm(person));
+  }
+  if (pendingChildUndo?.parentId === person.id) {
+    const undo = document.createElement('section'); undo.className = 'person-sheet-undo';
+    const note = document.createElement('p'); note.textContent = `Добавлен ребёнок «${pendingChildUndo.name}» в черновик.`;
+    const undoButton = document.createElement('button'); undoButton.type = 'button'; undoButton.textContent = 'Отменить добавление';
+    undoButton.dataset.profileFocus = 'action:undo-child';
+    undoButton.addEventListener('click', undoLastChildAddition);
+    undo.append(note, undoButton); sections.push(undo);
+  }
+  if (canEditDraft() && !personSheetEditOpen
+    && (['dirty', 'saving', 'error', 'conflict'].includes(editStatus) || hasAccountPublishChanges())) {
+    sections.push(buildDraftActionsPanel());
+  }
+  if (canEditDraft() && personSheetEditOpen) {
     const editorSection = document.createElement('section'); editorSection.className = 'person-sheet-section';
     const editorTitle = document.createElement('h3'); editorTitle.textContent = 'Изменить данные';
-    const editor = buildEditControls(person); editor.open = true;
+    const editor = buildEditControls(person, { open: true });
     editorSection.append(editorTitle, editor);
     sections.push(editorSection);
   }
@@ -1108,7 +1323,8 @@ function renderPersonSheet(personId) {
     mediaSection.append(buildLocalPhotoControls(person, { showDraftActions: false }));
     sections.push(mediaSection);
   }
-  const actions = document.createElement('div'); actions.className = 'person-sheet-actions';
+  const secondaryActions = document.createElement('details'); secondaryActions.className = 'person-sheet-secondary-actions';
+  const secondarySummary = document.createElement('summary'); secondarySummary.textContent = 'Родственники и связи';
   const relatives = document.createElement('button'); relatives.type = 'button'; relatives.className = 'person-sheet-link';
   relatives.textContent = 'Открыть родственников и связи';
   relatives.addEventListener('click', () => {
@@ -1117,8 +1333,8 @@ function renderPersonSheet(personId) {
     renderProfile('relatives');
     if (window.matchMedia('(max-width: 700px)').matches) ui.app.classList.add('profile-open');
   });
-  actions.append(relatives);
-  sections.push(actions);
+  secondaryActions.append(secondarySummary, relatives);
+  sections.push(secondaryActions);
 
   ui.personSheetTitle.textContent = person.name || 'Человек';
   ui.personSheetContent.replaceChildren(...sections);
@@ -1132,6 +1348,10 @@ function renderPersonSheet(personId) {
 function openPersonSheet(personId) {
   if (!byId.has(personId) || !ui.personSheet) return;
   resetCameraGestureState();
+  if (personSheetId !== personId) {
+    addChildFormOpenForPerson = null;
+    personSheetEditOpen = false;
+  }
   personSheetId = personId;
   if (selectedId !== personId) {
     selectedId = personId;
@@ -1162,6 +1382,22 @@ function addField(form, labelText, name, value = '', type = 'text') {
     input.inputMode = 'numeric'; input.maxLength = 4; input.pattern = '[0-9]{3,4}';
   }
   label.append(input); form.append(label); return input;
+}
+
+function addGenderField(form, value = 'male', labelText = 'Пол') {
+  const label = document.createElement('label');
+  label.className = 'mock-edit-field';
+  label.append(document.createTextNode(labelText));
+  const select = document.createElement('select');
+  select.name = 'gender';
+  select.required = true;
+  select.dataset.profileFocus = 'field:gender';
+  for (const [gender, text] of [['male', 'Сын'], ['female', 'Дочь']]) {
+    const option = document.createElement('option');
+    option.value = gender; option.textContent = text; select.append(option);
+  }
+  select.value = value === 'female' ? 'female' : 'male';
+  label.append(select); form.append(label); return select;
 }
 
 function addYearClearButton(form, fieldName, input) {
@@ -1390,6 +1626,7 @@ function bindPhotoCropControls() {
 async function stageLocalPersonPhoto(personId, photo) {
   if (!localTreeDraft || !photo) return;
   try {
+    pendingChildUndo = null;
     const oldUrl = localPhotoUrls.get(personId);
     if (oldUrl) URL.revokeObjectURL(oldUrl);
     const oldFullUrl = localPhotoFullUrls.get(personId);
@@ -1414,6 +1651,7 @@ async function stageLocalPersonPhoto(personId, photo) {
 }
 
 function removeLocalPersonPhoto(person) {
+  pendingChildUndo = null;
   if (!localTreeDraft || !hasDisplayPhoto(person)) return;
   if (!window.confirm(`Удалить фотографию ${person.name} из ${hasRemoteTreeWriteAccess() ? 'черновика древа' : 'локального черновика'}?`)) return;
   const oldUrl = localPhotoUrls.get(person.id);
@@ -1514,9 +1752,9 @@ function setProfileCollapsed(collapsed) {
   focusTarget?.focus({ preventScroll: true });
 }
 
-function buildEditControls(person) {
+function buildEditControls(person, { open = editDisclosureOpen } = {}) {
   const section = document.createElement('details'); section.className = 'mock-editor';
-  section.open = editDisclosureOpen;
+  section.open = open;
   section.addEventListener('toggle', () => { editDisclosureOpen = section.open; });
   const title = document.createElement('summary'); title.className = 'mock-editor-summary';
   title.textContent = syntheticFixture ? 'Редактировать демо-запись'
@@ -1529,6 +1767,7 @@ function buildEditControls(person) {
   addYearClearButton(form, 'born', bornInput);
   const diedInput = addField(form, 'Год смерти', 'died', person.died, 'text');
   addYearClearButton(form, 'died', diedInput);
+  addGenderField(form, person.gender);
   addField(form, 'Биография', 'bio', person.bio || '');
   if (syntheticFixture) {
     const failureLabel = document.createElement('label'); failureLabel.className = 'mock-edit-failure';
@@ -1568,15 +1807,13 @@ function buildEditControls(person) {
     retry.hidden = editStatus !== 'error';
     reloadSaved.hidden = editStatus !== 'conflict';
     syncDraftRecoveryActions(recovery);
-    if (publish) {
-      publish.hidden = !['saved', 'clean'].includes(editStatus) || !hasAccountPublishChanges();
-      publish.disabled = editStatus === 'saving' || editStatus === 'conflict' || !accountBaseFingerprint || !hasAccountPublishChanges();
-    }
+    syncAccountPublishButton(publish);
     status.textContent = messages();
     status.className = `mock-edit-status status-${editStatus}`;
   };
   syncActions();
   form.addEventListener('input', () => {
+    pendingChildUndo = null;
     rawDraftDirty = true;
     const values = Object.fromEntries(new FormData(form).entries());
     try {
@@ -1606,8 +1843,9 @@ function buildEditControls(person) {
 }
 
 function buildRelationshipControls(person) {
-  const section = document.createElement('section'); section.className = 'mock-editor';
-  const title = document.createElement('strong'); title.textContent = syntheticFixture ? 'Связи демо-дерева' : hasRemoteTreeWriteAccess() ? 'Связи семейного древа' : 'Связи локальной копии'; section.append(title);
+  const section = document.createElement('details'); section.className = 'mock-editor relationship-tools';
+  const title = document.createElement('summary'); title.className = 'mock-editor-summary'; title.textContent = 'Другие действия'; section.append(title);
+  const content = document.createElement('div'); content.className = 'relationship-tools-content'; section.append(content);
   const dragToggle = document.createElement('button'); dragToggle.type = 'button';
   dragToggle.textContent = relationshipDragEnabled ? 'Завершить перенос перетаскиванием' : 'Включить перенос карточек';
   dragToggle.setAttribute('aria-pressed', String(relationshipDragEnabled));
@@ -1623,37 +1861,7 @@ function buildRelationshipControls(person) {
   dragNote.textContent = relationshipDragEnabled
     ? 'Карточки можно переносить только после проверки новой связи. Корень переносить нельзя; самого человека и его потомка нельзя назначить новым отцом.'
     : 'Перетаскивание включается отдельно, чтобы случайно не изменить связь при перемещении древа.';
-  section.append(dragToggle, dragNote);
-  const addForm = document.createElement('form'); addForm.className = 'mock-edit-form';
-  addForm.dataset.addChildForm = 'true';
-  const idNote = document.createElement('p'); idNote.className = 'mock-edit-status';
-  idNote.textContent = syntheticFixture
-    ? 'ID создаётся автоматически; демо-изменение останется только в этой вкладке.'
-    : hasRemoteTreeWriteAccess() ? 'ID создаётся автоматически. Сначала сохраняется черновик; публикация выполняется отдельной кнопкой.'
-      : 'ID создаётся автоматически; исходное дерево не меняется.';
-  addForm.append(idNote);
-  addField(addForm, 'Имя ребёнка', 'name'); addField(addForm, 'Тейп', 'teip'); addField(addForm, 'Год рождения', 'born', '', 'text');
-  const addButton = document.createElement('button'); addButton.type = 'submit'; addButton.textContent = 'Проверить данные'; addButton.dataset.profileFocus = 'action:preview-child'; addForm.append(addButton);
-  const addPreview = document.createElement('p'); addPreview.className = 'mock-edit-status'; addPreview.setAttribute('role', 'status'); addPreview.setAttribute('aria-live', 'polite'); addPreview.setAttribute('aria-atomic', 'true'); addPreview.dataset.profileFocus = 'preview-status'; addPreview.tabIndex = -1; addForm.append(addPreview);
-  const addConfirm = document.createElement('button'); addConfirm.type = 'button'; addConfirm.textContent = 'Добавить в дерево'; addConfirm.hidden = true; addConfirm.dataset.profileFocus = 'action:confirm-child'; addForm.append(addConfirm);
-  let proposedChild = null;
-  addForm.addEventListener('input', () => { proposedChild = null; addConfirm.hidden = true; addPreview.textContent = ''; });
-  addForm.addEventListener('submit', event => {
-    event.preventDefault();
-    try {
-      proposedChild = Object.fromEntries(new FormData(addForm).entries());
-      if (!proposedChild.id) proposedChild.id = generateUniquePersonId(editableDraftRoot());
-      const previewTree = cloneTree(editableDraftRoot()); addChild(previewTree, person.id, proposedChild);
-      addPreview.textContent = `Предпросмотр: «${proposedChild.name}» будет добавлен ребёнком к «${person.name}».`;
-      addConfirm.hidden = false;
-    } catch (error) { proposedChild = null; addConfirm.hidden = true; addPreview.textContent = error.message; }
-  });
-  addConfirm.addEventListener('click', () => {
-    if (!proposedChild) return;
-    try { addChild(editableDraftRoot(), person.id, proposedChild); proposedChild = null; markRelationshipDirty(); }
-    catch (error) { addPreview.textContent = error.message; }
-  });
-  section.append(addForm);
+  content.append(dragToggle, dragNote);
   const candidates = records.filter(item => item.id !== person.id);
   const moveForm = document.createElement('form'); moveForm.className = 'mock-edit-form';
   const addSelect = (name, accessibleName, placeholder) => {
@@ -1686,7 +1894,7 @@ function buildRelationshipControls(person) {
     try { reparentPerson(editableDraftRoot(), proposed.personId, proposed.parentId); markRelationshipDirty(); }
     catch (error) { preview.textContent = error.message; }
   });
-  section.append(moveForm);
+  content.append(moveForm);
   const deleteForm = document.createElement('form'); deleteForm.className = 'mock-edit-form';
   const target = addSelect('deleteId', 'Листовой человек для удаления', 'Листового человека для удаления'); deleteForm.append(target);
   const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Удалить листового человека';
@@ -1711,32 +1919,12 @@ function buildRelationshipControls(person) {
     }
     catch (error) { announce(error.message); }
   });
-  deleteForm.append(remove); section.append(deleteForm);
-  const save = document.createElement('button'); save.type = 'button'; save.textContent = editStatus === 'saving' ? 'Сохраняется…' : syntheticFixture ? 'Сохранить демо-черновик' : hasRemoteTreeWriteAccess() ? 'Сохранить черновик' : 'Сохранить локально'; save.disabled = editStatus === 'saving' || editStatus === 'conflict'; save.hidden = !['dirty', 'saving'].includes(editStatus); save.dataset.profileFocus = 'action:save'; save.addEventListener('click', submitMockSave);
-  const retry = document.createElement('button'); retry.type = 'button'; retry.textContent = 'Повторить'; retry.hidden = editStatus !== 'error'; retry.dataset.profileFocus = 'action:retry'; retry.addEventListener('click', () => { nextSaveFails = false; submitMockSave(); });
-  const reloadSaved = document.createElement('button'); reloadSaved.type = 'button'; reloadSaved.textContent = hasRemoteTreeWriteAccess() && accountPublishConflict ? 'Загрузить текущую версию сайта' : 'Загрузить сохранённую версию'; reloadSaved.hidden = editStatus !== 'conflict'; reloadSaved.dataset.profileFocus = 'action:reload-saved'; reloadSaved.addEventListener('click', () => hasRemoteTreeWriteAccess() && accountPublishConflict ? reloadAccountServerVersion() : reloadLocalDraftFromStorage());
-  const actions = document.createElement('div'); actions.className = 'mock-edit-actions';
-  const publish = appendAccountPublishButton(actions);
-  if (publish) {
-    publish.hidden = !['saved', 'clean'].includes(editStatus) || !hasAccountPublishChanges();
-    publish.disabled = editStatus === 'saving' || editStatus === 'conflict' || !accountBaseFingerprint || !hasAccountPublishChanges();
-  }
-  const recovery = buildDraftRecoveryActions({ resetText: syntheticFixture ? 'Сбросить демо-дерево' : 'Вернуть исходное древо' });
-  const status = document.createElement('p'); status.className = `mock-edit-status status-${editStatus}`; status.setAttribute('aria-live', 'polite'); status.dataset.profileFocus = 'action-status'; status.tabIndex = -1;
-  status.textContent = editStatus === 'conflict'
-    ? hasRemoteTreeWriteAccess() && accountPublishConflict ? 'На сайте новая версия. Ваш черновик сохранён отдельно; загрузка сайта заменит его в редакторе.' : 'Древо изменилось в другой вкладке. Загрузите последнюю сохранённую версию.'
-    : editStatus === 'error' ? localDraftPersistenceError || 'Не удалось сохранить; изменения остались на странице.'
-      : editStatus === 'saved' ? syntheticFixture ? 'Сохранено только в памяти этой страницы.' : hasRemoteTreeWriteAccess()
-        ? localDraftPersistenceError || (hasAccountPublishChanges() ? 'Черновик в этом браузере; в production ещё не опубликован.' : localMediaStatus || 'Нет неопубликованных изменений.')
-        : 'Сохранено в этом браузере. Прод не меняется.'
-        : editStatus === 'saving' ? hasRemoteTreeWriteAccess() ? 'Сохраняется черновик или публикуется версия…' : 'Обновляется локальный черновик…'
-          : editStatus === 'dirty' ? 'Есть несохранённые изменения.'
-          : `Нет несохранённых изменений. ${syntheticFixture ? 'Данные демонстрационные.' : hasRemoteTreeWriteAccess() ? hasAccountPublishChanges() ? 'Черновик сохранён в этом браузере; его можно опубликовать.' : localDraftPersistenceError || 'Древо загружено с сервера.' : 'Прод не меняется.'}`;
-  actions.append(save, retry, reloadSaved, recovery);
-  section.append(actions, status); return section;
+  deleteForm.append(remove); content.append(deleteForm);
+  return section;
 }
 
-function markRelationshipDirty() {
+function markRelationshipDirty({ preserveChildUndo = false } = {}) {
+  if (!preserveChildUndo) pendingChildUndo = null;
   editStatus = 'dirty'; refreshEditableModel(); renderProfile('relatives');
   announce(hasRemoteTreeWriteAccess() ? 'Черновик изменён. Сохраните его, затем опубликуйте кнопкой «Опубликовать в древо».' : 'Черновик изменён. Сохраните его через вкладку «Информация».');
 }
@@ -1906,6 +2094,7 @@ async function publishAccountDraft() {
     originalFixtureRoot = cloneTree(nextTree);
     sourceFixtureRoot = cloneTree(nextTree);
     accountPublishConflict = null;
+    pendingChildUndo = null;
     const savedBase = await saveLocalTreeDraft(localDraftKey, fixtureRoot, localDraftRevision, {}, accountDraftMetadata());
     localDraftRevision = savedBase.revision;
     localDraftPersistenceError = '';
@@ -1966,6 +2155,7 @@ async function reloadLocalDraftFromStorage() {
   if ((rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))
     && !window.confirm('Заменить несохранённые изменения последней версией из этого браузера?')) return;
   try {
+    pendingChildUndo = null;
     const stored = await loadLocalTreeDraft(localDraftKey);
     if (!stored) throw new Error('Сохранённая локальная версия не найдена. Обновите страницу.');
     fixtureRoot = cloneTree(stored.tree);
@@ -1997,6 +2187,7 @@ async function cancelDraft() {
     try { await restoreLocalPhotoUrls(); }
     catch (error) { localDraftPersistenceError = error?.message || ''; }
   }
+  pendingChildUndo = null;
   fixtureRoot = cloneTree(originalFixtureRoot); editStatus = 'clean'; rawDraftDirty = false; refreshEditableModel(); renderProfile(currentProfileTab);
 }
 
@@ -2055,6 +2246,9 @@ function centerVisiblePerson() {
 
 function selectPerson(id, { preserveContext = false } = {}) {
   if (!byId.has(id)) return;
+  if (!showWomen && !filterPeopleByWomen(records, false).some(person => person.id === String(id))) {
+    setWomenVisibility(true);
+  }
   if (id === 'demo-ali') masterMobileOverview = false;
   if (mode === 'path' && !preserveContext && !ancestors(myPersonId).includes(id)) {
     mode = 'all-tree';
@@ -3006,6 +3200,8 @@ function bindControls() {
     masterMobileOverview = false;
     const previousSelectedId = selectedId;
     filters = { min: Number($('#minGeneration').value), max: Number($('#maxGeneration').value), photosOnly: $('#photosOnly').checked };
+    const womenChanged = showWomen !== $('#showWomen').checked;
+    setWomenVisibility($('#showWomen').checked);
     let pathFiltersAdjusted = false;
     if (mode === 'path' && myPersonId) {
       const pathPeople = ancestors(myPersonId).map(id => byId.get(id)).filter(Boolean);
@@ -3030,6 +3226,7 @@ function bindControls() {
     drawTree(); fitTree();
     if (selectedId !== previousSelectedId) announce('Выбранный человек скрыт фильтром. Выбрана первая карточка в результатах.');
     else if (pathFiltersAdjusted) announce('Фильтры скорректированы, чтобы показать всю линию предков.');
+    else if (womenChanged) announce(showWomen ? 'Показаны все женщины и их ветви.' : 'Женщины и их ветви скрыты только из вида. Данные дерева сохранены.');
   });
   $('#resetFilters').addEventListener('click', () => {
     masterMobileOverview = false;
@@ -3888,6 +4085,7 @@ async function initialize() {
     byId = new Map(records.map(person => [person.id, person]));
     childrenById = new Map(records.map(person => [person.id, []]));
     for (const person of records) if (person.parentId) childrenById.get(person.parentId)?.push(person);
+    loadWomenPreference();
     loadMyPersonPreference();
     const workshopReturn = params.get('workshopReturn') === '1'
       ? readExportWorkshopHandoff(window.sessionStorage)

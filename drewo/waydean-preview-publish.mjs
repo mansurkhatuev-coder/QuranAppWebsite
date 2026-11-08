@@ -40,7 +40,7 @@ export function buildWaydeanPublishActivity(before, after, at = new Date().toISO
     const old = previous.get(person.id);
     if (!old) {
       const father = person.parentId ? next.get(person.parentId) : null;
-      add({ type: 'add', son: person.name, father: father?.name || '', sonId: person.id, fatherId: person.parentId });
+      add({ type: 'add', son: person.name, father: father?.name || '', sonId: person.id, fatherId: person.parentId, gender: person.gender });
       continue;
     }
     if (old.parentId !== person.parentId) {
@@ -52,6 +52,7 @@ export function buildWaydeanPublishActivity(before, after, at = new Date().toISO
       });
     }
     if (old.name !== person.name) add({ type: 'rename', son: person.name, father: old.name, sonId: person.id });
+    if (old.gender !== person.gender) add({ type: 'gender', field: 'gender', son: person.name, sonId: person.id, gender: person.gender });
     if (old.born !== person.born) add({ type: 'year', field: 'born', son: person.name, sonId: person.id });
     if (old.died !== person.died) add({ type: 'year', field: 'died', son: person.name, sonId: person.id });
     if (old.bio !== person.bio) add({ type: 'bio', son: person.name, sonId: person.id });
@@ -68,6 +69,16 @@ export function buildWaydeanPublishActivity(before, after, at = new Date().toISO
     }
   }
   return events;
+}
+
+export function accountPublishButtonState({
+  editStatus = 'clean', hasChanges = false, canPublish = false, hasBaseFingerprint = false
+} = {}) {
+  const visible = ['saved', 'clean'].includes(editStatus) && hasChanges && canPublish && hasBaseFingerprint;
+  return {
+    visible,
+    disabled: !visible || editStatus === 'saving' || editStatus === 'conflict' || !hasBaseFingerprint
+  };
 }
 
 export function buildWaydeanPublishPayload({

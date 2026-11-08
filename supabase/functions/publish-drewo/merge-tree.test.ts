@@ -39,6 +39,15 @@ test('three-way: same field, incoming local wins', () => {
   assert.equal(tree.sons![0].born, 1920);
 });
 
+test('three-way merge publishes gender changes without losing unrelated server fields', () => {
+  const base = person('root', 'Род', {}, [person('a', 'Человек', { gender: 'male', born: 1900 })]);
+  const server = person('root', 'Род', {}, [person('a', 'Человек', { gender: 'male', born: 1910 })]);
+  const local = person('root', 'Род', {}, [person('a', 'Человек', { gender: 'female', born: 1900 })]);
+  const { tree } = mergeThreeWay(server, local, base);
+  assert.equal(tree.sons![0].gender, 'female');
+  assert.equal(tree.sons![0].born, 1910);
+});
+
 test('three-way: rename on server survives unrelated local edit', () => {
   const base = person('root', 'Род', {}, [person('a', 'Иван')]);
   const server = person('root', 'Род', {}, [person('a', 'Иван-А')]);

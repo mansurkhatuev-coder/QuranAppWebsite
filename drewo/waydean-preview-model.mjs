@@ -33,6 +33,7 @@ export function flattenTree(root) {
       died: normalizeYear(node.died),
       bio: String(node.bio ?? ''),
       teip: String(node.teip ?? '').trim().slice(0, 80),
+      gender: node.gender === 'female' ? 'female' : 'male',
       photoKey,
       hasPhoto: Boolean(photoKey),
       generation,
@@ -45,6 +46,22 @@ export function flattenTree(root) {
 
   visit(root, null, 1);
   return flat;
+}
+
+/** Hide women and every descendant below them without changing the source tree. */
+export function filterPeopleByWomen(people, showWomen = false) {
+  if (showWomen) return people;
+  const hidden = new Set();
+  return people.filter(person => {
+    const id = String(person.id);
+    if (person.gender === 'female' || (person.parentId && hidden.has(String(person.parentId)))) hidden.add(id);
+    return !hidden.has(id);
+  });
+}
+
+export function womenFilterStorageKey(treeId) {
+  const id = String(treeId ?? '').trim() || 'tree';
+  return `waydean-preview:show-women:${encodeURIComponent(id)}`;
 }
 
 /** Keep a person's name on one line by growing its card when needed. */

@@ -17,6 +17,7 @@ test('describes production activity types without treating names as markup', () 
   assert.equal(describeWaydeanActivity({ type: 'year', field: 'born', son: 'Хьасан' }), 'Изменена дата рождения · Хьасан');
   assert.equal(describeWaydeanActivity({ type: 'delete', son: '<img src=x>' }), 'Удалён человек · <img src=x>');
   assert.equal(describeWaydeanActivity({ type: 'unexpected' }), 'Изменение дерева');
+  assert.equal(describeWaydeanActivity({ type: 'gender', son: 'Хьасан' }), 'Изменён пол · Хьасан');
 });
 
 test('normalizes server backup rows and drops rows without a safe identifier', () => {
