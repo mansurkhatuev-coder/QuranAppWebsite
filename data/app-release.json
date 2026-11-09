@@ -1,21 +1,21 @@
 {
   "android": {
-    "rustore": {
-      "latestVersion": "1.0.25",
-      "versionCode": 32,
-      "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp"
-    },
     "apk": {
-      "latestVersion": "1.0.21",
-      "versionCode": 31,
-      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.21/QuranApp-1.0.21-RuStore.apk"
+      "url": "https://github.com/mansurkhatuev-coder/QuranAppWebsite/releases/download/v1.0.20/QuranApp-1.0.20-Android-APK-28.apk",
+      "versionCode": 28,
+      "latestVersion": "1.0.20"
+    },
+    "rustore": {
+      "url": "https://www.rustore.ru/catalog/app/com.sheyhmansur.quranapp",
+      "versionCode": 32,
+      "latestVersion": "1.0.25"
     }
   },
   "ios": {
-    "latestVersion": "1.0.25",
+    "appStoreUrl": "https://apps.apple.com/app/id6782619598",
     "buildNumber": 26,
-    "appStoreUrl": "https://apps.apple.com/app/id6782619598"
+    "latestVersion": "1.0.25"
   },
-  "messageRu": "Доработали отображение прогресса чтения Корана, улучшили светлую тему и исправили небольшие ошибки. Ваши отзывы очень важны для нас и помогают делать приложение лучше. Будем рады вашим предложениям и замечаниям!",
-  "messageEn": "We improved Quran reading progress, refined the light theme, and fixed minor issues. Your feedback helps us make the app better, and we welcome your suggestions."
+  "messageRu": "Добавили режим «Печатный мусхаф» — читайте Коран по страницам и перелистывайте их, как в печатном издании. Улучшили стабильность приложения.",
+  "messageEn": "Added a Printed Mushaf mode for page-by-page Quran reading with page turning. Improved app stability."
 }
