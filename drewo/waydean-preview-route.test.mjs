@@ -70,7 +70,9 @@ test('local family URLs fall back to the local tree and strip live credentials f
     '127.0.0.1'
   ), {
     enabled: false,
-    href: 'http://127.0.0.1:8784/drewo/waydean-preview.html?state=all-tree'
+    href: 'http://127.0.0.1:8784/drewo/waydean-preview.html?state=all-tree',
+    treeDir: 'drewo',
+    demoMode: false
   });
   assert.equal(resolveFamilyPreviewRoute(
     'https://waydean.ru/drewo/waydean-preview.html?source=family&state=all-tree',
@@ -84,7 +86,9 @@ test('family routes are disabled on every non-production host and strip signed t
     'preview.example'
   ), {
     enabled: false,
-    href: 'https://preview.example/drewo/waydean-preview.html?state=all-tree'
+    href: 'https://preview.example/drewo/waydean-preview.html?state=all-tree',
+    treeDir: 'drewo',
+    demoMode: false
   });
   assert.equal(resolveFamilyPreviewRoute(
     'https://waydean.ru/drewo/waydean-preview.html?source=family&state=all-tree',
@@ -186,8 +190,8 @@ test('the local offline cache precaches the current preview entry modules', () =
   for (const module of versionedModules) {
     assert.ok(worker.includes(`'./${module}'`), `offline cache should precache the current module URL: ${module}`);
   }
-  assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-5'"));
-  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-2'"));
+  assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-6'"));
+  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-3'"));
   assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v\d+'/);
 });
 
@@ -200,4 +204,95 @@ test('the offline cache contains every versioned preview stylesheet referenced b
   for (const stylesheet of stylesheetUrls) {
     assert.ok(worker.includes(`'./${stylesheet}'`), `offline cache should use the current stylesheet URL: ${stylesheet}`);
   }
+});
+
+test('demo family route resolves only the public demo tree', () => {
+  const result = resolveFamilyPreviewRoute(
+    'https://waydean.ru/drewo/waydean-preview.html?source=family&tree=drewo-reklama&state=all-tree',
+    'waydean.ru'
+  );
+  assert.equal(result.enabled, true);
+  assert.equal(result.treeDir, 'drewo-reklama');
+  assert.equal(result.demoMode, true);
+});
+
+test('the ordinary family route remains HOTI and rejects arbitrary tree ids', () => {
+  const hoti = resolveFamilyPreviewRoute(
+    'https://waydean.ru/drewo/waydean-preview.html?source=family&state=all-tree',
+    'waydean.ru'
+  );
+  assert.equal(hoti.treeDir, 'drewo');
+  assert.equal(hoti.demoMode, false);
+
+  const unknown = resolveFamilyPreviewRoute(
+    'https://waydean.ru/drewo/waydean-preview.html?source=family&tree=drewo-guzat',
+    'waydean.ru'
+  );
+  assert.equal(unknown.treeDir, 'drewo');
+  assert.equal(new URL(unknown.href).searchParams.has('tree'), false);
+});
+
+test('loopback demo preview keeps only the safe demo tree id, never live credentials', () => {
+  const result = resolveFamilyPreviewRoute(
+    'http://127.0.0.1:8792/drewo/waydean-preview.html?source=family&tree=drewo-reklama&nek=secret&invite=private',
+    '127.0.0.1'
+  );
+  assert.equal(result.enabled, false);
+  assert.equal(result.treeDir, 'drewo-reklama');
+  assert.equal(result.demoMode, true);
+  assert.equal(new URL(result.href).searchParams.has('source'), false);
+  assert.equal(new URL(result.href).searchParams.has('nek'), false);
+  assert.equal(new URL(result.href).searchParams.has('invite'), false);
+});
+
+test('an admin-account route cannot inherit the demo tree id', () => {
+  const result = resolveFamilyPreviewRoute(
+    'https://waydean.ru/drewo/waydean-preview.html?source=account&tree=drewo-reklama',
+    'waydean.ru'
+  );
+  assert.equal(result.treeDir, 'drewo');
+  assert.equal(result.demoMode, false);
+  assert.equal(new URL(result.href).searchParams.has('tree'), false);
+});
+
+test('the public demo entry opens the shared Waydean interface and its PWA starts there', () => {
+  const entry = readFileSync(new URL('../drewo-reklama/index.html', import.meta.url), 'utf8');
+  const workshop = readFileSync(new URL('../docs/design/waydean/export/workshop.mjs', import.meta.url), 'utf8');
+  const manifest = JSON.parse(readFileSync(new URL('../drewo-reklama/manifest.webmanifest', import.meta.url), 'utf8'));
+  assert.match(entry, /\.\.\/drewo\/waydean-preview\.html\?source=family&amp;tree=drewo-reklama&amp;state=all-tree/);
+  assert.match(entry, /window\.location\.replace/);
+  assert.equal(manifest.start_url, '/drewo/waydean-preview.html?source=family&tree=drewo-reklama&state=all-tree');
+  assert.equal(manifest.scope, '/drewo/');
+  assert.match(workshop, /treeId === "drewo-reklama"\) url\.searchParams\.set\("tree", "drewo-reklama"\)/);
+});
+
+test('shared preview keeps demo identity and the demo limitations explicit', () => {
+  const html = readFileSync(new URL('./waydean-preview.html', import.meta.url), 'utf8');
+  const script = readFileSync(new URL('./waydean-preview.js', import.meta.url), 'utf8');
+  const stylesheet = readFileSync(new URL('./waydean-preview-demo.css', import.meta.url), 'utf8');
+  const worker = readFileSync(new URL('./waydean-preview-sw.js', import.meta.url), 'utf8');
+  assert.match(html, /id="demoModeNotice"/);
+  assert.match(html, /waydean-preview-demo\.css\?v=demo-interface-1/);
+  assert.match(script, /activeTreeDir = familyRoute\.treeDir/);
+  assert.match(script, /activeTreeId = syntheticFixture \? 'demo' : activeTreeDir === 'drewo' \? 'hoti' : activeTreeDir/);
+  assert.match(script, /treeDir: activeTreeDir/);
+  assert.match(script, /if \(demoMode\) return null/);
+  assert.match(stylesheet, /Демо, не ваше древо|demo-mode-notice/);
+  assert.ok(worker.includes("'./waydean-preview-demo.css?v=demo-interface-1'"));
+  assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-6'"));
+  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-3'"));
+  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v62'/);
+});
+
+test('demo share URL is public and has no family session data', () => {
+  const payload = previewRoute.buildTreeSharePayload({
+    href: 'https://waydean.ru/drewo/waydean-preview.html?source=family&tree=drewo-reklama&nek=secret&invite=private&refresh=old',
+    title: 'Некъ (демо)',
+    treeDir: 'drewo-reklama'
+  });
+
+  assert.equal(payload.url, 'https://waydean.ru/drewo-reklama/');
+  assert.equal(payload.url.includes('nek='), false);
+  assert.equal(payload.url.includes('invite='), false);
+  assert.equal(payload.url.includes('refresh='), false);
 });

@@ -87,6 +87,24 @@ test("shared handoff round-trips through same-tab storage without query data", (
   assert.ok(storage.getItem(EXPORT_WORKSHOP_HANDOFF_KEY).includes("Мансур"));
 });
 
+test("public demo can use the shared print and video workshop without changing its tree id", () => {
+  const storage = createStorage();
+  const handoff = createExportWorkshopHandoff(people, {
+    treeId: "drewo-reklama",
+    scopeType: "all",
+    selectedPersonId: "self",
+    returnContext: "family",
+    returnView: "all-tree",
+    returnPersonId: "self"
+  });
+
+  writeExportWorkshopHandoff(storage, handoff);
+
+  assert.equal(readExportWorkshopHandoff(storage).treeId, "drewo-reklama");
+  assert.equal(readExportWorkshopHandoff(storage).video.tree.people.length, people.length);
+  assert.equal(readExportWorkshopHandoff(storage).print.tree, "drewo-reklama");
+});
+
 test("malformed or untrusted handoff is ignored", () => {
   const storage = createStorage();
   storage.setItem(EXPORT_WORKSHOP_HANDOFF_KEY, JSON.stringify({

@@ -1,0 +1,60 @@
+.demo-mode-notice {
+  position: absolute;
+  z-index: 5;
+  top: 14px;
+  left: 50%;
+  display: grid;
+  gap: 3px;
+  width: max-content;
+  max-width: min(620px, calc(100% - 28px));
+  padding: 8px 15px 9px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(218, 183, 111, .48);
+  border-radius: 12px;
+  background: rgba(5, 13, 16, .82);
+  box-shadow: 0 8px 26px rgba(0, 0, 0, .34), inset 0 1px rgba(255, 255, 255, .05);
+  color: #eee2c7;
+  text-align: center;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(12px) saturate(1.12);
+  backdrop-filter: blur(12px) saturate(1.12);
+}
+
+.demo-mode-notice[hidden],
+.demo-login-hint[hidden] {
+  display: none !important;
+}
+
+.demo-mode-notice strong {
+  color: #f0cf78;
+  font: 700 12px/1.2 var(--ui, "Segoe UI", sans-serif);
+  letter-spacing: .035em;
+}
+
+.demo-mode-notice span {
+  color: rgba(226, 216, 193, .8);
+  font: 10px/1.35 var(--ui, "Segoe UI", sans-serif);
+}
+
+.demo-login-hint {
+  padding: 10px 11px;
+  border: 1px solid rgba(218, 183, 111, .28);
+  border-radius: 8px;
+  background: rgba(218, 183, 111, .08);
+}
+
+.demo-login-hint strong { color: #f0cf78; }
+.demo-mode #waydeanFamilyLoginForm .waydean-login-switch,
+.demo-mode .person-sheet-photo-action { display: none !important; }
+
+@media (max-width: 700px) {
+  .demo-mode-notice {
+    top: 10px;
+    max-width: calc(100% - 20px);
+    padding: 7px 11px 8px;
+    border-radius: 10px;
+  }
+
+  .demo-mode-notice strong { font-size: 11px; }
+  .demo-mode-notice span { font-size: 9px; }
+}

@@ -82,6 +82,17 @@ test('does not silently open the family tree without a valid legacy view session
   }), error => error.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED');
 });
 
+test('a demo route never treats the HOTI remembered viewer as demo access', async () => {
+  await assert.rejects(resolveFamilyPreviewAccess({
+    endpoint: 'https://example.test/functions/publish-drewo',
+    treeDir: 'drewo-reklama',
+    token: '',
+    allowLegacyReadOnly: false,
+    legacyViewSession: { personId: 'mansur' },
+    fetcher: async () => { throw new Error('No request should be needed'); }
+  }), error => error.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED');
+});
+
 test('consumes a signed invite token from the URL without leaving it in navigation history', () => {
   assert.deepEqual(
     consumeFamilyTokenFromUrl('https://waydean.ru/drewo/waydean-preview.html?source=family&nek=signed%2Btoken&state=path#tree'),
@@ -149,6 +160,25 @@ test('redirects credentials for a different tree only to the server-resolved sam
     redirect: true,
     redirectUrl: '/other-tree/?nek=signed+token'
   });
+});
+
+test('demo login rejects credentials resolved to a different family tree', async () => {
+  const storage = memoryStorage();
+  await assert.rejects(loginFamilySession({
+    endpoint: 'https://example.test/functions/publish-drewo',
+    login: 'other-tree',
+    password: 'demo-password',
+    treeDir: 'drewo-reklama',
+    allowTreeRedirect: false,
+    storage,
+    fetcher: async () => jsonResponse({
+      ok: true,
+      treeDir: 'drewo-guzat',
+      path: '/drewo-guzat/',
+      sessionToken: 'must-not-be-forwarded'
+    })
+  }), error => error.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED');
+  assert.equal(readFamilySession(storage, 'drewo-reklama'), '');
 });
 
 test('rejects a redirected family path that could leave the current site', async () => {

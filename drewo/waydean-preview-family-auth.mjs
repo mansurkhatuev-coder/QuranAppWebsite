@@ -140,9 +140,11 @@ export async function resolveFamilyPreviewAccess({
   treeDir = DEFAULT_TREE_DIR,
   token,
   legacyViewSession = null,
+  allowLegacyReadOnly = true,
   fetcher = fetch
 }) {
-  const canUseLegacyReadOnly = Boolean(String(legacyViewSession?.personId || '').trim());
+  const canUseLegacyReadOnly = allowLegacyReadOnly
+    && Boolean(String(legacyViewSession?.personId || '').trim());
   if (!String(token || '').trim() && canUseLegacyReadOnly) {
     return { authenticated: false, legacyReadOnly: true, session: null };
   }
@@ -166,6 +168,7 @@ export async function loginFamilySession({
   login,
   password,
   treeDir = DEFAULT_TREE_DIR,
+  allowTreeRedirect = true,
   origin = globalThis.location?.origin || 'https://waydean.ru',
   storage,
   fetcher = fetch
@@ -187,6 +190,11 @@ export async function loginFamilySession({
 
   const targetTree = normalizeTreeDir(loginData.treeDir || expectedTree);
   if (targetTree !== expectedTree) {
+    if (!allowTreeRedirect) {
+      const error = familyError({ error: 'Этот логин не относится к демо-древу.' }, 403);
+      error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
+      throw error;
+    }
     const targetPath = safeTreePath(targetTree, loginData.path);
     const targetUrl = new URL(targetPath, origin);
     targetUrl.searchParams.set('nek', token);

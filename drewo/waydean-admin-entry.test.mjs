@@ -10,7 +10,7 @@ test('legacy tree offers an optional new interface using its existing family ses
   assert.ok(/<button[^>]*id="waydean-premium-open"[^>]*>Открыть новый интерфейс<\/button>/.test(treePage), 'the visible entry link must be present');
   assert.ok(/waydeanPremiumOpenBtn\.addEventListener\('click',[\s\S]*?window\.location\.assign\('waydean-preview\.html\?source=family&state=all-tree'\)/.test(treePage), 'the entry must open the family-session route');
   assert.ok(/var NEK_SESSION_KEY = 'nek-session:' \+ TREE_DIR/.test(treePage), 'the legacy tree must keep its signed session in the shared same-tab storage key');
-  assert.ok(/readFamilySession\(familySessionStorage\(\), 'drewo'\)/.test(previewScript), 'the new interface must read the same signed family session');
+  assert.ok(/readFamilySession\(familySessionStorage\(\), activeTreeDir\)/.test(previewScript), 'the new interface must read the signed session for the selected tree');
   assert.ok(!/if \(sessionRole !== 'super'\) return;\s*setNavMenuOpen\(false\);\s*window\.location\.assign/.test(treePage), 'the entry must not require the family super-role');
 });
 

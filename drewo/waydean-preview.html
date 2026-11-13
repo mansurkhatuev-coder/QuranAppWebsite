@@ -45,6 +45,7 @@
   <link rel="stylesheet" href="waydean-preview-auth.css?v=dialog-close-20261102-1">
   <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=person-actions-20261108-1">
   <link rel="stylesheet" href="waydean-preview-appearance.css?v=dropdown-polish-20261106-1">
+  <link rel="stylesheet" href="waydean-preview-demo.css?v=demo-interface-1">
   <link rel="stylesheet" href="waydean-color-scheme.css?v=dark-default-20261103-1">
 </head>
 <body>
@@ -88,6 +89,10 @@
 
       <section class="tree-stage" id="treeStage" aria-label="Полотно древа">
         <div class="stage-wash" aria-hidden="true"></div>
+        <aside class="demo-mode-notice" id="demoModeNotice" hidden aria-label="Демонстрационный режим">
+          <strong>Демо, не ваше древо</strong>
+          <span>Вымышленные имена · без фото · до 90 человек · пароль не меняется</span>
+        </aside>
         <div class="tree-loading-overlay" id="treeLoading" role="status" aria-live="polite">
           <div class="tree-loading-card">
             <svg class="tree-loading-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
@@ -340,6 +345,7 @@
       </form>
       <form id="waydeanFamilyLoginForm" class="waydean-admin-login" hidden>
         <p>Вход по семейному логину и паролю. Сессия действует только в этой вкладке.</p>
+        <p class="demo-login-hint" id="demoLoginHint" hidden><strong>Демо-вход:</strong> логин и пароль уже заполнены. Это отдельное демонстрационное дерево.</p>
         <label for="waydeanFamilyLogin">Логин семьи</label>
         <input id="waydeanFamilyLogin" name="login" type="text" autocomplete="username" required>
         <label for="waydeanFamilyPassword">Пароль семьи</label>
@@ -376,7 +382,7 @@
   <script src="../admin/admin-supabase.js?v=16"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1');
     }
   </script>
 </body>

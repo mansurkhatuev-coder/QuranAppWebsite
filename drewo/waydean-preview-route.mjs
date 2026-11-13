@@ -1,4 +1,5 @@
 const TREE_MODES = new Set(['path', 'branch', 'all-tree']);
+const FAMILY_TREE_DIRS = new Set(['drewo', 'drewo-reklama']);
 
 export function initialPreviewView(state, { mobile = false } = {}) {
   const mode = TREE_MODES.has(state) ? state : 'all';
@@ -36,16 +37,34 @@ export function isFamilyPreviewRoute(search) {
 
 export function resolveFamilyPreviewRoute(href, hostname) {
   const url = new URL(href);
-  const requested = isFamilyPreviewRoute(url.search);
+  const requestedFamily = isFamilyPreviewRoute(url.search);
   const host = String(hostname || url.hostname).trim().toLowerCase().replace(/\.$/, '');
   const isProductionHost = host === 'waydean.ru' || host === 'www.waydean.ru';
+  const loopback = isLoopbackHost(host);
+  const isAccountRoute = url.searchParams.get('source') === 'account';
+  const requestedTreeDir = String(url.searchParams.get('tree') || '').trim().toLowerCase();
+  const maySelectTree = !isAccountRoute && (requestedFamily || loopback);
+  let treeDir = 'drewo';
+
+  if (maySelectTree && FAMILY_TREE_DIRS.has(requestedTreeDir)) treeDir = requestedTreeDir;
+  else url.searchParams.delete('tree');
+
   if (!isProductionHost) {
     url.searchParams.delete('nek');
     url.searchParams.delete('invite');
     if (url.searchParams.get('source') === 'family') url.searchParams.delete('source');
-    return { enabled: false, href: url.href };
+    if (!loopback) {
+      url.searchParams.delete('tree');
+      treeDir = 'drewo';
+    }
   }
-  return { enabled: isProductionHost && requested, href: url.href };
+
+  return {
+    enabled: isProductionHost && requestedFamily,
+    href: url.href,
+    treeDir,
+    demoMode: treeDir === 'drewo-reklama' && (isProductionHost ? requestedFamily : loopback)
+  };
 }
 
 export function isMasterFixtureQuery(search) {
@@ -58,7 +77,7 @@ export function isLoopbackHost(hostname) {
   return ['localhost', '127.0.0.1', '[::1]', '::1'].includes(host);
 }
 
-export function buildTreeSharePayload({ href, title = 'WAYDEAN', localPreview = false } = {}) {
+export function buildTreeSharePayload({ href, title = 'WAYDEAN', localPreview = false, treeDir = 'drewo' } = {}) {
   const sourceUrl = new URL(href);
   const label = String(title || '').trim() || 'WAYDEAN';
   const url = new URL(sourceUrl.href);
@@ -67,7 +86,7 @@ export function buildTreeSharePayload({ href, title = 'WAYDEAN', localPreview = 
     for (const key of ['refresh', 'source', 'nek', 'invite']) url.searchParams.delete(key);
     url.hash = '';
   } else {
-    url.pathname = '/drewo/';
+    url.pathname = treeDir === 'drewo-reklama' ? '/drewo-reklama/' : '/drewo/';
     url.search = '';
     url.hash = '';
   }

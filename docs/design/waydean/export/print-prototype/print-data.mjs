@@ -1,6 +1,6 @@
 import { PROTOTYPE_PEOPLE } from "../../fixtures/prototype-people.mjs";
 import { loadLocalTreeDraft, listLocalTreePhotos } from "../../../../../drewo/waydean-preview-storage.mjs?v=2";
-import { readExportWorkshopHandoff } from "../workshop-model.mjs?v=shared-export-1";
+import { readExportWorkshopHandoff } from "../workshop-model.mjs?v=shared-export-2";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const mayReadHoti = typeof window !== "undefined" && LOOPBACK_HOSTS.has(window.location.hostname);
@@ -104,7 +104,10 @@ function loadWorkshopPeople() {
 
 const WORKSHOP_SNAPSHOT = loadWorkshopPeople();
 const WORKSHOP_HOTI_PEOPLE = WORKSHOP_SNAPSHOT?.treeId === "hoti" ? WORKSHOP_SNAPSHOT.people : [];
-const WORKSHOP_DEMO_PEOPLE = WORKSHOP_SNAPSHOT?.treeId === "demo" ? WORKSHOP_SNAPSHOT.people : [];
+const WORKSHOP_DEMO_PEOPLE = ["demo", "drewo-reklama"].includes(WORKSHOP_SNAPSHOT?.treeId) ? WORKSHOP_SNAPSHOT.people : [];
+const WORKSHOP_DEMO_LABEL = WORKSHOP_SNAPSHOT?.treeId === "drewo-reklama"
+  ? "Некъ · снимок этой сессии"
+  : "Демонстрация · снимок этой сессии";
 const AVAILABLE_HOTI_PEOPLE = WORKSHOP_HOTI_PEOPLE.length ? WORKSHOP_HOTI_PEOPLE : HOTI_PEOPLE;
 const AVAILABLE_DEMO_PEOPLE = WORKSHOP_DEMO_PEOPLE.length ? WORKSHOP_DEMO_PEOPLE : PROTOTYPE_PEOPLE;
 
@@ -165,7 +168,7 @@ function createSource(id, people, label, rawTree = null) {
 
 const SOURCES = Object.freeze({
   demo: createSource("demo", AVAILABLE_DEMO_PEOPLE, WORKSHOP_DEMO_PEOPLE.length
-    ? "Демонстрация · снимок этой сессии"
+    ? WORKSHOP_DEMO_LABEL
     : "Демонстрационное дерево · 12 человек"),
   hoti: createSource("hoti", AVAILABLE_HOTI_PEOPLE, WORKSHOP_HOTI_PEOPLE.length
     ? "Текущее дерево · снимок этой сессии"

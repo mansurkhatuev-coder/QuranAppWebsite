@@ -4,7 +4,7 @@ import {
   readExportWorkshopHandoff,
   updateExportWorkshopHandoff,
   writeExportWorkshopHandoff
-} from "./workshop-model.mjs?v=shared-export-1";
+} from "./workshop-model.mjs?v=shared-export-2";
 
 const tabs = [...document.querySelectorAll('[role="tab"][data-mode]')];
 const frame = document.getElementById("workshop-frame");
@@ -21,6 +21,7 @@ function treeReturnHref(value) {
     url.searchParams.set("source", value.returnContext);
   }
   if (value?.treeId === "demo") url.searchParams.set("fixture", "master");
+  if (value?.treeId === "drewo-reklama") url.searchParams.set("tree", "drewo-reklama");
   url.searchParams.set("state", value?.returnView || "all-tree");
   url.searchParams.set("workshopReturn", "1");
   return url.href;

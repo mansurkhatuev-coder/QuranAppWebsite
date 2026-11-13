@@ -22,7 +22,7 @@ import {
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
-} from './waydean-preview-route.mjs?v=family-route-5';
+} from './waydean-preview-route.mjs?v=family-route-6';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
@@ -30,11 +30,11 @@ import {
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
 import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-2';
-import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-1';
+import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-2';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-2';
+import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-3';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
@@ -83,6 +83,9 @@ let fullDataDepth = 1;
 let syntheticFixture = false;
 let accountPreview = false;
 let familyPreview = false;
+let activeTreeDir = 'drewo';
+let activeTreeId = 'hoti';
+let demoMode = false;
 let familyLegacyReadOnly = false;
 let familyLegacyViewPersonId = '';
 let familySessionTokenMemory = '';
@@ -310,6 +313,7 @@ function preparePreviewRecords(root) {
 }
 
 function photoSource(person) {
+  if (demoMode) return null;
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
   if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
     return localPhotoUrls.get(person.id) || null;
@@ -320,6 +324,7 @@ function photoSource(person) {
 }
 
 function fullPhotoSource(person) {
+  if (demoMode) return null;
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
   if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
     return localPhotoFullUrls.get(person.id) || null;
@@ -652,7 +657,7 @@ function setWomenVisibility(visible) {
 }
 
 function loadMyPersonPreference() {
-  myPersonId = readWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti', new Set(byId.keys()));
+  myPersonId = readWhoAmIPerson(browserStorage(), activeTreeId, new Set(byId.keys()));
 }
 
 function syncWhoAmIButton() {
@@ -678,7 +683,7 @@ function syncWhoAmIButton() {
 function setSelfPerson(id) {
   if (!byId.has(id)) return;
   myPersonId = String(id);
-  const persisted = saveWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti', myPersonId);
+  const persisted = saveWhoAmIPerson(browserStorage(), activeTreeId, myPersonId);
   selectPerson(myPersonId);
   syncWhoAmIButton();
   announce(persisted ? 'Отметка «Это я» сохранена в этом браузере.' : 'Отметка действует до закрытия этой страницы: браузер не разрешил сохранение.');
@@ -687,7 +692,7 @@ function setSelfPerson(id) {
 function clearSelfPerson() {
   const previous = myPersonId;
   myPersonId = null;
-  clearWhoAmIPerson(browserStorage(), syntheticFixture ? 'demo' : 'hoti');
+  clearWhoAmIPerson(browserStorage(), activeTreeId);
   if (mode === 'path') {
     mode = 'all-tree';
     resetGenerationFilters();
@@ -963,6 +968,7 @@ function renderProfile(tab = 'info') {
   const profileFocusKey = ui.profile.contains(document.activeElement)
     ? document.activeElement.dataset.profileFocus || null
     : null;
+  if (demoMode && tab === 'media') tab = 'info';
   currentProfileTab = tab;
   const person = byId.get(selectedId);
   if (!person) return;
@@ -1004,7 +1010,9 @@ function renderProfile(tab = 'info') {
 
   const tabs = document.createElement('div');
   tabs.className = 'profile-tabs';
-  for (const [id, label] of [['info','Информация'], ['relatives',`Родственники ${children.length + Number(Boolean(parent))}`], ['media',`Медиа ${hasDisplayPhoto(person) ? 1 : 0}`]]) {
+  const profileTabs = [['info','Информация'], ['relatives',`Родственники ${children.length + Number(Boolean(parent))}`]];
+  if (!demoMode) profileTabs.push(['media', `Медиа ${hasDisplayPhoto(person) ? 1 : 0}`]);
+  for (const [id, label] of profileTabs) {
     const button = document.createElement('button');
     button.type = 'button';
     button.dataset.profileTab = id;
@@ -1096,7 +1104,7 @@ function renderProfile(tab = 'info') {
       media.append(title);
     }
     body.append(media);
-    if (localTreeDraft) body.append(buildLocalPhotoControls(person, { showAvatarHint: true }));
+    if (localTreeDraft && !demoMode) body.append(buildLocalPhotoControls(person, { showAvatarHint: true }));
   }
   const close = document.createElement('button');
   close.type = 'button'; close.className = 'profile-close'; close.setAttribute('aria-label','Свернуть профиль'); close.title = 'Свернуть профиль';
@@ -1222,7 +1230,7 @@ function renderPersonSheet(personId) {
   photoButton.disabled = !hasDisplayPhoto(person);
   photoButton.addEventListener('click', () => openPhotoLightbox(person));
   let avatar = photoButton;
-  if (localTreeDraft) {
+  if (localTreeDraft && !demoMode) {
     const avatarWrap = document.createElement('div');
     avatarWrap.className = 'person-sheet-avatar-wrap';
     const photoInput = createLocalPhotoPicker(person);
@@ -1318,7 +1326,7 @@ function renderPersonSheet(personId) {
     editorSection.append(editorTitle, editor);
     sections.push(editorSection);
   }
-  if (localTreeDraft && (hasDisplayPhoto(person) || localMediaStatus)) {
+  if (localTreeDraft && !demoMode && (hasDisplayPhoto(person) || localMediaStatus)) {
     const mediaSection = document.createElement('section'); mediaSection.className = 'person-sheet-section';
     mediaSection.append(buildLocalPhotoControls(person, { showDraftActions: false }));
     sections.push(mediaSection);
@@ -2080,7 +2088,7 @@ async function publishAccountDraft() {
     const published = accountPreview
       ? await callWaydeanAdminAction('waydean-admin-publish', payload, accountAdminAccess)
       : await callFamilyTreeAction('publish', payload, {
-        endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
+        endpoint: familyEndpoint(), treeDir: activeTreeDir, sessionToken: familySessionTokenMemory
       });
     const nextTree = JSON.parse(published.treeJson);
     flattenTree(nextTree);
@@ -2281,7 +2289,7 @@ function openExportWorkshop(initialMode = 'print') {
     announce('Древо ещё загружается. Повторите через несколько секунд.');
     return;
   }
-  const treeId = syntheticFixture ? 'demo' : 'hoti';
+  const treeId = activeTreeId;
   const scopeType = mode === 'path' || mode === 'branch' ? mode : 'all';
   const selectedPersonId = scopeType === 'path' ? (myPersonId || selectedId) : selectedId;
   const returnContext = accountPreview ? 'account' : familyPreview ? 'family' : 'preview';
@@ -2294,7 +2302,8 @@ function openExportWorkshop(initialMode = 'print') {
       returnView: mode === 'all' ? 'all-tree' : mode,
       returnPersonId: selectedId,
       depth: scopeType === 'path' ? fullDataDepth : Math.min(5, fullDataDepth),
-      aspectRatio: window.matchMedia('(max-width: 700px)').matches ? '9:16' : '16:9'
+      aspectRatio: window.matchMedia('(max-width: 700px)').matches ? '9:16' : '16:9',
+      printPeople: demoMode ? records.map(person => ({ ...person, hasPhoto: false, photoKey: null })) : records
     });
     writeExportWorkshopHandoff(window.sessionStorage, handoff);
     const workshopUrl = new URL('./waydean-preview.html?view=export-workshop', window.location.href);
@@ -2853,7 +2862,8 @@ async function shareLocalPreview() {
   const payload = buildTreeSharePayload({
     href: location.href,
     title: $('.brand strong')?.textContent || 'WAYDEAN',
-    localPreview
+    localPreview,
+    treeDir: activeTreeDir
   });
   try {
     const result = await shareTreeLink({
@@ -3147,8 +3157,8 @@ function bindControls() {
     $('#pwaPushClose').disabled = true;
     error.hidden = true;
     try {
-      if (pwaPushAction === 'subscribe') await pwaController.subscribeServerPush(password, 'drewo');
-      else await pwaController.unsubscribeServerPush(password, 'drewo');
+      if (pwaPushAction === 'subscribe') await pwaController.subscribeServerPush(password, activeTreeDir);
+      else await pwaController.unsubscribeServerPush(password, activeTreeDir);
       $('#pwaPushDialog').close();
       announce(pwaPushAction === 'subscribe' ? 'Push-уведомления включены для этого устройства.' : 'Push-уведомления отключены для этого устройства.');
       renderPwaStatus();
@@ -3682,7 +3692,9 @@ function showError(error) {
     $('#loadErrorText').textContent = 'Откройте локальную версию проекта на компьютере, где хранятся данные древа.';
   } else if (familyAuthError) {
     $('#loadErrorText').textContent = error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED'
-      ? 'Семейный вход действует только в текущей вкладке. Войдите заново, если сессия завершилась.'
+      ? demoMode
+        ? 'Сессия демо завершилась. Данные для входа уже заполнены.'
+        : 'Семейный вход действует только в текущей вкладке. Войдите заново, если сессия завершилась.'
       : error?.message || 'Не удалось проверить семейный вход.';
   } else if (loginRequired) {
     $('#loadErrorText').textContent = 'Полное дерево откроется после входа в разрешённую администраторскую учётную запись.';
@@ -3768,7 +3780,8 @@ function bindWaydeanFamilyLogin() {
           endpoint: familyEndpoint(),
           login: loginInput.value,
           password: passwordInput.value,
-          treeDir: 'drewo',
+          treeDir: activeTreeDir,
+          allowTreeRedirect: !demoMode,
           origin: window.location.origin,
           storage: familySessionStorage()
         });
@@ -3785,7 +3798,7 @@ function bindWaydeanFamilyLogin() {
         }
         window.location.reload();
       } catch (error) {
-        passwordInput.value = '';
+        passwordInput.value = demoMode ? 'демо' : '';
         if (errorMessage) {
           errorMessage.textContent = error?.message || 'Не удалось войти. Проверьте логин семьи и пароль.';
           errorMessage.hidden = false;
@@ -3794,7 +3807,7 @@ function bindWaydeanFamilyLogin() {
       } finally {
         if (submitButton) {
           submitButton.disabled = false;
-          submitButton.textContent = 'Войти и открыть древо';
+          submitButton.textContent = demoMode ? 'Войти в демо' : 'Войти и открыть древо';
         }
       }
     });
@@ -3808,10 +3821,12 @@ function bindWaydeanFamilyLogin() {
       familySessionRole = '';
       familySessionLocked = false;
       familySessionLockReason = '';
-      storeFamilySession(familySessionStorage(), 'drewo', '');
-      try {
-        localStorage.removeItem('drewo-view-session');
-      } catch { /* Session logout must still complete if local preferences are unavailable. */ }
+      storeFamilySession(familySessionStorage(), activeTreeDir, '');
+      if (!demoMode) {
+        try {
+          localStorage.removeItem('drewo-view-session');
+        } catch { /* Session logout must still complete if local preferences are unavailable. */ }
+      }
       const url = new URL(window.location.href);
       url.searchParams.set('source', 'family');
       url.searchParams.set('state', 'all-tree');
@@ -3823,7 +3838,7 @@ function bindWaydeanFamilyLogin() {
 }
 
 async function requireFamilyPreviewSession(params, setLoadingText) {
-  if (params.has('invite')) {
+  if (params.has('invite') && !demoMode) {
     setLoadingText('Проверяем приглашение');
     const invite = await resolveFamilyInvite({ endpoint: familyEndpoint(), code: params.get('invite') });
     const target = new URL(invite.invitePath, window.location.origin);
@@ -3835,15 +3850,16 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
   if (fromUrl.token) {
     window.history.replaceState(window.history.state, '', fromUrl.cleanUrl);
     familySessionTokenMemory = fromUrl.token;
-    storeFamilySession(familySessionStorage(), 'drewo', fromUrl.token);
+    storeFamilySession(familySessionStorage(), activeTreeDir, fromUrl.token);
   }
-  let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), 'drewo');
+  let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
   let legacyViewSession = null;
   try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
   setLoadingText('Проверяем семейный доступ');
   try {
     const access = await resolveFamilyPreviewAccess({
-      endpoint: familyEndpoint(), treeDir: 'drewo', token, legacyViewSession
+    endpoint: familyEndpoint(), treeDir: activeTreeDir, token, legacyViewSession,
+    allowLegacyReadOnly: !demoMode
     });
     if (access.legacyReadOnly) {
       familyLegacyReadOnly = true;
@@ -3855,12 +3871,12 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
     const session = access.session;
     familySessionTokenMemory = session.sessionToken;
     familySessionRole = String(session.role || '').trim();
-    storeFamilySession(familySessionStorage(), 'drewo', session.sessionToken);
+    storeFamilySession(familySessionStorage(), activeTreeDir, session.sessionToken);
     return true;
   } catch (error) {
     if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED') {
       familySessionTokenMemory = '';
-      storeFamilySession(familySessionStorage(), 'drewo', '');
+      storeFamilySession(familySessionStorage(), activeTreeDir, '');
       familySessionRole = '';
     }
     throw error;
@@ -3885,6 +3901,24 @@ async function initialize() {
     syntheticFixture = isMasterFixtureQuery(location.search);
     accountPreview = params.get('source') === 'account';
     familyPreview = familyRoute.enabled;
+    activeTreeDir = familyRoute.treeDir;
+    activeTreeId = syntheticFixture ? 'demo' : activeTreeDir === 'drewo' ? 'hoti' : activeTreeDir;
+    demoMode = !syntheticFixture && familyRoute.demoMode;
+    if (demoMode && params.has('invite')) {
+      params.delete('invite');
+      const cleanUrl = new URL(familyRoute.href);
+      cleanUrl.searchParams.delete('invite');
+      window.history.replaceState(window.history.state, '', cleanUrl);
+    }
+    document.body.classList.toggle('demo-mode', demoMode);
+    $('#demoModeNotice').hidden = !demoMode;
+    $('#demoLoginHint').hidden = !demoMode;
+    if (demoMode) {
+      $('#waydeanFamilyLogin').value = 'demo';
+      $('#waydeanFamilyPassword').value = 'демо';
+      $('#waydeanFamilyLoginSubmit').textContent = 'Войти в демо';
+      $('.load-error-actions a').hidden = true;
+    }
     familySessionLocked = familyPreview;
     familyLegacyReadOnly = false;
     familyLegacyViewPersonId = '';
@@ -3952,7 +3986,7 @@ async function initialize() {
         : null,
       familySessionAction: familyPreview && familySessionTokenMemory
         ? (action, payload) => callFamilyTreeAction(action, payload, {
-          endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
+          endpoint: familyEndpoint(), treeDir: activeTreeDir, sessionToken: familySessionTokenMemory
         })
         : null
     });
@@ -3971,7 +4005,9 @@ async function initialize() {
     document.title = 'Waydean — семейное древо';
     const dataUrl = syntheticFixture
       ? '../docs/design/waydean/fixtures/master-tree.json'
-      : './family-tree.json';
+      : demoMode && !familyPreview
+        ? '../drewo-reklama/family-tree.json'
+        : './family-tree.json';
     setLoadingText('Загружаем данные рода');
     let root;
     if (accountPreview) {
@@ -3989,7 +4025,7 @@ async function initialize() {
       accountBaseActivityJson = accountServerActivityJson;
     } else if (familyPreview && !familyLegacyReadOnly) {
       const serverSnapshot = await callFamilyTreeAction('family-load', {}, {
-        endpoint: familyEndpoint(), treeDir: 'drewo', sessionToken: familySessionTokenMemory
+        endpoint: familyEndpoint(), treeDir: activeTreeDir, sessionToken: familySessionTokenMemory
       });
       accountServerTreeJson = serverSnapshot.treeJson;
       accountServerActivityJson = serverSnapshot.activityJson || '[]';
@@ -4025,7 +4061,8 @@ async function initialize() {
       originalFixtureRoot = cloneTree(root);
       fixtureRoot = cloneTree(root);
     } else if (localTreeDraft) {
-      localDraftKey = new URL('./family-tree.json', location.href).pathname
+      localDraftKey = new URL(dataUrl, location.href).pathname
+        + `::${activeTreeDir}`
         + (accountPreview ? '::admin-account' : familyPreview ? '::family-session' : '');
       sourceFixtureRoot = cloneTree(root);
       let storedDraft = null;
@@ -4080,7 +4117,7 @@ async function initialize() {
       error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
       throw error;
     }
-    $('#moreVideo').hidden = !(localTreeDraft || accountPreview);
+    $('#moreVideo').hidden = !(localTreeDraft || accountPreview || demoMode);
     fullDataDepth = Math.max(...records.map(person => person.generation));
     byId = new Map(records.map(person => [person.id, person]));
     childrenById = new Map(records.map(person => [person.id, []]));
@@ -4092,12 +4129,12 @@ async function initialize() {
       : null;
     const expectedReturnContext = accountPreview ? 'account' : familyPreview ? 'family' : 'preview';
     const workshopReturnId = workshopReturn?.returnContext === expectedReturnContext
-      && workshopReturn.treeId === (syntheticFixture ? 'demo' : 'hoti')
+      && workshopReturn.treeId === activeTreeId
       && byId.has(workshopReturn.returnPersonId)
       ? workshopReturn.returnPersonId
       : null;
     if (workshopReturn?.returnContext === expectedReturnContext
-      && workshopReturn.treeId === (syntheticFixture ? 'demo' : 'hoti')) {
+      && workshopReturn.treeId === activeTreeId) {
       mode = ['path', 'branch', 'all-tree'].includes(workshopReturn.returnView)
         ? workshopReturn.returnView
         : 'all-tree';
