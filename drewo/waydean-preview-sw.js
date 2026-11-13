@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v62';
+const CACHE_NAME = 'waydean-preview-shell-v63';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -34,7 +34,7 @@ const PRECACHE = [
   './waydean-preview-appearance.css?v=dropdown-polish-20261106-1',
   './waydean-preview-demo.css?v=demo-interface-1',
   './waydean-color-scheme.css?v=dark-default-20261103-1',
-  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1',
+  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&touch-pan=20261114-1',
   './waydean-preview-appearance.mjs?v=dark-default-20261103-1',
   './waydean-preview-family-auth.mjs?v=family-auth-3',
   './waydean-preview-family-api.mjs?v=family-lock-2',
@@ -47,7 +47,7 @@ const PRECACHE = [
   './waydean-preview-pwa.mjs?v=family-push-20261030-cache-2',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
   './waydean-preview-model.mjs?v=person-card-gender-20261108-1',
-  './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1',
+  './waydean-preview-camera.mjs?v=touch-pan-20261114-1',
   './waydean-preview-access.mjs?v=admin-auth-2',
   './waydean-preview-lines.mjs',
   './waydean-preview-fixture.mjs',

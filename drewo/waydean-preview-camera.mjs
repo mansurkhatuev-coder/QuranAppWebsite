@@ -45,6 +45,15 @@ export function wheelZoomFactor(deltaY) {
   return deltaY < 0 ? 1.1 : 1 / 1.1;
 }
 
+export function pointerPanThreshold(pointerType) {
+  return pointerType === 'touch' ? 6 : 18;
+}
+
+export function panViewportByPointer(viewport, previous, next) {
+  viewport.scrollLeft += previous.x - next.x;
+  viewport.scrollTop += previous.y - next.y;
+}
+
 export function cameraLayout(viewWidth, viewHeight, graphWidth, graphHeight, zoom) {
   const scaledWidth = graphWidth * zoom;
   const scaledHeight = graphHeight * zoom;

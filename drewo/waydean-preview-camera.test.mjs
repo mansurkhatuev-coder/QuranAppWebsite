@@ -8,9 +8,24 @@ import {
   createLatestFrameCoalescer,
   zoomAroundAnchor,
   wheelZoomFactor,
+  pointerPanThreshold,
   miniMapViewport,
-  miniMapScrollTarget
+  miniMapScrollTarget,
+  panViewportByPointer
 } from './waydean-preview-camera.mjs';
+
+test('one-finger panning applies pointer deltas directly to the scroll position', () => {
+  const viewport = { scrollLeft: 120, scrollTop: 240 };
+
+  panViewportByPointer(viewport, { x: 200, y: 300 }, { x: 176, y: 311 });
+  assert.deepEqual(viewport, { scrollLeft: 144, scrollTop: 229 });
+});
+
+test('touch panning starts promptly while mouse panning keeps a click-safe threshold', () => {
+  assert.equal(pointerPanThreshold('touch'), 6);
+  assert.equal(pointerPanThreshold('mouse'), 18);
+  assert.equal(pointerPanThreshold('pen'), 18);
+});
 
 test('a large wheel event remains one controlled zoom step', () => {
   assert.ok(wheelZoomFactor(900) > 0.85);

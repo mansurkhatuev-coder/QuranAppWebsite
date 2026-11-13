@@ -2,8 +2,9 @@ import { flattenTree, filterPeopleByWomen, womenFilterStorageKey, getCardWidthFo
 import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
   createLatestFrameCoalescer, clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
-  miniMapViewport, miniMapScrollTarget, wheelZoomFactor
-} from './waydean-preview-camera.mjs?v=20261027-pinch-rAF-1';
+  miniMapViewport, miniMapScrollTarget, wheelZoomFactor,
+  panViewportByPointer, pointerPanThreshold
+} from './waydean-preview-camera.mjs?v=touch-pan-20261114-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
 import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
 import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
@@ -3488,6 +3489,7 @@ function bindCameraGestures() {
       x: event.clientX, y: event.clientY,
       startX: event.clientX, startY: event.clientY,
       dragging: false,
+      panThreshold: pointerPanThreshold(event.pointerType),
       personId: personNode?.dataset.personId || null,
       longPressFired: false,
       reparentCandidate: Boolean(personNode && relationshipDragEnabled && canEditDraft() && personNode.dataset.personId !== fixtureRoot?.id),
@@ -3520,7 +3522,7 @@ function bindCameraGestures() {
     if (!previous) return;
     if (pointers.size === 1) {
       const distance = Math.hypot(event.clientX - previous.startX, event.clientY - previous.startY);
-      if (!previous.dragging && distance > 18) {
+      if (!previous.dragging && distance >= previous.panThreshold) {
         cancelLongPress(previous);
         if (previous.reparentCandidate) {
           startReparentDrag(previous, event.clientX, event.clientY);
@@ -3533,7 +3535,7 @@ function bindCameraGestures() {
         }
         previous.dragging = true;
         markCameraMoving();
-        ui.viewport.scrollBy({ left: previous.startX - event.clientX, top: previous.startY - event.clientY, behavior: 'instant' });
+        panViewportByPointer(ui.viewport, { x: previous.startX, y: previous.startY }, { x: event.clientX, y: event.clientY });
       } else if (previous.reparentDragging) {
         updateReparentDrag(previous, event.clientX, event.clientY);
         previous.x = event.clientX;
@@ -3542,7 +3544,7 @@ function bindCameraGestures() {
         return;
       } else if (previous.dragging) {
         markCameraMoving();
-        ui.viewport.scrollBy({ left: previous.x - event.clientX, top: previous.y - event.clientY, behavior: 'instant' });
+        panViewportByPointer(ui.viewport, { x: previous.x, y: previous.y }, { x: event.clientX, y: event.clientY });
       }
       previous.x = event.clientX;
       previous.y = event.clientY;
