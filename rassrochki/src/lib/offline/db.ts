@@ -40,7 +40,8 @@ function sameOperation(existing: OfflineOperation, incoming: OfflineOperation): 
   return (
     existing.userId === incoming.userId &&
     existing.organizationId === incoming.organizationId &&
-    stableJson(existing.command) === stableJson(incoming.command)
+    stableJson(existing.command) === stableJson(incoming.command) &&
+    stableJson(existing.dependsOn ?? []) === stableJson(incoming.dependsOn ?? [])
   );
 }
 
@@ -149,7 +150,7 @@ export class OfflineStore {
     operationId: string,
     userId: string,
     organizationId: string,
-    patch: Partial<Pick<OfflineOperation, "state" | "attempts" | "lastError">>
+    patch: Partial<Pick<OfflineOperation, "state" | "attempts" | "lastError" | "command">>
   ): Promise<void> {
     await this.transaction("operations", "readwrite", async (tx) => {
       const store = tx.objectStore("operations");

@@ -3,6 +3,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { getOfflineStore } from "@/lib/offline/db";
 import { parseSnapshotEnvelope } from "@/lib/offline/snapshot";
+import { syncOfflineQueue } from "@/lib/offline/sync";
+import { createClient } from "@/lib/supabase/client";
 
 const ACTIVE_ACCOUNT_KEY = "rassrochki:offline-account";
 
@@ -20,6 +22,7 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
   const [error, setError] = useState<string | null>(null);
   const [storageMessage, setStorageMessage] = useState<string | null>(null);
   const locked = useRef(false);
+  const queueSyncing = useRef(false);
   const requestController = useRef<AbortController | null>(null);
 
   const refreshLocalState = useCallback(async () => {
@@ -35,6 +38,7 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
 
   const refreshSnapshot = useCallback(async () => {
     if (locked.current) return;
+    if (queueSyncing.current) return;
     if (!navigator.onLine) {
       setOnline(false);
       return;
@@ -46,18 +50,40 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
     setOnline(true);
     setSyncing(true);
     setError(null);
+    queueSyncing.current = true;
     try {
-      const response = await fetch("/api/offline/snapshot", {
-        method: "GET",
-        cache: "no-store",
-        headers: { Accept: "application/json" },
-        signal: controller.signal,
-      });
-      if (!response.ok) throw new Error("Не удалось загрузить полный снимок данных");
-      const envelope: unknown = await response.json();
-      if (locked.current || controller.signal.aborted) return;
-      const snapshot = parseSnapshotEnvelope(envelope, userId, organizationId);
-      await getOfflineStore().putSnapshot(snapshot);
+      const store = getOfflineStore();
+      const queued = await store.listOperations(userId, organizationId);
+      if (queued.some((operation) => operation.state !== "conflict")) {
+        const supabase = createClient();
+        await syncOfflineQueue({
+          store,
+          userId,
+          organizationId,
+          fetcher: (input, init) => fetch(input, { ...init, signal: controller.signal }),
+          uploadReceipt: async (receipt, path) => {
+            const { error: uploadError } = await supabase.storage
+              .from("payment-receipts")
+              .upload(path, receipt.blob, {
+                upsert: true,
+                contentType: receipt.mimeType,
+              });
+            if (uploadError) throw uploadError;
+          },
+        });
+      } else {
+        const response = await fetch("/api/offline/snapshot", {
+          method: "GET",
+          cache: "no-store",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        if (!response.ok) throw new Error("Не удалось загрузить полный снимок данных");
+        const envelope: unknown = await response.json();
+        if (locked.current || controller.signal.aborted) return;
+        const snapshot = parseSnapshotEnvelope(envelope, userId, organizationId);
+        await store.putSnapshot(snapshot);
+      }
       if (locked.current || controller.signal.aborted) return;
       localStorage.setItem(ACTIVE_ACCOUNT_KEY, JSON.stringify({ userId, organizationId }));
       await refreshLocalState();
@@ -71,6 +97,7 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
     } finally {
       if (requestController.current === controller) {
         requestController.current = null;
+        queueSyncing.current = false;
         setSyncing(false);
       }
     }
@@ -155,7 +182,9 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
       : syncing
         ? "Обновляем данные…"
         : online === true
-          ? "На связи"
+          ? error
+            ? "Сбой синхронизации"
+            : "На связи"
           : "Проверяем сеть…";
 
   return (
@@ -183,8 +212,13 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
           onClick={prepareOfflineAccess}
           disabled={online === false || syncing}
         >
-          {syncing ? "Синхронизация…" : "Подготовить офлайн-доступ"}
+          {syncing ? "Синхронизация…" : pendingCount > 0 ? "Синхронизировать" : "Подготовить офлайн-доступ"}
         </button>
+        {online === false && (
+          <a href="/offline.html" className="btn-secondary px-2.5 py-1.5 text-xs">
+            Открыть офлайн-рабочее место
+          </a>
+        )}
       </div>
       {error && <p className="mt-1 text-amber-800">{error}</p>}
       {storageMessage && <p className="mt-1 text-[var(--muted)]">{storageMessage}</p>}

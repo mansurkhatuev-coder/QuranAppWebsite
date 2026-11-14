@@ -106,6 +106,17 @@ describe("offline IndexedDB store", () => {
     expect(await store.listOperations("user-2", "org-1")).toEqual([]);
   });
 
+  it("stores a deterministic receipt path on its queued payment before sync", async () => {
+    const store = makeStore();
+    await store.enqueue(operation({ command: { type: "payment.record", payload: { payment: { receipt_path: null } } } }));
+    await store.updateOperation("op-1", "user-1", "org-1", {
+      command: { type: "payment.record", payload: { payment: { receipt_path: "org-1/loan-1/op-1.jpg" } } },
+    });
+    expect(await store.listOperations("user-1", "org-1")).toMatchObject([
+      { command: { payload: { payment: { receipt_path: "org-1/loan-1/op-1.jpg" } } } },
+    ]);
+  });
+
   it("keeps receipt blobs until the owning operation is removed", async () => {
     const store = makeStore();
     const file = new Blob(["receipt"], { type: "image/jpeg" });

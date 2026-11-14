@@ -36,6 +36,21 @@ export function AppShell({
   const router = useRouter();
 
   async function logout() {
+    let queuedCount = 0;
+    try {
+      queuedCount = (await getOfflineStore().listOperations(userId, organizationId)).length;
+    } catch {
+      // Continue to the explicit logout path if local storage cannot be read.
+    }
+    if (
+      queuedCount > 0 &&
+      !window.confirm(
+        `На устройстве есть ${queuedCount} несинхронизированных изменений. Нажмите «Отмена», чтобы остаться и синхронизировать их. Если выйти сейчас, локальные изменения и чеки будут удалены без отправки. Выйти и удалить данные?`
+      )
+    ) {
+      return;
+    }
+
     window.dispatchEvent(new Event("rassrochki:offline-lock"));
     try {
       await getOfflineStore().clearAccount(userId, organizationId);

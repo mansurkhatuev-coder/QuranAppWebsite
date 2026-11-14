@@ -68,6 +68,35 @@ describe("offline local projections", () => {
     expect(result.payments).toHaveLength(1);
     expect(result.schedules[0].paid_amount).toBe(40);
     expect(result.schedules[0].status).toBe("pending");
+    expect((result.loans[0] as { offline_version?: number }).offline_version).toBe(2);
+  });
+
+  it("increments a client's local version for a queued blacklist update", () => {
+    const snapshot = baseSnapshot();
+    snapshot.clients = [{ id: "client-1", offline_version: 3, is_blacklisted: false }] as never;
+    const result = applyPendingOperations(snapshot, [
+      op("blacklist-op", "client.blacklist", { clientId: "client-1", isBlacklisted: true }),
+    ]);
+    expect(result.clients[0]).toMatchObject({ is_blacklisted: true, offline_version: 4 });
+  });
+
+  it("projects dependent commands in dependency order even when timestamps are out of order", () => {
+    const snapshot = baseSnapshot();
+    const create = op("create-loan", "loan.create", {
+      loan: { id: "loan-2", organization_id: "org-1", title: "Созданная версия", offline_version: 1 },
+      schedules: [],
+      guarantors: [],
+    });
+    create.createdAt = "2026-11-14T12:00:00.000Z";
+    const edit = op("edit-loan", "loan.edit", {
+      loan: { id: "loan-2", organization_id: "org-1", title: "Изменённая версия" },
+      projectedSchedules: [],
+    });
+    edit.createdAt = "2026-11-14T10:00:00.000Z";
+    edit.dependsOn = [create.id];
+
+    const result = applyPendingOperations(snapshot, [edit, create]);
+    expect(result.loans.find((loan) => loan.id === "loan-2")?.title).toBe("Изменённая версия");
   });
 
   it("does not project a payment twice if the server snapshot already includes its key", () => {

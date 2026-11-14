@@ -67,6 +67,7 @@ export type Client = {
   is_blacklisted: boolean;
   blacklist_note: string | null;
   created_at: string;
+  offline_version?: number;
 };
 
 export type Loan = {
@@ -97,6 +98,7 @@ export type Loan = {
   status: "active" | "closed";
   notes: string | null;
   created_at: string;
+  offline_version?: number;
 };
 
 export type PaymentSchedule = {

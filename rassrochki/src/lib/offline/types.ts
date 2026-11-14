@@ -35,6 +35,7 @@ export type OfflineOperation = {
   userId: string;
   organizationId: string;
   createdAt: string;
+  dependsOn?: string[];
   command: OfflineCommand;
   state: OfflineOperationState;
   attempts: number;

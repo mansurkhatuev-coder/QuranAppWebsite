@@ -29,12 +29,26 @@
       .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #e2e8f0; }
       .row:last-child { border: 0; }
       .row button { padding: 6px 8px; }
+      .actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
+      .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+      .field { display: grid; gap: 5px; font-size: 13px; }
+      .field.full { grid-column: 1 / -1; }
+      input, select, textarea { width: 100%; min-width: 0; border: 1px solid #cbd5e1; border-radius: 9px; padding: 10px; font: inherit; color: #0f172a; background: white; }
+      textarea { min-height: 82px; resize: vertical; }
+      input[type="checkbox"] { width: auto; }
+      .check { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+      button.primary { background: #0f766e; color: white; }
+      button.danger-button { color: #b91c1c; background: #fef2f2; }
+      button:disabled { opacity: .55; cursor: not-allowed; }
+      .badge.pending { color: #92400e; background: #fef3c7; }
+      .badge.conflict { color: #991b1b; background: #fee2e2; }
       .table-wrap { overflow-x: auto; }
       table { width: 100%; border-collapse: collapse; font-size: 13px; }
       th, td { padding: 9px 8px; text-align: left; border-bottom: 1px solid #e2e8f0; }
       th { color: #64748b; font-weight: 600; }
       .warning { border-color: #fcd34d; background: #fffbeb; color: #78350f; }
       .danger { color: #b91c1c; }
+      @media (max-width: 520px) { .form-grid { grid-template-columns: 1fr; } .field.full { grid-column: auto; } .row { align-items: flex-start; } }
       @media (min-width: 700px) { .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } main { padding: 22px 18px; } }
     </style>
   </head>
@@ -42,12 +56,12 @@
     <header>
       <div class="head">
         <div><h1>Рассрочки</h1><div class="muted" id="org-name">Офлайн-режим</div></div>
-        <span class="badge offline" id="network-state">Без сети</span>
+        <div class="actions"><span class="badge offline" id="network-state">Без сети</span><button type="button" id="clear-offline" title="Удалить офлайн-копию только текущей организации">Очистить данные</button></div>
       </div>
     </header>
     <main>
       <div id="sync-info" role="status">Загружаем сохранённые данные…</div>
-      <div id="online-action"><a class="button" href="/dashboard">Открыть обычное приложение</a></div>
+      <div id="online-action"><button type="button" id="sync-now" class="primary">Синхронизировать изменения</button> <a class="button" href="/dashboard">Открыть обычное приложение</a></div>
       <nav aria-label="Разделы">
         <button type="button" data-view="dashboard" aria-current="page">Обзор</button>
         <button type="button" data-view="clients">Клиенты</button>

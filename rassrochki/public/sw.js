@@ -1,5 +1,5 @@
 /* PWA-оболочка кэшируется; приватные данные остаются в IndexedDB приложения. */
-const CACHE = "rassrochki-shell-v5";
+const CACHE = "rassrochki-shell-v7";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/offline.html",
