@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type {
@@ -256,6 +257,9 @@ export function LoanDetail({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
+          <Link href={`/loans/${loan.id}/edit`} className="btn-secondary">
+            Изменить
+          </Link>
           {loan.clients?.phone ? (
             <WhatsAppButton
               phone={loan.clients.phone}

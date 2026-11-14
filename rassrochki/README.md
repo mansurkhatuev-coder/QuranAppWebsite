@@ -40,6 +40,7 @@ MVP веб-приложения для учёта рассрочек: клиен
    - `supabase/migrations/013_platform_activity_stats.sql`
    - `supabase/migrations/014_schedule_on_full_amount_default.sql`
    - `supabase/migrations/015_default_contract_template.sql`
+   - `supabase/migrations/016_edit_loan_transaction.sql` — this migration is applied by the `Apply Rassrochki Edit Migration` GitHub Actions workflow when pushed to `main`; publish the editing interface after the workflow succeeds.
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
 5. Назначьте себя владельцем продукта (platform-admin) в SQL Editor:
@@ -50,7 +51,7 @@ set is_platform_admin = true
 where id = (select id from auth.users where email = 'YOUR_EMAIL');
 ```
 
-Если проект уже создан — выполните все недостающие миграции по порядку, включая `015_default_contract_template.sql`.
+Если проект уже создан — выполните все недостающие миграции по порядку, включая `015_default_contract_template.sql`. Миграция `016_edit_loan_transaction.sql` применяется отдельным GitHub Actions workflow при публикации в `main`.
 
 ### Бэкапы
 
