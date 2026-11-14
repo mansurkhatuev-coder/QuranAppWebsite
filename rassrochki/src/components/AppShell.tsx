@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageFade } from "@/components/PageFade";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
+import { OfflineBootstrap } from "@/components/OfflineBootstrap";
+import { getOfflineStore } from "@/lib/offline/db";
 
 const links = [
   { href: "/dashboard", label: "Главная" },
@@ -18,18 +20,47 @@ export function AppShell({
   accessLabel,
   showTrialWarning,
   isPlatformAdmin,
+  userId,
+  organizationId,
   children,
 }: {
   orgName: string;
   accessLabel?: string | null;
   showTrialWarning?: boolean;
   isPlatformAdmin?: boolean;
+  userId: string;
+  organizationId: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
 
   async function logout() {
+    let queuedCount = 0;
+    try {
+      queuedCount = (await getOfflineStore().listOperations(userId, organizationId)).length;
+    } catch {
+      // Continue to the explicit logout path if local storage cannot be read.
+    }
+    if (
+      queuedCount > 0 &&
+      !window.confirm(
+        `На устройстве есть ${queuedCount} несинхронизированных изменений. Нажмите «Отмена», чтобы остаться и синхронизировать их. Если выйти сейчас, локальные изменения и чеки будут удалены без отправки. Выйти и удалить данные?`
+      )
+    ) {
+      return;
+    }
+
+    window.dispatchEvent(new Event("rassrochki:offline-lock"));
+    try {
+      await getOfflineStore().clearAccount(userId, organizationId);
+      localStorage.removeItem("rassrochki:offline-account");
+    } catch {
+      window.dispatchEvent(new Event("rassrochki:offline-unlock"));
+      window.alert("Не удалось очистить офлайн-данные. Повторите выход после перезагрузки страницы.");
+      return;
+    }
+
     const supabase = createClient();
     await supabase.auth.signOut();
     try {
@@ -104,6 +135,7 @@ export function AppShell({
         </nav>
       </header>
       <main className="mx-auto max-w-6xl space-y-3 px-4 py-4 md:py-6">
+        <OfflineBootstrap userId={userId} organizationId={organizationId} />
         <PwaInstallBanner />
         <PageFade>{children}</PageFade>
       </main>

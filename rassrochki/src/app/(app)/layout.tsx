@@ -22,6 +22,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <AppShell
       orgName={organization.name}
+      userId={user.id}
+      organizationId={organization.id}
       accessLabel={access.label}
       showTrialWarning={showTrialWarning}
       isPlatformAdmin={Boolean(profile?.is_platform_admin)}

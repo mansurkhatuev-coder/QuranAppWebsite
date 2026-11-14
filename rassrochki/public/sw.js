@@ -1,7 +1,9 @@
-/* Рассрочки PWA — только статика. HTML/данные приложения не кэшируем. */
-const CACHE = "rassrochki-shell-v4";
+/* PWA-оболочка кэшируется; приватные данные остаются в IndexedDB приложения. */
+const CACHE = "rassrochki-shell-v7";
 const PRECACHE = [
   "/manifest.webmanifest",
+  "/offline.html",
+  "/offline.js",
   "/icons/icon-192.png",
   "/icons/icon-512.png",
   "/icons/apple-touch-icon.png",
@@ -33,18 +35,28 @@ self.addEventListener("fetch", (event) => {
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
 
-  // Документы (страницы приложения) — только сеть, без кэша
+  // API, в том числе снимок и синхронизация, всегда идут напрямую в сеть.
+  if (url.pathname.startsWith("/api")) return;
+
+  // HTML приложения не кэшируем. При потере сети показываем локальную оболочку.
   if (req.mode === "navigate" || req.destination === "document") {
-    event.respondWith(fetch(req));
+    event.respondWith(
+      fetch(req).catch(async () => {
+        const offlinePage = await caches.match("/offline.html", { cacheName: CACHE });
+        return offlinePage || new Response("Нет подключения к интернету", {
+          status: 503,
+          headers: { "Content-Type": "text/plain; charset=utf-8" },
+        });
+      })
+    );
     return;
   }
-
-  if (url.pathname.startsWith("/api")) return;
 
   const isStatic =
     url.pathname.startsWith("/icons") ||
     url.pathname === "/manifest.webmanifest" ||
     url.pathname === "/sw.js" ||
+    url.pathname === "/offline.js" ||
     req.destination === "style" ||
     req.destination === "script" ||
     req.destination === "image" ||
