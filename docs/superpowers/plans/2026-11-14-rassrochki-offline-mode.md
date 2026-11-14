@@ -34,13 +34,13 @@
 - Create: `rassrochki/src/lib/offline/model.test.ts`
 - Modify: `rassrochki/package.json`, `rassrochki/package-lock.json`
 
-- [ ] Add `fake-indexeddb` as a dev dependency and initialize it in the IDB test file before opening the database.
-- [ ] Write failing tests for saving and retrieving snapshots by the compound `(userId, organizationId)` key; prove one account cannot read or clear another account’s snapshot.
-- [ ] Write failing tests for enqueue, stable operation IDs, ordered pending reads, retry state changes, completion removal, and receipt `Blob` persistence.
-- [ ] Write failing model tests showing pending payment/deletion commands change the local dashboard once, and repeated projection does not apply the same command twice.
-- [ ] Implement a versioned database with `snapshots`, `operations`, and `receiptFiles` stores; every operation and file references its user and organization.
-- [ ] Implement pure helpers `applyPendingOperations(snapshot, operations)`, `pendingCounts(operations)`, and `clearAccountData(userId, organizationId)` with no browser globals.
-- [ ] Run `npm test -- --run src/lib/offline` from `rassrochki`; expected: all new tests pass.
+- [x] Add `fake-indexeddb` as a dev dependency and initialize it in the IDB test file before opening the database.
+- [x] Write failing tests for saving and retrieving snapshots by the compound `(userId, organizationId)` key; prove one account cannot read or clear another account’s snapshot.
+- [x] Write failing tests for enqueue, stable operation IDs, ordered pending reads, retry state changes, completion removal, and receipt `Blob` persistence.
+- [x] Write failing model tests showing pending payment/deletion commands change the local dashboard once, and repeated projection does not apply the same command twice.
+- [x] Implement a versioned database with `snapshots`, `operations`, and `receiptFiles` stores; every operation and file references its user and organization.
+- [x] Implement pure helpers `applyPendingOperations(snapshot, operations)` and `pendingCounts(operations)` with no browser globals, plus `OfflineStore.clearAccount(userId, organizationId)`.
+- [x] Run `npm test -- --run src/lib/offline` from `rassrochki`; expected: all new tests pass.
 
 ## Task 2: Add snapshot loading and a reliable offline shell
 
