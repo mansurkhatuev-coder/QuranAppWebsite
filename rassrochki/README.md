@@ -40,8 +40,9 @@ MVP веб-приложения для учёта рассрочек: клиен
    - `supabase/migrations/013_platform_activity_stats.sql`
    - `supabase/migrations/014_schedule_on_full_amount_default.sql`
    - `supabase/migrations/015_default_contract_template.sql`
-   - `supabase/migrations/016_edit_loan_transaction.sql` — применяется workflow `Apply Rassrochki Migrations` при публикации в `main`; интерфейс редактирования публикуется после успешного применения миграции.
-   - `supabase/migrations/017_delete_unpaid_loan.sql` — добавляет безопасное удаление рассрочки без оплат; рассрочки с оплатами и чеками удалить нельзя, чтобы сохранить историю.
+   - `supabase/migrations/016_edit_loan_transaction.sql` — добавляет безопасное редактирование рассрочки.
+   - `supabase/migrations/017_delete_unpaid_loan.sql` — добавляет начальную защиту от удаления истории оплат.
+   - `supabase/migrations/018_delete_loan_with_history.sql` — добавляет подтверждаемое удаление рассрочки вместе с графиком, оплатами и чеками; удалённые суммы больше не входят в дашборды и отчёты.
 3. Authentication → Providers → Email: для MVP отключите **Confirm email**
 4. Settings → API → скопируйте URL и anon key
 5. Назначьте себя владельцем продукта (platform-admin) в SQL Editor:
@@ -52,7 +53,7 @@ set is_platform_admin = true
 where id = (select id from auth.users where email = 'YOUR_EMAIL');
 ```
 
-Если проект уже создан — выполните все недостающие миграции по порядку. Миграции `016_edit_loan_transaction.sql` и `017_delete_unpaid_loan.sql` применяются отдельным GitHub Actions workflow при публикации соответствующего SQL-файла в `main`.
+Если проект уже создан — выполните все недостающие миграции по порядку. Миграции рассрочек применяются отдельным GitHub Actions workflow при публикации соответствующего SQL-файла в `main`.
 
 ### Бэкапы
 

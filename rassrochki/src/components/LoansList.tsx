@@ -7,6 +7,7 @@ import { EmptyState, StatusBadge } from "@/components/ui";
 import { Spinner } from "@/components/Spinner";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/friendly";
+import { buildLoanDeleteConfirmation } from "@/lib/loan-delete-confirmation";
 import { formatDateShort, formatMoney, loanEndDate } from "@/lib/utils";
 
 export type LoanListRow = {
@@ -25,6 +26,7 @@ export function LoansList({ loans }: { loans: LoanListRow[] }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [deletedLoanIds, setDeletedLoanIds] = useState<string[]>([]);
   const normalized = query.trim().toLowerCase();
@@ -41,28 +43,47 @@ export function LoansList({ loans }: { loans: LoanListRow[] }) {
 
   async function deleteLoan(loan: LoanListRow) {
     const label = [loan.clients?.full_name, loan.title].filter(Boolean).join(" — ") || "эту рассрочку";
-    const confirmed = window.confirm(
-      `Удалить рассрочку «${label}»?\n\nУдалить можно только рассрочку без оплат и чеков. Историю платежей с чеками удалить нельзя.`
-    );
+    const confirmed = window.confirm(buildLoanDeleteConfirmation(label));
     if (!confirmed) return;
 
     setBusyId(loan.id);
     setError(null);
+    setWarning(null);
     try {
       const supabase = createClient();
-      const { error: deleteError } = await supabase.rpc("delete_loan_without_payments", {
+      const { data: deleteData, error: deleteError } = await supabase.rpc("delete_loan_with_history", {
         p_loan_id: loan.id,
       });
 
       if (deleteError) {
-        const message = deleteError.message?.includes("Нельзя удалить рассрочку")
-          ? deleteError.message
-          : friendlyError("Не удалось удалить рассрочку", deleteError);
-        setError(message);
+        setError(friendlyError("Не удалось удалить рассрочку", deleteError));
         return;
       }
 
+      const receiptResult = deleteData as { receipt_paths?: unknown } | null;
+      const receiptPaths = Array.isArray(receiptResult?.receipt_paths)
+        ? receiptResult.receipt_paths.filter(
+            (path): path is string => typeof path === "string" && path.trim().length > 0
+          )
+        : [];
+
       setDeletedLoanIds((current) => [...current, loan.id]);
+      if (receiptPaths.length > 0) {
+        try {
+          const { error: receiptError } = await supabase.storage
+            .from("payment-receipts")
+            .remove(receiptPaths);
+          if (receiptError) {
+            setWarning(
+              "Рассрочка и оплаты удалены, но не удалось удалить некоторые чеки из хранилища."
+            );
+          }
+        } catch {
+          setWarning(
+            "Рассрочка и оплаты удалены, но не удалось удалить некоторые чеки из хранилища."
+          );
+        }
+      }
       router.refresh();
     } catch (deleteError) {
       setError(friendlyError("Не удалось удалить рассрочку", deleteError));
@@ -76,6 +97,11 @@ export function LoansList({ loans }: { loans: LoanListRow[] }) {
       {error ? (
         <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
           {error}
+        </p>
+      ) : null}
+      {warning ? (
+        <p className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900" role="alert">
+          {warning}
         </p>
       ) : null}
       <div>
