@@ -19,7 +19,7 @@
 - `rassrochki/src/app/api/offline/sync/route.ts` — authenticated sequential sync endpoint; validates account/org scope and calls transactional database RPCs.
 - `rassrochki/public/offline.html` and `rassrochki/public/offline.js` — static offline workspace and UI. Keep the fallback self-contained and cacheable without depending on Next server rendering.
 - `rassrochki/public/sw.js` — versioned app-shell caching and navigation fallback; never cache authenticated API responses or receipt URLs.
-- `rassrochki/src/components/OfflineBootstrap.tsx` and `rassrochki/src/components/OfflineStatus.tsx` — online snapshot refresh, sync triggers, network status, last sync, pending/conflict counts, storage persistence result.
+- `rassrochki/src/components/OfflineBootstrap.tsx` — online snapshot refresh, sync triggers, network status, last sync, pending/conflict counts, storage persistence result.
 - `rassrochki/supabase/migrations/019_offline_operations.sql` — operation ledger, row revisions, and organization-scoped idempotent RPCs for client/loan writes, payments, and loan deletion.
 - Existing `LoanForm.tsx`, `LoanDetail.tsx`, `LoansList.tsx`, client forms, and `dashboard/page.tsx` — send/reflect queued operations while online behavior remains intact.
 - `rassrochki/README.md` — install, first sync, offline limitations, and device-data privacy instructions.
@@ -47,7 +47,6 @@
 **Files:**
 - Create: `rassrochki/src/app/api/offline/snapshot/route.ts`
 - Create: `rassrochki/src/components/OfflineBootstrap.tsx`
-- Create: `rassrochki/src/components/OfflineStatus.tsx`
 - Create: `rassrochki/public/offline.html`
 - Create: `rassrochki/public/offline.js`
 - Modify: `rassrochki/public/sw.js`
@@ -55,14 +54,14 @@
 - Modify: `rassrochki/src/components/AppShell.tsx`
 - Create: `rassrochki/src/lib/offline/snapshot.test.ts`
 
-- [ ] Add failing tests for transforming snapshot rows and for refusing to cache a partial/error response.
-- [ ] Implement `GET /api/offline/snapshot` using the server Supabase client; resolve the signed-in user and organization from the profile, query clients, loans, schedules, payments, guarantors, investors, and organization settings under RLS, paginate each list, and set `Cache-Control: private, no-store`.
-- [ ] Keep the response limited to the fields required by the primary screens; never include auth tokens, platform admin inventory, or receipt file bytes.
-- [ ] Implement online bootstrap: fetch the complete snapshot, save it only after every page succeeds, record `syncedAt`, and request `navigator.storage.persist()` on explicit “Подготовить офлайн-доступ” activation when available.
-- [ ] Implement a static offline workspace with tabs for dashboard, clients, loans, and loan details; read only the matching account’s IndexedDB snapshot and clearly show snapshot time and stale state.
-- [ ] Update the service worker to cache the static offline shell and its assets, serve the shell when an internal navigation fails, and continue bypassing `/api`, Supabase origins, uploads, and signed receipt URLs.
-- [ ] Add the offline status and manual snapshot refresh action to `AppShell`; do not clear a snapshot when an incomplete network refresh fails.
-- [ ] Run focused offline tests, `npx tsc --noEmit`, and `npm run build` from `rassrochki`; expected: exit code 0.
+- [x] Add failing tests for validating complete snapshot envelopes and for rejecting partial/error page responses.
+- [x] Implement `GET /api/offline/snapshot` using the server Supabase client; resolve the signed-in user and organization from the profile, query clients, loans, schedules, payments, guarantors, investors, and organization settings under RLS, paginate each list, and set `Cache-Control: private, no-store`.
+- [x] Keep the response limited to the fields required by the primary screens; never include auth tokens, platform admin inventory, or receipt file bytes.
+- [x] Implement online bootstrap: fetch the complete snapshot, save it only after every page succeeds, record `syncedAt`, and request `navigator.storage.persist()` on explicit “Подготовить офлайн-доступ” activation when available.
+- [x] Implement a static offline workspace with tabs for dashboard, clients, loans, and loan details; read only the matching account’s IndexedDB snapshot and clearly show snapshot time and stale state.
+- [x] Update the service worker to cache the static offline shell and its assets, serve the shell when an internal navigation fails, and continue bypassing `/api`, Supabase origins, uploads, and signed receipt URLs.
+- [x] Add the offline status and manual snapshot refresh action to `AppShell`; do not clear a snapshot when an incomplete network refresh fails.
+- [x] Run focused offline tests, `npx tsc --noEmit`, `npx eslint` for the changed TypeScript files, `node --check` for both public JavaScript files, and `npm run build` from `rassrochki`; expected: exit code 0.
 
 ## Task 3: Queue offline client and loan changes
 
@@ -102,7 +101,7 @@
 ## Task 5: Finish status, logout, and user documentation
 
 **Files:**
-- Modify: `rassrochki/src/components/OfflineBootstrap.tsx`, `rassrochki/src/components/OfflineStatus.tsx`, `rassrochki/src/components/AppShell.tsx`
+- Modify: `rassrochki/src/components/OfflineBootstrap.tsx`, `rassrochki/src/components/AppShell.tsx`
 - Modify: `rassrochki/src/lib/offline/db.ts`, `rassrochki/public/offline.js`
 - Modify: `rassrochki/README.md`
 

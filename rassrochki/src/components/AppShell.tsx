@@ -5,6 +5,8 @@ import { usePathname, useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { PageFade } from "@/components/PageFade";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
+import { OfflineBootstrap } from "@/components/OfflineBootstrap";
+import { getOfflineStore } from "@/lib/offline/db";
 
 const links = [
   { href: "/dashboard", label: "Главная" },
@@ -18,18 +20,32 @@ export function AppShell({
   accessLabel,
   showTrialWarning,
   isPlatformAdmin,
+  userId,
+  organizationId,
   children,
 }: {
   orgName: string;
   accessLabel?: string | null;
   showTrialWarning?: boolean;
   isPlatformAdmin?: boolean;
+  userId: string;
+  organizationId: string;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
   const router = useRouter();
 
   async function logout() {
+    window.dispatchEvent(new Event("rassrochki:offline-lock"));
+    try {
+      await getOfflineStore().clearAccount(userId, organizationId);
+      localStorage.removeItem("rassrochki:offline-account");
+    } catch {
+      window.dispatchEvent(new Event("rassrochki:offline-unlock"));
+      window.alert("Не удалось очистить офлайн-данные. Повторите выход после перезагрузки страницы.");
+      return;
+    }
+
     const supabase = createClient();
     await supabase.auth.signOut();
     try {
@@ -104,6 +120,7 @@ export function AppShell({
         </nav>
       </header>
       <main className="mx-auto max-w-6xl space-y-3 px-4 py-4 md:py-6">
+        <OfflineBootstrap userId={userId} organizationId={organizationId} />
         <PwaInstallBanner />
         <PageFade>{children}</PageFade>
       </main>
