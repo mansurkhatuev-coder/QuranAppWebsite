@@ -9,6 +9,7 @@ import { NumericInput } from "@/components/NumericInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { PhoneInput } from "@/components/PhoneInput";
 import { Spinner } from "@/components/Spinner";
+import { PassportNameScan } from "@/components/PassportNameScan";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import { friendlyError } from "@/lib/friendly";
@@ -692,6 +693,9 @@ export function LoanForm({ loanId }: { loanId?: string }) {
                   value={newClient.full_name}
                   onChange={(full_name) => setNewClient({ ...newClient, full_name })}
                   required={showNewClient}
+                />
+                <PassportNameScan
+                  onUseName={(full_name) => setNewClient({ ...newClient, full_name })}
                 />
                 <PhoneInput
                   value={newClient.phone}

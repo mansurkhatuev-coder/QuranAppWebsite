@@ -10,6 +10,7 @@ import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import { Spinner } from "@/components/Spinner";
 import { friendlyError } from "@/lib/friendly";
+import { PassportNameScan } from "@/components/PassportNameScan";
 
 type ClientDraft = {
   full_name: string;
@@ -83,6 +84,11 @@ export default function NewClientPage() {
             onChange={(full_name) => setValue({ ...value, full_name })}
             required
           />
+          <div className="mt-2">
+            <PassportNameScan
+              onUseName={(full_name) => setValue({ ...value, full_name })}
+            />
+          </div>
         </div>
         <div>
           <label className="label">Телефон</label>
