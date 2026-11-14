@@ -26,7 +26,6 @@ import {
   assertStartScheduleCanAcceptPayment,
   loanScheduleRemaining,
   scheduleDueRemaining,
-  sumSchedulePaid,
 } from "@/lib/schedule-payments";
 import { calculateOverdueCutoff, calculateOverdueStatus } from "@/lib/overdue";
 import type { PaymentSchedule } from "@/types/database";
@@ -155,6 +154,21 @@ describe("Down payment правила", () => {
   it("16. cash учитывает взнос ровно один раз", () => {
     moneyEq(cashReceived(loan, 0), 30_000);
     moneyEq(cashReceived(loan, 20_000), 50_000);
+  });
+});
+
+describe("Исторические графики", () => {
+  it("сохраняет сумму уже созданного графика после отключения режима полной суммы", () => {
+    const legacyLoan = {
+      cost_amount: 1_000,
+      markup_percent: 30,
+      principal: 1_300,
+      down_payment: 300,
+      schedulePrincipal: 1_300,
+    };
+
+    moneyEq(dealTotals(legacyLoan).financed, 1_300);
+    moneyEq(dealTotals({ ...legacyLoan, schedulePrincipal: null }).financed, 1_000);
   });
 });
 

@@ -11,7 +11,8 @@ type PassportNameScanProps = {
 const MAX_IMAGE_SIZE = 15 * 1024 * 1024;
 
 export function PassportNameScan({ onUseName }: PassportNameScanProps) {
-  const inputRef = useRef<HTMLInputElement>(null);
+  const cameraInputRef = useRef<HTMLInputElement>(null);
+  const galleryInputRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState<number | null>(null);
   const [stage, setStage] = useState("");
@@ -74,23 +75,42 @@ export function PassportNameScan({ onUseName }: PassportNameScanProps) {
   return (
     <div className="space-y-2">
       <input
-        ref={inputRef}
+        ref={cameraInputRef}
         className="sr-only"
         type="file"
         accept="image/*"
         capture="environment"
         onChange={onFileChange}
         tabIndex={-1}
-        aria-label="Выбрать фото страницы паспорта"
+        aria-label="Сфотографировать страницу паспорта"
       />
-      <button
-        type="button"
-        className="btn-secondary text-sm"
-        disabled={busy}
-        onClick={() => inputRef.current?.click()}
-      >
-        {busy ? <Spinner label="Распознаём…" /> : "Сканировать паспорт"}
-      </button>
+      <input
+        ref={galleryInputRef}
+        className="sr-only"
+        type="file"
+        accept="image/*"
+        onChange={onFileChange}
+        tabIndex={-1}
+        aria-label="Выбрать существующее фото паспорта"
+      />
+      <div className="flex flex-wrap gap-2">
+        <button
+          type="button"
+          className="btn-secondary text-sm"
+          disabled={busy}
+          onClick={() => cameraInputRef.current?.click()}
+        >
+          {busy ? <Spinner label="Распознаём…" /> : "Сделать фото"}
+        </button>
+        <button
+          type="button"
+          className="btn-secondary text-sm"
+          disabled={busy}
+          onClick={() => galleryInputRef.current?.click()}
+        >
+          Выбрать фото из галереи
+        </button>
+      </div>
       <p className="text-xs text-[var(--muted)]">
         Фото обрабатывается в браузере и не сохраняется. После сканирования проверьте ФИО.
       </p>

@@ -9,7 +9,6 @@ export type LoanFinancialField =
   | "markup_percent"
   | "principal"
   | "down_payment"
-  | "schedule_on_full_amount"
   | "term_months"
   | "start_date"
   | "monthly_payment"
@@ -196,7 +195,6 @@ export function hasLoanFinancialChanges(
     "markup_percent",
     "principal",
     "down_payment",
-    "schedule_on_full_amount",
     "term_months",
     "start_date",
     "monthly_payment",

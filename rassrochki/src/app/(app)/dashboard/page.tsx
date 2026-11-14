@@ -95,7 +95,7 @@ function StatCard({
   );
 }
 
-function normalizeLoanRow(loan: Record<string, unknown>): LoanFinanceInput & {
+function normalizeLoanRow(loan: Record<string, unknown>, schedulePrincipal?: number): LoanFinanceInput & {
   id: string;
   status: string;
   clients?: { full_name: string } | { full_name: string }[] | null;
@@ -108,7 +108,7 @@ function normalizeLoanRow(loan: Record<string, unknown>): LoanFinanceInput & {
     markup_percent: loan.markup_percent == null ? null : Number(loan.markup_percent),
     principal: Number(loan.principal) || 0,
     down_payment: Number(loan.down_payment ?? 0),
-    schedule_on_full_amount: Boolean(loan.schedule_on_full_amount),
+    schedulePrincipal,
     investor_amount: loan.investor_amount == null ? null : Number(loan.investor_amount),
     income_share_manager:
       loan.income_share_manager == null ? null : Number(loan.income_share_manager),
@@ -185,10 +185,20 @@ export default async function DashboardPage() {
     monthPaymentsRes.error?.message ||
     null;
 
-  const loans = (loansRes.data ?? []).map((row) =>
-    normalizeLoanRow(row as Record<string, unknown>)
-  );
   const schedules = schedulesRes.data ?? [];
+  const schedulePrincipalByLoan = new Map<string, number>();
+  for (const row of schedules) {
+    schedulePrincipalByLoan.set(
+      row.loan_id,
+      (schedulePrincipalByLoan.get(row.loan_id) ?? 0) + Number(row.amount || 0)
+    );
+  }
+  const loans = (loansRes.data ?? []).map((row) =>
+    normalizeLoanRow(
+      row as Record<string, unknown>,
+      schedulePrincipalByLoan.get(String(row.id))
+    )
+  );
   const dueSoon = dueSoonRes.data ?? [];
   const overdue = overdueRes.data ?? [];
   const recentPayments = recentPaymentsRes.data ?? [];

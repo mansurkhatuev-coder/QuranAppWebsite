@@ -345,7 +345,6 @@
     const clients = app.snapshot.clients.filter((client) => !client.is_blacklisted || client.id === loan?.client_id);
     if (!clients.length) return `<article class="card"><h2>Новая рассрочка</h2><p class="muted">Сначала добавьте клиента. Это можно сделать офлайн.</p><button type="button" data-action="new-client">Добавить клиента</button><button type="button" data-action="cancel-form">Отмена</button></article>`;
     const value = (key, fallback = "") => text(loan?.[key] ?? fallback);
-    const checked = loan?.schedule_on_full_amount ?? true;
     return `<article class="card"><h2>${loan ? "Изменить рассрочку" : "Новая рассрочка"}</h2><form data-form="${loan ? "loan-edit" : "loan-create"}" data-loan-id="${text(loanId || "")}" class="form-grid">
       <label class="field full">Клиент<select name="client_id" required>${clients.map((client) => `<option value="${text(client.id)}" ${client.id === loan?.client_id ? "selected" : ""}>${text(client.full_name)}${client.is_blacklisted ? " · чёрный список" : ""}</option>`).join("")}</select></label>
       <label class="field full">Название / товар<input name="title" maxlength="200" value="${value("title")}" placeholder="Например, холодильник"></label>
@@ -360,7 +359,6 @@
       <label class="field">Вложение инвестора<input name="investor_amount" type="number" min="0" step="0.01" value="${value("investor_amount")}"></label>
       <label class="field">Доля владельца, %<input name="income_share_manager" type="number" min="0" max="100" step="0.01" value="${value("income_share_manager", app.snapshot.settings?.income_share_manager || 100)}"></label>
       <label class="field">Доля инвестора, %<input name="income_share_investor" type="number" min="0" max="100" step="0.01" value="${value("income_share_investor", app.snapshot.settings?.income_share_investor || 0)}"></label>
-      <label class="check field full"><input name="schedule_on_full_amount" type="checkbox" ${checked ? "checked" : ""}> График на полную сумму (первоначальный взнос отдельно)</label>
       <label class="field full">Заметки<textarea name="notes" maxlength="4000">${value("notes")}</textarea></label>
       <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">${loan ? "Сохранить офлайн" : "Создать офлайн"}</button></div>
     </form><p class="muted">Неоплаченный график будет пересчитан. Уже полученные оплаты и строки с чеками сохраняются.</p></article>`;
@@ -491,12 +489,11 @@
     const downPayment = number("down_payment");
     const termMonths = number("term_months");
     const startDate = String(data.get("start_date") || "");
-    const scheduleOnFull = data.get("schedule_on_full_amount") === "on";
-    const scheduled = scheduleOnFull ? principal : principal - downPayment;
+    const scheduled = principal - downPayment;
     if (!data.get("client_id") || principal <= 0 || (form.dataset.form === "loan-create" && !(costAmount > 0)) || downPayment < 0 || downPayment > principal || !Number.isInteger(termMonths) || termMonths < 1 || termMonths > 120 || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
       throw new Error("Проверьте клиента, сумму, взнос, срок и дату начала.");
     }
-    if (scheduled <= 0.009) throw new Error("Нечего разбивать на платежи. Уменьшите взнос или включите график на полную сумму.");
+    if (scheduled <= 0.009) throw new Error("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
     const monthlyInput = number("monthly_payment");
     const monthlyPayment = monthlyInput > 0 ? monthlyInput : Math.round(scheduled / termMonths * 100) / 100;
     const investorId = String(data.get("investor_id") || "") || null;
@@ -512,7 +509,7 @@
       markup_percent: markupPercent,
       principal,
       down_payment: downPayment,
-      schedule_on_full_amount: scheduleOnFull,
+      schedule_on_full_amount: false,
       term_months: termMonths,
       start_date: startDate,
       monthly_payment: monthlyPayment,

@@ -244,11 +244,10 @@ begin
       select count(*)::int, coalesce(sum((row->>'amount')::numeric), 0)
       into v_schedule_count, v_schedule_total
       from jsonb_array_elements(p_payload->'schedules') as item(row);
-      v_expected_schedule_total := case
-        when coalesce((v_entity->>'schedule_on_full_amount')::boolean, false)
-          then (v_entity->>'principal')::numeric
-        else greatest(0, (v_entity->>'principal')::numeric - coalesce((v_entity->>'down_payment')::numeric, 0))
-      end;
+      v_expected_schedule_total := greatest(
+        0,
+        (v_entity->>'principal')::numeric - coalesce((v_entity->>'down_payment')::numeric, 0)
+      );
       if v_schedule_count <> v_term
         or abs(round(v_schedule_total, 2) - round(v_expected_schedule_total, 2)) > 0.009 then
         raise exception 'Сумма графика не совпадает с условиями рассрочки';
@@ -267,7 +266,7 @@ begin
         coalesce(nullif(v_entity->>'markup_percent', '')::numeric, 0),
         (v_entity->>'principal')::numeric,
         coalesce(nullif(v_entity->>'down_payment', '')::numeric, 0),
-        coalesce((v_entity->>'schedule_on_full_amount')::boolean, false),
+        false,
         v_term, (v_entity->>'start_date')::date,
         (v_entity->>'monthly_payment')::numeric,
         coalesce(nullif(v_entity->>'income_share_manager', '')::numeric, 100),

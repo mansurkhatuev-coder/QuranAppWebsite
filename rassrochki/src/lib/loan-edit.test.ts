@@ -23,7 +23,6 @@ const loanTerms = (overrides: Partial<Loan> = {}): Pick<
   | "markup_percent"
   | "principal"
   | "down_payment"
-  | "schedule_on_full_amount"
   | "term_months"
   | "start_date"
   | "monthly_payment"
@@ -36,7 +35,6 @@ const loanTerms = (overrides: Partial<Loan> = {}): Pick<
   markup_percent: 20,
   principal: 1200,
   down_payment: 0,
-  schedule_on_full_amount: true,
   term_months: 3,
   start_date: "2026-01-01",
   monthly_payment: 400,

@@ -1,6 +1,7 @@
 "use client";
 
 import { createClient } from "@/lib/supabase/client";
+import { deliverExportFile } from "@/lib/file-export";
 
 const LAST_BACKUP_KEY = "rassrochki:last-full-backup-at";
 
@@ -63,14 +64,12 @@ export async function buildFullOrgBackup(organizationId: string) {
   };
 }
 
-export function downloadJson(filename: string, data: unknown) {
-  const blob = new Blob([JSON.stringify(data, null, 2)], {
+export function createJsonBackupFile(filename: string, data: unknown) {
+  return new File([JSON.stringify(data, null, 2)], filename, {
     type: "application/json;charset=utf-8",
   });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+}
+
+export async function downloadJson(filename: string, data: unknown) {
+  return deliverExportFile(createJsonBackupFile(filename, data));
 }
