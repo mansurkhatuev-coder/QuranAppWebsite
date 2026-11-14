@@ -75,3 +75,11 @@ test('installed PWA receives the updated mobile layout stylesheet', () => {
   assert.match(worker, /waydean-preview-shell-v\d+/);
   assert.match(worker, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
 });
+
+test('mobile tree gesture blocks iOS native touch scrolling before camera panning', () => {
+  const appJs = readFileSync(new URL('waydean-preview.js', here), 'utf8');
+  const viewportRule = rule(mobileCss, '.graph-viewport');
+  assert.match(viewportRule, /touch-action:\s*none/);
+  assert.match(viewportRule, /-webkit-overflow-scrolling:\s*auto/);
+  assert.match(appJs, /addEventListener\('touchmove',\s*preventNativeTouchScroll,\s*\{\s*passive:\s*false\s*\}\)/);
+});

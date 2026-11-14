@@ -49,6 +49,10 @@ export function pointerPanThreshold(pointerType) {
   return pointerType === 'touch' ? 6 : 18;
 }
 
+export function preventNativeTouchScroll(event) {
+  if (event.cancelable) event.preventDefault();
+}
+
 export function panViewportByPointer(viewport, previous, next) {
   viewport.scrollLeft += previous.x - next.x;
   viewport.scrollTop += previous.y - next.y;

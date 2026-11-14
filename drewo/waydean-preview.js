@@ -3,8 +3,8 @@ import {
   cameraLayout, readableFitZoom, zoomAroundAnchor, createFrameCoalescer,
   createLatestFrameCoalescer, clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor,
-  panViewportByPointer, pointerPanThreshold
-} from './waydean-preview-camera.mjs?v=touch-pan-20261114-1';
+  panViewportByPointer, pointerPanThreshold, preventNativeTouchScroll
+} from './waydean-preview-camera.mjs?v=touch-guard-20261114-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
 import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
 import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
@@ -30,7 +30,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-push-20261030-cache-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=touch-guard-20261114-1';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-2';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -3313,6 +3313,7 @@ function setMiniMapCollapsed(collapsed) {
 }
 
 function bindCameraGestures() {
+  ui.viewport.addEventListener('touchmove', preventNativeTouchScroll, { passive: false });
   let miniDrag = null;
   ui.miniSvg.addEventListener('pointerdown', event => {
     if (event.button !== 0) return;

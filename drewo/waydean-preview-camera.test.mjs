@@ -9,6 +9,7 @@ import {
   zoomAroundAnchor,
   wheelZoomFactor,
   pointerPanThreshold,
+  preventNativeTouchScroll,
   miniMapViewport,
   miniMapScrollTarget,
   panViewportByPointer
@@ -25,6 +26,12 @@ test('touch panning starts promptly while mouse panning keeps a click-safe thres
   assert.equal(pointerPanThreshold('touch'), 6);
   assert.equal(pointerPanThreshold('mouse'), 18);
   assert.equal(pointerPanThreshold('pen'), 18);
+});
+
+test('the tree touch guard cancels native scrolling before it can fight camera panning', () => {
+  let prevented = false;
+  preventNativeTouchScroll({ cancelable: true, preventDefault() { prevented = true; } });
+  assert.equal(prevented, true);
 });
 
 test('a large wheel event remains one controlled zoom step', () => {

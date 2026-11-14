@@ -281,7 +281,7 @@ test('shared preview keeps demo identity and the demo limitations explicit', () 
   assert.ok(worker.includes("'./waydean-preview-demo.css?v=demo-interface-1'"));
   assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-6'"));
   assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-3'"));
-  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v63'/);
+  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v64'/);
 });
 
 test('demo share URL is public and has no family session data', () => {

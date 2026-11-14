@@ -51,7 +51,7 @@
   .tree-stage { inset: 0; min-width: 0; min-height: 0; }
   .graph-viewport {
     touch-action: none;
-    -webkit-overflow-scrolling: touch;
+    -webkit-overflow-scrolling: auto;
     overscroll-behavior: contain;
     scrollbar-width: none;
   }
