@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import type { PlatformOrganization } from "@/types/database";
@@ -8,6 +7,7 @@ import { formatDateShort, formatMoney } from "@/lib/utils";
 import { NumericInput } from "@/components/NumericInput";
 import { ListPageSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
+import { BackLink } from "@/components/BackLink";
 import { formatDistanceToNow } from "date-fns";
 import { ru } from "date-fns/locale";
 
@@ -110,18 +110,14 @@ export default function PlatformPage() {
   return (
     <div className="min-h-screen bg-[var(--background)]">
       <header className="border-b border-[var(--border)] bg-white">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-3 px-4 py-4">
-          <div>
-            <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Рассрочки</p>
-            <h1 className="text-xl font-bold">Организации</h1>
-          </div>
-          <Link href="/dashboard" className="btn-secondary text-sm">
-            В приложение
-          </Link>
+        <div className="mx-auto max-w-5xl px-4 py-4">
+          <p className="text-xs uppercase tracking-wide text-[var(--muted)]">Рассрочки</p>
+          <h1 className="text-xl font-bold">Организации</h1>
         </div>
       </header>
 
       <main className="mx-auto max-w-5xl space-y-4 px-4 py-6">
+        <BackLink href="/dashboard" label="В приложение" />
         {!loading && orgs.length > 0 && (
           <p className="text-sm text-[var(--muted)]">
             Всего доход:{" "}
