@@ -17,7 +17,6 @@ import type {
   Client,
   Investor,
   Loan,
-  OrganizationSettings,
   Payment,
   PaymentSchedule,
 } from "@/types/database";
@@ -27,7 +26,6 @@ import {
   MARKUP_PRESETS,
   TERM_PRESETS,
   buildSchedule,
-  calcFinancedAmount,
   calcInvestorCapitalBase,
   calcInvestorShareByCapital,
   calcMonthlyPayment,
@@ -47,7 +45,6 @@ type LoanDraft = {
   cost_amount: string;
   markup_percent: string;
   down_payment: string;
-  schedule_on_full_amount: boolean;
   term_months: string;
   start_date: string;
   monthly_payment: string;
@@ -61,7 +58,6 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const [clients, setClients] = useState<Client[]>([]);
   const [investors, setInvestors] = useState<Investor[]>([]);
   const [orgId, setOrgId] = useState<string | null>(null);
-  const [settings, setSettings] = useState<OrganizationSettings | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(true);
@@ -88,7 +84,6 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     cost_amount: "",
     markup_percent: "30",
     down_payment: "",
-    schedule_on_full_amount: true,
     term_months: "12",
     start_date: new Date().toISOString().slice(0, 10),
     monthly_payment: "",
@@ -98,7 +93,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   };
 
   const { value, setValue, status, clearDraft } = useDraft<LoanDraft>(
-    loanId ? `draft:edit-loan:${loanId}` : "draft:new-loan-v6",
+    loanId ? `draft:edit-loan:${loanId}` : "draft:new-loan-v7",
     initial
   );
 
@@ -144,7 +139,6 @@ export function LoanForm({ loanId }: { loanId?: string }) {
         setClients(clientRows ?? []);
         setInvestors(investorRows ?? []);
         if (settingsRow) {
-          setSettings(settingsRow);
           const defaultTerm = String(settingsRow.default_term_months ?? 12);
           const isPreset = TERM_PRESETS.some((t) => String(t.months) === defaultTerm);
           if (!isPreset && defaultTerm) setCustomTerm(true);
@@ -216,7 +210,6 @@ export function LoanForm({ loanId }: { loanId?: string }) {
             cost_amount: loanRow.cost_amount == null ? "" : String(loanRow.cost_amount),
             markup_percent: String(loanRow.markup_percent),
             down_payment: String(loanRow.down_payment ?? 0),
-            schedule_on_full_amount: loanRow.schedule_on_full_amount,
             term_months: String(loanRow.term_months),
             start_date: loanRow.start_date,
             monthly_payment: String(loanRow.monthly_payment),
@@ -259,10 +252,8 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const markup = Number(value.markup_percent) || 0;
   const downPayment = Number(value.down_payment) || 0;
   const principal = cost > 0 ? calcTotalWithMarkup(cost, markup) : 0;
-  const scheduleOnFull = Boolean(value.schedule_on_full_amount);
   const schedulePrincipal =
-    principal > 0 ? calcSchedulePrincipal(principal, downPayment, scheduleOnFull) : 0;
-  const remainingAfterDown = principal > 0 ? calcFinancedAmount(principal, downPayment) : 0;
+    principal > 0 ? calcSchedulePrincipal(principal, downPayment) : 0;
   const profit = cost > 0 ? calcProfit(cost, markup) : 0;
   const withInvestor = Boolean(value.investor_id);
   const invested = Number(value.investor_amount) || 0;
@@ -476,19 +467,14 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     const termMonths = Number(value.term_months);
     const total = calcTotalWithMarkup(cost, markup);
     const down = Number(value.down_payment) || 0;
-    const onFull = Boolean(value.schedule_on_full_amount);
     if (down > total) {
       setError("Взнос не может быть больше суммы к возврату");
       setLoading(false);
       return;
     }
-    const scheduleAmount = calcSchedulePrincipal(total, down, onFull);
+    const scheduleAmount = calcSchedulePrincipal(total, down);
     if (scheduleAmount <= 0) {
-      setError(
-        onFull
-          ? "Нечего разбивать на платежи — проверьте сумму"
-          : "После взноса нечего разбивать на платежи — уменьшите взнос или включите график на полную сумму"
-      );
+      setError("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
       setLoading(false);
       return;
     }
@@ -509,7 +495,8 @@ export function LoanForm({ loanId }: { loanId?: string }) {
       markup_percent: markup,
       principal: total,
       down_payment: down,
-      schedule_on_full_amount: onFull,
+      // Legacy database/RPC field; new schedules always deduct the down payment.
+      schedule_on_full_amount: false,
       term_months: termMonths,
       start_date: value.start_date,
       monthly_payment: monthlyPayment,
@@ -862,27 +849,6 @@ export function LoanForm({ loanId }: { loanId?: string }) {
               }
               placeholder="0 — без взноса"
             />
-            <label className="mt-3 flex items-start gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                className="mt-1"
-                checked={Boolean(value.schedule_on_full_amount)}
-                onChange={(e) =>
-                  setValue({
-                    ...value,
-                    schedule_on_full_amount: e.target.checked,
-                    monthly_payment: "",
-                  })
-                }
-              />
-              <span>
-                График на полную сумму к возврату
-                <span className="mt-0.5 block text-xs text-[var(--muted)]">
-                  Если выключено — платежи только с остатка после взноса. Если включено —
-                  взнос есть, но месяцы считаются от всей суммы.
-                </span>
-              </span>
-            </label>
           </div>
 
           <div>
@@ -911,19 +877,11 @@ export function LoanForm({ loanId }: { loanId?: string }) {
               </span>
             </div>
             <div className="flex justify-between gap-2">
-              <span className="text-[var(--muted)]">
-                {scheduleOnFull ? "По графику (полная)" : "В рассрочку"}
-              </span>
+              <span className="text-[var(--muted)]">Сумма графика после взноса</span>
               <span className="font-semibold text-teal-800">
                 {schedulePrincipal ? formatMoney(schedulePrincipal) : "—"}
               </span>
             </div>
-            {!scheduleOnFull && downPayment > 0 && (
-              <div className="flex justify-between gap-2 text-xs">
-                <span className="text-[var(--muted)]">остаток после взноса</span>
-                <span>{remainingAfterDown ? formatMoney(remainingAfterDown) : "—"}</span>
-              </div>
-            )}
             <div className="flex justify-between gap-2">
               <span className="text-[var(--muted)]">Прибыль</span>
               <span className="font-semibold">{profit ? formatMoney(profit) : "—"}</span>

@@ -82,9 +82,9 @@ export type Loan = {
   markup_percent: number;
   /** Сумма к возврату клиентом (= cost + наценка), до вычета взноса */
   principal: number;
-  /** Первоначальный взнос; график считается от (principal - down_payment), если не schedule_on_full_amount */
+  /** Первоначальный взнос, который вычитается из суммы нового графика. */
   down_payment: number;
-  /** true (по умолчанию) — график на всю сумму к возврату; взнос отдельно */
+  /** Retained for historical rows and RPC compatibility; no longer user-selectable. */
   schedule_on_full_amount: boolean;
   term_months: number;
   start_date: string;

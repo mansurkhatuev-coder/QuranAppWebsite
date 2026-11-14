@@ -7,14 +7,15 @@ import { FormSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
-import type { Investor, Organization, OrganizationSettings } from "@/types/database";
-import { downloadCsv } from "@/lib/utils";
+import type { Investor } from "@/types/database";
+import { createCsvFile } from "@/lib/utils";
+import { deliverExportFile, isAppleMobileBrowser } from "@/lib/file-export";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
 import { shouldUseDefaultContractSample } from "@/lib/default-contract";
 import {
   buildFullOrgBackup,
+  createJsonBackupFile,
   daysSinceBackup,
-  downloadJson,
   markBackupDone,
   needsBackupReminder,
 } from "@/lib/backup";
@@ -36,7 +37,20 @@ export default function SettingsPage() {
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [backupBusy, setBackupBusy] = useState(false);
+  const [preparedExportBusy, setPreparedExportBusy] = useState(false);
+  const [preparedExport, setPreparedExport] = useState<{
+    file: File;
+    kind: "backup" | "table";
+  } | null>(null);
   const [backupHint, setBackupHint] = useState<string>("");
+
+  function isAppleMobileDevice() {
+    return isAppleMobileBrowser({
+      userAgent: navigator.userAgent,
+      platform: navigator.platform,
+      maxTouchPoints: navigator.maxTouchPoints,
+    });
+  }
   const [booting, setBooting] = useState(true);
 
   useEffect(() => {
@@ -162,15 +176,37 @@ export default function SettingsPage() {
 
   async function exportFullBackup() {
     if (!orgId) return;
+    setPreparedExport(null);
     setBackupBusy(true);
     setMessage(null);
+    setBackupHint(
+      isAppleMobileDevice()
+        ? "Откроется меню отправки. На iPhone выберите «Сохранить в Файлы»."
+        : "Подготавливаем копию для сохранения на компьютере."
+    );
     try {
       const data = await buildFullOrgBackup(orgId);
       const stamp = new Date().toISOString().slice(0, 10);
-      downloadJson(`rassrochki-kopiya-${stamp}.json`, data);
+      const file = createJsonBackupFile(`rassrochki-kopiya-${stamp}.json`, data);
+      if (isAppleMobileDevice()) {
+        setPreparedExport({ file, kind: "backup" });
+        setBackupHint("Копия подготовлена. Нажмите «Передать файл», затем выберите «Сохранить в Файлы».");
+        setMessage("Бэкап готов к сохранению на iPhone");
+        return;
+      }
+      const delivery = await deliverExportFile(file);
+      if (delivery === "cancelled") {
+        setBackupHint("Отправка отменена. Копия не отмечена как сохранённая.");
+        setMessage("Сохранение копии отменено");
+        return;
+      }
       markBackupDone();
-      setBackupHint("Копия только что скачана — сохраните файл на компьютер");
-      setMessage("Полная копия скачана");
+      setBackupHint(
+        delivery === "shared"
+          ? "Копия передана через меню отправки. Проверьте, что сохранили её в Файлы или другое место."
+          : "Копия подготовлена. Сохраните файл в надёжное место."
+      );
+      setMessage(delivery === "shared" ? "Копия передана через меню отправки" : "Полная копия скачана");
     } catch (err) {
       setMessage(friendlyError("Не удалось скачать копию данных", err));
     } finally {
@@ -180,6 +216,7 @@ export default function SettingsPage() {
 
   async function exportAll() {
     if (!orgId) return;
+    setPreparedExport(null);
     const supabase = createClient();
     const [{ data: loans, error: loansError }, { data: schedules, error: schedulesError }] =
       await Promise.all([
@@ -210,78 +247,121 @@ export default function SettingsPage() {
       scheduleByLoan.set(row.loan_id, list);
     }
 
-    downloadCsv("rassrochki_export.csv", [
-      [
-        "Клиент",
-        "Телефон",
-        "Рассрочка",
-        "Статус",
-        "Инвестор",
-        "Цена товара",
-        "Наценка, %",
-        "Сумма к возврату",
-        "Взнос",
-        "Режим графика",
-        "Срок, мес",
-        "Платёж/мес",
-        "Дата старта",
-        "Оплачено по графику",
-        "Остаток по графику",
-        "Просрочено (сумма)",
-        "Ближайший платёж",
-        "Кол-во оплаченных месяцев",
-        "Кол-во месяцев в просрочке",
-        "Доля владельца, %",
-        "Доля инвестора, %",
-        "Вложение инвестора",
-      ],
-      ...(loans ?? []).map((loan) => {
-        const rows = [...(scheduleByLoan.get(loan.id) ?? [])].sort((a, b) =>
-          a.due_date.localeCompare(b.due_date)
-        );
+    try {
+      const file = createCsvFile("rassrochki_export.csv", [
+        [
+          "Клиент",
+          "Телефон",
+          "Рассрочка",
+          "Статус",
+          "Инвестор",
+          "Цена товара",
+          "Наценка, %",
+          "Сумма к возврату",
+          "Взнос",
+          "Срок, мес",
+          "Платёж/мес",
+          "Дата старта",
+          "Оплачено по графику",
+          "Остаток по графику",
+          "Просрочено (сумма)",
+          "Ближайший платёж",
+          "Кол-во оплаченных месяцев",
+          "Кол-во месяцев в просрочке",
+          "Доля владельца, %",
+          "Доля инвестора, %",
+          "Вложение инвестора",
+        ],
+        ...(loans ?? []).map((loan) => {
+          const rows = [...(scheduleByLoan.get(loan.id) ?? [])].sort((a, b) =>
+            a.due_date.localeCompare(b.due_date)
+          );
 
-        const paidBySchedule = rows.reduce((sum, s) => {
-          if (s.status === "paid") return sum + Number(s.paid_amount ?? s.amount);
-          return sum + Number(s.paid_amount ?? 0);
-        }, 0);
-        const scheduledTotal = rows.reduce((sum, s) => sum + Number(s.amount || 0), 0);
-        const remainingBySchedule = Math.max(0, scheduledTotal - paidBySchedule);
-        const overdueRows = rows.filter((s) => s.status === "overdue");
-        const overdueAmount = overdueRows.reduce((sum, s) => {
-          const paid = Number(s.paid_amount ?? 0);
-          return sum + Math.max(0, Number(s.amount) - paid);
-        }, 0);
-        const nextPending = rows.find(
-          (s) => (s.status === "pending" || s.status === "overdue") && s.due_date >= today
-        );
-        const paidMonths = rows.filter((s) => s.status === "paid").length;
+          const paidBySchedule = rows.reduce((sum, s) => {
+            if (s.status === "paid") return sum + Number(s.paid_amount ?? s.amount);
+            return sum + Number(s.paid_amount ?? 0);
+          }, 0);
+          const scheduledTotal = rows.reduce((sum, s) => sum + Number(s.amount || 0), 0);
+          const remainingBySchedule = Math.max(0, scheduledTotal - paidBySchedule);
+          const overdueRows = rows.filter((s) => s.status === "overdue");
+          const overdueAmount = overdueRows.reduce((sum, s) => {
+            const paid = Number(s.paid_amount ?? 0);
+            return sum + Math.max(0, Number(s.amount) - paid);
+          }, 0);
+          const nextPending = rows.find(
+            (s) => (s.status === "pending" || s.status === "overdue") && s.due_date >= today
+          );
+          const paidMonths = rows.filter((s) => s.status === "paid").length;
 
-        return [
-          loan.clients?.full_name ?? "",
-          loan.clients?.phone ?? "",
-          loan.title ?? "",
-          statusLabelRu(loan.status),
-          loan.investors?.name ?? "",
-          String(loan.cost_amount ?? ""),
-          String(loan.markup_percent ?? ""),
-          String(loan.principal ?? ""),
-          String(loan.down_payment ?? ""),
-          loan.schedule_on_full_amount ? "Полная сумма" : "После взноса",
-          String(loan.term_months ?? ""),
-          String(loan.monthly_payment ?? ""),
-          loan.start_date ?? "",
-          String(Math.round(paidBySchedule * 100) / 100),
-          String(Math.round(remainingBySchedule * 100) / 100),
-          String(Math.round(overdueAmount * 100) / 100),
-          nextPending?.due_date ?? "",
-          String(paidMonths),
-          String(overdueRows.length),
-          String(loan.income_share_manager ?? ""),
-          String(loan.income_share_investor ?? ""),
-          String(loan.investor_amount ?? ""),
-        ];
-      }),
-    ]);
+          return [
+            loan.clients?.full_name ?? "",
+            loan.clients?.phone ?? "",
+            loan.title ?? "",
+            statusLabelRu(loan.status),
+            loan.investors?.name ?? "",
+            String(loan.cost_amount ?? ""),
+            String(loan.markup_percent ?? ""),
+            String(loan.principal ?? ""),
+            String(loan.down_payment ?? ""),
+            String(loan.term_months ?? ""),
+            String(loan.monthly_payment ?? ""),
+            loan.start_date ?? "",
+            String(Math.round(paidBySchedule * 100) / 100),
+            String(Math.round(remainingBySchedule * 100) / 100),
+            String(Math.round(overdueAmount * 100) / 100),
+            nextPending?.due_date ?? "",
+            String(paidMonths),
+            String(overdueRows.length),
+            String(loan.income_share_manager ?? ""),
+            String(loan.income_share_investor ?? ""),
+            String(loan.investor_amount ?? ""),
+          ];
+        }),
+      ]);
+      if (isAppleMobileDevice()) {
+        setPreparedExport({ file, kind: "table" });
+        setMessage("Таблица подготовлена. Нажмите «Передать файл» и выберите Numbers или Файлы.");
+        return;
+      }
+      const delivery = await deliverExportFile(file);
+      setMessage(
+        delivery === "cancelled"
+          ? "Отправка таблицы отменена"
+          : delivery === "shared"
+            ? "Таблица передана через меню отправки"
+            : "Таблица скачана"
+      );
+    } catch (err) {
+      setMessage(friendlyError("Не удалось подготовить таблицу", err));
+    }
+  }
+
+  async function deliverPreparedExport() {
+    if (!preparedExport) return;
+    setPreparedExportBusy(true);
+    try {
+      const delivery = await deliverExportFile(preparedExport.file);
+      if (delivery === "cancelled") {
+        setMessage("Передача отменена. Файл остаётся готовым — можно повторить.");
+        return;
+      }
+      if (preparedExport.kind === "backup") {
+        markBackupDone();
+        setBackupHint(
+          delivery === "shared"
+            ? "Копия передана через системное меню. Убедитесь, что сохранили её в Файлы или другое место."
+            : "Копия скачана. Сохраните файл в надёжное место."
+        );
+        setMessage(delivery === "shared" ? "Копия передана через системное меню" : "Полная копия скачана");
+      } else {
+        setMessage(delivery === "shared" ? "Таблица передана через системное меню" : "Таблица скачана");
+      }
+      setPreparedExport(null);
+    } catch (err) {
+      setMessage(friendlyError("Не удалось передать файл", err));
+    } finally {
+      setPreparedExportBusy(false);
+    }
   }
 
   if (booting) {
@@ -437,7 +517,8 @@ export default function SettingsPage() {
         <p className="text-sm text-[var(--muted)]">{backupHint}</p>
         <p className="text-sm text-[var(--muted)]">
           Полная копия — все клиенты, рассрочки и платежи. Таблица — краткий список
-          рассрочек. Раз в неделю скачивайте полную копию на компьютер.
+          рассрочек. На iPhone откроется системное меню: бэкап сохраните в «Файлы»,
+          таблицу можно открыть в Numbers.
         </p>
         <div className="flex flex-wrap gap-2">
           <button
@@ -451,6 +532,20 @@ export default function SettingsPage() {
           <button type="button" className="btn-secondary" onClick={exportAll}>
             Скачать таблицу
           </button>
+          {preparedExport && (
+            <button
+              type="button"
+              className="btn-primary"
+              onClick={deliverPreparedExport}
+              disabled={preparedExportBusy}
+            >
+              {preparedExportBusy
+                ? <Spinner label="Передаём…" />
+                : preparedExport.kind === "backup"
+                  ? "Передать бэкап"
+                  : "Передать таблицу"}
+            </button>
+          )}
         </div>
       </div>
     </div>

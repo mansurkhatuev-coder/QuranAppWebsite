@@ -1,5 +1,6 @@
 import { addMonths, format, parseISO } from "date-fns";
 import { ru } from "date-fns/locale";
+import { deliverExportFile } from "@/lib/file-export";
 
 export function formatMoney(value: number, currency = "RUB") {
   return new Intl.NumberFormat("ru-RU", {
@@ -61,16 +62,8 @@ export function calcInvestorShareByCapital(investorAmount: number, capitalBase: 
   return Math.round(Math.min(100, Math.max(0, raw)) * 100) / 100;
 }
 
-/**
- * Сумма, от которой строится график платежей.
- * scheduleOnFullAmount: график на всю сумму к возврату; иначе — после взноса.
- */
-export function calcSchedulePrincipal(
-  totalWithMarkup: number,
-  downPayment: number,
-  scheduleOnFullAmount: boolean
-) {
-  if (scheduleOnFullAmount) return Math.max(0, Number(totalWithMarkup) || 0);
+/** Сумма графика всегда равна остатку после первоначального взноса. */
+export function calcSchedulePrincipal(totalWithMarkup: number, downPayment: number) {
   return calcFinancedAmount(totalWithMarkup, downPayment);
 }
 
@@ -166,13 +159,12 @@ export function buildCsvContent(rows: unknown[][]): string {
   return `\uFEFF${body}`;
 }
 
-export function downloadCsv(filename: string, rows: unknown[][]) {
+export function createCsvFile(filename: string, rows: unknown[][]) {
   const content = buildCsvContent(rows);
-  const blob = new Blob([content], { type: "text/csv;charset=utf-8;" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
+  return new File([content], filename, { type: "text/csv;charset=utf-8;" });
+}
+
+export async function downloadCsv(filename: string, rows: unknown[][]) {
+  const file = createCsvFile(filename, rows);
+  return deliverExportFile(file);
 }

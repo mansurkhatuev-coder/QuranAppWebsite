@@ -1,5 +1,4 @@
 import {
-  calcFinancedAmount,
   calcInvestorCapitalBase,
   calcInvestorShareByCapital,
   calcProfit,
@@ -13,10 +12,11 @@ export type LoanFinanceInput = {
   markup_percent: number | null;
   principal: number;
   down_payment?: number | null;
+  /** Total of stored schedule rows; used to preserve existing contracts. */
+  schedulePrincipal?: number | null;
   investor_amount?: number | null;
   income_share_manager?: number | null;
   income_share_investor?: number | null;
-  schedule_on_full_amount?: boolean | null;
   status?: string;
 };
 
@@ -83,12 +83,9 @@ export function dealTotals(loan: LoanFinanceInput) {
       : cost > 0
         ? calcProfit(cost, markup)
         : 0;
-  const scheduleOnFull = Boolean(loan.schedule_on_full_amount);
-  const financed = calcSchedulePrincipal(
-    principal || cost + profit,
-    down,
-    scheduleOnFull
-  );
+  const financed = loan.schedulePrincipal == null
+    ? calcSchedulePrincipal(principal || cost + profit, down)
+    : Math.max(0, Number(loan.schedulePrincipal) || 0);
   const shares = resolveProfitShares(loan);
   const profitSplit = splitIncome(profit, shares.manager, shares.investor);
   const invested = Number(loan.investor_amount) || 0;

@@ -26,7 +26,6 @@ import {
 import { StatusBadge } from "@/components/ui";
 import {
   calcFinancedAmount,
-  calcSchedulePrincipal,
   downloadCsv,
   formatDateShort,
   formatMoney,
@@ -70,17 +69,17 @@ export function LoanDetail({
   } | null>(null);
 
   const downPayment = Number(loan.down_payment ?? 0);
-  const scheduleOnFull = Boolean(loan.schedule_on_full_amount);
-  const financed = calcSchedulePrincipal(
-    Number(loan.principal),
-    downPayment,
-    scheduleOnFull
-  );
-  const remainingAfterDown = calcFinancedAmount(Number(loan.principal), downPayment);
+  const scheduledTotal = schedules.reduce((sum, row) => sum + Number(row.amount || 0), 0);
+  const financed = scheduledTotal > 0
+    ? scheduledTotal
+    : calcFinancedAmount(Number(loan.principal), downPayment);
   const paidTotal = sumSchedulePaid(schedules);
   const remaining = Math.max(0, Math.round((financed - paidTotal) * 100) / 100);
   const loanRemaining = loanScheduleRemaining(schedules);
-  const projection = projectedRemaining(loan, paidTotal);
+  const projection = projectedRemaining(
+    { ...loan, schedulePrincipal: scheduledTotal > 0 ? scheduledTotal : undefined },
+    paidTotal
+  );
   const shares = resolveProfitShares(loan);
   const hasInvestor = Boolean(
     loan.investor_id && (Number(loan.investor_amount) > 0 || shares.investor > 0)
@@ -167,19 +166,32 @@ export function LoanDetail({
     window.open(data.signedUrl, "_blank", "noopener,noreferrer");
   }
 
-  function exportSchedule() {
-    downloadCsv(`rassrochka_${loan.id.slice(0, 8)}.csv`, [
-      ["Клиент", "Рассрочка", "Дата", "Сумма", "Статус", "Оплачено", "Чек"],
-      ...schedules.map((s) => [
-        loan.clients?.full_name ?? "",
-        loan.title ?? "",
-        formatDateShort(s.due_date),
-        String(s.amount),
-        statusLabelRu(s.status),
-        s.paid_amount != null ? String(s.paid_amount) : "",
-        s.receipt_path ? "да" : "",
-      ]),
-    ]);
+  async function exportSchedule() {
+    setError(null);
+    setInfo("Откроется меню отправки: выберите Numbers или «Сохранить в Файлы».");
+    try {
+      const delivery = await downloadCsv(`rassrochka_${loan.id.slice(0, 8)}.csv`, [
+        ["Клиент", "Рассрочка", "Дата", "Сумма", "Статус", "Оплачено", "Чек"],
+        ...schedules.map((s) => [
+          loan.clients?.full_name ?? "",
+          loan.title ?? "",
+          formatDateShort(s.due_date),
+          String(s.amount),
+          statusLabelRu(s.status),
+          s.paid_amount != null ? String(s.paid_amount) : "",
+          s.receipt_path ? "да" : "",
+        ]),
+      ]);
+      setInfo(
+        delivery === "cancelled"
+          ? "Отправка графика отменена"
+          : delivery === "shared"
+            ? "График передан через меню отправки"
+            : "График скачан"
+      );
+    } catch (exportError) {
+      setError(friendlyError("Не удалось выгрузить график", exportError));
+    }
   }
 
   function openContractEditor() {
@@ -296,14 +308,12 @@ export function LoanDetail({
           <p className="text-sm text-[var(--muted)]">Взнос</p>
           <p className="text-xl font-bold">{formatMoney(downPayment)}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
-            {scheduleOnFull
-              ? "график на полную сумму"
-              : `в рассрочку ${formatMoney(remainingAfterDown)}`}
+            в графике {formatMoney(financed)}
           </p>
         </div>
         <div className="card">
           <p className="text-sm text-[var(--muted)]">
-            {scheduleOnFull ? "По графику (полная сумма)" : "Остаток по графику"}
+            Остаток по графику
           </p>
           <p className="text-xl font-bold">{formatMoney(Math.max(remaining, 0))}</p>
           <p className="mt-1 text-xs text-[var(--muted)]">
