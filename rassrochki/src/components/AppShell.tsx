@@ -122,7 +122,8 @@ export function AppShell({
               <Link
                 key={link.href}
                 href={link.href}
-                className={`whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium ${
+                aria-current={active ? "page" : undefined}
+                className={`min-h-11 whitespace-nowrap rounded-xl px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 focus-visible:ring-offset-2 ${
                   active
                     ? "bg-teal-700 text-white"
                     : "text-slate-600 hover:bg-slate-100"

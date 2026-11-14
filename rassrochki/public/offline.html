@@ -9,7 +9,7 @@
       :root { color-scheme: light; font-family: Arial, sans-serif; background: #f4f6f8; color: #0f172a; }
       * { box-sizing: border-box; }
       body { margin: 0; padding: 0 0 env(safe-area-inset-bottom); }
-      header { position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid #dce3e8; padding: 14px max(16px, env(safe-area-inset-left)); }
+      header { position: sticky; top: 0; z-index: 2; background: #fff; border-bottom: 1px solid #dce3e8; padding: 14px max(16px, env(safe-area-inset-right)) 0 max(16px, env(safe-area-inset-left)); }
       .head { display: flex; align-items: center; justify-content: space-between; gap: 12px; max-width: 1040px; margin: auto; }
       h1 { margin: 0; font-size: 20px; }
       .muted { color: #64748b; font-size: 13px; }
@@ -19,7 +19,7 @@
       .badge.online { color: #166534; background: #dcfce7; }
       main { max-width: 1040px; margin: auto; padding: 16px; }
       #sync-info { margin-bottom: 12px; border: 1px solid #dce3e8; border-radius: 12px; background: #fff; padding: 11px 13px; font-size: 13px; }
-      nav { display: flex; gap: 6px; overflow-x: auto; margin-bottom: 12px; }
+      nav { display: flex; gap: 6px; max-width: 1040px; overflow-x: auto; margin: 10px auto 0; padding-bottom: 10px; scrollbar-width: thin; }
       button, a.button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; background: #f1f5f9; color: #334155; padding: 10px 13px; text-decoration: none; white-space: nowrap; }
       nav button[aria-current="page"] { background: #0f766e; color: white; }
       .card { margin-bottom: 12px; border: 1px solid #dce3e8; border-radius: 14px; background: white; padding: 14px; }
@@ -58,15 +58,15 @@
         <div><h1>Рассрочки</h1><div class="muted" id="org-name">Офлайн-режим</div></div>
         <div class="actions"><span class="badge offline" id="network-state">Без сети</span><button type="button" id="clear-offline" title="Удалить офлайн-копию только текущей организации">Очистить данные</button></div>
       </div>
-    </header>
-    <main>
-      <div id="sync-info" role="status">Загружаем сохранённые данные…</div>
-      <div id="online-action"><button type="button" id="sync-now" class="primary">Синхронизировать изменения</button> <a class="button" href="/dashboard">Открыть обычное приложение</a></div>
       <nav aria-label="Разделы">
         <button type="button" data-view="dashboard" aria-current="page">Обзор</button>
         <button type="button" data-view="clients">Клиенты</button>
         <button type="button" data-view="loans">Рассрочки</button>
       </nav>
+    </header>
+    <main>
+      <div id="sync-info" role="status">Загружаем сохранённые данные…</div>
+      <div id="online-action"><button type="button" id="sync-now" class="primary">Синхронизировать изменения</button> <a class="button" href="/dashboard">Открыть обычное приложение</a></div>
       <section id="content" aria-live="polite"></section>
       <p class="muted">Здесь показана последняя копия данных с этого устройства. Новые данные появятся после синхронизации через интернет.</p>
     </main>
