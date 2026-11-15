@@ -18,6 +18,7 @@ export type OfflineSyncCommand = Pick<OfflineOperation, "id" | "userId" | "organ
 const SYNCABLE_COMMANDS = new Set([
   "client.create",
   "client.blacklist",
+  "client.address",
   "client.delete",
   "loan.create",
   "loan.edit",

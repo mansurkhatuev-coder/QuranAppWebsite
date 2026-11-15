@@ -145,6 +145,20 @@ export function applyPendingOperations(
         );
         break;
       }
+      case "client.address": {
+        const clientId = String(payload.clientId ?? "");
+        snapshot.clients = snapshot.clients.map((client) =>
+          client.id === clientId
+            ? {
+                ...client,
+                address:
+                  typeof payload.address === "string" ? payload.address.trim() || null : null,
+                offline_version: Number(client.offline_version ?? 1) + 1,
+              }
+            : client
+        );
+        break;
+      }
       case "client.delete": {
         const clientId = String(payload.clientId ?? "");
         if (!snapshot.loans.some((loan) => loan.client_id === clientId)) {

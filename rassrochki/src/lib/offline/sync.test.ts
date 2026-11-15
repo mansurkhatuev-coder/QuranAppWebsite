@@ -107,6 +107,44 @@ describe("offline sync operation order", () => {
     ).toThrow(/unsupported/i);
   });
 
+  it("accepts client address updates and rejects unknown commands", () => {
+    const addressCommand = parseSyncBatch(
+      {
+        operations: [
+          {
+            id: "123e4567-e89b-42d3-a456-426614174000",
+            userId: "user-1",
+            organizationId: "org-1",
+            command: {
+              type: "client.address",
+              payload: { clientId: "client-1", expectedVersion: 3, address: "Новая улица, 10" },
+            },
+          },
+        ],
+      },
+      "user-1",
+      "org-1"
+    );
+
+    expect(addressCommand[0].command.type).toBe("client.address");
+    expect(() =>
+      parseSyncBatch(
+        {
+          operations: [
+            {
+              id: "123e4567-e89b-42d3-a456-426614174000",
+              userId: "user-1",
+              organizationId: "org-1",
+              command: { type: "client.rename-everything", payload: {} },
+            },
+          ],
+        },
+        "user-1",
+        "org-1"
+      )
+    ).toThrow(/unsupported/i);
+  });
+
   it("sends a dependency before a child even when the child has an earlier timestamp", () => {
     const child = operation("loan-op", "2026-11-14T09:00:00.000Z", ["client-op"]);
     const dependency = operation("client-op", "2026-11-14T10:00:00.000Z");

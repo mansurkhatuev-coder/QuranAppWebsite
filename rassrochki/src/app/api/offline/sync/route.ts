@@ -60,11 +60,16 @@ export async function POST(request: Request) {
       continue;
     }
 
-    const { data, error } = await supabase.rpc("apply_offline_operation", {
-      p_operation_id: operation.id,
-      p_command_type: operation.command.type,
-      p_payload: operation.command.payload,
-    });
+    const { data, error } = operation.command.type === "client.address"
+      ? await supabase.rpc("apply_offline_client_address", {
+          p_operation_id: operation.id,
+          p_payload: operation.command.payload,
+        })
+      : await supabase.rpc("apply_offline_operation", {
+          p_operation_id: operation.id,
+          p_command_type: operation.command.type,
+          p_payload: operation.command.payload,
+        });
 
     if (error) {
       const result = {
