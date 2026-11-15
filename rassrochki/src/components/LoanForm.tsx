@@ -8,6 +8,7 @@ import { FormSkeleton } from "@/components/Skeleton";
 import { NumericInput } from "@/components/NumericInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { PhoneInput } from "@/components/PhoneInput";
+import { calculateRoundedLoanTerms } from "@/lib/rounded-loan";
 import { Spinner } from "@/components/Spinner";
 import { PassportNameScan } from "@/components/PassportNameScan";
 import { useDraft } from "@/hooks/useDraft";
@@ -29,7 +30,6 @@ import {
   calcInvestorCapitalBase,
   calcInvestorShareByCapital,
   calcMonthlyPayment,
-  calcProfit,
   calcSchedulePrincipal,
   calcTotalWithMarkup,
   formatDateShort,
@@ -62,14 +62,14 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const [loading, setLoading] = useState(false);
   const [booting, setBooting] = useState(true);
   const [showNewClient, setShowNewClient] = useState(false);
-  const [newClient, setNewClient] = useState({ full_name: "", phone: "" });
+  const [newClient, setNewClient] = useState({ full_name: "", phone: "", address: "" });
   const [savingClient, setSavingClient] = useState(false);
   const [customTerm, setCustomTerm] = useState(false);
   const [showNewInvestor, setShowNewInvestor] = useState(false);
   const [newInvestor, setNewInvestor] = useState({ name: "", share_percent: "70" });
   const [savingInvestor, setSavingInvestor] = useState(false);
   const [guarantors, setGuarantors] = useState<
-    { full_name: string; phone: string; notes: string }[]
+    { full_name: string; phone: string; address: string; notes: string }[]
   >([]);
   const [shareManual, setShareManual] = useState(false);
   const [existingLoan, setExistingLoan] = useState<Loan | null>(null);
@@ -199,6 +199,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
           setGuarantors((guarantorRows ?? []).map((row) => ({
             full_name: row.full_name,
             phone: row.phone ?? "",
+            address: row.address ?? "",
             notes: row.notes ?? "",
           })));
 
@@ -251,10 +252,14 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const cost = Number(value.cost_amount) || 0;
   const markup = Number(value.markup_percent) || 0;
   const downPayment = Number(value.down_payment) || 0;
-  const principal = cost > 0 ? calcTotalWithMarkup(cost, markup) : 0;
-  const schedulePrincipal =
-    principal > 0 ? calcSchedulePrincipal(principal, downPayment) : 0;
-  const profit = cost > 0 ? calcProfit(cost, markup) : 0;
+  const termMonths = Number(value.term_months) || 0;
+  const roundedTerms = cost > 0 && termMonths > 0
+    ? calculateRoundedLoanTerms(cost, markup, downPayment, termMonths, Number(value.monthly_payment))
+    : null;
+  const principal = roundedTerms?.principal ?? (cost > 0 ? calcTotalWithMarkup(cost, markup) : 0);
+  const schedulePrincipal = roundedTerms?.schedulePrincipal ??
+    (principal > 0 ? calcSchedulePrincipal(principal, downPayment) : 0);
+  const profit = cost > 0 ? Math.round((principal - cost) * 100) / 100 : 0;
   const withInvestor = Boolean(value.investor_id);
   const invested = Number(value.investor_amount) || 0;
   const capitalBase = calcInvestorCapitalBase(cost, downPayment);
@@ -303,7 +308,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const previewSchedule = useMemo(() => {
     const term = Number(value.term_months);
     if (!schedulePrincipal || !term || !value.start_date) return [];
-    const monthly =
+    const monthly = roundedTerms?.monthlyPayment ||
       Number(value.monthly_payment) || calcMonthlyPayment(schedulePrincipal, term);
     const fullSchedule = buildSchedule(schedulePrincipal, term, value.start_date, monthly).map((row) => ({
       ...row,
@@ -360,6 +365,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     }
   }, [
     schedulePrincipal,
+    roundedTerms?.monthlyPayment,
     value.term_months,
     value.start_date,
     value.monthly_payment,
@@ -413,6 +419,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
         organization_id: orgId,
         full_name: newClient.full_name.trim(),
         phone: newClient.phone.trim() || null,
+        address: newClient.address.trim() || null,
       })
       .select("*")
       .single();
@@ -423,7 +430,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     }
     setClients((prev) => [...prev, data].sort((a, b) => a.full_name.localeCompare(b.full_name, "ru")));
     setValue({ ...value, client_id: data.id });
-    setNewClient({ full_name: "", phone: "" });
+    setNewClient({ full_name: "", phone: "", address: "" });
     setShowNewClient(false);
   }
 
@@ -465,21 +472,28 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     }
 
     const termMonths = Number(value.term_months);
-    const total = calcTotalWithMarkup(cost, markup);
+    const targetTotal = calcTotalWithMarkup(cost, markup);
     const down = Number(value.down_payment) || 0;
-    if (down > total) {
+    if (down > targetTotal) {
       setError("Взнос не может быть больше суммы к возврату");
       setLoading(false);
       return;
     }
-    const scheduleAmount = calcSchedulePrincipal(total, down);
+    const roundedLoan = calculateRoundedLoanTerms(
+      cost,
+      markup,
+      down,
+      termMonths,
+      Number(value.monthly_payment)
+    );
+    const total = roundedLoan.principal;
+    const scheduleAmount = roundedLoan.schedulePrincipal;
     if (scheduleAmount <= 0) {
       setError("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
       setLoading(false);
       return;
     }
-    const monthlyPayment =
-      Number(value.monthly_payment) || calcMonthlyPayment(scheduleAmount, termMonths);
+    const monthlyPayment = roundedLoan.monthlyPayment;
     const useInvestor = Boolean(value.investor_id);
     const investorAmount =
       useInvestor && value.investor_amount ? Number(value.investor_amount) : null;
@@ -492,7 +506,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
       investor_amount: investorAmount,
       title: value.title.trim() || null,
       cost_amount: cost,
-      markup_percent: markup,
+      markup_percent: roundedLoan.effectiveMarkupPercent,
       principal: total,
       down_payment: down,
       // Legacy database/RPC field; new schedules always deduct the down payment.
@@ -555,6 +569,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
           .map((g) => ({
             full_name: g.full_name.trim(),
             phone: g.phone.trim() || null,
+            address: g.address.trim() || null,
             notes: g.notes.trim() || null,
           })),
         p_expected_total: scheduleAmount,
@@ -563,6 +578,21 @@ export function LoanForm({ loanId }: { loanId?: string }) {
       setLoading(false);
       if (editError) {
         setError(friendlyError("Не удалось изменить рассрочку", editError));
+        return;
+      }
+      const { error: guarantorAddressError } = await supabase.rpc("replace_loan_guarantors", {
+        p_loan_id: loanId,
+        p_organization_id: profile.organization_id,
+        p_guarantors: guarantors.filter((g) => g.full_name.trim()).map((g) => ({
+          full_name: g.full_name.trim(),
+          phone: g.phone.trim() || null,
+          address: g.address.trim() || null,
+          notes: g.notes.trim() || null,
+        })),
+      });
+      if (guarantorAddressError) {
+        setLoading(false);
+        setError("Условия сохранены, но адреса поручителей не обновились. Повторите сохранение.");
         return;
       }
       clearDraft();
@@ -614,6 +644,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
         organization_id: profile.organization_id,
         full_name: g.full_name.trim(),
         phone: g.phone.trim() || null,
+        address: g.address.trim() || null,
         notes: g.notes.trim() || null,
       }));
 
@@ -687,6 +718,13 @@ export function LoanForm({ loanId }: { loanId?: string }) {
                 <PhoneInput
                   value={newClient.phone}
                   onChange={(phone) => setNewClient({ ...newClient, phone })}
+                />
+                <textarea
+                  className="input min-h-16"
+                  placeholder="Адрес клиента"
+                  value={newClient.address}
+                  onChange={(e) => setNewClient({ ...newClient, address: e.target.value })}
+                  autoComplete="street-address"
                 />
                 <button
                   type="button"
@@ -823,7 +861,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
                       ? "bg-teal-700 text-white"
                       : "border border-[var(--border)] bg-white text-slate-700"
                   }`}
-                  onClick={() => setValue({ ...value, markup_percent: String(p) })}
+                  onClick={() => setValue({ ...value, markup_percent: String(p), monthly_payment: "" })}
                 >
                   {p}%
                 </button>
@@ -832,12 +870,25 @@ export function LoanForm({ loanId }: { loanId?: string }) {
             <NumericInput
               mode="decimal"
               value={value.markup_percent}
-              onChange={(markup_percent) => setValue({ ...value, markup_percent })}
+              onChange={(markup_percent) => setValue({ ...value, markup_percent, monthly_payment: "" })}
             />
             <p className="mt-1 text-xs text-[var(--muted)]">
               Пример: товар 10 000 ₽ + 30% → к возврату 13 000 ₽, прибыль 3 000 ₽
             </p>
           </div>
+
+          {roundedTerms && (
+            <p className="-mt-2 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-900">
+              После округления платежа до {formatMoney(roundedTerms.monthlyPayment)} фактическая наценка составит{" "}
+              <strong>{roundedTerms.effectiveMarkupPercent}%</strong>
+              {roundedTerms.markupChangePercent !== 0
+                ? ` (${roundedTerms.markupChangePercent > 0 ? "+" : ""}${roundedTerms.markupChangePercent} п.п.)`
+                : " (без изменения)"}
+              {roundedTerms.totalChange !== 0
+                ? `; сумма к возврату изменится на ${roundedTerms.totalChange > 0 ? "+" : ""}${formatMoney(roundedTerms.totalChange)}`
+                : ""}.
+            </p>
+          )}
 
           <div>
             <label className="label">Первоначальный взнос, ₽</label>
@@ -854,10 +905,10 @@ export function LoanForm({ loanId }: { loanId?: string }) {
           <div>
             <label className="label">Платёж в месяц</label>
             <NumericInput
-              mode="decimal"
+              mode="integer"
               value={value.monthly_payment}
               onChange={(monthly_payment) => setValue({ ...value, monthly_payment })}
-              placeholder="Авто"
+              placeholder={roundedTerms ? String(roundedTerms.monthlyPayment) : "Авто"}
             />
           </div>
         </div>
@@ -890,10 +941,10 @@ export function LoanForm({ loanId }: { loanId?: string }) {
               <div className="flex justify-between gap-2">
                 <span className="text-[var(--muted)]">≈ платёж / мес</span>
                 <span className="font-semibold">
-                  {formatMoney(
+                  {formatMoney(roundedTerms?.monthlyPayment ?? (
                     Number(value.monthly_payment) ||
-                      calcMonthlyPayment(schedulePrincipal, Number(value.term_months))
-                  )}
+                    calcMonthlyPayment(schedulePrincipal, Number(value.term_months))
+                  ))}
                 </span>
               </div>
             )}
@@ -1078,7 +1129,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
                 type="button"
                 className="btn-secondary text-xs"
                 onClick={() =>
-                  setGuarantors((prev) => [...prev, { full_name: "", phone: "", notes: "" }])
+                  setGuarantors((prev) => [...prev, { full_name: "", phone: "", address: "", notes: "" }])
                 }
               >
                 + Поручитель
@@ -1116,6 +1167,16 @@ export function LoanForm({ loanId }: { loanId?: string }) {
                   onChange={(phone) =>
                     setGuarantors((prev) =>
                       prev.map((row, i) => (i === index ? { ...row, phone } : row))
+                    )
+                  }
+                />
+                <textarea
+                  className="input min-h-16"
+                  placeholder="Адрес поручителя"
+                  value={g.address}
+                  onChange={(e) =>
+                    setGuarantors((prev) =>
+                      prev.map((row, i) => i === index ? { ...row, address: e.target.value } : row)
                     )
                   }
                 />

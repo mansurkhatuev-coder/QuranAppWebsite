@@ -39,7 +39,15 @@ export default function LoansPage() {
             : error || "Пока не удалось сохранить данные на устройстве. Повторите обновление."}
         </div>
       ) : (
-        <LoansList loans={loans} />
+        <LoansList
+          loans={loans}
+          clients={snapshot.clients}
+          investors={snapshot.investors}
+          schedules={snapshot.schedules}
+          payments={snapshot.payments}
+          guarantors={snapshot.guarantors}
+          overdueDays={snapshot.settings?.overdue_days ?? 3}
+        />
       )}
     </div>
   );

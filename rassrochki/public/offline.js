@@ -333,12 +333,128 @@
   }
 
   function renderLoans() {
-    const rows = [...app.snapshot.loans].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
-    return `<article class="card"><div class="row"><h2>Рассрочки (${rows.length})</h2><button type="button" class="primary" data-action="new-loan">+ Новая рассрочка</button></div>${rows.length ? `<div class="list">${rows.map((loan) => `
-      <div class="row">
-        <div><strong>${text(relatedName(loan.clients) || loan.title || "Рассрочка")}</strong><div class="muted">${text(loan.title || "Товар не указан")} · ${date(loan.start_date)}</div><div class="muted">${text(money(loan.principal))} · ${loan.status === "closed" ? "Закрыта" : "Активна"}${pendingForLoan(loan.id).length ? ' · <span class="badge pending">Ожидает отправки</span>' : ""}</div></div>
-        <div class="actions"><button type="button" data-loan="${text(loan.id)}">Открыть</button><button type="button" data-action="edit-loan" data-loan-id="${text(loan.id)}">Изменить</button></div>
-      </div>`).join("")}</div>` : '<p class="muted">Рассрочек пока нет. Создайте новую без подключения к сети.</p>'}</article>`;
+    const allRows = [...app.snapshot.loans].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const filters = [["all", "Все"], ["overdue", "Просрочено"], ["soon", "Скоро срок · 7 дней"], ["normal", "В срок"]];
+    const visible = allRows.filter((loan) => {
+      const summary = debtSummary(loan);
+      return app.loanFilter === "all" ||
+        (app.loanFilter === "overdue" && summary.overdue > 0) ||
+        (app.loanFilter === "soon" && summary.overdue === 0 && summary.soon > 0) ||
+        (app.loanFilter === "normal" && summary.remaining > 0 && summary.overdue === 0 && summary.soon === 0);
+    });
+    const filterButtons = filters.map(([key, label]) =>
+      '<button type="button" data-loan-filter="' + key + '"' +
+      (app.loanFilter === key ? ' class="primary"' : "") + '>' + label + "</button>"
+    ).join("");
+    const loanRows = visible.map((loan) => {
+      const summary = debtSummary(loan);
+      const tone = summary.overdue > 0 ? "overdue" : summary.soon > 0 ? "soon" : summary.remaining > 0 ? "normal" : "";
+      const indicator = summary.overdue > 0
+        ? "Просрочено · " + text(money(summary.overdue))
+        : summary.soon > 0
+          ? "Скоро срок · " + date(summary.nextDue)
+          : summary.remaining > 0 ? "В срок · остаток " + text(money(summary.remaining)) : "Оплат к внесению нет";
+      return '<div class="row tone-' + tone + '">' +
+        '<div><strong>' + text(relatedName(loan.clients) || loan.title || "Рассрочка") + "</strong>" +
+        '<div class="muted">' + text(loan.title || "Товар не указан") + " · " + date(loan.start_date) + "</div>" +
+        '<div class="muted">' + text(money(loan.principal)) + " · " + (loan.status === "closed" ? "Закрыта" : "Активна") +
+        (pendingForLoan(loan.id).length ? ' · <span class="badge pending">Ожидает отправки</span>' : "") + "</div>" +
+        '<div class="muted">' + indicator + "</div></div>" +
+        '<div class="actions"><button type="button" data-loan="' + text(loan.id) + '">Открыть</button>' +
+        '<button type="button" data-action="edit-loan" data-loan-id="' + text(loan.id) + '">Изменить</button></div></div>';
+    }).join("");
+    return '<article class="card"><div class="row"><h2>Рассрочки (' + visible.length + ")</h2>" +
+      '<button type="button" class="primary" data-action="new-loan">+ Новая рассрочка</button></div>' +
+      '<div class="actions" style="justify-content:flex-start;margin:10px 0">' + filterButtons + "</div>" +
+      '<div class="actions" style="justify-content:flex-start;margin:10px 0">' +
+      '<button type="button" data-action="export-overdue-csv">Выгрузить просрочивших · CSV</button>' +
+      '<button type="button" data-action="export-loans-csv">Выгрузить все рассрочки · CSV</button></div>' +
+      (visible.length ? '<div class="list">' + loanRows + "</div>" : '<p class="muted">По выбранному фильтру рассрочек нет.</p>') +
+      "</article>";
+  }
+
+  function debtSummary(loan) {
+    const today = dateKey(new Date());
+    const grace = Math.max(0, Number(app.snapshot.settings?.overdue_days || 0));
+    const cutoffDate = new Date();
+    cutoffDate.setHours(0, 0, 0, 0);
+    cutoffDate.setDate(cutoffDate.getDate() - grace);
+    const soonDate = new Date();
+    soonDate.setHours(0, 0, 0, 0);
+    soonDate.setDate(soonDate.getDate() + 7);
+    const cutoff = dateKey(cutoffDate);
+    const soonThrough = dateKey(soonDate);
+    let remaining = 0;
+    let overdue = 0;
+    let soon = 0;
+    const dates = [];
+    for (const row of app.snapshot.schedules.filter((item) => item.loan_id === loan.id)) {
+      const paid = row.status === "paid" ? Number(row.amount) : Number(row.paid_amount || 0);
+      const due = Math.max(0, Number(row.amount) - paid);
+      if (due <= 0.009) continue;
+      remaining += due;
+      dates.push(row.due_date);
+      if (row.due_date < cutoff) overdue += due;
+      else if (row.due_date >= today && row.due_date <= soonThrough) soon += due;
+    }
+    return {
+      remaining: Math.round(remaining * 100) / 100,
+      overdue: Math.round(overdue * 100) / 100,
+      soon: Math.round(soon * 100) / 100,
+      nextDue: dates.sort()[0] || "",
+    };
+  }
+
+  function dateKey(value) {
+    const item = value instanceof Date ? value : new Date(String(value) + "T00:00:00");
+    return item.getFullYear() + "-" + String(item.getMonth() + 1).padStart(2, "0") + "-" + String(item.getDate()).padStart(2, "0");
+  }
+
+  function csvValue(value) {
+    let raw = value == null ? "" : String(value);
+    if (typeof value === "string" && /^[=+@-]/.test(raw)) raw = "'" + raw;
+    return /[",\r\n]/.test(raw) ? '"' + raw.replace(/"/g, '""') + '"' : raw;
+  }
+
+  function downloadOfflineCsv(filename, rows) {
+    const content = "\uFEFF" + rows.map((row) => row.map(csvValue).join(",")).join("\r\n");
+    const url = URL.createObjectURL(new Blob([content], { type: "text/csv;charset=utf-8" }));
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  function exportOverdueCsv() {
+    const rows = [["Клиент", "Телефон", "Адрес", "Рассрочка", "Общий остаток", "Просрочено", "К оплате за 7 дней", "Ближайшая дата"]];
+    for (const loan of app.snapshot.loans) {
+      const summary = debtSummary(loan);
+      if (summary.overdue <= 0) continue;
+      const client = app.snapshot.clients.find((item) => item.id === loan.client_id);
+      rows.push([client?.full_name || "", client?.phone || "", client?.address || "", loan.title || loan.id,
+        summary.remaining, summary.overdue, summary.soon, summary.nextDue]);
+    }
+    downloadOfflineCsv("prosrochivshie.csv", rows);
+  }
+
+  function exportAllLoansCsv() {
+    const rows = [["ID рассрочки", "Клиент", "Телефон", "Адрес клиента", "Поручители", "Адреса поручителей", "Название", "Цена", "Наценка, %", "К возврату", "Взнос", "Срок, мес.", "Платёж/мес.", "Начало", "Статус", "График", "История оплат"]];
+    for (const loan of app.snapshot.loans) {
+      const client = app.snapshot.clients.find((item) => item.id === loan.client_id);
+      const guarantors = app.snapshot.guarantors.filter((item) => item.loan_id === loan.id);
+      const schedule = app.snapshot.schedules.filter((item) => item.loan_id === loan.id).sort((a, b) => a.sequence_number - b.sequence_number)
+        .map((item) => "#" + item.sequence_number + " " + item.due_date + " " + item.amount + " (оплачено " + (item.paid_amount || 0) + ")").join("\n");
+      const payments = app.snapshot.payments.filter((item) => item.loan_id === loan.id)
+        .map((item) => item.paid_at.slice(0, 10) + " " + item.amount + (item.notes ? " · " + item.notes : "")).join("\n");
+      rows.push([loan.id, client?.full_name || "", client?.phone || "", client?.address || "",
+        guarantors.map((item) => item.full_name).join("; "), guarantors.map((item) => item.address || "").join("; "),
+        loan.title || "", loan.cost_amount || 0, loan.markup_percent, loan.principal, loan.down_payment,
+        loan.term_months, loan.monthly_payment, loan.start_date, loan.status, schedule, payments]);
+    }
+    downloadOfflineCsv("rassrochki_full.csv", rows);
   }
 
   function renderLoanDetails() {
@@ -383,6 +499,7 @@
     return `<article class="card"><h2>Новый клиент</h2><form data-form="client-create" class="form-grid">
       <label class="field full">ФИО<input name="full_name" required maxlength="200" autocomplete="name"></label>
       <label class="field">Телефон<input name="phone" type="tel" autocomplete="tel"></label>
+      <label class="field full">Адрес клиента<textarea name="address" maxlength="1000" autocomplete="street-address"></textarea></label>
       <label class="field full">Заметки<textarea name="notes" maxlength="4000"></textarea></label>
       <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить</button></div>
     </form></article>`;
@@ -531,19 +648,24 @@
     const costText = String(data.get("cost_amount") || "").trim();
     const costAmount = costText ? number("cost_amount") : null;
     const markupPercent = number("markup_percent");
-    const principal = costAmount !== null
+    const targetPrincipal = costAmount !== null
       ? Math.round(costAmount * (100 + markupPercent) / 100 * 100) / 100
       : rawPrincipal;
     const downPayment = number("down_payment");
     const termMonths = number("term_months");
     const startDate = String(data.get("start_date") || "");
-    const scheduled = principal - downPayment;
-    if (!data.get("client_id") || principal <= 0 || (form.dataset.form === "loan-create" && !(costAmount > 0)) || downPayment < 0 || downPayment > principal || !Number.isInteger(termMonths) || termMonths < 1 || termMonths > 120 || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
+    const targetScheduled = targetPrincipal - downPayment;
+    if (!data.get("client_id") || targetPrincipal <= 0 || (form.dataset.form === "loan-create" && !(costAmount > 0)) || downPayment < 0 || downPayment > targetPrincipal || !Number.isInteger(termMonths) || termMonths < 1 || termMonths > 120 || !/^\d{4}-\d{2}-\d{2}$/.test(startDate)) {
       throw new Error("Проверьте клиента, сумму, взнос, срок и дату начала.");
     }
-    if (scheduled <= 0.009) throw new Error("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
+    if (targetScheduled <= 0.009) throw new Error("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
     const monthlyInput = number("monthly_payment");
-    const monthlyPayment = monthlyInput > 0 ? monthlyInput : Math.round(scheduled / termMonths * 100) / 100;
+    const monthlyPayment = Math.max(1, Math.round(monthlyInput > 0 ? monthlyInput : targetScheduled / termMonths));
+    const scheduled = Math.round(monthlyPayment * termMonths * 100) / 100;
+    const principal = Math.round((scheduled + downPayment) * 100) / 100;
+    const effectiveMarkupPercent = costAmount > 0
+      ? Math.round(((principal - costAmount) / costAmount) * 10000) / 100
+      : markupPercent;
     const investorId = String(data.get("investor_id") || "") || null;
     const selectedClient = app.snapshot.clients.find((client) => client.id === data.get("client_id"));
     if (!selectedClient || selectedClient.is_blacklisted) throw new Error("Выберите клиента, которого нет в чёрном списке.");
@@ -554,7 +676,7 @@
       investor_amount: investorId ? number("investor_amount") || null : null,
       title: String(data.get("title") || "").trim() || null,
       cost_amount: costAmount,
-      markup_percent: markupPercent,
+      markup_percent: effectiveMarkupPercent,
       principal,
       down_payment: downPayment,
       schedule_on_full_amount: false,
@@ -564,7 +686,7 @@
       income_share_manager: number("income_share_manager", 100),
       income_share_investor: investorId ? number("income_share_investor") : 0,
       notes: String(data.get("notes") || "").trim() || null,
-      clients: { full_name: selectedClient.full_name, phone: selectedClient.phone },
+      clients: { full_name: selectedClient.full_name, phone: selectedClient.phone, address: selectedClient.address },
       investors: investor ? { name: investor.name } : null,
     };
     return { data, loan, schedulePrincipal: scheduled, monthlyPayment, termMonths, startDate };
@@ -577,8 +699,30 @@
     const markup = Number(data.get("markup_percent")) || 0;
     const principal = form.elements.namedItem("principal");
     if (!(principal instanceof HTMLInputElement)) return;
-    if (cost > 0) principal.value = String(Math.round(cost * (100 + markup) / 100 * 100) / 100);
+    const down = Number(data.get("down_payment")) || 0;
+    const months = Number(data.get("term_months")) || 0;
+    const target = cost > 0 ? Math.round(cost * (100 + markup) / 100 * 100) / 100 : Number(principal.value) || 0;
+    const targetScheduled = Math.max(0, target - down);
+    const inputMonthly = Number(data.get("monthly_payment")) || 0;
+    const monthly = months > 0 ? Math.max(1, Math.round(inputMonthly > 0 ? inputMonthly : targetScheduled / months)) : 0;
+    const total = months > 0 ? Math.round((down + monthly * months) * 100) / 100 : target;
+    if (cost > 0) principal.value = String(total);
     else if (form.dataset.form === "loan-create") principal.value = "";
+    let note = form.querySelector("[data-rounding-note]");
+    if (!note && principal.parentElement) {
+      note = document.createElement("p");
+      note.dataset.roundingNote = "true";
+      note.className = "field full muted";
+      principal.parentElement.insertAdjacentElement("afterend", note);
+    }
+    if (note && cost > 0 && months > 0) {
+      const effective = Math.round(((total - cost) / cost) * 10000) / 100;
+      const change = Math.round((effective - markup) * 100) / 100;
+      const totalChange = Math.round((total - target) * 100) / 100;
+      note.textContent = "После округления до " + monthly + " ₽ фактическая наценка " + effective + "% (" +
+        (change > 0 ? "+" : "") + change + " п.п.), сумма к возврату изменится на " +
+        (totalChange > 0 ? "+" : "") + totalChange + " ₽.";
+    }
   }
 
   async function handleFormSubmit(event) {
@@ -594,6 +738,7 @@
           organization_id: app.account.organizationId,
           full_name: String(values.get("full_name") || "").trim(),
           phone: String(values.get("phone") || "").trim() || null,
+          address: String(values.get("address") || "").trim() || null,
           notes: String(values.get("notes") || "").trim() || null,
           is_blacklisted: false,
           blacklist_note: null,
@@ -644,7 +789,7 @@
         } else {
           const plan = buildEditPlan(loanId, values.schedulePrincipal, values.termMonths, values.startDate, values.monthlyPayment);
           loan.status = plan.status;
-          const existingGuarantors = app.snapshot.guarantors.filter((item) => item.loan_id === loanId).map(({ full_name, phone, notes }) => ({ full_name, phone, notes }));
+          const existingGuarantors = app.snapshot.guarantors.filter((item) => item.loan_id === loanId).map(({ id, full_name, phone, address, notes }) => ({ id, full_name, phone, address, notes }));
           const operation = await enqueue({
             type: "loan.edit",
             payload: {
@@ -767,11 +912,25 @@
   async function handleOfflineClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const loanFilterButton = target.closest("[data-loan-filter]");
+    if (loanFilterButton) {
+      app.loanFilter = loanFilterButton.getAttribute("data-loan-filter") || "all";
+      render();
+      return;
+    }
     const actionButton = target.closest("[data-action]");
     if (actionButton) {
       const action = actionButton.getAttribute("data-action");
       const clientId = actionButton.getAttribute("data-client");
       const loanId = actionButton.getAttribute("data-loan-id");
+      if (action === "export-overdue-csv") {
+        exportOverdueCsv();
+        return;
+      }
+      if (action === "export-loans-csv") {
+        exportAllLoansCsv();
+        return;
+      }
       if (action === "cancel-form") {
         app.form = null;
         render();
@@ -881,11 +1040,30 @@
         : app.loanId
           ? renderLoanDetails()
           : renderLoans();
+    if (app.view === "clients" && !app.form) addClientAddressesToList();
+    if (app.form === "loan-create" || app.form === "loan-edit") {
+      const loanForm = content.querySelector('form[data-form^="loan-"]');
+      if (loanForm) updateLoanEstimate(loanForm);
+    }
     if (app.view === "dashboard" && !app.form) {
       const conflicts = app.operations.filter((operation) => operation.state === "conflict");
       if (conflicts.length) {
         content.insertAdjacentHTML("beforeend", `<article class="card warning"><h2>Операции требуют внимания</h2>${conflicts.map((operation) => `<div class="row"><span>${text(operation.lastError || "Конфликт данных")}</span><button class="danger-button" type="button" data-action="discard-operation" data-operation="${text(operation.id)}">Удалить локальную операцию</button></div>`).join("")}<p class="muted">Удаление здесь отменит только локальное изменение. Серверные данные не затрагиваются.</p></article>`);
       }
+    }
+  }
+
+  function addClientAddressesToList() {
+    for (const client of app.snapshot.clients) {
+      if (!client.address) continue;
+      const action = Array.from(content.querySelectorAll("[data-client]")).find((item) => item.getAttribute("data-client") === client.id);
+      const row = action?.closest(".row");
+      const details = row?.querySelector("strong")?.parentElement;
+      if (!details) continue;
+      const address = document.createElement("div");
+      address.className = "muted";
+      address.textContent = "Адрес: " + client.address;
+      details.append(address);
     }
   }
 
@@ -1052,7 +1230,7 @@
     content.addEventListener("submit", (event) => { void handleFormSubmit(event); });
     content.addEventListener("input", (event) => {
       const target = event.target;
-      if (target instanceof HTMLInputElement && (target.name === "cost_amount" || target.name === "markup_percent")) updateLoanEstimate(target.form);
+      if (target instanceof HTMLInputElement && ["cost_amount", "markup_percent", "down_payment", "term_months", "monthly_payment"].includes(target.name)) updateLoanEstimate(target.form);
     });
 
     try {

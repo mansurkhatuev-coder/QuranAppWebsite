@@ -14,10 +14,11 @@ import { PassportNameScan } from "@/components/PassportNameScan";
 type ClientDraft = {
   full_name: string;
   phone: string;
+  address: string;
   notes: string;
 };
 
-const initial: ClientDraft = { full_name: "", phone: "", notes: "" };
+const initial: ClientDraft = { full_name: "", phone: "", address: "", notes: "" };
 
 export default function NewClientPage() {
   const router = useRouter();
@@ -36,6 +37,7 @@ export default function NewClientPage() {
         organization_id: organizationId,
         full_name: value.full_name.trim(),
         phone: value.phone.trim() || null,
+        address: value.address.trim() || null,
         notes: value.notes.trim() || null,
         is_blacklisted: false,
         blacklist_note: null,
@@ -77,6 +79,15 @@ export default function NewClientPage() {
         <div>
           <label className="label">Телефон</label>
           <PhoneInput value={value.phone} onChange={(phone) => setValue({ ...value, phone })} />
+        </div>
+        <div>
+          <label className="label">Адрес клиента</label>
+          <textarea
+            className="input min-h-16"
+            value={value.address}
+            onChange={(e) => setValue({ ...value, address: e.target.value })}
+            autoComplete="street-address"
+          />
         </div>
         <div>
           <label className="label">Заметки</label>

@@ -46,7 +46,7 @@ export async function GET() {
         (from, to) =>
           supabase
             .from("loans")
-            .select("*, clients(full_name, phone), investors(name)")
+            .select("*, clients(full_name, phone, address), investors(name)")
             .eq("organization_id", organizationId)
             .order("created_at", { ascending: true })
             .order("id", { ascending: true })

@@ -266,6 +266,9 @@ export function LoanDetail({
           {loan.clients?.phone ? (
             <p className="mt-1 text-sm text-[var(--muted)]">{loan.clients.phone}</p>
           ) : null}
+          {loan.clients?.address ? (
+            <p className="mt-1 text-sm text-[var(--muted)]">{loan.clients.address}</p>
+          ) : null}
           <div className="mt-2">
             <StatusBadge status={loan.status} />
           </div>
@@ -414,6 +417,7 @@ export function LoanDetail({
               >
                 <p className="font-medium">{g.full_name}</p>
                 <p className="text-[var(--muted)]">{g.phone ?? "Телефон не указан"}</p>
+                {g.address ? <p className="text-[var(--muted)]">{g.address}</p> : null}
                 {g.notes && <p className="text-xs text-[var(--muted)]">{g.notes}</p>}
               </li>
             ))}
