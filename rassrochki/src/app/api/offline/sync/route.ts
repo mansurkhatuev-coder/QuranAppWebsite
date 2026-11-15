@@ -60,11 +60,22 @@ export async function POST(request: Request) {
       continue;
     }
 
-    const { data, error } = await supabase.rpc("apply_offline_operation", {
-      p_operation_id: operation.id,
-      p_command_type: operation.command.type,
-      p_payload: operation.command.payload,
-    });
+    const { data, error } =
+      operation.command.type === "client.create"
+        ? await supabase.rpc("apply_offline_client_create", {
+            p_operation_id: operation.id,
+            p_payload: operation.command.payload,
+          })
+        : operation.command.type === "client.address"
+          ? await supabase.rpc("apply_offline_client_address", {
+              p_operation_id: operation.id,
+              p_payload: operation.command.payload,
+            })
+          : await supabase.rpc("apply_offline_operation", {
+              p_operation_id: operation.id,
+              p_command_type: operation.command.type,
+              p_payload: operation.command.payload,
+            });
 
     if (error) {
       const result = {
@@ -82,20 +93,6 @@ export async function POST(request: Request) {
       ? rpcResult.status
       : "failed";
     let message = typeof rpcResult.message === "string" ? rpcResult.message : undefined;
-    if (status === "synced" && operation.command.type === "client.create") {
-      const client = operation.command.payload.client as { id?: string; address?: string | null } | undefined;
-      if (client?.id) {
-        const { error: addressError } = await supabase
-          .from("clients")
-          .update({ address: client.address?.trim() || null })
-          .eq("id", client.id)
-          .eq("organization_id", organization.id);
-        if (addressError) {
-          status = "failed";
-          message = "Клиент сохранён, но адрес ещё не синхронизирован. Повторите синхронизацию.";
-        }
-      }
-    }
     if (status === "synced" && ["loan.create", "loan.edit"].includes(operation.command.type)) {
       const payload = operation.command.payload;
       const loan = payload.loan as { id?: string } | undefined;

@@ -80,6 +80,36 @@ describe("offline local projections", () => {
     expect(result.clients[0]).toMatchObject({ is_blacklisted: true, offline_version: 4 });
   });
 
+  it("projects a queued client address update and increments its local version", () => {
+    const snapshot = baseSnapshot();
+    snapshot.clients = [{ id: "client-1", address: "Старая улица", offline_version: 3 }] as never;
+
+    const result = applyPendingOperations(snapshot, [
+      op("address-op", "client.address", {
+        clientId: "client-1",
+        expectedVersion: 3,
+        address: "Новая улица, 10",
+      }),
+    ]);
+
+    expect(result.clients[0]).toMatchObject({ address: "Новая улица, 10", offline_version: 4 });
+  });
+
+  it("projects a queued client address clear as null", () => {
+    const snapshot = baseSnapshot();
+    snapshot.clients = [{ id: "client-1", address: "Старая улица", offline_version: 3 }] as never;
+
+    const result = applyPendingOperations(snapshot, [
+      op("address-clear-op", "client.address", {
+        clientId: "client-1",
+        expectedVersion: 3,
+        address: null,
+      }),
+    ]);
+
+    expect(result.clients[0]).toMatchObject({ address: null, offline_version: 4 });
+  });
+
   it("projects dependent commands in dependency order even when timestamps are out of order", () => {
     const snapshot = baseSnapshot();
     const create = op("create-loan", "loan.create", {

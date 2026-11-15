@@ -1,5 +1,7 @@
 import { calcTotalWithMarkup } from "@/lib/utils";
 
+export const PAYMENT_ROUNDING_STEPS = [1, 10, 100] as const;
+
 function money(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }

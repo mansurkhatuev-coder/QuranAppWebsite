@@ -18,12 +18,56 @@ export type OfflineSyncCommand = Pick<OfflineOperation, "id" | "userId" | "organ
 const SYNCABLE_COMMANDS = new Set([
   "client.create",
   "client.blacklist",
+  "client.address",
   "client.delete",
   "loan.create",
   "loan.edit",
   "payment.record",
   "loan.delete",
 ]);
+
+export function getClientOperationDependencies(
+  operations: OfflineOperation[],
+  clientId: string,
+  loans: Array<Pick<OfflineSnapshot["loans"][number], "id" | "client_id">>
+): string[] {
+  const clientIdByLoanId = new Map(loans.map((loan) => [loan.id, loan.client_id]));
+
+  for (const operation of operations) {
+    const payload = operation.command.payload;
+    const loan = isRecord(payload.loan) ? payload.loan : {};
+    const loanId = typeof payload.loanId === "string"
+      ? payload.loanId
+      : typeof loan.id === "string"
+        ? loan.id
+        : null;
+    if (loanId && typeof loan.client_id === "string") {
+      clientIdByLoanId.set(loanId, loan.client_id);
+    }
+  }
+
+  return operations
+    .filter((operation) => {
+      if (operation.state === "conflict") return false;
+      const payload = operation.command.payload;
+      const client = isRecord(payload.client) ? payload.client : {};
+      const loan = isRecord(payload.loan) ? payload.loan : {};
+      const payment = isRecord(payload.payment) ? payload.payment : {};
+      const directClientId = typeof payload.clientId === "string"
+        ? payload.clientId
+        : typeof client.id === "string"
+          ? client.id
+          : typeof loan.client_id === "string"
+            ? loan.client_id
+            : null;
+      if (directClientId === clientId) return true;
+
+      const loanIds = [payload.loanId, loan.id, payment.loan_id]
+        .filter((value): value is string => typeof value === "string");
+      return loanIds.some((loanId) => clientIdByLoanId.get(loanId) === clientId);
+    })
+    .map((operation) => operation.id);
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);

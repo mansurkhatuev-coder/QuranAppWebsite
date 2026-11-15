@@ -2,7 +2,13 @@ import "fake-indexeddb/auto";
 import { afterEach } from "vitest";
 import { describe, expect, it } from "vitest";
 import { createOfflineStore } from "./db";
-import { applySyncResponse, orderOperationsForSync, parseSyncBatch, syncOfflineQueue } from "./sync";
+import {
+  applySyncResponse,
+  getClientOperationDependencies,
+  orderOperationsForSync,
+  parseSyncBatch,
+  syncOfflineQueue,
+} from "./sync";
 import type { OfflineOperation, OfflineSnapshot } from "./types";
 
 let databaseNumber = 0;
@@ -105,6 +111,91 @@ describe("offline sync operation order", () => {
         "org-1"
       )
     ).toThrow(/unsupported/i);
+  });
+
+  it("accepts client address updates and rejects unknown commands", () => {
+    const addressCommand = parseSyncBatch(
+      {
+        operations: [
+          {
+            id: "123e4567-e89b-42d3-a456-426614174000",
+            userId: "user-1",
+            organizationId: "org-1",
+            command: {
+              type: "client.address",
+              payload: { clientId: "client-1", expectedVersion: 3, address: "Новая улица, 10" },
+            },
+          },
+        ],
+      },
+      "user-1",
+      "org-1"
+    );
+
+    expect(addressCommand[0].command.type).toBe("client.address");
+    expect(() =>
+      parseSyncBatch(
+        {
+          operations: [
+            {
+              id: "123e4567-e89b-42d3-a456-426614174000",
+              userId: "user-1",
+              organizationId: "org-1",
+              command: { type: "client.rename-everything", payload: {} },
+            },
+          ],
+        },
+        "user-1",
+        "org-1"
+      )
+    ).toThrow(/unsupported/i);
+  });
+
+  it("finds same-client dependencies through queued loans and snapshot loans", () => {
+    const loanDelete = operation("loan-delete", "2026-11-14T09:00:00.000Z");
+    loanDelete.command = { type: "loan.delete", payload: { loanId: "snapshot-loan" } };
+    const loanCreate = operation("loan-create", "2026-11-14T10:00:00.000Z");
+    loanCreate.command = {
+      type: "loan.create",
+      payload: { loan: { id: "queued-loan", client_id: "client-1" } },
+    };
+    const payment = operation("payment", "2026-11-14T11:00:00.000Z");
+    payment.command = {
+      type: "payment.record",
+      payload: { payment: { loan_id: "queued-loan" } },
+    };
+    const unrelated = operation("other-client-loan", "2026-11-14T12:00:00.000Z");
+    unrelated.command = {
+      type: "loan.create",
+      payload: { loan: { id: "other-loan", client_id: "client-2" } },
+    };
+
+    expect(
+      getClientOperationDependencies(
+        [loanDelete, loanCreate, payment, unrelated],
+        "client-1",
+        [{ id: "snapshot-loan", client_id: "client-1" }]
+      )
+    ).toEqual(["loan-delete", "loan-create", "payment"]);
+  });
+
+  it("orders client changes after all queued changes for that client", () => {
+    const address = operation("address", "2026-11-14T09:00:00.000Z");
+    address.command = { type: "client.address", payload: { clientId: "client-1", address: "ул. 1" } };
+    const blacklist = operation("blacklist", "2026-11-14T10:00:00.000Z");
+    blacklist.command = { type: "client.blacklist", payload: { clientId: "client-1" } };
+    const payment = operation("payment", "2026-11-14T11:00:00.000Z");
+    payment.command = { type: "payment.record", payload: { payment: { loan_id: "loan-1" } } };
+    const loanDelete = operation("loan-delete", "2026-11-14T12:00:00.000Z");
+    loanDelete.command = { type: "loan.delete", payload: { loanId: "loan-1" } };
+
+    expect(
+      getClientOperationDependencies(
+        [address, blacklist, payment, loanDelete],
+        "client-1",
+        [{ id: "loan-1", client_id: "client-1" }]
+      )
+    ).toEqual(["address", "blacklist", "payment", "loan-delete"]);
   });
 
   it("sends a dependency before a child even when the child has an earlier timestamp", () => {
