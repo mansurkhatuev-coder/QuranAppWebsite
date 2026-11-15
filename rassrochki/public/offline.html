@@ -18,7 +18,11 @@
       .badge.offline { color: #92400e; background: #fef3c7; }
       .badge.online { color: #166534; background: #dcfce7; }
       main { max-width: 1040px; margin: auto; padding: 16px; }
-      #sync-info { margin-bottom: 12px; border: 1px solid #dce3e8; border-radius: 12px; background: #fff; padding: 11px 13px; font-size: 13px; }
+      #sync-info { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 12px; border: 1px solid #dce3e8; border-radius: 12px; background: #fff; padding: 9px 11px; font-size: 13px; }
+      #sync-detail { color: #64748b; font-size: 12px; }
+      #sync-error-details { flex-basis: 100%; color: #64748b; font-size: 12px; }
+      #sync-error-details summary { width: fit-content; cursor: pointer; }
+      #sync-error-text { margin: 4px 0 0; overflow-wrap: anywhere; white-space: pre-wrap; }
       nav { display: flex; gap: 6px; max-width: 1040px; overflow-x: auto; margin: 10px auto 0; padding-bottom: 10px; scrollbar-width: thin; }
       button, a.button { font: inherit; cursor: pointer; border: 0; border-radius: 10px; background: #f1f5f9; color: #334155; padding: 10px 13px; text-decoration: none; white-space: nowrap; }
       nav button[aria-current="page"] { background: #0f766e; color: white; }
@@ -56,7 +60,7 @@
     <header>
       <div class="head">
         <div><h1>Рассрочки</h1><div class="muted" id="org-name">Офлайн-режим</div></div>
-        <div class="actions"><span class="badge offline" id="network-state">Без сети</span><button type="button" id="clear-offline" title="Удалить офлайн-копию только текущей организации">Очистить данные</button></div>
+        <div class="actions"><span class="badge offline" id="network-state">Без сети</span><button type="button" id="clear-offline" title="Удалить офлайн-копию только текущей организации">Очистить</button></div>
       </div>
       <nav aria-label="Разделы">
         <button type="button" data-view="dashboard" aria-current="page">Обзор</button>
@@ -65,10 +69,19 @@
       </nav>
     </header>
     <main>
-      <div id="sync-info" role="status">Загружаем сохранённые данные…</div>
-      <div id="online-action"><button type="button" id="sync-now" class="primary">Синхронизировать изменения</button> <a class="button" href="/dashboard">Открыть обычное приложение</a></div>
+      <div id="sync-info" role="status" aria-live="polite">
+        <span id="sync-state" class="badge pending">Загрузка…</span>
+        <span id="sync-detail">Проверяем копию</span>
+        <span id="sync-pending" class="badge pending" hidden></span>
+        <span id="sync-conflicts" class="badge conflict" hidden></span>
+        <details id="sync-error-details" hidden>
+          <summary>Подробности</summary>
+          <p id="sync-error-text"></p>
+        </details>
+      </div>
+      <div id="online-action"><button type="button" id="sync-now" class="primary">Синхронизировать</button> <a class="button" href="/dashboard">Обычная версия</a></div>
       <section id="content" aria-live="polite"></section>
-      <p class="muted">Здесь показана последняя копия данных с этого устройства. Новые данные появятся после синхронизации через интернет.</p>
+      <p class="muted">Изменения сохраняются на устройстве и синхронизируются при подключении.</p>
     </main>
     <script defer src="/offline.js"></script>
   </body>
