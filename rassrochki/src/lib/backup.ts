@@ -39,6 +39,7 @@ export async function buildFullOrgBackup(organizationId: string) {
     { data: schedules },
     { data: payments },
     { data: guarantors },
+    { data: cashTransactions },
   ] = await Promise.all([
     supabase.from("organizations").select("*").eq("id", organizationId).single(),
     supabase.from("organization_settings").select("*").eq("organization_id", organizationId).single(),
@@ -48,6 +49,7 @@ export async function buildFullOrgBackup(organizationId: string) {
     supabase.from("payment_schedules").select("*").eq("organization_id", organizationId),
     supabase.from("payments").select("*").eq("organization_id", organizationId),
     supabase.from("loan_guarantors").select("*").eq("organization_id", organizationId),
+    supabase.from("cash_transactions").select("*").eq("organization_id", organizationId),
   ]);
 
   return {
@@ -61,6 +63,7 @@ export async function buildFullOrgBackup(organizationId: string) {
     payment_schedules: schedules ?? [],
     payments: payments ?? [],
     loan_guarantors: guarantors ?? [],
+    cash_transactions: cashTransactions ?? [],
   };
 }
 

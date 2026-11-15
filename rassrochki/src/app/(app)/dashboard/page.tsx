@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { addDays, format, startOfMonth, endOfMonth } from "date-fns";
+import { addDays, format } from "date-fns";
 import { BackupReminder } from "@/components/BackupReminder";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
@@ -15,6 +15,7 @@ import {
   type LoanFinanceInput,
 } from "@/lib/finance";
 import { scheduleDueRemaining, sumSchedulePaid } from "@/lib/schedule-payments";
+import { buildCashRegisterSummary } from "@/lib/cash-register";
 
 function ShareBar({
   owner,
@@ -127,8 +128,6 @@ export default function DashboardPage() {
   const sourceLoans = snapshot?.loans ?? [];
   const schedules = snapshot?.schedules ?? [];
   const sourcePayments = snapshot?.payments ?? [];
-  const monthStart = format(startOfMonth(todayDate), "yyyy-MM-dd");
-  const monthEndDate = format(endOfMonth(todayDate), "yyyy-MM-dd");
   const next30 = format(addDays(todayDate, 30), "yyyy-MM-dd");
   const recentStart = format(addDays(todayDate, -30), "yyyy-MM-dd'T00:00:00");
   const loansById = new Map(sourceLoans.map((loan) => [loan.id, loan]));
@@ -157,9 +156,6 @@ export default function DashboardPage() {
   const recentPayments = sourcePayments
     .filter((payment) => payment.paid_at >= recentStart)
     .map((payment) => ({ ...payment, loans: loansById.get(payment.loan_id) ?? null }));
-  const monthPayments = sourcePayments.filter(
-    (payment) => payment.paid_at >= `${monthStart}T00:00:00` && payment.paid_at <= `${monthEndDate}T23:59:59`
-  );
 
   const schedulePrincipalByLoan = new Map<string, number>();
   for (const row of schedules) {
@@ -225,14 +221,14 @@ export default function DashboardPage() {
     investorProfit30d += parts.investor;
   }
 
-  const cashPaymentsThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
-  // Взнос не пишется в payments — учитываем loans.down_payment один раз по start_date месяца.
-  const cashDownThisMonth = sourceLoans.reduce((sum, row) => {
-    const start = String((row as { start_date?: string }).start_date ?? "");
-    if (!start || start < monthStart || start > monthEndDate) return sum;
-    return sum + (Number((row as { down_payment?: number | null }).down_payment ?? 0) || 0);
-  }, 0);
-  const cashThisMonth = Math.round((cashPaymentsThisMonth + cashDownThisMonth) * 100) / 100;
+  const cash = buildCashRegisterSummary({
+    loans: sourceLoans,
+    payments: sourcePayments,
+    transactions: snapshot?.cash_transactions ?? [],
+    investors: snapshot?.investors ?? [],
+    now: todayDate,
+  });
+  const cashCurrency = snapshot?.settings?.currency || "RUB";
   const dueSoonAmount = dueSoon.reduce((s, p) => s + scheduleDueRemaining(p), 0);
   const overdueAmount = overdue.reduce((s, p) => s + scheduleDueRemaining(p), 0);
 
@@ -322,15 +318,22 @@ export default function DashboardPage() {
           hint={`${dueSoon.length} платежей`}
           tone="accent"
         />
-        <StatCard
-          label="Касса в этом месяце"
-          value={formatMoney(cashThisMonth)}
-          hint={
-            cashDownThisMonth > 0
-              ? `платежи ${formatMoney(cashPaymentsThisMonth)} + взносы ${formatMoney(cashDownThisMonth)}`
-              : "платежи и первоначальные взносы"
-          }
-        />
+        <Link
+          href="/cash"
+          className="block rounded-2xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-700 focus-visible:ring-offset-2"
+          aria-label="Открыть кассу"
+        >
+          <StatCard
+            label="Остаток кассы"
+            value={cash.initialized ? formatMoney(cash.balance, cashCurrency) : "Не задан"}
+            hint={
+              cash.initialized
+                ? `за месяц +${formatMoney(cash.monthInflow, cashCurrency)} · −${formatMoney(cash.monthOutflow, cashCurrency)}`
+                : "Откройте, чтобы указать начальный остаток"
+            }
+            tone="accent"
+          />
+        </Link>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-2">

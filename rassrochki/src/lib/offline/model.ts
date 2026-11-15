@@ -65,7 +65,14 @@ function applyPayment(snapshot: OfflineSnapshot, operation: OfflineOperation, pa
   const start = snapshot.schedules.find((row) => row.id === startId);
   if (!start) return;
 
-  snapshot.payments = [...snapshot.payments, { ...payment, idempotency_key: paymentKey }];
+  snapshot.payments = [
+    ...snapshot.payments,
+    {
+      ...payment,
+      cash_recorded_at: payment.cash_recorded_at || operation.createdAt,
+      idempotency_key: paymentKey,
+    },
+  ];
 
   let remaining = Number(payment.amount);
   const scheduleRows = snapshot.schedules
@@ -115,6 +122,7 @@ export function applyPendingOperations(
     payments: [...source.payments],
     guarantors: [...source.guarantors],
     investors: [...source.investors],
+    cash_transactions: [...(source.cash_transactions ?? [])],
   };
 
   const scopedOperations = operations.filter(
@@ -201,6 +209,13 @@ export function applyPendingOperations(
       case "payment.record":
         applyPayment(snapshot, operation, payload);
         break;
+      case "cash.transaction.create": {
+        const transaction = record(payload.transaction) as NonNullable<OfflineSnapshot["cash_transactions"]>[number];
+        if (transaction.id && !snapshot.cash_transactions?.some((row) => row.id === transaction.id)) {
+          snapshot.cash_transactions = [...(snapshot.cash_transactions ?? []), transaction];
+        }
+        break;
+      }
       case "loan.delete": {
         const loanId = String(payload.loanId ?? "");
         snapshot.loans = snapshot.loans.filter((loan) => loan.id !== loanId);

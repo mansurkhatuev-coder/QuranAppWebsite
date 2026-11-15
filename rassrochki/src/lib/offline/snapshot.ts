@@ -55,5 +55,10 @@ export function parseSnapshotEnvelope(
     throw new Error("Offline snapshot data is incomplete");
   }
 
-  return snapshot as unknown as OfflineSnapshot;
+  return {
+    ...(snapshot as unknown as OfflineSnapshot),
+    cash_transactions: Array.isArray(snapshot.cash_transactions)
+      ? snapshot.cash_transactions as OfflineSnapshot["cash_transactions"]
+      : [],
+  };
 }

@@ -139,6 +139,7 @@ export function LoanDetail({
             schedule_id: schedule.id,
             amount: Math.round(amount * 100) / 100,
             paid_at: paidAtIso,
+            cash_recorded_at: values.cash_recorded_at,
             method: values.file ? "transfer_with_receipt" : "manual",
             notes: values.notes.trim() || null,
             receipt_path: null,

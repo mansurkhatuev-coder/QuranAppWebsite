@@ -66,16 +66,21 @@ export async function POST(request: Request) {
             p_operation_id: operation.id,
             p_payload: operation.command.payload,
           })
-        : operation.command.type === "client.address"
-          ? await supabase.rpc("apply_offline_client_address", {
+        : operation.command.type === "cash.transaction.create"
+          ? await supabase.rpc("apply_offline_cash_transaction", {
               p_operation_id: operation.id,
               p_payload: operation.command.payload,
             })
-          : await supabase.rpc("apply_offline_operation", {
-              p_operation_id: operation.id,
-              p_command_type: operation.command.type,
-              p_payload: operation.command.payload,
-            });
+          : operation.command.type === "client.address"
+            ? await supabase.rpc("apply_offline_client_address", {
+                p_operation_id: operation.id,
+                p_payload: operation.command.payload,
+              })
+            : await supabase.rpc("apply_offline_operation", {
+                p_operation_id: operation.id,
+                p_command_type: operation.command.type,
+                p_payload: operation.command.payload,
+              });
 
     if (error) {
       const result = {
@@ -93,11 +98,48 @@ export async function POST(request: Request) {
       ? rpcResult.status
       : "failed";
     let message = typeof rpcResult.message === "string" ? rpcResult.message : undefined;
+    if (status === "synced" && operation.command.type === "payment.record") {
+      const payment = operation.command.payload.payment as Record<string, unknown> | undefined;
+      const recordedAt = payment?.cash_recorded_at;
+      if (typeof recordedAt === "string") {
+        const paymentId = typeof rpcResult.payment_id === "string" ? rpcResult.payment_id : null;
+        if (!Number.isFinite(Date.parse(recordedAt)) || !paymentId) {
+          status = "failed";
+          message = "Оплата сохранена, но время её учёта в кассе не распознано. Операция останется в очереди для повтора.";
+        } else {
+          const { error: cashTimeError } = await supabase
+            .from("payments")
+            .update({ cash_recorded_at: new Date(recordedAt).toISOString() })
+            .eq("id", paymentId)
+            .eq("organization_id", organization.id);
+          if (cashTimeError) {
+            status = "failed";
+            message = "Оплата сохранена, но её время учёта в кассе ещё не синхронизировано. Повторите синхронизацию.";
+          }
+        }
+      }
+    }
     if (status === "synced" && ["loan.create", "loan.edit"].includes(operation.command.type)) {
       const payload = operation.command.payload;
-      const loan = payload.loan as { id?: string } | undefined;
+      const loan = payload.loan as { id?: string; created_at?: string } | undefined;
       const loanId = typeof payload.loanId === "string" ? payload.loanId : loan?.id;
       const guarantors = Array.isArray(payload.guarantors) ? payload.guarantors : [];
+      if (
+        operation.command.type === "loan.create" &&
+        loanId &&
+        typeof loan?.created_at === "string" &&
+        Number.isFinite(Date.parse(loan.created_at))
+      ) {
+        const { error: downPaymentTimeError } = await supabase
+          .from("loans")
+          .update({ down_payment_recorded_at: new Date(loan.created_at).toISOString() })
+          .eq("id", loanId)
+          .eq("organization_id", organization.id);
+        if (downPaymentTimeError) {
+          status = "failed";
+          message = "Рассрочка сохранена, но время учёта первоначального взноса ещё не синхронизировано. Повторите синхронизацию.";
+        }
+      }
       if (loanId) {
         const { error: guarantorError } = await supabase.rpc("replace_loan_guarantors", {
           p_loan_id: loanId,

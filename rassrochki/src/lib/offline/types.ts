@@ -1,5 +1,6 @@
 import type {
   Client,
+  CashTransaction,
   Investor,
   LoanGuarantor,
   LoanWithRelations,
@@ -21,6 +22,8 @@ export type OfflineSnapshot = {
   payments: Payment[];
   guarantors: LoanGuarantor[];
   investors: Investor[];
+  /** Missing only in snapshots saved by older app versions. */
+  cash_transactions?: CashTransaction[];
 };
 
 export type OfflineOperationState = "pending" | "syncing" | "conflict";

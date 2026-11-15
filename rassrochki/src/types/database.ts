@@ -85,6 +85,7 @@ export type Loan = {
   principal: number;
   /** Первоначальный взнос, который вычитается из суммы нового графика. */
   down_payment: number;
+  down_payment_recorded_at?: string;
   /** Retained for historical rows and RPC compatibility; no longer user-selectable. */
   schedule_on_full_amount: boolean;
   term_months: number;
@@ -125,7 +126,29 @@ export type Payment = {
   method: string | null;
   notes: string | null;
   receipt_path: string | null;
+  cash_recorded_at?: string;
   idempotency_key?: string | null;
+};
+
+export type CashTransactionType =
+  | "opening_balance"
+  | "deposit"
+  | "owner_withdrawal"
+  | "expense"
+  | "investor_contribution"
+  | "investor_return";
+
+export type CashTransaction = {
+  id: string;
+  operation_id: string;
+  organization_id: string;
+  transaction_type: CashTransactionType;
+  amount: number;
+  occurred_at: string;
+  investor_id: string | null;
+  notes: string | null;
+  created_at: string;
+  investors?: Pick<Investor, "name"> | null;
 };
 
 export type LoanGuarantor = {

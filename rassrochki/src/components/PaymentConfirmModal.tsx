@@ -11,6 +11,7 @@ import { scheduleDueRemaining } from "@/lib/schedule-payments";
 
 export type PaymentConfirmValues = {
   paid_at: string;
+  cash_recorded_at: string;
   amount: string;
   file: File | null;
   notes: string;
@@ -92,6 +93,7 @@ export function PaymentConfirmModal({
     try {
       await onConfirm({
         paid_at: paidAt,
+        cash_recorded_at: new Date().toISOString(),
         amount: String(num),
         file,
         notes,

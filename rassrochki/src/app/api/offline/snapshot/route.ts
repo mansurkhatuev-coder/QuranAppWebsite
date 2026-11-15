@@ -30,7 +30,7 @@ export async function GET() {
 
   try {
     await syncOverdueSchedules(supabase, organizationId, settings.overdue_days, new Date());
-    const [clients, loans, schedules, payments, guarantors, investors] = await Promise.all([
+    const [clients, loans, schedules, payments, guarantors, investors, cashTransactions] = await Promise.all([
       readAllPages(
         (from, to) =>
           supabase
@@ -97,6 +97,17 @@ export async function GET() {
             .range(from, to),
         PAGE_SIZE
       ),
+      readAllPages(
+        (from, to) =>
+          supabase
+            .from("cash_transactions")
+            .select("*, investors(name)")
+            .eq("organization_id", organizationId)
+            .order("occurred_at", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to),
+        PAGE_SIZE
+      ),
     ]);
 
     return json(
@@ -114,6 +125,7 @@ export async function GET() {
           payments,
           guarantors,
           investors,
+          cash_transactions: cashTransactions,
         },
       },
       200
