@@ -6,6 +6,12 @@
   const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, form: null, syncError: null };
   const content = document.getElementById("content");
   const syncInfo = document.getElementById("sync-info");
+  const syncState = document.getElementById("sync-state");
+  const syncDetail = document.getElementById("sync-detail");
+  const syncPending = document.getElementById("sync-pending");
+  const syncConflicts = document.getElementById("sync-conflicts");
+  const syncErrorDetails = document.getElementById("sync-error-details");
+  const syncErrorText = document.getElementById("sync-error-text");
   const orgName = document.getElementById("org-name");
   const networkState = document.getElementById("network-state");
   const onlineAction = document.getElementById("online-action");
@@ -219,10 +225,50 @@
     if (!app.baseSnapshot) return;
     const pending = app.operations.filter((item) => item.state !== "conflict").length;
     const conflicts = app.operations.filter((item) => item.state === "conflict").length;
-    const syncedAt = new Date(app.baseSnapshot.syncedAt).toLocaleString("ru-RU");
     const lastError = app.operations.find((item) => item.state !== "conflict" && item.lastError)?.lastError;
-    syncInfo.textContent = `Копия от ${syncedAt}${pending ? ` · ожидают отправки: ${pending}` : ""}${conflicts ? ` · конфликтов: ${conflicts}` : ""}${lastError ? ` · ${lastError}` : ""}${app.syncError ? ` · ${app.syncError}` : ""}`;
-    syncInfo.classList.toggle("warning", !navigator.onLine || conflicts > 0 || Boolean(app.syncError));
+    const errorDetail = String(lastError || app.syncError || "");
+    const hasError = Boolean(errorDetail);
+    const hasChanges = pending > 0 || conflicts > 0;
+    const status = !navigator.onLine
+      ? "Офлайн"
+      : hasError
+        ? "Проверить"
+        : hasChanges
+          ? "Есть изменения"
+          : "Актуально";
+    const tone = !navigator.onLine || hasError ? "offline" : hasChanges ? "pending" : "online";
+    syncState.textContent = status;
+    syncState.className = `badge ${tone}`;
+    syncDetail.textContent = `Копия ${new Date(app.baseSnapshot.syncedAt).toLocaleString("ru-RU", {
+      day: "numeric",
+      month: "short",
+      hour: "2-digit",
+      minute: "2-digit",
+    })}`;
+    syncPending.hidden = pending === 0;
+    syncPending.textContent = pending > 0 ? `В очереди ${pending}` : "";
+    syncConflicts.hidden = conflicts === 0;
+    syncConflicts.textContent = conflicts > 0 ? `Конфликты ${conflicts}` : "";
+    setSyncErrorDetail(errorDetail);
+    syncInfo.classList.toggle("warning", !navigator.onLine || hasError || conflicts > 0);
+  }
+
+  function setSyncErrorDetail(detail) {
+    syncErrorText.textContent = detail;
+    syncErrorDetails.hidden = !detail;
+    if (!detail) syncErrorDetails.open = false;
+  }
+
+  function showSyncMessage(label, detail = "", warning = true) {
+    syncState.textContent = label;
+    syncState.className = `badge ${warning ? "offline" : "online"}`;
+    syncDetail.textContent = detail;
+    syncPending.hidden = true;
+    syncPending.textContent = "";
+    syncConflicts.hidden = true;
+    syncConflicts.textContent = "";
+    setSyncErrorDetail(warning ? detail : "");
+    syncInfo.classList.toggle("warning", warning);
   }
 
   async function refreshLocalData() {
@@ -712,7 +758,7 @@
     app.baseSnapshot = null;
     app.operations = [];
     app.account = null;
-    syncInfo.textContent = "Офлайн-копия удалена с этого устройства.";
+    showSyncMessage("Копия удалена", "Офлайн-данные очищены.", false);
     content.innerHTML = '<article class="card"><a class="button" href="/login">Войти и снова подготовить офлайн-доступ</a></article>';
   }
 
@@ -846,6 +892,7 @@
     networkState.textContent = !online ? "Без сети" : app.syncError ? "Сервер недоступен" : "Есть интернет";
     networkState.className = `badge ${online && !app.syncError ? "online" : "offline"}`;
     onlineAction.style.display = online ? "block" : "none";
+    updateSyncInfo();
   }
 
   let syncRunning = false;
@@ -1019,9 +1066,10 @@
       render();
       if (navigator.onLine && app.operations.some((item) => item.state !== "conflict")) void syncNow();
     } catch (error) {
-      syncInfo.classList.add("warning");
-      syncInfo.textContent = error instanceof Error ? error.message : "Не удалось загрузить офлайн-данные.";
-      content.innerHTML = '<article class="card"><a class="button" href="/login">Войти после восстановления интернета</a></article>';
+      const detail = error instanceof Error ? error.message : "Не удалось загрузить офлайн-данные.";
+      showSyncMessage("Копии нет", "Подключитесь и обновите офлайн-доступ.");
+      setSyncErrorDetail(detail);
+      content.innerHTML = '<article class="card"><p>Офлайн-копия не найдена.</p><a class="button" href="/login">Войти при подключении</a></article>';
     }
   }
 
