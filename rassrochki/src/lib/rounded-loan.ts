@@ -1,6 +1,6 @@
 import { calcTotalWithMarkup } from "@/lib/utils";
 
-export const PAYMENT_ROUNDING_STEPS = [1, 10, 100] as const;
+export const PAYMENT_ROUNDING_STEP = 100;
 
 function money(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
@@ -10,18 +10,17 @@ function percent(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-/** Rounds every scheduled payment to the selected ruble step and reports the resulting contract rate. */
+/** Rounds every scheduled payment to the nearest hundred rubles and reports the resulting contract rate. */
 export function calculateRoundedLoanTerms(
   cost: number,
   requestedMarkupPercent: number,
   downPayment: number,
   termMonths: number,
-  monthlyOverride?: number,
-  roundingStep = 1
+  monthlyOverride?: number
 ) {
   const targetPrincipal = calcTotalWithMarkup(cost, requestedMarkupPercent);
   const targetSchedulePrincipal = money(Math.max(0, targetPrincipal - downPayment));
-  const step = Math.max(1, Math.round(roundingStep));
+  const step = PAYMENT_ROUNDING_STEP;
   const monthlyPayment = termMonths > 0 && targetSchedulePrincipal > 0
     ? Math.max(step, Math.round((monthlyOverride && monthlyOverride > 0
         ? monthlyOverride
