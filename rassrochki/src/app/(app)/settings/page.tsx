@@ -5,7 +5,6 @@ import { DraftIndicator } from "@/components/ui";
 import { NumericInput } from "@/components/NumericInput";
 import { FormSkeleton } from "@/components/Skeleton";
 import { Spinner } from "@/components/Spinner";
-import { BackLink } from "@/components/BackLink";
 import { useDraft } from "@/hooks/useDraft";
 import { createClient } from "@/lib/supabase/client";
 import type { Investor } from "@/types/database";
@@ -371,7 +370,6 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-4">
-      <BackLink href="/dashboard" label="На главную" />
       <div>
         <h1 className="text-2xl font-bold">Настройки</h1>
         <DraftIndicator status={status} />
