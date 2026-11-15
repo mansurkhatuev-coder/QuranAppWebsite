@@ -458,13 +458,16 @@
       ["loan_id", "ID рассрочки"], ["client_id", "ID клиента"], ["client_name", "ФИО клиента"],
       ["client_phone", "Телефон клиента"], ["client_address", "Адрес клиента"], ["client_notes", "Заметки клиента"],
       ["client_is_blacklisted", "Клиент в чёрном списке"], ["client_blacklist_note", "Причина чёрного списка"],
+      ["client_created_at", "Клиент создан"], ["client_offline_version", "Версия клиента"],
       ["investor_id", "ID инвестора"], ["investor_name", "Имя инвестора"], ["investor_share_percent", "Доля инвестора по умолчанию, %"],
-      ["investor_notes", "Заметки инвестора"], ["deal_invested_amount", "Вложение инвестора в сделку"],
+      ["investor_notes", "Заметки инвестора"], ["investor_created_at", "Инвестор создан"],
+      ["deal_invested_amount", "Вложение инвестора в сделку"],
       ["manager_share_percent", "Доля владельца в сделке, %"], ["deal_investor_share_percent", "Доля инвестора в сделке, %"],
       ["loan_title", "Название / товар"], ["cost_amount", "Цена"], ["markup_percent", "Наценка, %"],
       ["principal", "К возврату"], ["down_payment", "Первоначальный взнос"], ["term_months", "Срок, мес."],
       ["monthly_payment", "Платёж в месяц"], ["schedule_on_full_amount", "График на полную сумму"],
       ["start_date", "Дата начала"], ["loan_status", "Статус рассрочки"], ["loan_created_at", "Создана"],
+      ["loan_offline_version", "Версия рассрочки"],
       ["loan_notes", "Заметки по рассрочке"], ["guarantors", "Поручители (по одному на строку)"],
       ["schedules", "График (по одному платежу на строку)"], ["payments", "Оплаты (по одной на строку)"],
     ];
@@ -473,16 +476,20 @@
       .map(([label, read]) => `${label}: ${read(item) ?? ""}`)
       .join(" | ")).join("\n");
     const guarantorFields = [
-      ["ID", (item) => item.id], ["ID рассрочки", (item) => item.loan_id], ["ФИО", (item) => item.full_name],
+      ["ID", (item) => item.id], ["ID организации", (item) => item.organization_id],
+      ["ID рассрочки", (item) => item.loan_id], ["ФИО", (item) => item.full_name],
       ["Телефон", (item) => item.phone], ["Адрес", (item) => item.address], ["Заметки", (item) => item.notes],
+      ["Создан", (item) => item.created_at],
     ];
     const scheduleFields = [
-      ["ID", (item) => item.id], ["№", (item) => item.sequence_number], ["Дата", (item) => item.due_date],
+      ["ID", (item) => item.id], ["ID организации", (item) => item.organization_id],
+      ["ID рассрочки", (item) => item.loan_id], ["№", (item) => item.sequence_number], ["Дата", (item) => item.due_date],
       ["Сумма", (item) => item.amount], ["Статус", (item) => item.status], ["Оплачено", (item) => item.paid_amount],
       ["Дата оплаты", (item) => item.paid_at], ["Путь к чеку", (item) => item.receipt_path],
     ];
     const paymentFields = [
-      ["ID", (item) => item.id], ["ID графика", (item) => item.schedule_id], ["Дата", (item) => item.paid_at],
+      ["ID", (item) => item.id], ["ID организации", (item) => item.organization_id],
+      ["ID рассрочки", (item) => item.loan_id], ["ID графика", (item) => item.schedule_id], ["Дата", (item) => item.paid_at],
       ["Сумма", (item) => item.amount], ["Способ", (item) => item.method], ["Заметки", (item) => item.notes],
       ["Путь к чеку", (item) => item.receipt_path], ["Ключ идемпотентности", (item) => item.idempotency_key],
     ];
@@ -506,10 +513,13 @@
         client_notes: client?.notes,
         client_is_blacklisted: client?.is_blacklisted == null ? "" : client.is_blacklisted ? "Да" : "Нет",
         client_blacklist_note: client?.blacklist_note,
+        client_created_at: client?.created_at,
+        client_offline_version: client?.offline_version,
         investor_id: loan.investor_id,
         investor_name: investor?.name,
         investor_share_percent: investor?.share_percent,
         investor_notes: investor?.notes,
+        investor_created_at: investor?.created_at,
         deal_invested_amount: loan.investor_amount,
         manager_share_percent: loan.income_share_manager,
         deal_investor_share_percent: loan.income_share_investor,
@@ -524,6 +534,7 @@
         start_date: loan.start_date,
         loan_status: loan.status,
         loan_created_at: loan.created_at,
+        loan_offline_version: loan.offline_version,
         loan_notes: loan.notes,
         guarantors: detailRows(guarantors, guarantorFields),
         schedules: detailRows(schedule, scheduleFields),
@@ -543,6 +554,8 @@
         client_notes: client.notes,
         client_is_blacklisted: client.is_blacklisted ? "Да" : "Нет",
         client_blacklist_note: client.blacklist_note,
+        client_created_at: client.created_at,
+        client_offline_version: client.offline_version,
       });
     }
     const loanInvestorIds = new Set(app.snapshot.loans.map((loan) => loan.investor_id).filter(Boolean));
@@ -554,6 +567,7 @@
         investor_name: investor.name,
         investor_share_percent: investor.share_percent,
         investor_notes: investor.notes,
+        investor_created_at: investor.created_at,
       });
     }
 
