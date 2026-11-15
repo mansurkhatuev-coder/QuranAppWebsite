@@ -179,6 +179,25 @@ describe("offline sync operation order", () => {
     ).toEqual(["loan-delete", "loan-create", "payment"]);
   });
 
+  it("orders client changes after all queued changes for that client", () => {
+    const address = operation("address", "2026-11-14T09:00:00.000Z");
+    address.command = { type: "client.address", payload: { clientId: "client-1", address: "ул. 1" } };
+    const blacklist = operation("blacklist", "2026-11-14T10:00:00.000Z");
+    blacklist.command = { type: "client.blacklist", payload: { clientId: "client-1" } };
+    const payment = operation("payment", "2026-11-14T11:00:00.000Z");
+    payment.command = { type: "payment.record", payload: { payment: { loan_id: "loan-1" } } };
+    const loanDelete = operation("loan-delete", "2026-11-14T12:00:00.000Z");
+    loanDelete.command = { type: "loan.delete", payload: { loanId: "loan-1" } };
+
+    expect(
+      getClientOperationDependencies(
+        [address, blacklist, payment, loanDelete],
+        "client-1",
+        [{ id: "loan-1", client_id: "client-1" }]
+      )
+    ).toEqual(["address", "blacklist", "payment", "loan-delete"]);
+  });
+
   it("sends a dependency before a child even when the child has an earlier timestamp", () => {
     const child = operation("loan-op", "2026-11-14T09:00:00.000Z", ["client-op"]);
     const dependency = operation("client-op", "2026-11-14T10:00:00.000Z");

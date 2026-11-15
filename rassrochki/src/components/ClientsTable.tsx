@@ -31,13 +31,10 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
     setError(null);
     const note = next ? (noteDraft[client.id] ?? client.blacklist_note ?? "").trim() || null : null;
     try {
-      const dependencies = operations
-        .filter(
-          (operation) =>
-            operation.state !== "conflict" &&
-            (operation.command.payload.client as { id?: string } | undefined)?.id === client.id
-        )
-        .map((operation) => operation.id);
+      const dependencies = getClientOperationDependencies(operations, client.id, [
+        ...(snapshot?.loans ?? []),
+        ...(baseSnapshot?.loans ?? []),
+      ]);
       await enqueueCommand(
         {
           type: "client.blacklist",
@@ -81,13 +78,10 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
       return;
     }
     try {
-      const dependencies = operations
-        .filter(
-          (operation) =>
-            operation.state !== "conflict" &&
-            (operation.command.payload.client as { id?: string } | undefined)?.id === client.id
-        )
-        .map((operation) => operation.id);
+      const dependencies = getClientOperationDependencies(operations, client.id, [
+        ...(snapshot?.loans ?? []),
+        ...(baseSnapshot?.loans ?? []),
+      ]);
       await enqueueCommand(
         {
           type: "client.delete",

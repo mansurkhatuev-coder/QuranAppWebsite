@@ -424,7 +424,7 @@
 
   function csvValue(value) {
     let raw = value == null ? "" : String(value);
-    if (typeof value === "string" && /^[=+@\-\t\r\n]/.test(raw)) raw = "'" + raw;
+    if (typeof value === "string" && /^[\s\uFEFF]*[=+@\-]/.test(raw)) raw = "'" + raw;
     return /[",\t\r\n]/.test(raw) ? '"' + raw.replace(/"/g, '""') + '"' : raw;
   }
 
@@ -468,31 +468,20 @@
       ["monthly_payment", "Платёж в месяц"], ["schedule_on_full_amount", "График на полную сумму"],
       ["start_date", "Дата начала"], ["loan_status", "Статус рассрочки"], ["loan_created_at", "Создана"],
       ["loan_offline_version", "Версия рассрочки"],
-      ["loan_notes", "Заметки по рассрочке"], ["guarantors", "Поручители (по одному на строку)"],
-      ["schedules", "График (по одному платежу на строку)"], ["payments", "Оплаты (по одной на строку)"],
+      ["loan_notes", "Заметки по рассрочке"],
+      ["guarantor_id", "ID поручителя"], ["guarantor_name", "ФИО поручителя"],
+      ["guarantor_phone", "Телефон поручителя"], ["guarantor_address", "Адрес поручителя"],
+      ["guarantor_notes", "Заметки поручителя"], ["guarantor_created_at", "Поручитель создан"],
+      ["schedule_id", "ID платежа графика"], ["schedule_number", "Номер платежа"],
+      ["schedule_due_date", "Срок платежа"], ["schedule_amount", "Сумма по графику"],
+      ["schedule_status", "Статус платежа"], ["schedule_paid_amount", "Оплачено по графику"],
+      ["schedule_paid_at", "Дата оплаты по графику"], ["schedule_receipt_path", "Путь к чеку графика"],
+      ["payment_id", "ID оплаты"], ["payment_schedule_id", "ID платежа графика для оплаты"],
+      ["payment_paid_at", "Дата фактической оплаты"], ["payment_amount", "Сумма оплаты"],
+      ["payment_method", "Способ оплаты"], ["payment_notes", "Заметки оплаты"],
+      ["payment_receipt_path", "Путь к чеку оплаты"], ["payment_idempotency_key", "Ключ идемпотентности оплаты"],
     ];
     const rows = [columns.map(([, label]) => label)];
-    const detailRows = (items, fields) => items.map((item) => fields
-      .map(([label, read]) => `${label}: ${read(item) ?? ""}`)
-      .join(" | ")).join("\n");
-    const guarantorFields = [
-      ["ID", (item) => item.id], ["ID организации", (item) => item.organization_id],
-      ["ID рассрочки", (item) => item.loan_id], ["ФИО", (item) => item.full_name],
-      ["Телефон", (item) => item.phone], ["Адрес", (item) => item.address], ["Заметки", (item) => item.notes],
-      ["Создан", (item) => item.created_at],
-    ];
-    const scheduleFields = [
-      ["ID", (item) => item.id], ["ID организации", (item) => item.organization_id],
-      ["ID рассрочки", (item) => item.loan_id], ["№", (item) => item.sequence_number], ["Дата", (item) => item.due_date],
-      ["Сумма", (item) => item.amount], ["Статус", (item) => item.status], ["Оплачено", (item) => item.paid_amount],
-      ["Дата оплаты", (item) => item.paid_at], ["Путь к чеку", (item) => item.receipt_path],
-    ];
-    const paymentFields = [
-      ["ID", (item) => item.id], ["ID организации", (item) => item.organization_id],
-      ["ID рассрочки", (item) => item.loan_id], ["ID графика", (item) => item.schedule_id], ["Дата", (item) => item.paid_at],
-      ["Сумма", (item) => item.amount], ["Способ", (item) => item.method], ["Заметки", (item) => item.notes],
-      ["Путь к чеку", (item) => item.receipt_path], ["Ключ идемпотентности", (item) => item.idempotency_key],
-    ];
     const append = (fields) => rows.push(columns.map(([key]) => fields[key] ?? ""));
 
     for (const loan of app.snapshot.loans) {
@@ -536,9 +525,46 @@
         loan_created_at: loan.created_at,
         loan_offline_version: loan.offline_version,
         loan_notes: loan.notes,
-        guarantors: detailRows(guarantors, guarantorFields),
-        schedules: detailRows(schedule, scheduleFields),
-        payments: detailRows(payments, paymentFields),
+      });
+      for (const item of guarantors) append({
+        organization_id: item.organization_id || loan.organization_id || app.snapshot.organizationId,
+        record_type: "guarantor",
+        loan_id: loan.id,
+        client_id: loan.client_id,
+        guarantor_id: item.id,
+        guarantor_name: item.full_name,
+        guarantor_phone: item.phone,
+        guarantor_address: item.address,
+        guarantor_notes: item.notes,
+        guarantor_created_at: item.created_at,
+      });
+      for (const item of schedule) append({
+        organization_id: item.organization_id || loan.organization_id || app.snapshot.organizationId,
+        record_type: "schedule",
+        loan_id: loan.id,
+        client_id: loan.client_id,
+        schedule_id: item.id,
+        schedule_number: item.sequence_number,
+        schedule_due_date: item.due_date,
+        schedule_amount: item.amount,
+        schedule_status: item.status,
+        schedule_paid_amount: item.paid_amount,
+        schedule_paid_at: item.paid_at,
+        schedule_receipt_path: item.receipt_path,
+      });
+      for (const item of payments) append({
+        organization_id: item.organization_id || loan.organization_id || app.snapshot.organizationId,
+        record_type: "payment",
+        loan_id: loan.id,
+        client_id: loan.client_id,
+        payment_id: item.id,
+        payment_schedule_id: item.schedule_id,
+        payment_paid_at: item.paid_at,
+        payment_amount: item.amount,
+        payment_method: item.method,
+        payment_notes: item.notes,
+        payment_receipt_path: item.receipt_path,
+        payment_idempotency_key: item.idempotency_key,
       });
     }
 
@@ -581,13 +607,42 @@
       const guarantors = app.snapshot.guarantors.filter((item) => item.loan_id === loanId);
       const schedules = app.snapshot.schedules.filter((item) => item.loan_id === loanId).sort((a, b) => a.sequence_number - b.sequence_number);
       const payments = app.snapshot.payments.filter((item) => item.loan_id === loanId).sort((a, b) => String(a.paid_at || "").localeCompare(String(b.paid_at || "")));
-      append({
-        organization_id: app.snapshot.organizationId,
-        record_type: "orphan loan details",
+      for (const item of guarantors) append({
+        organization_id: item.organization_id || app.snapshot.organizationId,
+        record_type: "orphan_guarantor",
         loan_id: loanId,
-        guarantors: detailRows(guarantors, guarantorFields),
-        schedules: detailRows(schedules, scheduleFields),
-        payments: detailRows(payments, paymentFields),
+        guarantor_id: item.id,
+        guarantor_name: item.full_name,
+        guarantor_phone: item.phone,
+        guarantor_address: item.address,
+        guarantor_notes: item.notes,
+        guarantor_created_at: item.created_at,
+      });
+      for (const item of schedules) append({
+        organization_id: item.organization_id || app.snapshot.organizationId,
+        record_type: "orphan_schedule",
+        loan_id: loanId,
+        schedule_id: item.id,
+        schedule_number: item.sequence_number,
+        schedule_due_date: item.due_date,
+        schedule_amount: item.amount,
+        schedule_status: item.status,
+        schedule_paid_amount: item.paid_amount,
+        schedule_paid_at: item.paid_at,
+        schedule_receipt_path: item.receipt_path,
+      });
+      for (const item of payments) append({
+        organization_id: item.organization_id || app.snapshot.organizationId,
+        record_type: "orphan_payment",
+        loan_id: loanId,
+        payment_id: item.id,
+        payment_schedule_id: item.schedule_id,
+        payment_paid_at: item.paid_at,
+        payment_amount: item.amount,
+        payment_method: item.method,
+        payment_notes: item.notes,
+        payment_receipt_path: item.receipt_path,
+        payment_idempotency_key: item.idempotency_key,
       });
     }
     downloadOfflineCsv("rassrochki_full.csv", rows);
@@ -642,7 +697,9 @@
   }
 
   function dependenciesForClient(clientId) {
-    return app.operations.filter((operation) => clientIdForOperation(operation) === clientId).map((operation) => operation.id);
+    return app.operations
+      .filter((operation) => operation.state !== "conflict" && clientIdForOperation(operation) === clientId)
+      .map((operation) => operation.id);
   }
 
   function clientHasConflict(clientId) {
@@ -1177,16 +1234,14 @@
       if (action === "toggle-blacklist" && clientId) {
         const client = app.snapshot.clients.find((item) => item.id === clientId);
         if (!client) return;
-        const dependencies = app.operations.filter((item) => item.state !== "conflict" && (item.command?.payload?.client?.id === clientId || item.command?.payload?.clientId === clientId)).map((item) => item.id);
-        await enqueue({ type: "client.blacklist", payload: { clientId, expectedVersion: Number(client.offline_version || 1), isBlacklisted: !client.is_blacklisted, blacklistNote: null } }, dependencies);
+        await enqueue({ type: "client.blacklist", payload: { clientId, expectedVersion: Number(client.offline_version || 1), isBlacklisted: !client.is_blacklisted, blacklistNote: null } }, dependenciesForClient(clientId));
         return;
       }
       if (action === "delete-client" && clientId) {
         const client = app.snapshot.clients.find((item) => item.id === clientId);
         if (!client || app.snapshot.loans.some((loan) => loan.client_id === clientId)) return;
         if (!window.confirm(`Удалить клиента «${client.full_name}» с этого устройства и при синхронизации?`)) return;
-        const dependencies = app.operations.filter((item) => item.state !== "conflict" && (item.command?.payload?.client?.id === clientId || item.command?.payload?.clientId === clientId || item.command?.payload?.loan?.client_id === clientId)).map((item) => item.id);
-        await enqueue({ type: "client.delete", payload: { clientId, expectedVersion: Number(client.offline_version || 1) } }, dependencies);
+        await enqueue({ type: "client.delete", payload: { clientId, expectedVersion: Number(client.offline_version || 1) } }, dependenciesForClient(clientId));
         return;
       }
       if (action === "delete-loan" && loanId) {
