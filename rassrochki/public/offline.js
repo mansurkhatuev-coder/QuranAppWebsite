@@ -4,7 +4,7 @@
   const DB_NAME = "rassrochki-offline-v1";
   const ACTIVE_ACCOUNT_KEY = "rassrochki:offline-account";
   const PAYMENT_ROUNDING_STEP = 100;
-  const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, clientId: null, form: null, syncError: null };
+  const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, clientId: null, cashType: null, form: null, syncError: null };
   const content = document.getElementById("content");
   const syncInfo = document.getElementById("sync-info");
   const syncState = document.getElementById("sync-state");
@@ -158,6 +158,7 @@
 
   function projectPendingOperations() {
     const snapshot = structuredClone(app.baseSnapshot);
+    snapshot.cash_transactions = Array.isArray(snapshot.cash_transactions) ? snapshot.cash_transactions : [];
     for (const operation of orderQueuedOperations(app.operations)) {
       const payload = operation.command?.payload || {};
       if (operation.userId !== snapshot.userId || operation.organizationId !== snapshot.organizationId) continue;
@@ -198,7 +199,7 @@
         case "payment.record": {
           const payment = payload.payment;
           if (!payment?.id || snapshot.payments.some((row) => row.idempotency_key === operation.id)) break;
-          snapshot.payments.push({ ...payment, idempotency_key: operation.id });
+          snapshot.payments.push({ ...payment, cash_recorded_at: payment.cash_recorded_at || operation.createdAt, idempotency_key: operation.id });
           let remaining = Number(payment.amount);
           const rows = snapshot.schedules.filter((row) => row.loan_id === payment.loan_id).sort((a, b) => a.sequence_number - b.sequence_number);
           const start = rows.findIndex((row) => row.id === (payload.scheduleId || payment.schedule_id));
@@ -212,6 +213,20 @@
             snapshot.schedules = snapshot.schedules.map((item) => item.id === row.id ? { ...item, paid_amount: totalPaid, paid_at: payment.paid_at, status: totalPaid + 0.009 >= Number(item.amount) ? "paid" : item.status } : item);
           }
           snapshot.loans = snapshot.loans.map((loan) => loan.id === payment.loan_id ? { ...loan, offline_version: Number(loan.offline_version || 1) + 1 } : loan);
+          break;
+        }
+        case "cash.transaction.create": {
+          const transaction = payload.transaction;
+          if (transaction?.id && !snapshot.cash_transactions.some((item) => item.id === transaction.id)) {
+            const investor = snapshot.investors.find((item) => item.id === transaction.investor_id);
+            snapshot.cash_transactions.push({
+              ...transaction,
+              operation_id: operation.id,
+              organization_id: app.account.organizationId,
+              created_at: operation.createdAt,
+              investors: investor ? { name: investor.name } : null,
+            });
+          }
           break;
         }
         case "loan.delete": {
@@ -295,6 +310,7 @@
     app.view = view;
     app.loanId = null;
     app.clientId = null;
+    app.cashType = null;
     app.form = null;
     render();
   }
@@ -304,15 +320,142 @@
     const activeLoans = snapshot.loans.filter((loan) => loan.status !== "closed").length;
     const paid = snapshot.payments.reduce((total, payment) => total + Number(payment.amount || 0), 0);
     const overdue = snapshot.schedules.filter((schedule) => schedule.status === "overdue").length;
+    const cash = getCashSummary();
     return `
       <div class="grid">
         <article class="card"><div class="muted">Клиенты</div><div class="stat">${snapshot.clients.length}</div></article>
         <article class="card"><div class="muted">Активные рассрочки</div><div class="stat">${activeLoans}</div></article>
         <article class="card"><div class="muted">Получено оплат</div><div class="stat">${text(money(paid))}</div></article>
+        <article class="card"><div class="muted">Остаток кассы</div><div class="stat">${cash.initialized ? text(money(cash.balance)) : "Не задан"}</div><div class="muted">${cash.initialized ? `За месяц +${text(money(cash.monthInflow))} · −${text(money(cash.monthOutflow))}` : '<button type="button" data-cash-type="opening_balance">Указать остаток</button>'}</div></article>
         <article class="card"><div class="muted">Просроченные платежи</div><div class="stat">${overdue}</div></article>
       </div>
       <article class="card"><h2>Ближайшие платежи</h2>${renderUpcoming()}</article>
     `;
+  }
+
+  const cashTypeLabels = {
+    opening_balance: "Начальный остаток",
+    deposit: "Пополнение",
+    owner_withdrawal: "Забрал с кассы",
+    expense: "Расход",
+    investor_contribution: "Вклад инвестора",
+    investor_return: "Возврат инвестору",
+  };
+
+  function getCashSummary() {
+    const snapshot = app.snapshot;
+    const transactions = Array.isArray(snapshot.cash_transactions) ? snapshot.cash_transactions : [];
+    const opening = transactions.find((item) => item.transaction_type === "opening_balance");
+    if (!opening) return { initialized: false, balance: 0, monthInflow: 0, monthOutflow: 0, entries: [] };
+    const start = Date.parse(opening.occurred_at) || 0;
+    const entries = [{
+      id: opening.id,
+      label: cashTypeLabels.opening_balance,
+      occurred_at: opening.occurred_at,
+      amount: Number(opening.amount) || 0,
+      direction: "opening",
+      details: "Начало учёта денег, уже находившихся в кассе и на счетах",
+      notes: opening.notes || null,
+    }];
+    const typeDirection = {
+      deposit: "in",
+      owner_withdrawal: "out",
+      expense: "out",
+      investor_contribution: "in",
+      investor_return: "out",
+    };
+    for (const item of transactions) {
+      if (item.id === opening.id || Date.parse(item.occurred_at) < start) continue;
+      const investor = item.investors || snapshot.investors.find((row) => row.id === item.investor_id);
+      const amount = Number(item.amount) || 0;
+      const direction = typeDirection[item.transaction_type] || "in";
+      entries.push({
+        id: item.id,
+        label: cashTypeLabels[item.transaction_type] || "Операция кассы",
+        occurred_at: item.occurred_at,
+        amount,
+        direction,
+        signed_amount: direction === "in" ? amount : -amount,
+        details: investor ? `Инвестор: ${investor.name}` : item.transaction_type === "deposit" ? "Дополнительное поступление" : "",
+        notes: item.notes || null,
+      });
+    }
+    const loansById = new Map(snapshot.loans.map((loan) => [loan.id, loan]));
+    for (const loan of snapshot.loans) {
+      const recordedAt = loan.down_payment_recorded_at || loan.created_at;
+      if ((Date.parse(recordedAt) || 0) < start || Number(loan.down_payment || 0) <= 0) continue;
+      const name = relatedName(loan.clients) || loan.title || "Рассрочка";
+      entries.push({ id: `down-payment:${loan.id}`, label: "Первоначальный взнос", occurred_at: recordedAt, amount: Number(loan.down_payment), direction: "in", signed_amount: Number(loan.down_payment), details: name, notes: null });
+    }
+    for (const payment of snapshot.payments) {
+      const recordedAt = payment.cash_recorded_at || payment.paid_at;
+      if ((Date.parse(recordedAt) || 0) < start || !loansById.has(payment.loan_id) || Number(payment.amount) <= 0) continue;
+      const loan = loansById.get(payment.loan_id);
+      entries.push({
+        id: `payment:${payment.id}`,
+        label: "Оплата по рассрочке",
+        occurred_at: recordedAt,
+        amount: Number(payment.amount),
+        direction: "in",
+        signed_amount: Number(payment.amount),
+        details: relatedName(loan.clients) || loan.title || "Рассрочка",
+        notes: payment.notes || null,
+      });
+    }
+    entries.sort((a, b) => Date.parse(b.occurred_at) - Date.parse(a.occurred_at) || a.id.localeCompare(b.id));
+    const now = new Date();
+    const thisMonth = (entry) => {
+      const dateValue = new Date(entry.occurred_at);
+      return dateValue.getFullYear() === now.getFullYear() && dateValue.getMonth() === now.getMonth();
+    };
+    const monthInflow = entries.filter((item) => item.direction === "in" && thisMonth(item)).reduce((sum, item) => sum + item.amount, 0);
+    const monthOutflow = entries.filter((item) => item.direction === "out" && thisMonth(item)).reduce((sum, item) => sum + item.amount, 0);
+    return {
+      initialized: true,
+      balance: Math.round((Number(opening.amount) + entries.reduce((sum, item) => sum + Number(item.signed_amount || 0), 0)) * 100) / 100,
+      monthInflow: Math.round(monthInflow * 100) / 100,
+      monthOutflow: Math.round(monthOutflow * 100) / 100,
+      entries,
+    };
+  }
+
+  function renderCashForm(type) {
+    const opening = type === "opening_balance";
+    const needsInvestor = type === "investor_contribution" || type === "investor_return";
+    return `<article class="card"><form data-form="cash-entry" data-type="${text(type)}" class="form-grid">
+      <div class="field full"><h2>${text(cashTypeLabels[type] || "Операция кассы")}</h2>${opening ? '<p class="muted">Старые оплаты уже входят в этот остаток и повторно не прибавятся.</p>' : ""}</div>
+      <label class="field">Сумма, ${text(app.snapshot.settings?.currency || "RUB")}<input name="amount" type="number" min="${opening ? "0" : "0.01"}" step="0.01" required></label>
+      ${needsInvestor ? `<label class="field">Инвестор<select name="investor_id" required><option value="">Выберите инвестора</option>${app.snapshot.investors.map((item) => `<option value="${text(item.id)}">${text(item.name)}</option>`).join("")}</select></label>` : ""}
+      <label class="field full">Комментарий (необязательно)<textarea name="notes" maxlength="1000" placeholder="${type === "expense" ? "На что потрачено" : type === "owner_withdrawal" ? "Зачем забрали" : ""}"></textarea></label>
+      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить</button></div>
+    </form></article>`;
+  }
+
+  function renderCash() {
+    const summary = getCashSummary();
+    if (!summary.initialized) {
+      return `<article class="card" style="max-width:680px;border-top:4px solid #0f766e"><div class="muted">Начало учёта</div><h2>Сколько денег уже есть?</h2><p class="muted">Укажите общий остаток наличных и на счетах. Старые оплаты уже входят в него и повторно не прибавятся. Новые оплаты и взносы клиентов будут записываться автоматически.</p>${app.form === "cash-entry" ? renderCashForm("opening_balance") : '<button type="button" class="primary" data-cash-type="opening_balance">Указать остаток</button>'}</article>`;
+    }
+    const types = [
+      ["deposit", "Пополнить"],
+      ["investor_contribution", "Вклад инвестора"],
+      ["owner_withdrawal", "Забрал с кассы"],
+      ["expense", "Расход"],
+      ["investor_return", "Возврат инвестору"],
+    ];
+    const entries = summary.entries.length ? `<div class="list">${summary.entries.map((item) => {
+      const operation = app.operations.find((row) => row.command?.type === "cash.transaction.create" && row.command.payload?.transaction?.id === item.id);
+      const sign = item.direction === "in" ? "+" : item.direction === "out" ? "−" : "";
+      const tone = item.direction === "in" ? 'style="color:#166534"' : item.direction === "out" ? 'style="color:#b91c1c"' : "";
+      return `<div class="row"><div><strong>${text(item.label)}</strong>${item.details ? `<div class="muted">${text(item.details)}</div>` : ""}${item.notes ? `<div>${text(item.notes)}</div>` : ""}<div class="muted">${date(item.occurred_at)}${operation ? ' · <span class="badge pending">Ожидает отправки</span>' : ""}</div></div><strong ${tone}>${item.direction === "opening" ? text(money(item.amount)) : `${sign}${text(money(item.amount))}`}</strong></div>`;
+    }).join("")}</div>` : '<p class="muted">Операций пока нет.</p>';
+    return `<div class="grid">
+      <article class="card" style="grid-column:1/-1;background:#0f172a;color:white"><div style="color:#ccfbf1">Деньги в кассе и на счетах</div><div class="stat">${text(money(summary.balance))}</div><div class="muted" style="color:#cbd5e1">За месяц поступило ${text(money(summary.monthInflow))} · снятия и расходы ${text(money(summary.monthOutflow))}</div></article>
+      <article class="card"><div class="muted">Поступления за месяц</div><div class="stat">${text(money(summary.monthInflow))}</div></article>
+      <article class="card"><div class="muted">Расходы и изъятия за месяц</div><div class="stat">${text(money(summary.monthOutflow))}</div><div class="muted">Чистое движение ${text(money(summary.monthInflow - summary.monthOutflow))}</div></article>
+    </div>
+    <article class="card"><h2>Добавить движение</h2><p class="muted">Вклады инвестора и возвраты не являются прибылью.</p><div class="actions" style="justify-content:flex-start">${types.map(([type, label]) => `<button type="button" data-cash-type="${type}">${label}</button>`).join("")}</div>${app.form === "cash-entry" ? renderCashForm(app.cashType || "deposit") : ""}</article>
+    <article class="card"><h2>История кассы</h2><p class="muted">Учёт начат ${date(summary.entries.find((item) => item.direction === "opening")?.occurred_at)} · ${summary.entries.length} операций</p>${entries}</article>`;
   }
 
   function renderUpcoming() {
@@ -963,6 +1106,44 @@
     if (!(form instanceof HTMLFormElement) || !form.dataset.form) return;
     event.preventDefault();
     try {
+      if (form.dataset.form === "cash-entry") {
+        const type = form.dataset.type;
+        const allowed = ["opening_balance", "deposit", "owner_withdrawal", "expense", "investor_contribution", "investor_return"];
+        if (!allowed.includes(type)) throw new Error("Неизвестный тип кассовой операции.");
+        if (type === "opening_balance" && app.snapshot.cash_transactions.some((item) => item.transaction_type === "opening_balance")) {
+          throw new Error("Начальный остаток уже задан.");
+        }
+        const values = new FormData(form);
+        const amountText = String(values.get("amount") || "").trim();
+        const amount = Number(amountText);
+        if (!amountText || !Number.isFinite(amount) || amount < 0 || (type !== "opening_balance" && amount <= 0)) {
+          throw new Error(type === "opening_balance" ? "Введите остаток не меньше нуля." : "Введите сумму больше нуля.");
+        }
+        if (type === "opening_balance" && !window.confirm(`Установить начальный остаток ${money(amount)}? Его нельзя будет задать повторно.`)) return;
+        const investorId = String(values.get("investor_id") || "").trim() || null;
+        const needsInvestor = type === "investor_contribution" || type === "investor_return";
+        if (needsInvestor && !app.snapshot.investors.some((item) => item.id === investorId)) throw new Error("Выберите инвестора из сохранённого списка.");
+        const notes = String(values.get("notes") || "").trim() || null;
+        await enqueue({
+          type: "cash.transaction.create",
+          payload: {
+            transaction: {
+              id: crypto.randomUUID(),
+              transaction_type: type,
+              amount: Math.round(amount * 100) / 100,
+              occurred_at: new Date().toISOString(),
+              investor_id: investorId,
+              notes,
+            },
+          },
+        });
+        app.cashType = null;
+        app.form = null;
+        app.view = "cash";
+        render();
+        return;
+      }
+
       if (form.dataset.form === "client-address-edit") {
         const clientId = form.dataset.clientId;
         const client = app.snapshot.clients.find((item) => item.id === clientId);
@@ -1091,6 +1272,7 @@
           schedule_id: scheduleId,
           amount: Math.round(amount * 100) / 100,
           paid_at: new Date(`${values.get("paid_at")}T12:00:00`).toISOString(),
+          cash_recorded_at: new Date().toISOString(),
           method: receipt ? "transfer_with_receipt" : "manual",
           notes: String(values.get("notes") || "").trim() || null,
           receipt_path: null,
@@ -1163,6 +1345,14 @@
   async function handleOfflineClick(event) {
     const target = event.target;
     if (!(target instanceof Element)) return;
+    const cashTypeButton = target.closest("[data-cash-type]");
+    if (cashTypeButton) {
+      app.cashType = cashTypeButton.getAttribute("data-cash-type");
+      app.form = "cash-entry";
+      app.view = "cash";
+      render();
+      return;
+    }
     const loanFilterButton = target.closest("[data-loan-filter]");
     if (loanFilterButton) {
       app.loanFilter = loanFilterButton.getAttribute("data-loan-filter") || "all";
@@ -1184,6 +1374,7 @@
       }
       if (action === "cancel-form") {
         app.clientId = null;
+        app.cashType = null;
         app.form = null;
         render();
         return;
@@ -1292,7 +1483,8 @@
     document.querySelectorAll("nav [data-view]").forEach((button) => {
       button.setAttribute("aria-current", button.dataset.view === app.view ? "page" : "false");
     });
-    if (app.form === "client-create") content.innerHTML = renderClientForm();
+    if (app.form === "cash-entry") content.innerHTML = renderCash();
+    else if (app.form === "client-create") content.innerHTML = renderClientForm();
     else if (app.form === "client-address-edit") content.innerHTML = renderClientAddressForm(app.clientId);
     else if (app.form === "loan-create") content.innerHTML = renderLoanForm();
     else if (app.form === "loan-edit") content.innerHTML = renderLoanForm(app.loanId);
@@ -1301,6 +1493,8 @@
       ? renderDashboard()
       : app.view === "clients"
         ? renderClients()
+        : app.view === "cash"
+          ? renderCash()
         : app.loanId
           ? renderLoanDetails()
           : renderLoans();

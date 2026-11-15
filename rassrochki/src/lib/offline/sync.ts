@@ -23,6 +23,7 @@ const SYNCABLE_COMMANDS = new Set([
   "loan.create",
   "loan.edit",
   "payment.record",
+  "cash.transaction.create",
   "loan.delete",
 ]);
 

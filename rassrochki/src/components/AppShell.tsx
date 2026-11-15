@@ -13,6 +13,7 @@ const links = [
   { href: "/dashboard", label: "Главная" },
   { href: "/clients", label: "Клиенты" },
   { href: "/loans", label: "Рассрочки" },
+  { href: "/cash", label: "Касса" },
   { href: "/settings", label: "Настройки" },
 ];
 
