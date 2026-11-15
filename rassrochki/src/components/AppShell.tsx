@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import type { MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PageFade } from "@/components/PageFade";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
@@ -34,6 +35,35 @@ export function AppShell({
 }) {
   const pathname = usePathname();
   const router = useRouter();
+
+  function openOfflineWorkspace(event: MouseEvent<HTMLDivElement>) {
+    if (
+      navigator.onLine ||
+      event.defaultPrevented ||
+      event.button !== 0 ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey
+    ) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Element)) return;
+    const link = target.closest<HTMLAnchorElement>("a[href]");
+    if (!link || link.target === "_blank" || link.hasAttribute("download")) return;
+
+    const destination = new URL(link.href, window.location.href);
+    if (destination.origin !== window.location.origin || destination.pathname === "/offline.html") {
+      return;
+    }
+
+    // Next.js client transitions request server data; the service worker only
+    // falls back to the local workspace for document navigations.
+    event.preventDefault();
+    window.location.replace("/offline.html");
+  }
 
   async function logout() {
     let queuedCount = 0;
@@ -86,7 +116,7 @@ export function AppShell({
   }
 
   return (
-    <div className="min-h-screen">
+    <div className="min-h-screen" onClickCapture={openOfflineWorkspace}>
       <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
           <div>
