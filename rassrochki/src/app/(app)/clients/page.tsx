@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { EmptyState } from "@/components/ui";
 import { ClientsTable } from "@/components/ClientsTable";
-import { BackLink } from "@/components/BackLink";
 import { createClient, getSessionProfile } from "@/lib/supabase/server";
 
 export default async function ClientsPage() {
@@ -15,7 +14,6 @@ export default async function ClientsPage() {
 
   return (
     <div className="space-y-4">
-      <BackLink href="/dashboard" label="На главную" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Клиенты</h1>
