@@ -1,13 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { calculateRoundedLoanTerms, PAYMENT_ROUNDING_STEPS } from "@/lib/rounded-loan";
+import { calculateRoundedLoanTerms, PAYMENT_ROUNDING_STEP } from "@/lib/rounded-loan";
 
-describe("payment rounding choices", () => {
-  it("offers whole rubles, ten rubles, and hundred rubles", () => {
-    expect(PAYMENT_ROUNDING_STEPS).toEqual([1, 10, 100]);
-  });
+describe("fixed payment rounding", () => {
+  it("always rounds a 270 ruble payment to 300 by default", () => {
+    expect(PAYMENT_ROUNDING_STEP).toBe(100);
 
-  it("rounds a 270 ruble payment to 300 at the hundred-ruble step", () => {
-    const result = calculateRoundedLoanTerms(270, 0, 0, 1, undefined, 100);
+    const result = calculateRoundedLoanTerms(270, 0, 0, 1);
 
     expect(result.monthlyPayment).toBe(300);
     expect(result.principal).toBe(300);
@@ -18,25 +16,25 @@ describe("payment rounding choices", () => {
 });
 
 describe("calculateRoundedLoanTerms", () => {
-  it("rounds monthly payments to whole rubles and reports the actual markup", () => {
+  it("rounds monthly payments to hundreds of rubles and reports the actual markup", () => {
     expect(calculateRoundedLoanTerms(1_000, 30, 0, 12)).toEqual({
       targetPrincipal: 1_300,
       targetSchedulePrincipal: 1_300,
-      monthlyPayment: 108,
-      schedulePrincipal: 1_296,
-      principal: 1_296,
-      effectiveMarkupPercent: 29.6,
-      markupChangePercent: -0.4,
-      totalChange: -4,
+      monthlyPayment: 100,
+      schedulePrincipal: 1_200,
+      principal: 1_200,
+      effectiveMarkupPercent: 20,
+      markupChangePercent: -10,
+      totalChange: -100,
     });
   });
 
-  it("includes the down payment in the effective rate and rounds a manual payment", () => {
+  it("includes the down payment in the effective rate and rounds a manual payment to hundreds", () => {
     const result = calculateRoundedLoanTerms(10_000, 30, 1_000, 3, 4_333.4);
-    expect(result.monthlyPayment).toBe(4_333);
-    expect(result.schedulePrincipal).toBe(12_999);
-    expect(result.principal).toBe(13_999);
-    expect(result.effectiveMarkupPercent).toBe(39.99);
+    expect(result.monthlyPayment).toBe(4_300);
+    expect(result.schedulePrincipal).toBe(12_900);
+    expect(result.principal).toBe(13_900);
+    expect(result.effectiveMarkupPercent).toBe(39);
   });
 
   it("does not add monthly payments when the down payment covers the total", () => {

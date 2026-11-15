@@ -3,6 +3,7 @@
 
   const DB_NAME = "rassrochki-offline-v1";
   const ACTIVE_ACCOUNT_KEY = "rassrochki:offline-account";
+  const PAYMENT_ROUNDING_STEP = 100;
   const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, clientId: null, form: null, syncError: null };
   const content = document.getElementById("content");
   const syncInfo = document.getElementById("sync-info");
@@ -739,7 +740,7 @@
       <label class="field">Первоначальный взнос<input name="down_payment" type="number" min="0" step="0.01" value="${value("down_payment", "0")}"></label>
       <label class="field">Срок, месяцев<input name="term_months" type="number" min="1" max="120" step="1" required value="${value("term_months", app.snapshot.settings?.default_term_months || 6)}"></label>
       <label class="field">Начало рассрочки<input name="start_date" type="date" required value="${value("start_date", new Date().toISOString().slice(0, 10))}"></label>
-      <label class="field">Округлять платёж до<select name="rounding_step"><option value="1">1 ₽</option><option value="10">10 ₽</option><option value="100">100 ₽</option></select></label>
+      <p class="field full muted">Ежемесячный платёж округляется до ближайших 100 ₽.</p>
       <label class="field">Платёж в месяц (0 — автоматически)<input name="monthly_payment" type="number" min="0" step="0.01" value="${value("monthly_payment", "0")}"></label>
       <label class="field">Инвестор<select name="investor_id"><option value="">Без инвестора</option>${app.snapshot.investors.map((investor) => `<option value="${text(investor.id)}" ${investor.id === loan?.investor_id ? "selected" : ""}>${text(investor.name)}</option>`).join("")}</select></label>
       <label class="field">Вложение инвестора<input name="investor_amount" type="number" min="0" step="0.01" value="${value("investor_amount")}"></label>
@@ -881,7 +882,7 @@
     }
     if (targetScheduled <= 0.009) throw new Error("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
     const monthlyInput = number("monthly_payment");
-    const roundingStep = Math.max(1, number("rounding_step", 1));
+    const roundingStep = PAYMENT_ROUNDING_STEP;
     const monthlyPayment = Math.max(roundingStep, Math.round((monthlyInput > 0 ? monthlyInput : targetScheduled / termMonths) / roundingStep) * roundingStep);
     const scheduled = Math.round(monthlyPayment * termMonths * 100) / 100;
     const principal = Math.round((scheduled + downPayment) * 100) / 100;
@@ -930,7 +931,7 @@
         : Number(principal.value) || 0;
     const targetScheduled = Math.max(0, target - down);
     const inputMonthly = Number(data.get("monthly_payment")) || 0;
-    const roundingStep = Math.max(1, Number(data.get("rounding_step")) || 1);
+    const roundingStep = PAYMENT_ROUNDING_STEP;
     const monthly = months > 0 ? Math.max(roundingStep, Math.round((inputMonthly > 0 ? inputMonthly : targetScheduled / months) / roundingStep) * roundingStep) : 0;
     const total = months > 0 ? Math.round((down + monthly * months) * 100) / 100 : target;
     if (months > 0 && (cost > 0 || form.dataset.form === "loan-edit")) principal.value = String(total);
@@ -1480,11 +1481,6 @@
       const target = event.target;
       if (target instanceof HTMLInputElement && ["cost_amount", "markup_percent", "down_payment", "term_months", "monthly_payment"].includes(target.name)) updateLoanEstimate(target.form);
     });
-    content.addEventListener("change", (event) => {
-      const target = event.target;
-      if (target instanceof HTMLSelectElement && target.name === "rounding_step") updateLoanEstimate(target.form);
-    });
-
     try {
       const { snapshot, operations, account, db } = await loadAccount();
       db.close();
