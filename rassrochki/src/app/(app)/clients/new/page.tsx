@@ -2,14 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useState } from "react";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 import { DraftIndicator } from "@/components/ui";
 import { BackLink } from "@/components/BackLink";
 import { PhoneInput } from "@/components/PhoneInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { useDraft } from "@/hooks/useDraft";
-import { createClient } from "@/lib/supabase/client";
 import { Spinner } from "@/components/Spinner";
-import { friendlyError } from "@/lib/friendly";
 import { PassportNameScan } from "@/components/PassportNameScan";
 
 type ClientDraft = {
@@ -22,6 +21,7 @@ const initial: ClientDraft = { full_name: "", phone: "", notes: "" };
 
 export default function NewClientPage() {
   const router = useRouter();
+  const { organizationId, enqueueCommand } = useOfflineWorkspace();
   const { value, setValue, status, clearDraft } = useDraft<ClientDraft>("draft:new-client", initial);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,42 +30,26 @@ export default function NewClientPage() {
     e.preventDefault();
     setLoading(true);
     setError(null);
-    const supabase = createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
-    if (!user) {
-      setError("Войдите в аккаунт");
+    try {
+      const client = {
+        id: crypto.randomUUID(),
+        organization_id: organizationId,
+        full_name: value.full_name.trim(),
+        phone: value.phone.trim() || null,
+        notes: value.notes.trim() || null,
+        is_blacklisted: false,
+        blacklist_note: null,
+        created_at: new Date().toISOString(),
+        offline_version: 1,
+      };
+      await enqueueCommand({ type: "client.create", payload: { client } });
+      clearDraft();
+      router.push("/clients");
+    } catch {
+      setError("Не удалось сохранить клиента на этом устройстве. Проверьте свободное место и повторите.");
+    } finally {
       setLoading(false);
-      return;
     }
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("organization_id")
-      .eq("id", user.id)
-      .single();
-    if (!profile) {
-      setError("Не удалось продолжить. Выйдите и войдите снова");
-      setLoading(false);
-      return;
-    }
-
-    const { error: insertError } = await supabase.from("clients").insert({
-      full_name: value.full_name.trim(),
-      phone: value.phone.trim() || null,
-      notes: value.notes.trim() || null,
-      organization_id: profile.organization_id,
-      is_blacklisted: false,
-    });
-
-    setLoading(false);
-    if (insertError) {
-      setError(friendlyError("Не удалось сохранить клиента", insertError));
-      return;
-    }
-    clearDraft();
-    router.push("/clients");
-    router.refresh();
   }
 
   return (

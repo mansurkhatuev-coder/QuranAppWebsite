@@ -1,19 +1,61 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState } from "react";
 import { getOfflineStore } from "@/lib/offline/db";
+import { applyPendingOperations } from "@/lib/offline/model";
 import { parseSnapshotEnvelope } from "@/lib/offline/snapshot";
+import { getOfflineStatus } from "@/lib/offline/status";
 import { syncOfflineQueue } from "@/lib/offline/sync";
 import { createClient } from "@/lib/supabase/client";
+import type { OfflineCommand, OfflineOperation, OfflineSnapshot } from "@/lib/offline/types";
 
 const ACTIVE_ACCOUNT_KEY = "rassrochki:offline-account";
 
 type OfflineBootstrapProps = {
   userId: string;
   organizationId: string;
+  children: React.ReactNode;
 };
 
-export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapProps) {
+type OfflineEnqueueOptions = {
+  id?: string;
+  receipt?: File;
+};
+
+type OfflineWorkspaceValue = {
+  userId: string;
+  organizationId: string;
+  snapshot: OfflineSnapshot | null;
+  operations: OfflineOperation[];
+  loaded: boolean;
+  online: boolean | null;
+  syncing: boolean;
+  pendingCount: number;
+  conflictCount: number;
+  error: string | null;
+  storageMessage: string | null;
+  cachedAt: string | null;
+  refreshSnapshot: () => Promise<void>;
+  prepareOfflineAccess: () => Promise<void>;
+  enqueueCommand: (
+    command: OfflineCommand,
+    dependsOn?: string[],
+    options?: OfflineEnqueueOptions
+  ) => Promise<OfflineOperation>;
+};
+
+const OfflineWorkspaceContext = createContext<OfflineWorkspaceValue | null>(null);
+
+export function useOfflineWorkspace(): OfflineWorkspaceValue {
+  const value = useContext(OfflineWorkspaceContext);
+  if (!value) throw new Error("useOfflineWorkspace must be used inside OfflineBootstrap");
+  return value;
+}
+
+export function OfflineBootstrap({ userId, organizationId, children }: OfflineBootstrapProps) {
+  const [snapshot, setSnapshot] = useState<OfflineSnapshot | null>(null);
+  const [operations, setOperations] = useState<OfflineOperation[]>([]);
+  const [loaded, setLoaded] = useState(false);
   const [online, setOnline] = useState<boolean | null>(null);
   const [cachedAt, setCachedAt] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
@@ -31,9 +73,17 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
       store.getSnapshot(userId, organizationId),
       store.listOperations(userId, organizationId),
     ]);
-    setCachedAt(snapshot?.syncedAt ?? null);
-    setPendingCount(operations.filter((item) => item.state !== "conflict").length);
-    setConflictCount(operations.filter((item) => item.state === "conflict").length);
+    const accountSnapshot =
+      snapshot?.userId === userId && snapshot.organizationId === organizationId ? snapshot : null;
+    const accountOperations = operations.filter(
+      (item) => item.userId === userId && item.organizationId === organizationId
+    );
+    setSnapshot(accountSnapshot ? applyPendingOperations(accountSnapshot, accountOperations) : null);
+    setOperations(accountOperations);
+    setLoaded(true);
+    setCachedAt(accountSnapshot?.syncedAt ?? null);
+    setPendingCount(accountOperations.filter((item) => item.state !== "conflict").length);
+    setConflictCount(accountOperations.filter((item) => item.state === "conflict").length);
   }, [organizationId, userId]);
 
   const refreshSnapshot = useCallback(async () => {
@@ -157,7 +207,7 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
     };
   }, [organizationId, refreshLocalState, refreshSnapshot, userId]);
 
-  async function prepareOfflineAccess() {
+  const prepareOfflineAccess = useCallback(async () => {
     setStorageMessage(null);
     try {
       if (!navigator.storage?.persist) {
@@ -174,73 +224,126 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
       setStorageMessage("Не удалось закрепить хранилище браузера.");
     }
     await refreshSnapshot();
-  }
+  }, [refreshSnapshot]);
 
-  const statusLabel =
-    online === false
-      ? "Нет сети"
-      : syncing
-        ? "Обновление…"
-        : online === true
-          ? error
-            ? "Нет связи"
-            : "Онлайн"
-          : "Проверка";
-  const statusClass = online === false || error ? "badge-yellow" : "badge-green";
-  const cachedLabel = cachedAt
-    ? new Date(cachedAt).toLocaleString("ru-RU", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      })
-    : "копии нет";
+  const enqueueCommand = useCallback(
+    async (
+      command: OfflineCommand,
+      dependsOn: string[] = [],
+      options: OfflineEnqueueOptions = {}
+    ) => {
+      const operation: OfflineOperation = {
+        id: options.id ?? crypto.randomUUID(),
+        userId,
+        organizationId,
+        createdAt: new Date().toISOString(),
+        dependsOn,
+        command,
+        state: "pending",
+        attempts: 0,
+        lastError: null,
+      };
+      const store = getOfflineStore();
+      await store.enqueue(operation);
+      if (options.receipt) {
+        try {
+          await store.putReceipt(
+            operation.id,
+            userId,
+            organizationId,
+            options.receipt,
+            options.receipt.name || "receipt.jpg"
+          );
+        } catch (receiptError) {
+          await store.removeOperation(operation.id, userId, organizationId);
+          throw receiptError;
+        }
+      }
+      window.dispatchEvent(new Event("rassrochki:offline-queue-changed"));
+      await refreshLocalState();
+      if (navigator.onLine) void refreshSnapshot();
+      return operation;
+    },
+    [organizationId, refreshLocalState, refreshSnapshot, userId]
+  );
+
+  const value: OfflineWorkspaceValue = {
+    userId,
+    organizationId,
+    snapshot,
+    operations,
+    loaded,
+    online,
+    syncing,
+    pendingCount,
+    conflictCount,
+    error,
+    storageMessage,
+    cachedAt,
+    refreshSnapshot,
+    prepareOfflineAccess,
+    enqueueCommand,
+  };
+
+  return <OfflineWorkspaceContext.Provider value={value}>{children}</OfflineWorkspaceContext.Provider>;
+}
+
+export function OfflineStatus() {
+  const {
+    online,
+    syncing,
+    cachedAt,
+    pendingCount,
+    conflictCount,
+    error,
+    storageMessage,
+    prepareOfflineAccess,
+  } = useOfflineWorkspace();
+
+  const status = getOfflineStatus({
+    online,
+    syncing,
+    cachedAt,
+    pendingCount,
+    conflictCount,
+    hasError: Boolean(error),
+  });
+  const statusClass =
+    status.tone === "success"
+      ? "badge-green"
+      : status.tone === "danger"
+        ? "badge-red"
+        : status.tone === "warning"
+          ? "badge-yellow"
+          : "bg-slate-100 text-slate-600";
+  const actionLabel = pendingCount > 0 ? "Отправить изменения" : "Обновить копию";
 
   return (
-    <section
-      className="rounded-xl border border-[var(--border)] bg-white px-3 py-2 text-xs text-slate-700"
-      aria-live="polite"
-    >
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={statusClass}>{statusLabel}</span>
-          <span className="text-[var(--muted)]" title={cachedAt ? new Date(cachedAt).toLocaleString("ru-RU") : undefined}>
-            Копия {cachedLabel}
-          </span>
-          {(pendingCount > 0 || conflictCount > 0) && (
-            <>
-              {pendingCount > 0 && <span className="badge-yellow">В очереди {pendingCount}</span>}
-              {conflictCount > 0 && <span className="badge-red">Конфликты {conflictCount}</span>}
-            </>
-          )}
-        </div>
-        <div className="flex shrink-0 gap-1.5">
-          <button
-            type="button"
-            className="btn-secondary px-2.5 py-1.5 text-xs"
-            onClick={prepareOfflineAccess}
-            disabled={online !== true || syncing}
-            title={pendingCount > 0 ? "Отправить изменения и обновить копию" : "Обновить офлайн-копию"}
-          >
-            {syncing ? "…" : pendingCount > 0 ? "Отправить" : "Обновить"}
-          </button>
-          <a
-            href="/offline.html"
-            className="btn-secondary px-2.5 py-1.5 text-xs"
-            title="Открыть автономное рабочее место"
-          >
-            Офлайн
-          </a>
-        </div>
-      </div>
+    <div className="flex min-w-0 items-center gap-1.5 text-[11px] sm:text-xs" aria-live="polite">
+      <span
+        className={`${statusClass} max-w-[10rem] truncate sm:max-w-none`}
+        title={cachedAt ? `${status.label}. Последняя копия: ${new Date(cachedAt).toLocaleString("ru-RU")}` : status.label}
+      >
+        {status.label}
+      </span>
+      <button
+        type="button"
+        className="inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-lg text-base text-slate-600 transition hover:bg-slate-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600 disabled:cursor-not-allowed disabled:opacity-50"
+        onClick={prepareOfflineAccess}
+        disabled={online !== true || syncing}
+        title={actionLabel}
+        aria-label={actionLabel}
+      >
+        {syncing ? "…" : "↻"}
+      </button>
       {(error || storageMessage) && (
-        <details className="mt-1 text-xs text-[var(--muted)]">
-          <summary className="w-fit cursor-pointer">
-            {error ? "Проблема синхронизации" : "Хранилище устройства"}
-          </summary>
-          <p className="mt-1">{error || storageMessage}</p>
+        <details className="shrink-0 text-xs text-[var(--muted)]">
+          <summary className="cursor-pointer rounded px-1 py-1">Подробнее</summary>
+          <p className="absolute z-30 mt-1 max-w-xs rounded-lg border border-[var(--border)] bg-white p-2 shadow-lg">
+            {error || storageMessage}
+          </p>
         </details>
       )}
-    </section>
+    </div>
   );
 }

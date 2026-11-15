@@ -1,19 +1,19 @@
 "use client";
 
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 import type { Client } from "@/types/database";
-import { createClient } from "@/lib/supabase/client";
-import { friendlyError } from "@/lib/friendly";
 import { formatDateShort } from "@/lib/utils";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 
 export function ClientsTable({ clients: initial }: { clients: Client[] }) {
-  const router = useRouter();
+  const { snapshot, operations, enqueueCommand } = useOfflineWorkspace();
   const [clients, setClients] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => setClients(initial), [initial]);
 
   async function toggleBlacklist(client: Client) {
     const next = !client.is_blacklisted;
@@ -26,31 +26,39 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
 
     setBusyId(client.id);
     setError(null);
-    const supabase = createClient();
     const note = next ? (noteDraft[client.id] ?? client.blacklist_note ?? "").trim() || null : null;
-
-    const { data, error: updateError } = await supabase
-      .from("clients")
-      .update({
-        is_blacklisted: next,
-        blacklist_note: note,
-      })
-      .eq("id", client.id)
-      .select("*")
-      .single();
-
-    setBusyId(null);
-    if (updateError || !data) {
-      setError(
-        next
-          ? "Не удалось добавить в чёрный список"
-          : "Не удалось убрать из чёрного списка"
+    try {
+      const dependencies = operations
+        .filter(
+          (operation) =>
+            operation.state !== "conflict" &&
+            (operation.command.payload.client as { id?: string } | undefined)?.id === client.id
+        )
+        .map((operation) => operation.id);
+      await enqueueCommand(
+        {
+          type: "client.blacklist",
+          payload: {
+            clientId: client.id,
+            expectedVersion: Number(client.offline_version ?? 1),
+            isBlacklisted: next,
+            blacklistNote: note,
+          },
+        },
+        dependencies
       );
-      return;
+      setClients((prev) =>
+        prev.map((item) =>
+          item.id === client.id
+            ? { ...item, is_blacklisted: next, blacklist_note: note }
+            : item
+        )
+      );
+    } catch {
+      setError(next ? "Не удалось сохранить клиента в очереди" : "Не удалось сохранить изменение");
+    } finally {
+      setBusyId(null);
     }
-
-    setClients((prev) => prev.map((c) => (c.id === client.id ? data : c)));
-    router.refresh();
   }
 
   async function deleteClient(client: Client) {
@@ -61,47 +69,35 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
 
     setBusyId(client.id);
     setError(null);
-    const supabase = createClient();
-
-    const { count, error: countError } = await supabase
-      .from("loans")
-      .select("id", { count: "exact", head: true })
-      .eq("client_id", client.id);
-
-    if (countError) {
-      setBusyId(null);
-      setError(friendlyError("Не удалось проверить рассрочки клиента", countError));
-      return;
-    }
-
-    if ((count ?? 0) > 0) {
+    const relatedLoans = snapshot?.loans.filter((loan) => loan.client_id === client.id).length ?? 0;
+    if (relatedLoans > 0) {
       setBusyId(null);
       setError(
-        `Нельзя удалить «${client.full_name}»: есть связанные рассрочки (${count}). Сначала закройте или удалите их.`
+        `Нельзя удалить «${client.full_name}»: есть связанные рассрочки (${relatedLoans}). Сначала закройте или удалите их.`
       );
       return;
     }
-
-    const { error: deleteError } = await supabase
-      .from("clients")
-      .delete()
-      .eq("id", client.id);
-
-    setBusyId(null);
-    if (deleteError) {
-      const raw = deleteError.message?.toLowerCase() ?? "";
-      if (raw.includes("foreign key") || raw.includes("restrict") || deleteError.code === "23503") {
-        setError(
-          `Нельзя удалить «${client.full_name}»: есть связанные рассрочки.`
-        );
-        return;
-      }
-      setError(friendlyError("Не удалось удалить клиента", deleteError));
-      return;
+    try {
+      const dependencies = operations
+        .filter(
+          (operation) =>
+            operation.state !== "conflict" &&
+            (operation.command.payload.client as { id?: string } | undefined)?.id === client.id
+        )
+        .map((operation) => operation.id);
+      await enqueueCommand(
+        {
+          type: "client.delete",
+          payload: { clientId: client.id, expectedVersion: Number(client.offline_version ?? 1) },
+        },
+        dependencies
+      );
+      setClients((prev) => prev.filter((item) => item.id !== client.id));
+    } catch {
+      setError(`Не удалось удалить «${client.full_name}» из локального списка.`);
+    } finally {
+      setBusyId(null);
     }
-
-    setClients((prev) => prev.filter((c) => c.id !== client.id));
-    router.refresh();
   }
 
   return (

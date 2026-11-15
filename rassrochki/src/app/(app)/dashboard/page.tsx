@@ -1,8 +1,10 @@
+"use client";
+
 import Link from "next/link";
 import { addDays, format, startOfMonth, endOfMonth } from "date-fns";
 import { BackupReminder } from "@/components/BackupReminder";
 import { EmptyState, StatusBadge } from "@/components/ui";
-import { getSessionProfile, createClient } from "@/lib/supabase/server";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 import { formatDateShort, formatMoney, splitIncome } from "@/lib/utils";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
@@ -13,7 +15,6 @@ import {
   type LoanFinanceInput,
 } from "@/lib/finance";
 import { scheduleDueRemaining, sumSchedulePaid } from "@/lib/schedule-payments";
-import { syncOverdueSchedules } from "@/lib/overdue";
 
 function ShareBar({
   owner,
@@ -119,73 +120,47 @@ function normalizeLoanRow(loan: Record<string, unknown>, schedulePrincipal?: num
   };
 }
 
-export default async function DashboardPage() {
-  const { organization, settings } = await getSessionProfile();
-  const supabase = await createClient();
-  const orgId = organization!.id;
-  const today = format(new Date(), "yyyy-MM-dd");
-  const overdueGrace = Math.max(0, Number(settings?.overdue_days ?? 0));
-  const monthStart = format(startOfMonth(new Date()), "yyyy-MM-dd");
-  const monthEndDate = format(endOfMonth(new Date()), "yyyy-MM-dd");
-  const next30 = format(addDays(new Date(), 30), "yyyy-MM-dd");
+export default function DashboardPage() {
+  const { snapshot, loaded, online, syncing, error } = useOfflineWorkspace();
+  const todayDate = new Date();
+  const today = format(todayDate, "yyyy-MM-dd");
+  const sourceLoans = snapshot?.loans ?? [];
+  const schedules = snapshot?.schedules ?? [];
+  const sourcePayments = snapshot?.payments ?? [];
+  const monthStart = format(startOfMonth(todayDate), "yyyy-MM-dd");
+  const monthEndDate = format(endOfMonth(todayDate), "yyyy-MM-dd");
+  const next30 = format(addDays(todayDate, 30), "yyyy-MM-dd");
+  const recentStart = format(addDays(todayDate, -30), "yyyy-MM-dd'T00:00:00");
+  const loansById = new Map(sourceLoans.map((loan) => [loan.id, loan]));
+  const relatedSchedule = (schedule: (typeof schedules)[number]) => {
+    const loan = loansById.get(schedule.loan_id);
+    return {
+      ...schedule,
+      loans: loan
+        ? { title: loan.title, clients: loan.clients ? { full_name: loan.clients.full_name, phone: loan.clients.phone } : null }
+        : null,
+    };
+  };
+  const dueSoon = schedules
+    .filter(
+      (row) =>
+        (row.status === "pending" || row.status === "overdue") &&
+        row.due_date >= today &&
+        row.due_date <= next30
+    )
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+    .map(relatedSchedule);
+  const overdue = schedules
+    .filter((row) => row.status === "overdue")
+    .sort((a, b) => a.due_date.localeCompare(b.due_date))
+    .map(relatedSchedule);
+  const recentPayments = sourcePayments
+    .filter((payment) => payment.paid_at >= recentStart)
+    .map((payment) => ({ ...payment, loans: loansById.get(payment.loan_id) ?? null }));
+  const monthPayments = sourcePayments.filter(
+    (payment) => payment.paid_at >= `${monthStart}T00:00:00` && payment.paid_at <= `${monthEndDate}T23:59:59`
+  );
 
-  await syncOverdueSchedules(supabase, orgId, overdueGrace, new Date());
-
-  const [
-    dueSoonRes,
-    overdueRes,
-    loansRes,
-    schedulesRes,
-    recentPaymentsRes,
-    monthPaymentsRes,
-  ] = await Promise.all([
-    supabase
-      .from("payment_schedules")
-      .select("*, loans(title, clients(full_name, phone))")
-      .eq("organization_id", orgId)
-      .in("status", ["pending", "overdue"])
-      .gte("due_date", today)
-      .lte("due_date", next30)
-      .order("due_date"),
-    supabase
-      .from("payment_schedules")
-      .select("*, loans(title, clients(full_name, phone))")
-      .eq("organization_id", orgId)
-      .eq("status", "overdue")
-      .order("due_date"),
-    // * — не падаем, если какая-то миграция ещё не применена
-    supabase
-      .from("loans")
-      .select("*, clients(full_name), investors(name)")
-      .eq("organization_id", orgId)
-      .order("created_at", { ascending: false }),
-    supabase
-      .from("payment_schedules")
-      .select("loan_id, amount, paid_amount, status")
-      .eq("organization_id", orgId),
-    supabase
-      .from("payments")
-      .select("amount, paid_at, loan_id, loans(*)")
-      .eq("organization_id", orgId)
-      .gte("paid_at", format(addDays(new Date(), -30), "yyyy-MM-dd'T00:00:00")),
-    supabase
-      .from("payments")
-      .select("amount, paid_at")
-      .eq("organization_id", orgId)
-      .gte("paid_at", `${monthStart}T00:00:00`)
-      .lte("paid_at", `${monthEndDate}T23:59:59`),
-  ]);
-
-  const queryError =
-    loansRes.error?.message ||
-    dueSoonRes.error?.message ||
-    overdueRes.error?.message ||
-    schedulesRes.error?.message ||
-    recentPaymentsRes.error?.message ||
-    monthPaymentsRes.error?.message ||
-    null;
-
-  const schedules = schedulesRes.data ?? [];
   const schedulePrincipalByLoan = new Map<string, number>();
   for (const row of schedules) {
     schedulePrincipalByLoan.set(
@@ -193,16 +168,12 @@ export default async function DashboardPage() {
       (schedulePrincipalByLoan.get(row.loan_id) ?? 0) + Number(row.amount || 0)
     );
   }
-  const loans = (loansRes.data ?? []).map((row) =>
+  const loans = sourceLoans.map((row) =>
     normalizeLoanRow(
       row as Record<string, unknown>,
       schedulePrincipalByLoan.get(String(row.id))
     )
   );
-  const dueSoon = dueSoonRes.data ?? [];
-  const overdue = overdueRes.data ?? [];
-  const recentPayments = recentPaymentsRes.data ?? [];
-  const monthPayments = monthPaymentsRes.data ?? [];
 
   const paidByLoan = new Map<string, number>();
   const schedulesByLoan = new Map<string, typeof schedules>();
@@ -256,7 +227,7 @@ export default async function DashboardPage() {
 
   const cashPaymentsThisMonth = monthPayments.reduce((s, p) => s + Number(p.amount), 0);
   // Взнос не пишется в payments — учитываем loans.down_payment один раз по start_date месяца.
-  const cashDownThisMonth = (loansRes.data ?? []).reduce((sum, row) => {
+  const cashDownThisMonth = sourceLoans.reduce((sum, row) => {
     const start = String((row as { start_date?: string }).start_date ?? "");
     if (!start || start < monthStart || start > monthEndDate) return sum;
     return sum + (Number((row as { down_payment?: number | null }).down_payment ?? 0) || 0);
@@ -265,15 +236,31 @@ export default async function DashboardPage() {
   const dueSoonAmount = dueSoon.reduce((s, p) => s + scheduleDueRemaining(p), 0);
   const overdueAmount = overdue.reduce((s, p) => s + scheduleDueRemaining(p), 0);
 
+  if (!snapshot) {
+    return (
+      <div className="space-y-4">
+        <h1 className="text-2xl font-bold">Главная</h1>
+        {!loaded || syncing ? (
+          <p className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]">
+            Загружаем данные на устройство…
+          </p>
+        ) : (
+          <EmptyState
+            title={online === false ? "Нет сохранённых данных" : "Не удалось загрузить данные"}
+            description={
+              online === false
+                ? "Подключитесь к интернету на этом устройстве, чтобы сохранить рабочую копию."
+                : error || "Обновите локальную копию и попробуйте снова."
+            }
+          />
+        )}
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-4 overflow-x-hidden">
       <BackupReminder />
-
-      {queryError && (
-        <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          Не удалось загрузить часть данных. Обновите страницу или зайдите позже.
-        </div>
-      )}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">

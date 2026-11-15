@@ -1,29 +1,20 @@
+"use client";
+
 import Link from "next/link";
 import { LoansList } from "@/components/LoansList";
-import { createClient, getSessionProfile } from "@/lib/supabase/server";
-import { syncOverdueSchedules } from "@/lib/overdue";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 
-export default async function LoansPage() {
-  const { organization, settings } = await getSessionProfile();
-  const supabase = await createClient();
-  if (organization && settings) {
-    await syncOverdueSchedules(supabase, organization.id, settings.overdue_days, new Date());
-  }
-  const { data: loans, error } = await supabase
-    .from("loans")
-    .select("*, clients(full_name), investors(name)")
-    .eq("organization_id", organization!.id)
-    .order("created_at", { ascending: false });
-
-  const list = loans ?? [];
-  const activeCount = list.filter((l) => l.status !== "closed").length;
-  const closedCount = list.length - activeCount;
+export default function LoansPage() {
+  const { snapshot, loaded, online, syncing, error } = useOfflineWorkspace();
+  const loans = snapshot?.loans ?? [];
+  const activeCount = loans.filter((loan) => loan.status !== "closed").length;
+  const closedCount = loans.length - activeCount;
   const countHint =
-    list.length === 0
+    loans.length === 0
       ? "Договоры и графики платежей"
       : closedCount > 0
-        ? `${list.length} · активных ${activeCount} · закрыто ${closedCount}`
-        : `${list.length} ${pluralRassrochki(list.length)}`;
+        ? `${loans.length} · активных ${activeCount} · закрыто ${closedCount}`
+        : `${loans.length} ${pluralRassrochki(loans.length)}`;
 
   return (
     <div className="space-y-4">
@@ -37,13 +28,19 @@ export default async function LoansPage() {
         </Link>
       </div>
 
-      {error && (
+      {!loaded || (!snapshot && syncing) ? (
+        <p className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]">
+          Загружаем данные на устройство…
+        </p>
+      ) : !snapshot ? (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          Не удалось загрузить рассрочки. Обновите страницу.
+          {online === false
+            ? "На этом устройстве ещё нет сохранённых рассрочек. Подключитесь к интернету, чтобы загрузить данные."
+            : error || "Пока не удалось сохранить данные на устройстве. Повторите обновление."}
         </div>
+      ) : (
+        <LoansList loans={loans} />
       )}
-
-      {!error ? <LoansList loans={list} /> : null}
     </div>
   );
 }

@@ -91,7 +91,7 @@
       account = null;
     }
     if (!account?.userId || !account?.organizationId) {
-      throw new Error("Сначала войдите в приложение с интернетом и подготовьте офлайн-доступ.");
+      throw new Error("Сначала войдите в приложение с интернетом, чтобы загрузить данные на это устройство.");
     }
 
     const db = await openDatabase();
@@ -230,12 +230,14 @@
     const hasError = Boolean(errorDetail);
     const hasChanges = pending > 0 || conflicts > 0;
     const status = !navigator.onLine
-      ? "Офлайн"
+      ? "Нет сети · данные на устройстве"
       : hasError
-        ? "Проверить"
-        : hasChanges
-          ? "Есть изменения"
-          : "Актуально";
+        ? "Синхронизация не завершена"
+        : conflicts > 0
+          ? "Нужно проверить изменения"
+          : pending > 0
+            ? "Изменения ждут отправки"
+            : "Копия сохранена на устройстве";
     const tone = !navigator.onLine || hasError ? "offline" : hasChanges ? "pending" : "online";
     syncState.textContent = status;
     syncState.className = `badge ${tone}`;
@@ -246,9 +248,9 @@
       minute: "2-digit",
     })}`;
     syncPending.hidden = pending === 0;
-    syncPending.textContent = pending > 0 ? `В очереди ${pending}` : "";
+    syncPending.textContent = pending > 0 ? `Ждут отправки: ${pending}` : "";
     syncConflicts.hidden = conflicts === 0;
-    syncConflicts.textContent = conflicts > 0 ? `Конфликты ${conflicts}` : "";
+    syncConflicts.textContent = conflicts > 0 ? `Нужно проверить: ${conflicts}` : "";
     setSyncErrorDetail(errorDetail);
     syncInfo.classList.toggle("warning", !navigator.onLine || hasError || conflicts > 0);
   }
@@ -274,7 +276,7 @@
   async function refreshLocalData() {
     const { snapshot, operations, account, db } = await loadAccount();
     db.close();
-    if (!snapshot) throw new Error("Нет сохранённых данных. Подключитесь к интернету и подготовьте офлайн-доступ.");
+    if (!snapshot) throw new Error("Нет сохранённых данных. Подключитесь к интернету, чтобы загрузить копию.");
     app.baseSnapshot = snapshot;
     app.account = account;
     app.operations = operations || [];
@@ -382,7 +384,7 @@
       <label class="field full">ФИО<input name="full_name" required maxlength="200" autocomplete="name"></label>
       <label class="field">Телефон<input name="phone" type="tel" autocomplete="tel"></label>
       <label class="field full">Заметки<textarea name="notes" maxlength="4000"></textarea></label>
-      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить офлайн</button></div>
+      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить</button></div>
     </form></article>`;
   }
 
@@ -406,7 +408,7 @@
       <label class="field">Доля владельца, %<input name="income_share_manager" type="number" min="0" max="100" step="0.01" value="${value("income_share_manager", app.snapshot.settings?.income_share_manager || 100)}"></label>
       <label class="field">Доля инвестора, %<input name="income_share_investor" type="number" min="0" max="100" step="0.01" value="${value("income_share_investor", app.snapshot.settings?.income_share_investor || 0)}"></label>
       <label class="field full">Заметки<textarea name="notes" maxlength="4000">${value("notes")}</textarea></label>
-      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">${loan ? "Сохранить офлайн" : "Создать офлайн"}</button></div>
+      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">${loan ? "Сохранить" : "Создать"}</button></div>
     </form><p class="muted">Неоплаченный график будет пересчитан. Уже полученные оплаты и строки с чеками сохраняются.</p></article>`;
   }
 
@@ -424,7 +426,7 @@
       <label class="field">Способ<select name="method"><option value="manual">Наличные / вручную</option><option value="transfer_with_receipt">Перевод с чеком</option></select></label>
       <label class="field">Чек (необязательно)<input name="receipt" type="file" accept="image/jpeg,image/png,image/webp,image/heic,application/pdf"></label>
       <label class="field full">Заметки<textarea name="notes" maxlength="1000"></textarea></label>
-      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить оплату офлайн</button></div>
+      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить оплату</button></div>
     </form></article>`;
   }
 
@@ -610,7 +612,7 @@
         const editing = form.dataset.form === "loan-edit";
         const loanId = editing ? form.dataset.loanId : crypto.randomUUID();
         const current = editing ? app.snapshot.loans.find((item) => item.id === loanId) : null;
-        if (editing && !current) throw new Error("Рассрочка уже отсутствует в офлайн-копии.");
+        if (editing && !current) throw new Error("Рассрочка больше не найдена в сохранённых данных.");
         if (editing && app.operations.some((item) => item.state === "conflict" && (item.command?.payload?.loanId === loanId || item.command?.payload?.loan?.id === loanId || item.command?.payload?.payment?.loan_id === loanId))) {
           throw new Error("Сначала разрешите конфликт этой рассрочки.");
         }
@@ -705,7 +707,7 @@
         render();
       }
     } catch (error) {
-      window.alert(error instanceof Error ? error.message : "Не удалось сохранить офлайн-изменение.");
+      window.alert(error instanceof Error ? error.message : "Не удалось сохранить изменение на устройстве.");
     }
   }
 
@@ -758,8 +760,8 @@
     app.baseSnapshot = null;
     app.operations = [];
     app.account = null;
-    showSyncMessage("Копия удалена", "Офлайн-данные очищены.", false);
-    content.innerHTML = '<article class="card"><a class="button" href="/login">Войти и снова подготовить офлайн-доступ</a></article>';
+    showSyncMessage("Данные удалены", "Копия организации очищена с этого устройства.", false);
+    content.innerHTML = '<article class="card"><a class="button" href="/login">Войти и загрузить данные</a></article>';
   }
 
   async function handleOfflineClick(event) {
@@ -1056,7 +1058,7 @@
     try {
       const { snapshot, operations, account, db } = await loadAccount();
       db.close();
-      if (!snapshot) throw new Error("Нет сохранённых данных. Подключитесь к интернету и подготовьте офлайн-доступ.");
+      if (!snapshot) throw new Error("Нет сохранённых данных. Подключитесь к интернету, чтобы загрузить копию.");
       app.baseSnapshot = snapshot;
       app.account = account;
       app.operations = operations || [];
@@ -1067,9 +1069,9 @@
       if (navigator.onLine && app.operations.some((item) => item.state !== "conflict")) void syncNow();
     } catch (error) {
       const detail = error instanceof Error ? error.message : "Не удалось загрузить офлайн-данные.";
-      showSyncMessage("Копии нет", "Подключитесь и обновите офлайн-доступ.");
+      showSyncMessage("Копии нет", "Подключитесь к интернету, чтобы загрузить данные на это устройство.");
       setSyncErrorDetail(detail);
-      content.innerHTML = '<article class="card"><p>Офлайн-копия не найдена.</p><a class="button" href="/login">Войти при подключении</a></article>';
+      content.innerHTML = '<article class="card"><p>Данные этого аккаунта ещё не сохранены на устройстве.</p><a class="button" href="/login">Войти и загрузить данные</a></article>';
     }
   }
 
