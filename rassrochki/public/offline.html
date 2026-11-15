@@ -32,6 +32,9 @@
       .list { display: grid; gap: 8px; }
       .row { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 11px 0; border-bottom: 1px solid #e2e8f0; }
       .row:last-child { border: 0; }
+      .row.tone-overdue { border-left: 4px solid #dc2626; background: #fff1f2; padding-left: 8px; }
+      .row.tone-soon { border-left: 4px solid #f59e0b; background: #fffbeb; padding-left: 8px; }
+      .row.tone-normal { border-left: 4px solid #16a34a; background: #f0fdf4; padding-left: 8px; }
       .row button { padding: 6px 8px; }
       .actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
       .form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }

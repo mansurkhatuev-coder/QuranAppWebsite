@@ -82,6 +82,37 @@ export async function POST(request: Request) {
       ? rpcResult.status
       : "failed";
     let message = typeof rpcResult.message === "string" ? rpcResult.message : undefined;
+    if (status === "synced" && operation.command.type === "client.create") {
+      const client = operation.command.payload.client as { id?: string; address?: string | null } | undefined;
+      if (client?.id) {
+        const { error: addressError } = await supabase
+          .from("clients")
+          .update({ address: client.address?.trim() || null })
+          .eq("id", client.id)
+          .eq("organization_id", organization.id);
+        if (addressError) {
+          status = "failed";
+          message = "Клиент сохранён, но адрес ещё не синхронизирован. Повторите синхронизацию.";
+        }
+      }
+    }
+    if (status === "synced" && ["loan.create", "loan.edit"].includes(operation.command.type)) {
+      const payload = operation.command.payload;
+      const loan = payload.loan as { id?: string } | undefined;
+      const loanId = typeof payload.loanId === "string" ? payload.loanId : loan?.id;
+      const guarantors = Array.isArray(payload.guarantors) ? payload.guarantors : [];
+      if (loanId) {
+        const { error: guarantorError } = await supabase.rpc("replace_loan_guarantors", {
+          p_loan_id: loanId,
+          p_organization_id: organization.id,
+          p_guarantors: guarantors,
+        });
+        if (guarantorError) {
+          status = "failed";
+          message = "Рассрочка сохранена, но адреса поручителей ещё не синхронизированы. Повторите синхронизацию.";
+        }
+      }
+    }
     if (status === "synced" && operation.command.type === "loan.delete") {
       const paths = Array.isArray(rpcResult.receipt_paths)
         ? rpcResult.receipt_paths.filter((path): path is string => typeof path === "string" && path.length > 0)

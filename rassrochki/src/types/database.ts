@@ -63,6 +63,7 @@ export type Client = {
   organization_id: string;
   full_name: string;
   phone: string | null;
+  address?: string | null;
   notes: string | null;
   is_blacklisted: boolean;
   blacklist_note: string | null;
@@ -133,12 +134,13 @@ export type LoanGuarantor = {
   organization_id: string;
   full_name: string;
   phone: string | null;
+  address?: string | null;
   notes: string | null;
   created_at: string;
 };
 
 export type LoanWithRelations = Loan & {
-  clients: Pick<Client, "full_name" | "phone"> | null;
+  clients: Pick<Client, "full_name" | "phone"> & { address?: string | null } | null;
   investors: Pick<Investor, "name"> | null;
   loan_guarantors?: LoanGuarantor[];
 };

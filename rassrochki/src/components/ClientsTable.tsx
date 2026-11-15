@@ -133,6 +133,9 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
                       <WhatsAppButton phone={client.phone} label="WA" />
                     ) : null}
                   </div>
+                  {client.address ? (
+                    <p className="mt-1 max-w-xs text-xs text-[var(--muted)]">{client.address}</p>
+                  ) : null}
                 </td>
                 <td className="px-3 py-2">
                   {client.is_blacklisted ? (
@@ -215,6 +218,9 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
                     <WhatsAppButton phone={client.phone} label="WA" />
                   ) : null}
                 </div>
+                {client.address ? (
+                  <p className="mt-1 text-xs text-[var(--muted)]">{client.address}</p>
+                ) : null}
                 {client.is_blacklisted && client.blacklist_note ? (
                   <p className="mt-0.5 truncate text-xs text-red-700">{client.blacklist_note}</p>
                 ) : null}
