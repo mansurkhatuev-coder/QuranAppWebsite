@@ -5,9 +5,10 @@ import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 import type { Client } from "@/types/database";
 import { formatDateShort } from "@/lib/utils";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
+import { getClientOperationDependencies } from "@/lib/offline/sync";
 
 export function ClientsTable({ clients: initial }: { clients: Client[] }) {
-  const { snapshot, operations, enqueueCommand } = useOfflineWorkspace();
+  const { snapshot, baseSnapshot, operations, enqueueCommand } = useOfflineWorkspace();
   const [clients, setClients] = useState(initial);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [noteDraft, setNoteDraft] = useState<Record<string, string>>({});
@@ -127,25 +128,10 @@ export function ClientsTable({ clients: initial }: { clients: Client[] }) {
     const address = value.trim() || null;
     const projectedClient = snapshot?.clients.find((item) => item.id === client.id);
     const expectedVersion = Number(projectedClient?.offline_version ?? client.offline_version ?? 1);
-    const dependencies = operations
-      .filter(
-        (operation) => {
-          if (operation.state === "conflict") return false;
-          const payload = operation.command.payload;
-          const queuedClient = payload.client as { id?: unknown } | undefined;
-          const queuedLoan = payload.loan as { client_id?: unknown } | undefined;
-          const operationClientId =
-            typeof payload.clientId === "string"
-              ? payload.clientId
-              : typeof queuedClient?.id === "string"
-                ? queuedClient.id
-                : typeof queuedLoan?.client_id === "string"
-                  ? queuedLoan.client_id
-                  : null;
-          return operationClientId === client.id;
-        }
-      )
-      .map((operation) => operation.id);
+    const dependencies = getClientOperationDependencies(operations, client.id, [
+      ...(baseSnapshot?.loans ?? []),
+      ...(snapshot?.loans ?? []),
+    ]);
 
     setBusyId(client.id);
     setError(null);

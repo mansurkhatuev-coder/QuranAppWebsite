@@ -136,3 +136,127 @@ $$;
 
 revoke all on function public.apply_offline_client_address(uuid, jsonb) from public, anon, authenticated;
 grant execute on function public.apply_offline_client_address(uuid, jsonb) to authenticated;
+
+create or replace function public.apply_offline_client_create(
+  p_operation_id uuid,
+  p_payload jsonb
+)
+returns jsonb
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  v_uid uuid := auth.uid();
+  v_org_id uuid := public.user_organization_id();
+  v_payload_hash text;
+  v_log public.offline_operation_log%rowtype;
+  v_inserted int;
+  v_result jsonb;
+  v_entity jsonb;
+  v_id uuid;
+  v_address text;
+  v_error_message text;
+  v_error_state text;
+begin
+  if v_uid is null then
+    raise exception 'Not authenticated' using errcode = '28000';
+  end if;
+  if v_org_id is null or not public.organization_has_access(v_org_id) then
+    raise exception 'Organization access denied' using errcode = '42501';
+  end if;
+  if p_operation_id is null or jsonb_typeof(p_payload) is distinct from 'object' then
+    raise exception 'Invalid offline operation';
+  end if;
+
+  v_payload_hash := md5(jsonb_build_object(
+    'command_type', 'client.create',
+    'payload', p_payload
+  )::text);
+
+  insert into public.offline_operation_log (
+    operation_id, organization_id, actor_id, command_type, payload_hash
+  ) values (
+    p_operation_id, v_org_id, v_uid, 'client.create', v_payload_hash
+  )
+  on conflict (operation_id) do nothing;
+  get diagnostics v_inserted = row_count;
+
+  if v_inserted = 0 then
+    select * into v_log
+    from public.offline_operation_log
+    where operation_id = p_operation_id
+    for update;
+
+    if v_log.actor_id <> v_uid
+      or v_log.organization_id <> v_org_id
+      or v_log.command_type <> 'client.create'
+      or v_log.payload_hash <> v_payload_hash then
+      return jsonb_build_object(
+        'status', 'conflict',
+        'message', 'Идентификатор операции уже использован с другими данными'
+      );
+    end if;
+
+    if v_log.result is null then
+      raise exception 'Offline operation is still being processed' using errcode = '40001';
+    end if;
+    return v_log.result;
+  end if;
+
+  begin
+    v_entity := p_payload->'client';
+    v_id := nullif(v_entity->>'id', '')::uuid;
+    if jsonb_typeof(v_entity) is distinct from 'object'
+      or v_id is null
+      or nullif(btrim(v_entity->>'full_name'), '') is null then
+      raise exception 'Некорректные данные клиента';
+    end if;
+    if (v_entity ? 'address')
+      and jsonb_typeof(v_entity->'address') not in ('string', 'null') then
+      raise exception 'Некорректный адрес клиента';
+    end if;
+
+    v_address := nullif(btrim(coalesce(v_entity->>'address', '')), '');
+
+    insert into public.clients (
+      id, organization_id, full_name, phone, address, notes, is_blacklisted, blacklist_note
+    ) values (
+      v_id,
+      v_org_id,
+      btrim(v_entity->>'full_name'),
+      nullif(btrim(coalesce(v_entity->>'phone', '')), ''),
+      v_address,
+      nullif(btrim(coalesce(v_entity->>'notes', '')), ''),
+      false,
+      null
+    );
+    v_result := jsonb_build_object('status', 'synced', 'client_id', v_id);
+  exception
+    when serialization_failure or deadlock_detected or lock_not_available or query_canceled then
+      raise;
+    when others then
+      get stacked diagnostics
+        v_error_message = message_text,
+        v_error_state = returned_sqlstate;
+      v_result := jsonb_build_object(
+        'status', 'conflict',
+        'message', case
+          when v_error_state = 'P0001' then v_error_message
+          else 'Операцию нельзя применить к текущей версии данных'
+        end
+      );
+  end;
+
+  update public.offline_operation_log
+  set result = v_result
+  where operation_id = p_operation_id
+    and actor_id = v_uid
+    and organization_id = v_org_id;
+
+  return v_result;
+end;
+$$;
+
+revoke all on function public.apply_offline_client_create(uuid, jsonb) from public, anon, authenticated;
+grant execute on function public.apply_offline_client_create(uuid, jsonb) to authenticated;

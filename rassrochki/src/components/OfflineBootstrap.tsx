@@ -26,6 +26,7 @@ type OfflineWorkspaceValue = {
   userId: string;
   organizationId: string;
   snapshot: OfflineSnapshot | null;
+  baseSnapshot: OfflineSnapshot | null;
   operations: OfflineOperation[];
   loaded: boolean;
   online: boolean | null;
@@ -54,6 +55,7 @@ export function useOfflineWorkspace(): OfflineWorkspaceValue {
 
 export function OfflineBootstrap({ userId, organizationId, children }: OfflineBootstrapProps) {
   const [snapshot, setSnapshot] = useState<OfflineSnapshot | null>(null);
+  const [baseSnapshot, setBaseSnapshot] = useState<OfflineSnapshot | null>(null);
   const [operations, setOperations] = useState<OfflineOperation[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [online, setOnline] = useState<boolean | null>(null);
@@ -78,6 +80,7 @@ export function OfflineBootstrap({ userId, organizationId, children }: OfflineBo
     const accountOperations = operations.filter(
       (item) => item.userId === userId && item.organizationId === organizationId
     );
+    setBaseSnapshot(accountSnapshot);
     setSnapshot(accountSnapshot ? applyPendingOperations(accountSnapshot, accountOperations) : null);
     setOperations(accountOperations);
     setLoaded(true);
@@ -271,6 +274,7 @@ export function OfflineBootstrap({ userId, organizationId, children }: OfflineBo
     userId,
     organizationId,
     snapshot,
+    baseSnapshot,
     operations,
     loaded,
     online,

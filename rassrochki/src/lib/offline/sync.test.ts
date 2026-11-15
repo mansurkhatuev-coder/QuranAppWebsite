@@ -2,7 +2,13 @@ import "fake-indexeddb/auto";
 import { afterEach } from "vitest";
 import { describe, expect, it } from "vitest";
 import { createOfflineStore } from "./db";
-import { applySyncResponse, orderOperationsForSync, parseSyncBatch, syncOfflineQueue } from "./sync";
+import {
+  applySyncResponse,
+  getClientOperationDependencies,
+  orderOperationsForSync,
+  parseSyncBatch,
+  syncOfflineQueue,
+} from "./sync";
 import type { OfflineOperation, OfflineSnapshot } from "./types";
 
 let databaseNumber = 0;
@@ -143,6 +149,34 @@ describe("offline sync operation order", () => {
         "org-1"
       )
     ).toThrow(/unsupported/i);
+  });
+
+  it("finds same-client dependencies through queued loans and snapshot loans", () => {
+    const loanDelete = operation("loan-delete", "2026-11-14T09:00:00.000Z");
+    loanDelete.command = { type: "loan.delete", payload: { loanId: "snapshot-loan" } };
+    const loanCreate = operation("loan-create", "2026-11-14T10:00:00.000Z");
+    loanCreate.command = {
+      type: "loan.create",
+      payload: { loan: { id: "queued-loan", client_id: "client-1" } },
+    };
+    const payment = operation("payment", "2026-11-14T11:00:00.000Z");
+    payment.command = {
+      type: "payment.record",
+      payload: { payment: { loan_id: "queued-loan" } },
+    };
+    const unrelated = operation("other-client-loan", "2026-11-14T12:00:00.000Z");
+    unrelated.command = {
+      type: "loan.create",
+      payload: { loan: { id: "other-loan", client_id: "client-2" } },
+    };
+
+    expect(
+      getClientOperationDependencies(
+        [loanDelete, loanCreate, payment, unrelated],
+        "client-1",
+        [{ id: "snapshot-loan", client_id: "client-1" }]
+      )
+    ).toEqual(["loan-delete", "loan-create", "payment"]);
   });
 
   it("sends a dependency before a child even when the child has an earlier timestamp", () => {
