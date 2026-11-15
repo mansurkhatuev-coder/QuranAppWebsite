@@ -166,26 +166,35 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
         const persistent = await navigator.storage.persist();
         setStorageMessage(
           persistent
-            ? "Браузер разрешил постоянное хранилище. Очистка браузера всё равно удалит данные."
-            : "Браузер может удалить данные устройства. Синхронизируйте их при первой возможности."
+            ? "Хранилище браузера закреплено."
+            : "Браузер может очистить копию — синхронизируйте её при подключении."
         );
       }
     } catch {
-      setStorageMessage("Не удалось запросить постоянное хранилище браузера.");
+      setStorageMessage("Не удалось закрепить хранилище браузера.");
     }
     await refreshSnapshot();
   }
 
-  const summary =
+  const statusLabel =
     online === false
-      ? "Офлайн"
+      ? "Нет сети"
       : syncing
-        ? "Обновляем данные…"
+        ? "Обновление…"
         : online === true
           ? error
-            ? "Сбой синхронизации"
-            : "На связи"
-          : "Проверяем сеть…";
+            ? "Нет связи"
+            : "Онлайн"
+          : "Проверка";
+  const statusClass = online === false || error ? "badge-yellow" : "badge-green";
+  const cachedLabel = cachedAt
+    ? new Date(cachedAt).toLocaleString("ru-RU", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      })
+    : "копии нет";
 
   return (
     <section
@@ -193,35 +202,45 @@ export function OfflineBootstrap({ userId, organizationId }: OfflineBootstrapPro
       aria-live="polite"
     >
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="font-semibold">
-            {summary}
-            {cachedAt ? ` · копия от ${new Date(cachedAt).toLocaleString("ru-RU")}` : " · копии пока нет"}
-          </p>
+        <div className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+          <span className={statusClass}>{statusLabel}</span>
+          <span className="text-[var(--muted)]" title={cachedAt ? new Date(cachedAt).toLocaleString("ru-RU") : undefined}>
+            Копия {cachedLabel}
+          </span>
           {(pendingCount > 0 || conflictCount > 0) && (
-            <p className="mt-0.5">
-              {pendingCount > 0 && `Ожидают отправки: ${pendingCount}`}
-              {pendingCount > 0 && conflictCount > 0 ? " · " : ""}
-              {conflictCount > 0 && `Конфликты: ${conflictCount}`}
-            </p>
+            <>
+              {pendingCount > 0 && <span className="badge-yellow">В очереди {pendingCount}</span>}
+              {conflictCount > 0 && <span className="badge-red">Конфликты {conflictCount}</span>}
+            </>
           )}
         </div>
-        <button
-          type="button"
-          className="btn-secondary px-2.5 py-1.5 text-xs"
-          onClick={prepareOfflineAccess}
-          disabled={online === false || syncing}
-        >
-          {syncing ? "Синхронизация…" : pendingCount > 0 ? "Синхронизировать" : "Подготовить офлайн-доступ"}
-        </button>
-        {online === false && (
-          <a href="/offline.html" className="btn-secondary px-2.5 py-1.5 text-xs">
-            Открыть офлайн-рабочее место
+        <div className="flex shrink-0 gap-1.5">
+          <button
+            type="button"
+            className="btn-secondary px-2.5 py-1.5 text-xs"
+            onClick={prepareOfflineAccess}
+            disabled={online !== true || syncing}
+            title={pendingCount > 0 ? "Отправить изменения и обновить копию" : "Обновить офлайн-копию"}
+          >
+            {syncing ? "…" : pendingCount > 0 ? "Отправить" : "Обновить"}
+          </button>
+          <a
+            href="/offline.html"
+            className="btn-secondary px-2.5 py-1.5 text-xs"
+            title="Открыть автономное рабочее место"
+          >
+            Офлайн
           </a>
-        )}
+        </div>
       </div>
-      {error && <p className="mt-1 text-amber-800">{error}</p>}
-      {storageMessage && <p className="mt-1 text-[var(--muted)]">{storageMessage}</p>}
+      {(error || storageMessage) && (
+        <details className="mt-1 text-xs text-[var(--muted)]">
+          <summary className="w-fit cursor-pointer">
+            {error ? "Проблема синхронизации" : "Хранилище устройства"}
+          </summary>
+          <p className="mt-1">{error || storageMessage}</p>
+        </details>
+      )}
     </section>
   );
 }
