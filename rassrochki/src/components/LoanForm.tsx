@@ -68,6 +68,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const [showNewInvestor, setShowNewInvestor] = useState(false);
   const [newInvestor, setNewInvestor] = useState({ name: "", share_percent: "70" });
   const [savingInvestor, setSavingInvestor] = useState(false);
+  const [paymentRoundingStep, setPaymentRoundingStep] = useState(1);
   const [guarantors, setGuarantors] = useState<
     { full_name: string; phone: string; address: string; notes: string }[]
   >([]);
@@ -254,7 +255,14 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const downPayment = Number(value.down_payment) || 0;
   const termMonths = Number(value.term_months) || 0;
   const roundedTerms = cost > 0 && termMonths > 0
-    ? calculateRoundedLoanTerms(cost, markup, downPayment, termMonths, Number(value.monthly_payment))
+    ? calculateRoundedLoanTerms(
+        cost,
+        markup,
+        downPayment,
+        termMonths,
+        Number(value.monthly_payment),
+        paymentRoundingStep
+      )
     : null;
   const principal = roundedTerms?.principal ?? (cost > 0 ? calcTotalWithMarkup(cost, markup) : 0);
   const schedulePrincipal = roundedTerms?.schedulePrincipal ??
@@ -484,7 +492,8 @@ export function LoanForm({ loanId }: { loanId?: string }) {
       markup,
       down,
       termMonths,
-      Number(value.monthly_payment)
+      Number(value.monthly_payment),
+      paymentRoundingStep
     );
     const total = roundedLoan.principal;
     const scheduleAmount = roundedLoan.schedulePrincipal;
@@ -877,9 +886,32 @@ export function LoanForm({ loanId }: { loanId?: string }) {
             </p>
           </div>
 
+          <div>
+            <label className="label">Округлять ежемесячный платёж до</label>
+            <div className="flex flex-wrap gap-2">
+              {[1, 10].map((step) => (
+                <button
+                  key={step}
+                  type="button"
+                  aria-pressed={paymentRoundingStep === step}
+                  className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
+                    paymentRoundingStep === step
+                      ? "bg-teal-700 text-white"
+                      : "border border-[var(--border)] bg-white text-slate-700"
+                  }`}
+                  onClick={() => {
+                    setPaymentRoundingStep(step);
+                  }}
+                >
+                  {step} ₽
+                </button>
+              ))}
+            </div>
+          </div>
+
           {roundedTerms && (
             <p className="-mt-2 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-900">
-              После округления платежа до {formatMoney(roundedTerms.monthlyPayment)} фактическая наценка составит{" "}
+              Платёж округлён до {paymentRoundingStep} ₽: {formatMoney(roundedTerms.monthlyPayment)} в месяц. Фактическая наценка составит{" "}
               <strong>{roundedTerms.effectiveMarkupPercent}%</strong>
               {roundedTerms.markupChangePercent !== 0
                 ? ` (${roundedTerms.markupChangePercent > 0 ? "+" : ""}${roundedTerms.markupChangePercent} п.п.)`

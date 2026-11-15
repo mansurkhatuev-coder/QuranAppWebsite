@@ -8,20 +8,22 @@ function percent(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-/** Keeps every scheduled payment at a whole ruble and reports the resulting contract rate. */
+/** Rounds every scheduled payment to the selected ruble step and reports the resulting contract rate. */
 export function calculateRoundedLoanTerms(
   cost: number,
   requestedMarkupPercent: number,
   downPayment: number,
   termMonths: number,
-  monthlyOverride?: number
+  monthlyOverride?: number,
+  roundingStep = 1
 ) {
   const targetPrincipal = calcTotalWithMarkup(cost, requestedMarkupPercent);
   const targetSchedulePrincipal = money(Math.max(0, targetPrincipal - downPayment));
+  const step = Math.max(1, Math.round(roundingStep));
   const monthlyPayment = termMonths > 0 && targetSchedulePrincipal > 0
-    ? Math.max(1, Math.round(monthlyOverride && monthlyOverride > 0
+    ? Math.max(step, Math.round((monthlyOverride && monthlyOverride > 0
         ? monthlyOverride
-        : targetSchedulePrincipal / termMonths))
+        : targetSchedulePrincipal / termMonths) / step) * step)
     : 0;
   const schedulePrincipal = money(monthlyPayment * Math.max(0, termMonths));
   const principal = money(schedulePrincipal + downPayment);
