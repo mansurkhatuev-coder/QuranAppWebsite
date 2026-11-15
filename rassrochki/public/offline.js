@@ -3,7 +3,7 @@
 
   const DB_NAME = "rassrochki-offline-v1";
   const ACTIVE_ACCOUNT_KEY = "rassrochki:offline-account";
-  const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, form: null, syncError: null };
+  const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, clientId: null, form: null, syncError: null };
   const content = document.getElementById("content");
   const syncInfo = document.getElementById("sync-info");
   const syncState = document.getElementById("sync-state");
@@ -171,6 +171,11 @@
             ? { ...client, is_blacklisted: Boolean(payload.isBlacklisted), blacklist_note: payload.blacklistNote || null, offline_version: Number(client.offline_version || 1) + 1 }
             : client);
           break;
+        case "client.address":
+          snapshot.clients = snapshot.clients.map((client) => client.id === payload.clientId
+            ? { ...client, address: payload.address, offline_version: Number(client.offline_version || 1) + 1 }
+            : client);
+          break;
         case "client.delete":
           if (!snapshot.loans.some((loan) => loan.client_id === payload.clientId)) {
             snapshot.clients = snapshot.clients.filter((client) => client.id !== payload.clientId);
@@ -288,6 +293,7 @@
   function switchView(view) {
     app.view = view;
     app.loanId = null;
+    app.clientId = null;
     app.form = null;
     render();
   }
@@ -324,8 +330,9 @@
     const rows = [...app.snapshot.clients].sort((a, b) => a.full_name.localeCompare(b.full_name, "ru"));
     return `<article class="card"><div class="row"><h2>Клиенты (${rows.length})</h2><button type="button" class="primary" data-action="new-client">+ Новый клиент</button></div>${rows.length ? `<div class="list">${rows.map((client) => `
       <div class="row">
-        <div><strong>${text(client.full_name)}</strong><div class="muted">${text(client.phone || "Телефон не указан")}</div>${client.notes ? `<div class="muted">${text(client.notes)}</div>` : ""}</div>
+        <div><strong>${text(client.full_name)}</strong><div class="muted">${text(client.phone || "Телефон не указан")}</div><div class="muted">${client.address ? `Адрес: ${text(client.address)}` : "Адрес не указан"}</div>${client.notes ? `<div class="muted">${text(client.notes)}</div>` : ""}</div>
         <div class="actions"><span class="badge ${client.is_blacklisted ? "offline" : "online"}">${client.is_blacklisted ? "Чёрный список" : "Активен"}</span>${app.operations.some((item) => item.command?.payload?.client?.id === client.id || item.command?.payload?.clientId === client.id) ? '<span class="badge pending">Не синхр.</span>' : ""}
+          <button type="button" data-action="edit-client-address" data-client="${text(client.id)}">Изменить адрес</button>
           <button type="button" data-action="toggle-blacklist" data-client="${text(client.id)}">${client.is_blacklisted ? "Убрать из списка" : "В чёрный список"}</button>
           ${app.snapshot.loans.some((loan) => loan.client_id === client.id) ? "" : `<button type="button" class="danger-button" data-action="delete-client" data-client="${text(client.id)}">Удалить</button>`}
         </div>
@@ -352,7 +359,7 @@
       const indicator = summary.overdue > 0
         ? "Просрочено · " + text(money(summary.overdue))
         : summary.soon > 0
-          ? "Скоро срок · " + date(summary.nextDue)
+          ? "Скоро срок · " + date(summary.soonDue)
           : summary.remaining > 0 ? "В срок · остаток " + text(money(summary.remaining)) : "Оплат к внесению нет";
       return '<div class="row tone-' + tone + '">' +
         '<div><strong>' + text(relatedName(loan.clients) || loan.title || "Рассрочка") + "</strong>" +
@@ -387,6 +394,7 @@
     let remaining = 0;
     let overdue = 0;
     let soon = 0;
+    let soonDue = "";
     const dates = [];
     for (const row of app.snapshot.schedules.filter((item) => item.loan_id === loan.id)) {
       const paid = row.status === "paid" ? Number(row.amount) : Number(row.paid_amount || 0);
@@ -395,13 +403,17 @@
       remaining += due;
       dates.push(row.due_date);
       if (row.due_date < cutoff) overdue += due;
-      else if (row.due_date >= today && row.due_date <= soonThrough) soon += due;
+      else if (row.due_date >= today && row.due_date <= soonThrough) {
+        soon += due;
+        if (!soonDue || row.due_date < soonDue) soonDue = row.due_date;
+      }
     }
     return {
       remaining: Math.round(remaining * 100) / 100,
       overdue: Math.round(overdue * 100) / 100,
       soon: Math.round(soon * 100) / 100,
       nextDue: dates.sort()[0] || "",
+      soonDue,
     };
   }
 
@@ -412,8 +424,8 @@
 
   function csvValue(value) {
     let raw = value == null ? "" : String(value);
-    if (typeof value === "string" && /^[=+@-]/.test(raw)) raw = "'" + raw;
-    return /[",\r\n]/.test(raw) ? '"' + raw.replace(/"/g, '""') + '"' : raw;
+    if (typeof value === "string" && /^[=+@\-\t\r\n]/.test(raw)) raw = "'" + raw;
+    return /[",\t\r\n]/.test(raw) ? '"' + raw.replace(/"/g, '""') + '"' : raw;
   }
 
   function downloadOfflineCsv(filename, rows) {
@@ -441,18 +453,128 @@
   }
 
   function exportAllLoansCsv() {
-    const rows = [["ID рассрочки", "Клиент", "Телефон", "Адрес клиента", "Поручители", "Адреса поручителей", "Название", "Цена", "Наценка, %", "К возврату", "Взнос", "Срок, мес.", "Платёж/мес.", "Начало", "Статус", "График", "История оплат"]];
+    const columns = [
+      ["organization_id", "ID организации"], ["record_type", "Тип записи"],
+      ["loan_id", "ID рассрочки"], ["client_id", "ID клиента"], ["client_name", "ФИО клиента"],
+      ["client_phone", "Телефон клиента"], ["client_address", "Адрес клиента"], ["client_notes", "Заметки клиента"],
+      ["client_is_blacklisted", "Клиент в чёрном списке"], ["client_blacklist_note", "Причина чёрного списка"],
+      ["investor_id", "ID инвестора"], ["investor_name", "Имя инвестора"], ["investor_share_percent", "Доля инвестора по умолчанию, %"],
+      ["investor_notes", "Заметки инвестора"], ["deal_invested_amount", "Вложение инвестора в сделку"],
+      ["manager_share_percent", "Доля владельца в сделке, %"], ["deal_investor_share_percent", "Доля инвестора в сделке, %"],
+      ["loan_title", "Название / товар"], ["cost_amount", "Цена"], ["markup_percent", "Наценка, %"],
+      ["principal", "К возврату"], ["down_payment", "Первоначальный взнос"], ["term_months", "Срок, мес."],
+      ["monthly_payment", "Платёж в месяц"], ["schedule_on_full_amount", "График на полную сумму"],
+      ["start_date", "Дата начала"], ["loan_status", "Статус рассрочки"], ["loan_created_at", "Создана"],
+      ["loan_notes", "Заметки по рассрочке"], ["guarantors", "Поручители (по одному на строку)"],
+      ["schedules", "График (по одному платежу на строку)"], ["payments", "Оплаты (по одной на строку)"],
+    ];
+    const rows = [columns.map(([, label]) => label)];
+    const detailRows = (items, fields) => items.map((item) => fields
+      .map(([label, read]) => `${label}: ${read(item) ?? ""}`)
+      .join(" | ")).join("\n");
+    const guarantorFields = [
+      ["ID", (item) => item.id], ["ID рассрочки", (item) => item.loan_id], ["ФИО", (item) => item.full_name],
+      ["Телефон", (item) => item.phone], ["Адрес", (item) => item.address], ["Заметки", (item) => item.notes],
+    ];
+    const scheduleFields = [
+      ["ID", (item) => item.id], ["№", (item) => item.sequence_number], ["Дата", (item) => item.due_date],
+      ["Сумма", (item) => item.amount], ["Статус", (item) => item.status], ["Оплачено", (item) => item.paid_amount],
+      ["Дата оплаты", (item) => item.paid_at], ["Путь к чеку", (item) => item.receipt_path],
+    ];
+    const paymentFields = [
+      ["ID", (item) => item.id], ["ID графика", (item) => item.schedule_id], ["Дата", (item) => item.paid_at],
+      ["Сумма", (item) => item.amount], ["Способ", (item) => item.method], ["Заметки", (item) => item.notes],
+      ["Путь к чеку", (item) => item.receipt_path], ["Ключ идемпотентности", (item) => item.idempotency_key],
+    ];
+    const append = (fields) => rows.push(columns.map(([key]) => fields[key] ?? ""));
+
     for (const loan of app.snapshot.loans) {
       const client = app.snapshot.clients.find((item) => item.id === loan.client_id);
+      const investor = app.snapshot.investors.find((item) => item.id === loan.investor_id);
       const guarantors = app.snapshot.guarantors.filter((item) => item.loan_id === loan.id);
-      const schedule = app.snapshot.schedules.filter((item) => item.loan_id === loan.id).sort((a, b) => a.sequence_number - b.sequence_number)
-        .map((item) => "#" + item.sequence_number + " " + item.due_date + " " + item.amount + " (оплачено " + (item.paid_amount || 0) + ")").join("\n");
+      const schedule = app.snapshot.schedules.filter((item) => item.loan_id === loan.id).sort((a, b) => a.sequence_number - b.sequence_number);
       const payments = app.snapshot.payments.filter((item) => item.loan_id === loan.id)
-        .map((item) => item.paid_at.slice(0, 10) + " " + item.amount + (item.notes ? " · " + item.notes : "")).join("\n");
-      rows.push([loan.id, client?.full_name || "", client?.phone || "", client?.address || "",
-        guarantors.map((item) => item.full_name).join("; "), guarantors.map((item) => item.address || "").join("; "),
-        loan.title || "", loan.cost_amount || 0, loan.markup_percent, loan.principal, loan.down_payment,
-        loan.term_months, loan.monthly_payment, loan.start_date, loan.status, schedule, payments]);
+        .sort((a, b) => String(a.paid_at || "").localeCompare(String(b.paid_at || "")));
+      append({
+        organization_id: loan.organization_id || app.snapshot.organizationId,
+        record_type: "loan",
+        loan_id: loan.id,
+        client_id: loan.client_id,
+        client_name: client?.full_name,
+        client_phone: client?.phone,
+        client_address: client?.address,
+        client_notes: client?.notes,
+        client_is_blacklisted: client?.is_blacklisted == null ? "" : client.is_blacklisted ? "Да" : "Нет",
+        client_blacklist_note: client?.blacklist_note,
+        investor_id: loan.investor_id,
+        investor_name: investor?.name,
+        investor_share_percent: investor?.share_percent,
+        investor_notes: investor?.notes,
+        deal_invested_amount: loan.investor_amount,
+        manager_share_percent: loan.income_share_manager,
+        deal_investor_share_percent: loan.income_share_investor,
+        loan_title: loan.title,
+        cost_amount: loan.cost_amount,
+        markup_percent: loan.markup_percent,
+        principal: loan.principal,
+        down_payment: loan.down_payment,
+        term_months: loan.term_months,
+        monthly_payment: loan.monthly_payment,
+        schedule_on_full_amount: loan.schedule_on_full_amount,
+        start_date: loan.start_date,
+        loan_status: loan.status,
+        loan_created_at: loan.created_at,
+        loan_notes: loan.notes,
+        guarantors: detailRows(guarantors, guarantorFields),
+        schedules: detailRows(schedule, scheduleFields),
+        payments: detailRows(payments, paymentFields),
+      });
+    }
+
+    const loanClientIds = new Set(app.snapshot.loans.map((loan) => loan.client_id));
+    for (const client of app.snapshot.clients.filter((item) => !loanClientIds.has(item.id))) {
+      append({
+        organization_id: client.organization_id || app.snapshot.organizationId,
+        record_type: "client",
+        client_id: client.id,
+        client_name: client.full_name,
+        client_phone: client.phone,
+        client_address: client.address,
+        client_notes: client.notes,
+        client_is_blacklisted: client.is_blacklisted ? "Да" : "Нет",
+        client_blacklist_note: client.blacklist_note,
+      });
+    }
+    const loanInvestorIds = new Set(app.snapshot.loans.map((loan) => loan.investor_id).filter(Boolean));
+    for (const investor of app.snapshot.investors.filter((item) => !loanInvestorIds.has(item.id))) {
+      append({
+        organization_id: investor.organization_id || app.snapshot.organizationId,
+        record_type: "investor",
+        investor_id: investor.id,
+        investor_name: investor.name,
+        investor_share_percent: investor.share_percent,
+        investor_notes: investor.notes,
+      });
+    }
+
+    const loanIds = new Set(app.snapshot.loans.map((loan) => loan.id));
+    const orphanLoanIds = new Set([
+      ...app.snapshot.guarantors.map((item) => item.loan_id),
+      ...app.snapshot.schedules.map((item) => item.loan_id),
+      ...app.snapshot.payments.map((item) => item.loan_id),
+    ].filter((loanId) => !loanIds.has(loanId)));
+    for (const loanId of orphanLoanIds) {
+      const guarantors = app.snapshot.guarantors.filter((item) => item.loan_id === loanId);
+      const schedules = app.snapshot.schedules.filter((item) => item.loan_id === loanId).sort((a, b) => a.sequence_number - b.sequence_number);
+      const payments = app.snapshot.payments.filter((item) => item.loan_id === loanId).sort((a, b) => String(a.paid_at || "").localeCompare(String(b.paid_at || "")));
+      append({
+        organization_id: app.snapshot.organizationId,
+        record_type: "orphan loan details",
+        loan_id: loanId,
+        guarantors: detailRows(guarantors, guarantorFields),
+        schedules: detailRows(schedules, scheduleFields),
+        payments: detailRows(payments, paymentFields),
+      });
     }
     downloadOfflineCsv("rassrochki_full.csv", rows);
   }
@@ -495,6 +617,24 @@
     return pendingForLoan(loanId).map((operation) => operation.id);
   }
 
+  function clientIdForOperation(operation) {
+    const payload = operation.command?.payload || {};
+    const directClientId = payload.clientId || payload.client?.id || payload.loan?.client_id;
+    if (directClientId) return directClientId;
+    const loanId = payload.loanId || payload.loan?.id || payload.payment?.loan_id;
+    if (!loanId) return null;
+    const loan = app.snapshot?.loans.find((item) => item.id === loanId) || app.baseSnapshot?.loans.find((item) => item.id === loanId);
+    return loan?.client_id || null;
+  }
+
+  function dependenciesForClient(clientId) {
+    return app.operations.filter((operation) => clientIdForOperation(operation) === clientId).map((operation) => operation.id);
+  }
+
+  function clientHasConflict(clientId) {
+    return app.operations.some((operation) => operation.state === "conflict" && clientIdForOperation(operation) === clientId);
+  }
+
   function renderClientForm() {
     return `<article class="card"><h2>Новый клиент</h2><form data-form="client-create" class="form-grid">
       <label class="field full">ФИО<input name="full_name" required maxlength="200" autocomplete="name"></label>
@@ -505,12 +645,21 @@
     </form></article>`;
   }
 
+  function renderClientAddressForm(clientId) {
+    const client = app.snapshot.clients.find((item) => item.id === clientId);
+    if (!client) return '<article class="card"><p>Клиент отсутствует в локальной копии.</p><button type="button" data-action="cancel-form">Назад</button></article>';
+    return `<article class="card" style="max-width:560px"><h2>Изменить адрес клиента</h2><p class="muted">${text(client.full_name)}</p><form data-form="client-address-edit" data-client-id="${text(client.id)}" class="form-grid">
+      <label class="field full">Адрес клиента<textarea name="address" maxlength="1000" rows="2" autocomplete="street-address">${text(client.address || "")}</textarea></label>
+      <div class="actions field full"><button type="button" data-action="cancel-form">Отмена</button><button class="primary" type="submit">Сохранить адрес</button></div>
+    </form></article>`;
+  }
+
   function renderLoanForm(loanId = null) {
     const loan = loanId ? app.snapshot.loans.find((item) => item.id === loanId) : null;
     const clients = app.snapshot.clients.filter((client) => !client.is_blacklisted || client.id === loan?.client_id);
     if (!clients.length) return `<article class="card"><h2>Новая рассрочка</h2><p class="muted">Сначала добавьте клиента. Это можно сделать офлайн.</p><button type="button" data-action="new-client">Добавить клиента</button><button type="button" data-action="cancel-form">Отмена</button></article>`;
     const value = (key, fallback = "") => text(loan?.[key] ?? fallback);
-    return `<article class="card"><h2>${loan ? "Изменить рассрочку" : "Новая рассрочка"}</h2><form data-form="${loan ? "loan-edit" : "loan-create"}" data-loan-id="${text(loanId || "")}" class="form-grid">
+    return `<article class="card"><h2>${loan ? "Изменить рассрочку" : "Новая рассрочка"}</h2><form data-form="${loan ? "loan-edit" : "loan-create"}" data-loan-id="${text(loanId || "")}" data-original-principal="${value("principal", "0")}" class="form-grid">
       <label class="field full">Клиент<select name="client_id" required>${clients.map((client) => `<option value="${text(client.id)}" ${client.id === loan?.client_id ? "selected" : ""}>${text(client.full_name)}${client.is_blacklisted ? " · чёрный список" : ""}</option>`).join("")}</select></label>
       <label class="field full">Название / товар<input name="title" maxlength="200" value="${value("title")}" placeholder="Например, холодильник"></label>
       <label class="field">Цена товара<input name="cost_amount" type="number" min="0.01" step="0.01" value="${value("cost_amount")}" ${loan ? "" : "required"}></label>
@@ -519,7 +668,7 @@
       <label class="field">Первоначальный взнос<input name="down_payment" type="number" min="0" step="0.01" value="${value("down_payment", "0")}"></label>
       <label class="field">Срок, месяцев<input name="term_months" type="number" min="1" max="120" step="1" required value="${value("term_months", app.snapshot.settings?.default_term_months || 6)}"></label>
       <label class="field">Начало рассрочки<input name="start_date" type="date" required value="${value("start_date", new Date().toISOString().slice(0, 10))}"></label>
-      <label class="field">Округлять платёж до<select name="rounding_step"><option value="1">1 ₽</option><option value="10">10 ₽</option></select></label>
+      <label class="field">Округлять платёж до<select name="rounding_step"><option value="1">1 ₽</option><option value="10">10 ₽</option><option value="100">100 ₽</option></select></label>
       <label class="field">Платёж в месяц (0 — автоматически)<input name="monthly_payment" type="number" min="0" step="0.01" value="${value("monthly_payment", "0")}"></label>
       <label class="field">Инвестор<select name="investor_id"><option value="">Без инвестора</option>${app.snapshot.investors.map((investor) => `<option value="${text(investor.id)}" ${investor.id === loan?.investor_id ? "selected" : ""}>${text(investor.name)}</option>`).join("")}</select></label>
       <label class="field">Вложение инвестора<input name="investor_amount" type="number" min="0" step="0.01" value="${value("investor_amount")}"></label>
@@ -703,13 +852,17 @@
     if (!(principal instanceof HTMLInputElement)) return;
     const down = Number(data.get("down_payment")) || 0;
     const months = Number(data.get("term_months")) || 0;
-    const target = cost > 0 ? Math.round(cost * (100 + markup) / 100 * 100) / 100 : Number(principal.value) || 0;
+    const target = cost > 0
+      ? Math.round(cost * (100 + markup) / 100 * 100) / 100
+      : form.dataset.form === "loan-edit"
+        ? Number(form.dataset.originalPrincipal) || 0
+        : Number(principal.value) || 0;
     const targetScheduled = Math.max(0, target - down);
     const inputMonthly = Number(data.get("monthly_payment")) || 0;
     const roundingStep = Math.max(1, Number(data.get("rounding_step")) || 1);
     const monthly = months > 0 ? Math.max(roundingStep, Math.round((inputMonthly > 0 ? inputMonthly : targetScheduled / months) / roundingStep) * roundingStep) : 0;
     const total = months > 0 ? Math.round((down + monthly * months) * 100) / 100 : target;
-    if (cost > 0) principal.value = String(total);
+    if (months > 0 && (cost > 0 || form.dataset.form === "loan-edit")) principal.value = String(total);
     else if (form.dataset.form === "loan-create") principal.value = "";
     let note = form.querySelector("[data-rounding-note]");
     if (!note && principal.parentElement) {
@@ -718,12 +871,17 @@
       note.className = "field full muted";
       principal.parentElement.insertAdjacentElement("afterend", note);
     }
-    if (note && cost > 0 && months > 0) {
-      const effective = Math.round(((total - cost) / cost) * 10000) / 100;
-      const change = Math.round((effective - markup) * 100) / 100;
+    if (note && months > 0) {
       const totalChange = Math.round((total - target) * 100) / 100;
-      note.textContent = "Платёж округлён до " + roundingStep + " ₽: " + monthly + " ₽ в месяц. Фактическая наценка " + effective + "% (" +
-        (change > 0 ? "+" : "") + change + " п.п.), сумма к возврату изменится на " +
+      const effectiveMarkup = cost > 0
+        ? (() => {
+          const effective = Math.round(((total - cost) / cost) * 10000) / 100;
+          const change = Math.round((effective - markup) * 100) / 100;
+          return effective + "% (" + (change > 0 ? "+" : "") + change + " п.п.)";
+        })()
+        : "не рассчитывается без исходной цены";
+      note.textContent = "Округление до " + roundingStep + " ₽: " + monthly + " ₽ в месяц. Фактическая наценка " + effectiveMarkup +
+        ". Сумма к возврату изменится на " +
         (totalChange > 0 ? "+" : "") + totalChange + " ₽.";
     }
   }
@@ -733,6 +891,24 @@
     if (!(form instanceof HTMLFormElement) || !form.dataset.form) return;
     event.preventDefault();
     try {
+      if (form.dataset.form === "client-address-edit") {
+        const clientId = form.dataset.clientId;
+        const client = app.snapshot.clients.find((item) => item.id === clientId);
+        if (!client) throw new Error("Клиент отсутствует в локальной копии.");
+        if (clientHasConflict(clientId)) throw new Error("Сначала разрешите конфликт операций этого клиента на главной странице.");
+        const values = new FormData(form);
+        const address = String(values.get("address") || "").trim();
+        await enqueue({
+          type: "client.address",
+          payload: { clientId, expectedVersion: Number(client.offline_version || 1), address },
+        }, dependenciesForClient(clientId));
+        app.clientId = null;
+        app.form = null;
+        app.view = "clients";
+        render();
+        return;
+      }
+
       if (form.dataset.form === "client-create") {
         const values = new FormData(form);
         const clientId = crypto.randomUUID();
@@ -935,12 +1111,26 @@
         return;
       }
       if (action === "cancel-form") {
+        app.clientId = null;
         app.form = null;
         render();
         return;
       }
       if (action === "new-client") {
+        app.clientId = null;
         app.form = "client-create";
+        app.view = "clients";
+        render();
+        return;
+      }
+      if (action === "edit-client-address" && clientId) {
+        if (!app.snapshot.clients.some((item) => item.id === clientId)) return;
+        if (clientHasConflict(clientId)) {
+          window.alert("Сначала разрешите конфликт операций этого клиента на главной странице.");
+          return;
+        }
+        app.clientId = clientId;
+        app.form = "client-address-edit";
         app.view = "clients";
         render();
         return;
@@ -1033,6 +1223,7 @@
       button.setAttribute("aria-current", button.dataset.view === app.view ? "page" : "false");
     });
     if (app.form === "client-create") content.innerHTML = renderClientForm();
+    else if (app.form === "client-address-edit") content.innerHTML = renderClientAddressForm(app.clientId);
     else if (app.form === "loan-create") content.innerHTML = renderLoanForm();
     else if (app.form === "loan-edit") content.innerHTML = renderLoanForm(app.loanId);
     else if (app.form === "payment") content.innerHTML = renderPaymentForm(app.loanId);
@@ -1043,7 +1234,6 @@
         : app.loanId
           ? renderLoanDetails()
           : renderLoans();
-    if (app.view === "clients" && !app.form) addClientAddressesToList();
     if (app.form === "loan-create" || app.form === "loan-edit") {
       const loanForm = content.querySelector('form[data-form^="loan-"]');
       if (loanForm) updateLoanEstimate(loanForm);
@@ -1053,20 +1243,6 @@
       if (conflicts.length) {
         content.insertAdjacentHTML("beforeend", `<article class="card warning"><h2>Операции требуют внимания</h2>${conflicts.map((operation) => `<div class="row"><span>${text(operation.lastError || "Конфликт данных")}</span><button class="danger-button" type="button" data-action="discard-operation" data-operation="${text(operation.id)}">Удалить локальную операцию</button></div>`).join("")}<p class="muted">Удаление здесь отменит только локальное изменение. Серверные данные не затрагиваются.</p></article>`);
       }
-    }
-  }
-
-  function addClientAddressesToList() {
-    for (const client of app.snapshot.clients) {
-      if (!client.address) continue;
-      const action = Array.from(content.querySelectorAll("[data-client]")).find((item) => item.getAttribute("data-client") === client.id);
-      const row = action?.closest(".row");
-      const details = row?.querySelector("strong")?.parentElement;
-      if (!details) continue;
-      const address = document.createElement("div");
-      address.className = "muted";
-      address.textContent = "Адрес: " + client.address;
-      details.append(address);
     }
   }
 
