@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { LoansList } from "@/components/LoansList";
-import { BackLink } from "@/components/BackLink";
 import { createClient, getSessionProfile } from "@/lib/supabase/server";
 import { syncOverdueSchedules } from "@/lib/overdue";
 
@@ -28,7 +27,6 @@ export default async function LoansPage() {
 
   return (
     <div className="space-y-4">
-      <BackLink href="/dashboard" label="На главную" />
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-bold">Рассрочки</h1>
