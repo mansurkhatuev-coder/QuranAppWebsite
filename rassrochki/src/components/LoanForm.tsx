@@ -8,7 +8,7 @@ import { FormSkeleton } from "@/components/Skeleton";
 import { NumericInput } from "@/components/NumericInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { PhoneInput } from "@/components/PhoneInput";
-import { calculateRoundedLoanTerms } from "@/lib/rounded-loan";
+import { calculateRoundedLoanTerms, PAYMENT_ROUNDING_STEPS } from "@/lib/rounded-loan";
 import { Spinner } from "@/components/Spinner";
 import { PassportNameScan } from "@/components/PassportNameScan";
 import { useDraft } from "@/hooks/useDraft";
@@ -889,7 +889,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
           <div>
             <label className="label">Округлять ежемесячный платёж до</label>
             <div className="flex flex-wrap gap-2">
-              {[1, 10].map((step) => (
+              {PAYMENT_ROUNDING_STEPS.map((step) => (
                 <button
                   key={step}
                   type="button"

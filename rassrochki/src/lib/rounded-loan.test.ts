@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { calculateRoundedLoanTerms } from "@/lib/rounded-loan";
+import { calculateRoundedLoanTerms, PAYMENT_ROUNDING_STEPS } from "@/lib/rounded-loan";
+
+describe("payment rounding choices", () => {
+  it("offers whole rubles, ten rubles, and hundred rubles", () => {
+    expect(PAYMENT_ROUNDING_STEPS).toEqual([1, 10, 100]);
+  });
+
+  it("rounds a 270 ruble payment to 300 at the hundred-ruble step", () => {
+    const result = calculateRoundedLoanTerms(270, 0, 0, 1, undefined, 100);
+
+    expect(result.monthlyPayment).toBe(300);
+    expect(result.principal).toBe(300);
+    expect(result.effectiveMarkupPercent).toBe(11.11);
+    expect(result.markupChangePercent).toBe(11.11);
+    expect(result.totalChange).toBe(30);
+  });
+});
 
 describe("calculateRoundedLoanTerms", () => {
   it("rounds monthly payments to whole rubles and reports the actual markup", () => {
