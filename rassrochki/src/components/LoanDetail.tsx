@@ -1,9 +1,9 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 import type {
   LoanGuarantor,
   LoanWithRelations,
@@ -57,7 +57,7 @@ export function LoanDetail({
   settings: OrganizationSettings;
   orgName: string;
 }) {
-  const router = useRouter();
+  const { operations, enqueueCommand } = useOfflineWorkspace();
   const [pendingSchedule, setPendingSchedule] = useState<PaymentSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -103,52 +103,54 @@ export function LoanDetail({
     assertPaymentWithinLoanRemaining(amount, loanRemaining);
     setError(null);
     setInfo(null);
-    const supabase = createClient();
     const paidAtIso = new Date(`${values.paid_at}T12:00:00`).toISOString();
 
-    let receiptPath: string | null = null;
     if (values.file) {
       const ext = values.file.name.split(".").pop()?.toLowerCase() || "jpg";
       const safeExt = ["jpg", "jpeg", "png", "webp", "heic", "pdf"].includes(ext) ? ext : "jpg";
       if (values.file.size > 8 * 1024 * 1024) {
         throw new Error("Чек слишком большой (макс. 8 МБ)");
       }
-      const mime =
-        values.file.type && values.file.type.startsWith("image/")
-          ? values.file.type
-          : values.file.type === "application/pdf"
-            ? "application/pdf"
-            : safeExt === "pdf"
-              ? "application/pdf"
-              : "image/jpeg";
-      receiptPath = `${loan.organization_id}/${loan.id}/${schedule.id}-${Date.now()}.${safeExt}`;
-      const { error: uploadError } = await supabase.storage
-        .from("payment-receipts")
-        .upload(receiptPath, values.file, { upsert: false, contentType: mime });
-      if (uploadError) throw new Error("Не удалось загрузить чек");
+      if (!values.file.type && safeExt !== "pdf") {
+        throw new Error("Не удалось определить формат файла чека");
+      }
     }
 
-    const { data: rpcRows, error: rpcError } = await supabase.rpc("record_payment", {
-      p_schedule_id: schedule.id,
-      p_amount: amount,
-      p_paid_at: paidAtIso,
-      p_method: values.file ? "transfer_with_receipt" : "manual",
-      p_notes: values.notes.trim() || null,
-      p_receipt_path: receiptPath,
-      p_idempotency_key: values.idempotency_key,
-    });
-    if (rpcError) throw rpcError;
-    const rpc = Array.isArray(rpcRows) ? rpcRows[0] : rpcRows;
-    if (!rpc) throw new Error("Не удалось зарегистрировать оплату");
-
-    if (rpc.idempotent_replay) {
-      setInfo("Повторный запрос распознан: платёж уже был зарегистрирован ранее");
-    } else if (Number(rpc.applied_total ?? amount) > scheduleDueRemaining(schedule) + 0.009) {
-      setInfo("Сумма зачтена на несколько платежей по графику");
-    }
-
+    const dependencies = operations
+      .filter((operation) => {
+        if (operation.state === "conflict") return false;
+        const payload = operation.command.payload;
+        return (
+          payload.loanId === loan.id ||
+          (payload.loan as { id?: string } | undefined)?.id === loan.id ||
+          (payload.payment as { loan_id?: string } | undefined)?.loan_id === loan.id
+        );
+      })
+      .map((operation) => operation.id);
+    await enqueueCommand(
+      {
+        type: "payment.record",
+        payload: {
+          scheduleId: schedule.id,
+          payment: {
+            id: crypto.randomUUID(),
+            loan_id: loan.id,
+            organization_id: loan.organization_id,
+            schedule_id: schedule.id,
+            amount: Math.round(amount * 100) / 100,
+            paid_at: paidAtIso,
+            method: values.file ? "transfer_with_receipt" : "manual",
+            notes: values.notes.trim() || null,
+            receipt_path: null,
+            idempotency_key: values.idempotency_key,
+          },
+        },
+      },
+      dependencies,
+      { id: values.idempotency_key, receipt: values.file ?? undefined }
+    );
+    setInfo("Оплата сохранена на устройстве и отправится при подключении.");
     setPendingSchedule(null);
-    router.refresh();
   }
 
   async function openReceipt(path: string) {

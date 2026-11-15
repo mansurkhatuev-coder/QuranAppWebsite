@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { organizationHasAccess } from "@/lib/access";
 import { readAllPages } from "@/lib/offline/snapshot";
 import { createClient, getSessionProfile } from "@/lib/supabase/server";
+import { syncOverdueSchedules } from "@/lib/overdue";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -28,6 +29,7 @@ export async function GET() {
   const organizationId = organization.id;
 
   try {
+    await syncOverdueSchedules(supabase, organizationId, settings.overdue_days, new Date());
     const [clients, loans, schedules, payments, guarantors, investors] = await Promise.all([
       readAllPages(
         (from, to) =>

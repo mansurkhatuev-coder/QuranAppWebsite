@@ -6,7 +6,7 @@ import type { MouseEvent } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { PageFade } from "@/components/PageFade";
 import { PwaInstallBanner } from "@/components/PwaInstallBanner";
-import { OfflineBootstrap } from "@/components/OfflineBootstrap";
+import { OfflineBootstrap, OfflineStatus } from "@/components/OfflineBootstrap";
 import { getOfflineStore } from "@/lib/offline/db";
 
 const links = [
@@ -116,6 +116,7 @@ export function AppShell({
   }
 
   return (
+    <OfflineBootstrap userId={userId} organizationId={organizationId}>
     <div className="min-h-screen" onClickCapture={openOfflineWorkspace}>
       <header className="sticky top-0 z-20 border-b border-[var(--border)] bg-white/95 backdrop-blur">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3 px-4 py-3">
@@ -133,6 +134,7 @@ export function AppShell({
                 {accessLabel}
               </p>
             )}
+            <OfflineStatus />
           </div>
           <div className="flex items-center gap-2">
             {isPlatformAdmin && (
@@ -166,10 +168,10 @@ export function AppShell({
         </nav>
       </header>
       <main className="mx-auto max-w-6xl space-y-3 px-4 py-4 md:py-6">
-        <OfflineBootstrap userId={userId} organizationId={organizationId} />
-        <PwaInstallBanner />
         <PageFade>{children}</PageFade>
+        <PwaInstallBanner />
       </main>
     </div>
+    </OfflineBootstrap>
   );
 }

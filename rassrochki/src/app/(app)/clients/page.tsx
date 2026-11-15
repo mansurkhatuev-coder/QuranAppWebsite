@@ -1,16 +1,13 @@
-import Link from "next/link";
-import { EmptyState } from "@/components/ui";
-import { ClientsTable } from "@/components/ClientsTable";
-import { createClient, getSessionProfile } from "@/lib/supabase/server";
+"use client";
 
-export default async function ClientsPage() {
-  const { organization } = await getSessionProfile();
-  const supabase = await createClient();
-  const { data: clients, error } = await supabase
-    .from("clients")
-    .select("*")
-    .eq("organization_id", organization!.id)
-    .order("created_at", { ascending: false });
+import Link from "next/link";
+import { ClientsTable } from "@/components/ClientsTable";
+import { EmptyState } from "@/components/ui";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
+
+export default function ClientsPage() {
+  const { snapshot, loaded, online, syncing, error } = useOfflineWorkspace();
+  const clients = snapshot?.clients ?? [];
 
   return (
     <div className="space-y-4">
@@ -24,17 +21,21 @@ export default async function ClientsPage() {
         </Link>
       </div>
 
-      {error && (
+      {!loaded || (!snapshot && syncing) ? (
+        <p className="rounded-2xl border border-[var(--border)] bg-white px-4 py-3 text-sm text-[var(--muted)]">
+          Загружаем данные на устройство…
+        </p>
+      ) : !snapshot ? (
         <div className="rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-950">
-          Не удалось загрузить клиентов. Обновите страницу.
+          {online === false
+            ? "На этом устройстве ещё нет сохранённых клиентов. Подключитесь к интернету, чтобы загрузить данные."
+            : error || "Пока не удалось сохранить данные на устройстве. Повторите обновление."}
         </div>
-      )}
-
-      {!error && (clients ?? []).length === 0 ? (
+      ) : clients.length === 0 ? (
         <EmptyState title="Клиентов пока нет" description="Добавьте первого клиента." />
-      ) : !error ? (
-        <ClientsTable clients={clients ?? []} />
-      ) : null}
+      ) : (
+        <ClientsTable clients={clients} />
+      )}
     </div>
   );
 }

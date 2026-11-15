@@ -1,12 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useMemo, useState } from "react";
+import { useOfflineWorkspace } from "@/components/OfflineBootstrap";
 import { EmptyState, StatusBadge } from "@/components/ui";
 import { Spinner } from "@/components/Spinner";
-import { createClient } from "@/lib/supabase/client";
-import { friendlyError } from "@/lib/friendly";
 import { buildLoanDeleteConfirmation } from "@/lib/loan-delete-confirmation";
 import { formatDateShort, formatMoney, loanEndDate } from "@/lib/utils";
 
@@ -23,7 +21,7 @@ export type LoanListRow = {
 };
 
 export function LoansList({ loans }: { loans: LoanListRow[] }) {
-  const router = useRouter();
+  const { operations, enqueueCommand } = useOfflineWorkspace();
   const [query, setQuery] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [warning, setWarning] = useState<string | null>(null);
@@ -50,43 +48,27 @@ export function LoansList({ loans }: { loans: LoanListRow[] }) {
     setError(null);
     setWarning(null);
     try {
-      const supabase = createClient();
-      const { data: deleteData, error: deleteError } = await supabase.rpc("delete_loan_with_history", {
-        p_loan_id: loan.id,
-      });
-
-      if (deleteError) {
-        setError(friendlyError("Не удалось удалить рассрочку", deleteError));
-        return;
-      }
-
-      const receiptResult = deleteData as { receipt_paths?: unknown } | null;
-      const receiptPaths = Array.isArray(receiptResult?.receipt_paths)
-        ? receiptResult.receipt_paths.filter(
-            (path): path is string => typeof path === "string" && path.trim().length > 0
-          )
-        : [];
-
-      setDeletedLoanIds((current) => [...current, loan.id]);
-      if (receiptPaths.length > 0) {
-        try {
-          const { error: receiptError } = await supabase.storage
-            .from("payment-receipts")
-            .remove(receiptPaths);
-          if (receiptError) {
-            setWarning(
-              "Рассрочка и оплаты удалены, но не удалось удалить некоторые чеки из хранилища."
-            );
-          }
-        } catch {
-          setWarning(
-            "Рассрочка и оплаты удалены, но не удалось удалить некоторые чеки из хранилища."
+      const dependencies = operations
+        .filter((operation) => {
+          if (operation.state === "conflict") return false;
+          const payload = operation.command.payload;
+          return (
+            payload.loanId === loan.id ||
+            (payload.loan as { id?: string } | undefined)?.id === loan.id ||
+            (payload.payment as { loan_id?: string } | undefined)?.loan_id === loan.id
           );
-        }
-      }
-      router.refresh();
-    } catch (deleteError) {
-      setError(friendlyError("Не удалось удалить рассрочку", deleteError));
+        })
+        .map((operation) => operation.id);
+      await enqueueCommand(
+        {
+          type: "loan.delete",
+          payload: { loanId: loan.id, expectedVersion: Number((loan as { offline_version?: number }).offline_version ?? 1) },
+        },
+        dependencies
+      );
+      setDeletedLoanIds((current) => [...current, loan.id]);
+    } catch {
+      setError("Не удалось сохранить удаление на устройстве. Рассрочка не скрыта.");
     } finally {
       setBusyId(null);
     }
