@@ -22,10 +22,10 @@ test('one-finger panning applies pointer deltas directly to the scroll position'
   assert.deepEqual(viewport, { scrollLeft: 144, scrollTop: 229 });
 });
 
-test('touch panning starts promptly while mouse panning keeps a click-safe threshold', () => {
+test('mouse and touch panning both start promptly without stealing ordinary clicks', () => {
   assert.equal(pointerPanThreshold('touch'), 6);
-  assert.equal(pointerPanThreshold('mouse'), 18);
-  assert.equal(pointerPanThreshold('pen'), 18);
+  assert.equal(pointerPanThreshold('mouse'), 5);
+  assert.equal(pointerPanThreshold('pen'), 6);
 });
 
 test('the tree touch guard cancels native scrolling before it can fight camera panning', () => {

@@ -15,6 +15,6 @@ test('the production demo tree links back to the public atlas without obscuring 
 
 test('demo atlas backlink uses a fresh stylesheet and worker cache version',()=>{
  assert.match(html,/waydean-preview-demo\.css\?v=demo-interface-2/);
- assert.match(sw,/waydean-preview-shell-v66/);
+ assert.match(sw,/waydean-preview-shell-v67/);
  assert.match(sw,/waydean-preview-demo\.css\?v=demo-interface-2/);
 });

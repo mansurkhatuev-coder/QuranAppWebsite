@@ -3,6 +3,8 @@
   cursor: grab;
 }
 
+.graph-viewport.camera-panning { scroll-behavior: auto !important; }
+
 .graph-viewport:active { cursor: grabbing; }
 .graph-extent { position: relative; min-width: 100%; min-height: 100%; }
 .graph {

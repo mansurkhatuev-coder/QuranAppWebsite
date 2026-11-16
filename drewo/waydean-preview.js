@@ -3424,6 +3424,7 @@ function bindCameraGestures() {
     }
     pointers.clear();
     pinchStart = null;
+    ui.viewport.classList.remove('camera-panning');
   };
   const startReparentDrag = (pointer, clientX, clientY) => {
     const sourceNode = pointer.captureTarget;
@@ -3536,6 +3537,7 @@ function bindCameraGestures() {
         }
         previous.dragging = true;
         markCameraMoving();
+        ui.viewport.classList.add('camera-panning');
         panViewportByPointer(ui.viewport, { x: previous.startX, y: previous.startY }, { x: event.clientX, y: event.clientY });
       } else if (previous.reparentDragging) {
         updateReparentDrag(previous, event.clientX, event.clientY);
@@ -3557,6 +3559,7 @@ function bindCameraGestures() {
         pointer.dragging = true;
       }
       markCameraMoving();
+      ui.viewport.classList.add('camera-panning');
       previous.x = event.clientX;
       previous.y = event.clientY;
       const after = pair();
@@ -3584,6 +3587,9 @@ function bindCameraGestures() {
     pointers.delete(event.pointerId);
     if (wasPinching && pointers.size >= 2) beginPinch();
     else if (pointers.size < 2) pinchStart = null;
+    if (![...pointers.values()].some(active => active.dragging && !active.reparentDragging)) {
+      ui.viewport.classList.remove('camera-panning');
+    }
     const captureTarget = pointer?.captureTarget || ui.viewport;
     if (captureTarget.hasPointerCapture(event.pointerId)) captureTarget.releasePointerCapture(event.pointerId);
     if (wasReparentDragging && event.type === 'pointerup' && dropTargetId) applyReparentDrop(pointer.personId, dropTargetId);
