@@ -7695,7 +7695,7 @@
         }
       });
 
-      viewport.addEventListener('pointermove', function (e) {
+      window.addEventListener('pointermove', function (e) {
         if (dragState) {
           onDragMove(e);
           return;
@@ -7726,7 +7726,7 @@
 
         if (activePointers.size === 1 && panOrigin) {
           var p = activePointers.get(e.pointerId);
-          if (Math.hypot(p.x - panOrigin.x, p.y - panOrigin.y) > 6) {
+          if (Math.hypot(p.x - panOrigin.x, p.y - panOrigin.y) > 3) {
             gestureMoved = true;
             clearLongPressGesture();
           }
@@ -7734,7 +7734,7 @@
           map.y = panOrigin.mapY + (p.y - panOrigin.y);
           applyMapTransform();
         }
-      });
+      }, true);
 
       function endPointer(e) {
         if (dragState && e.pointerId === dragState.pointerId) {
@@ -7754,7 +7754,6 @@
       viewport.addEventListener('pointerup', endPointer);
       viewport.addEventListener('pointercancel', endPointer);
       viewport.addEventListener('lostpointercapture', endPointer);
-      window.addEventListener('pointermove', onDragMove);
       window.addEventListener('pointerup', onDragEnd);
       window.addEventListener('pointercancel', onDragEnd);
 
