@@ -58,12 +58,12 @@ test('pinch updates apply only the latest coordinates once per frame and can flu
   assert.equal(applied.length, 2);
 });
 
-test('camera keeps half a viewport of panning space around the scaled tree', () => {
+test('camera leaves a full viewport of panning space around the scaled tree', () => {
   assert.deepEqual(cameraLayout(900, 600, 1000, 700, 0.5), {
-    extentWidth: 1400,
-    extentHeight: 950,
-    offsetX: 450,
-    offsetY: 300
+    extentWidth: 2300,
+    extentHeight: 1550,
+    offsetX: 900,
+    offsetY: 600
   });
 });
 
@@ -74,9 +74,9 @@ test('camera can center people at the far edges of a scaled tree', () => {
   const leftPersonCenter = layout.offsetX + 50 * MIN_MOBILE_ZOOM - 390 / 2;
   const rightPersonCenter = layout.offsetX + (18000 - 50) * MIN_MOBILE_ZOOM - 390 / 2;
 
-  assert.equal(leftPersonCenter, 0.5);
-  assert.equal(rightPersonCenter, maxScrollLeft - 0.5);
-  assert.equal(maxScrollTop, 2800 * MIN_MOBILE_ZOOM);
+  assert.equal(leftPersonCenter, 195.5);
+  assert.equal(rightPersonCenter, maxScrollLeft - 195.5);
+  assert.equal(maxScrollTop, 728);
 });
 
 test('mobile camera zoom allows a much wider far-out range while keeping a safe maximum', () => {

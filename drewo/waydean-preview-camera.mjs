@@ -46,7 +46,7 @@ export function wheelZoomFactor(deltaY) {
 }
 
 export function pointerPanThreshold(pointerType) {
-  return pointerType === 'touch' ? 6 : 18;
+  return pointerType === 'mouse' ? 5 : 6;
 }
 
 export function preventNativeTouchScroll(event) {
@@ -61,14 +61,13 @@ export function panViewportByPointer(viewport, previous, next) {
 export function cameraLayout(viewWidth, viewHeight, graphWidth, graphHeight, zoom) {
   const scaledWidth = graphWidth * zoom;
   const scaledHeight = graphHeight * zoom;
-  // Always leave half a viewport of working space around the tree. A short
-  // tree can still have a person on its top, bottom, left, or right edge that
-  // should be movable to the center of the screen.
-  const offsetX = viewWidth / 2;
-  const offsetY = viewHeight / 2;
+  // Leave a full viewport of working space around the tree so a short tree
+  // can be dragged freely in every direction without immediately hitting an edge.
+  const offsetX = viewWidth;
+  const offsetY = viewHeight;
   return {
-    extentWidth: scaledWidth + viewWidth,
-    extentHeight: scaledHeight + viewHeight,
+    extentWidth: scaledWidth + viewWidth * 2,
+    extentHeight: scaledHeight + viewHeight * 2,
     offsetX,
     offsetY
   };

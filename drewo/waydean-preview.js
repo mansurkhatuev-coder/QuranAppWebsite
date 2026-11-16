@@ -4,7 +4,7 @@ import {
   createLatestFrameCoalescer, clampZoom, MIN_MOBILE_ZOOM, MIN_DESKTOP_ZOOM,
   miniMapViewport, miniMapScrollTarget, wheelZoomFactor,
   panViewportByPointer, pointerPanThreshold, preventNativeTouchScroll
-} from './waydean-preview-camera.mjs?v=touch-guard-20261114-1';
+} from './waydean-preview-camera.mjs?v=camera-pan-20261116-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
 import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
 import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
@@ -3642,7 +3642,11 @@ function fitTree() {
   const scaledHeight = ui.graph.offsetHeight * zoom;
   if (scaledWidth <= ui.viewport.clientWidth && scaledHeight <= ui.viewport.clientHeight) {
     // If the entire layout fits, center it as a whole.
-    ui.viewport.scrollTo({ left: scaledWidth / 2, top: scaledHeight / 2, behavior: 'instant' });
+    ui.viewport.scrollTo({
+      left: currentCameraLayout.offsetX + scaledWidth / 2 - ui.viewport.clientWidth / 2,
+      top: currentCameraLayout.offsetY + scaledHeight / 2 - ui.viewport.clientHeight / 2,
+      behavior: 'instant'
+    });
   } else {
     // A large tree stays readable and opens around the selected person.
     centerVisiblePerson();
