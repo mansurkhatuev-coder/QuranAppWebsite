@@ -1,0 +1,8 @@
+{
+  "tileSize": 512,
+  "maxZoom": 4,
+  "tiles": 341,
+  "source": "Natural Earth II 1:50m shaded relief and water",
+  "grade": "emerald-physical",
+  "sourcePage": "https://www.naturalearthdata.com/downloads/50m-raster-data/50m-natural-earth-2/"
+}

@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="ru">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+ <meta name="theme-color" content="#102b29">
+ <title>Древо — атлас происхождения</title>
+ <meta name="description" content="Интерактивный атлас Чечни: тухумы, тейпы, родовые места и башенные комплексы.">
+ <link rel="stylesheet" href="./assets/cormorant.css">
+ <link rel="stylesheet" href="./assets/source-sans.css">
+ <link rel="stylesheet" href="./vendor/maplibre-gl.css">
+ <link rel="stylesheet" href="./style.css">
+ <link rel="stylesheet" href="./opening.css">
+ <link rel="stylesheet" href="./journey.css">
+</head>
+<body data-atlas-entrance="pending">
+ <svg class="svg-defs" aria-hidden="true"><defs>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14M13 6l6 6-6 6"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m15.5 15.5 5 5"/></symbol>
+  <symbol id="i-tower" viewBox="0 0 24 24"><path d="M7 21h10L15.5 7h-7L7 21ZM8.5 7 12 2l3.5 5M10 12h4M10.5 16h3M5 21h14"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 3 10 6-10 6L2 9l10-6ZM2 13l10 6 10-6M2 17l10 6 10-6"/></symbol>
+  <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M19 12H5m6-6-6 6 6 6"/></symbol>
+  <symbol id="i-compass" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m15.5 8.5-2 5-5 2 2-5 5-2Z"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z"/><path d="M9 3v15m6-12v15"/></symbol>
+  <symbol id="i-branch" viewBox="0 0 24 24"><path d="M12 20V8m0 6-7-5m7 3 7-5"/><circle cx="12" cy="4.5" r="2.5"/><circle cx="4" cy="7" r="2"/><circle cx="20" cy="5" r="2"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+  <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+ </defs></svg>
+
+ <main class="atlas-shell" id="atlas-shell" data-layout="side" data-sheet="peek">
+  <button id="return-chechnya" class="return-chechnya" type="button">↗ Вернуться в Чечню</button>
+  <div id="map" class="map" role="region" aria-label="Карта рельефа Чечни"></div>
+  <div class="map-vignette" aria-hidden="true"></div>
+
+  <header class="topbar" id="topbar">
+   <button class="brand" id="brand-home" type="button" aria-label="Древо — обзор карты">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M24 58h16M32 58V21M32 46 18 33M32 38 45 25M32 29 23 20M32 24 38 15M25 39 13 37M23 38l-3-12M39 31l12-1M40 30l2-13"/><g fill="currentColor" stroke="none"><ellipse cx="32" cy="13" rx="3" ry="5"/><ellipse cx="21" cy="15" rx="3" ry="4" transform="rotate(-32 21 15)"/><ellipse cx="41" cy="11" rx="3" ry="4" transform="rotate(32 41 11)"/><ellipse cx="14" cy="23" rx="3" ry="4" transform="rotate(-45 14 23)"/><ellipse cx="10" cy="33" rx="3" ry="4" transform="rotate(-60 10 33)"/><ellipse cx="20" cy="25" rx="2.5" ry="4"/><ellipse cx="47" cy="21" rx="3" ry="4" transform="rotate(45 47 21)"/><ellipse cx="53" cy="29" rx="3" ry="4" transform="rotate(60 53 29)"/><ellipse cx="15" cy="43" rx="3" ry="4" transform="rotate(-65 15 43)"/><ellipse cx="45" cy="38" rx="3" ry="4" transform="rotate(45 45 38)"/></g></svg></span>
+    <span class="brand-word">Древо<small>АТЛАС ПРОИСХОЖДЕНИЯ</small></span>
+   </button>
+   <nav class="main-nav" aria-label="Разделы">
+    <button class="active" data-tab="atlas" type="button" aria-current="page">Атлас</button>
+    <button data-tab="roots" type="button">Происхождение</button>
+    <button data-tab="places" type="button">Места</button>
+   </nav>
+   <div class="top-actions">
+    <button class="top-action" id="search-toggle" type="button" aria-label="Поиск по атласу"><svg><use href="#i-search"/></svg><span>Поиск по атласу</span></button>
+    <button class="about-link" id="about" type="button">О проекте</button>
+    <a class="demo-tree-link" id="atlas-demo-tree" href="/drewo-reklama/" target="_blank" rel="noopener" aria-label="Открыть публичное демонстрационное родовое древо" title="Публичное демо-древо">
+     <svg aria-hidden="true"><use href="#i-branch"/></svg><span class="demo-full-label">Демо-древо</span><span class="demo-compact-label" aria-hidden="true">Демо</span>
+    </a>
+    <button class="login-link" id="atlas-login" type="button">Войти <svg><use href="#i-arrow"/></svg></button>
+   </div>
+  </header>
+
+  <section class="intro" id="intro">
+   <div class="eyebrow"><span class="gold-line"></span>НОХЧИЙН МОХК · АТЛАС ЧЕЧНИ</div>
+   <h1>Земля<br><em>предков.</em></h1>
+   <p>От родного селения —<br>к истории твоего рода.</p>
+   <div class="map-gesture" aria-hidden="true"><span class="gesture-orbit">↔</span><span>Вращайте и приближайте карту<small>Перетаскивание · колесо мыши</small></span></div>
+  </section>
+
+  <aside class="group-choice-panel" id="overview-group-dock" aria-label="Выбор тухума">
+   <div class="group-choice-grid" role="group" aria-label="Тухумы">
+    <button class="group-choice" id="overview-group-akki" type="button" data-overview-group="akki"><span>Аккий</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-melkhiy" type="button" data-overview-group="melkhiy"><span>Мелхий</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-nokhch" type="button" data-overview-group="nokhch"><span>Нохчмахкахой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-orst" type="button" data-overview-group="orst"><span>Орстхой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-terloy" type="button" data-overview-group="terloy"><span>Терлой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-chantiy" type="button" data-overview-group="chantiy"><span>Чантий</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-cheber" type="button" data-overview-group="cheber"><span>Чебарлой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-sharoi" type="button" data-overview-group="sharoi"><span>Шарой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+    <button class="group-choice" id="overview-group-shatoi" type="button" data-overview-group="shatoi"><span>Шатой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
+   </div>
+   <div class="hero-actions">
+    <button class="hero-primary" id="create-tree" type="button"><svg><use href="#i-plus"/></svg><span>Создать древо</span><svg class="hero-arrow"><use href="#i-arrow"/></svg></button>
+   </div>
+   <div class="hero-stats" aria-label="Состав демо-каталога">
+    <article data-hero-stat><strong id="hero-group-count">—</strong><span>тухумов</span></article>
+    <article data-hero-stat><strong id="hero-teip-count">—</strong><span>тейпов</span></article>
+    <article data-hero-stat><strong id="hero-place-count">—</strong><span>мест</span></article>
+   </div>
+  </aside>
+
+  <aside class="explorer" id="explorer" aria-label="Каталог происхождения">
+   <button class="sheet-handle" id="sheet-handle" type="button" aria-label="Развернуть каталог" aria-expanded="false"><span></span></button>
+   <div class="panel-heading">
+    <span class="panel-kicker" id="catalog-label">ИССЛЕДОВАТЬ ПРОИСХОЖДЕНИЕ</span>
+    <div class="panel-heading-actions">
+     <span class="count" id="count"></span>
+     <button class="icon-button panel-toggle" id="catalog-toggle" type="button" aria-expanded="true" aria-label="Свернуть каталог"><span aria-hidden="true">−</span></button>
+    </div>
+   </div>
+
+   <section class="catalog-body" id="catalog-body">
+    <label class="search-field" id="search-field">
+     <svg><use href="#i-search"/></svg>
+     <input id="search" type="search" placeholder="Тухум, тейп или место" autocomplete="off" aria-label="Поиск по атласу">
+     <kbd aria-hidden="true">↵</kbd>
+    </label>
+    <div class="search-results" id="search-results" hidden role="listbox" aria-label="Результаты поиска"></div>
+    <div class="catalog-heading"><div id="breadcrumbs" class="breadcrumbs"><span>Тухумы</span></div><div class="layer-tabs" aria-label="Содержание атласа"><button class="selected" type="button" data-layer="groups" aria-pressed="true">Тухумы</button><button type="button" data-layer="sites" aria-pressed="false">Места</button></div></div>
+    <section class="aggregate-dashboard" id="aggregate-dashboard" hidden aria-label="Публичная сводка"></section>
+    <div id="catalog-list" class="catalog-list"></div>
+    <div class="catalog-empty" id="catalog-empty" hidden>
+     <span class="empty-mark" aria-hidden="true">✦</span>
+     <p></p>
+     <button id="catalog-back" class="text-action" type="button">К предыдущему разделу <svg><use href="#i-arrow"/></svg></button>
+    </div>
+   </section>
+
+   <section class="place-detail" id="place-detail" hidden aria-label="Карточка места"></section>
+  </aside>
+
+  <div class="map-topline"><span class="map-status" id="map-status" role="status" aria-live="polite"><span class="small-dot"></span>Загружаем рельеф</span></div>
+  <div class="atlas-edition" aria-hidden="true"><span>Память начинается с места.</span></div>
+
+  <aside class="camera-rail" id="camera-rail" aria-label="Управление картой">
+   <button class="icon-button north-button" id="reset-north" type="button" aria-label="Север сверху" title="Север сверху"><span class="north-needle" aria-hidden="true">↑</span><small>N</small></button>
+   <div class="zoom-group" aria-label="Масштаб карты">
+    <button class="icon-button" id="zoom-in" type="button" aria-label="Приблизить"><svg><use href="#i-plus"/></svg></button>
+    <button class="icon-button" id="zoom-out" type="button" aria-label="Отдалить"><svg><use href="#i-minus"/></svg></button>
+   </div>
+   <button class="icon-button view-toggle" id="view-toggle" type="button" aria-expanded="false" aria-controls="view-menu" aria-label="Открыть управление видом карты"><svg><use href="#i-map"/></svg></button>
+  </aside>
+
+  <section class="view-menu" id="view-menu" hidden aria-label="Вид и слои карты">
+   <div class="view-menu-heading"><span>ВИД КАРТЫ</span><button class="icon-button" id="view-close" type="button" aria-label="Закрыть настройки вида"><svg><use href="#i-close"/></svg></button></div>
+   <div class="view-actions">
+    <button class="view-action" id="home-view" type="button"><svg><use href="#i-compass"/></svg><span>Общий вид</span></button>
+    <button class="view-action" id="world-view" type="button">Земля <span>↗</span></button>
+    <button class="view-action" id="rotate-left" type="button" aria-label="Повернуть влево на 15 градусов">Повернуть влево <span>↶</span></button>
+    <button class="view-action" id="rotate-right" type="button" aria-label="Повернуть вправо на 15 градусов">Повернуть вправо <span>↷</span></button>
+   </div>
+   <label class="pitch-control" for="pitch-slider"><span>Наклон</span><output id="pitch-value">44°</output><input id="pitch-slider" type="range" min="0" max="60" value="44"></label>
+   <div class="view-footer">
+    <button class="mode-switch" id="terrain-toggle" type="button" aria-pressed="true"><span>Объёмный рельеф</span><span class="switch-track"><i></i></span></button>
+    <button class="view-action" id="motion-toggle" type="button" aria-pressed="true"><span>Движение облаков</span><span class="motion-dot"></span></button>
+    <button class="view-action" id="sound-toggle" type="button" aria-pressed="false"><span>Звуки ветра</span><span class="motion-dot"></span></button>
+    <button class="view-action" id="map-only" type="button" aria-pressed="false"><svg><use href="#i-map"/></svg><span>Только карта</span></button>
+   </div>
+  </section>
+
+  <button class="feature-card" id="featured-place" type="button" aria-label="Открыть карточку Ушкалойских башен">
+   <picture class="feature-picture">
+    <source type="image/webp" srcset="./assets/landmarks/ushkaloi-480.webp 480w, ./assets/landmarks/ushkaloi-960.webp 960w, ./assets/landmarks/ushkaloi-1536.webp 1536w" sizes="274px">
+    <img src="./assets/landmarks/ushkaloy-towers-generated.jpg" alt="Ушкалойские башни под скальной аркой над рекой" fetchpriority="high" width="1536" height="1024">
+   </picture>
+   <span class="feature-caption"><small>УШКАЛОЙ · АРГУНСКОЕ УЩЕЛЬЕ</small><strong>Башни у дороги предков</strong><span>Открыть место <svg><use href="#i-arrow"/></svg></span></span>
+  </button>
+
+  <footer class="map-footer">
+   <span class="map-credit">Рельеф: AWS <i>·</i> © OpenStreetMap <i>·</i> Natural Earth</span>
+  </footer>
+ </main>
+
+ <main class="nek-preview" id="nek-preview" hidden aria-label="Вход и регистрация Некъ">
+  <section class="nek-landscape">
+   <button class="nek-brand" id="nek-brand-home" type="button" aria-label="Древо — атлас происхождения"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6 12 20h8L9 32h11l-5 7h18l-5-7h11L28 20h8L24 6Z"/><path d="M24 27v15"/></svg></span><span class="brand-word">Древо<small>АТЛАС ПРОИСХОЖДЕНИЯ</small></span></button>
+   <div class="nek-landscape-copy"><span class="eyebrow">ДРЕВО · НЭКЪ</span><h1>Храни<br>историю рода.</h1><p>Личный кабинет родословной</p></div>
+   <span class="nek-landscape-caption">ГОРЫ ЧЕЧНИ · ЗЕМЛЯ ПАМЯТИ</span>
+  </section>
+  <section class="nek-form-side">
+   <button class="nek-back" id="nek-back" type="button"><svg><use href="#i-back"/></svg>Вернуться в атлас</button>
+   <div class="nek-form-wrap">
+    <div class="nek-title"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6 12 20h8L9 32h11l-5 7h18l-5-7h11L28 20h8L24 6Z"/><path d="M24 27v15"/></svg></span><span>НЭКЪ</span></div>
+    <p class="nek-kicker">ЕДИНЫЙ АККАУНТ</p>
+    <p id="nek-context" class="nek-tree-context" hidden></p>
+    <div class="nek-tabs" role="tablist" aria-label="Режим аккаунта"><button id="nek-login-tab" type="button" role="tab" aria-selected="true">Войти</button><button id="nek-register-tab" type="button" role="tab" aria-selected="false">Создать аккаунт</button></div>
+    <form id="nek-form">
+     <label for="nek-identity">Телефон или почта</label><input id="nek-identity" name="identity" autocomplete="username" inputmode="email" placeholder="Введите телефон или почту">
+     <label for="nek-password">Пароль</label><input id="nek-password" name="password" type="password" autocomplete="current-password" placeholder="Введите пароль">
+     <button class="nek-submit" type="submit">Продолжить <svg><use href="#i-arrow"/></svg></button>
+     <p class="nek-status" id="nek-status" role="status">Экран Некъ подготовлен отдельно; вход пока не подключён.</p>
+    </form>
+    <button id="nek-preview-continue" class="nek-preview-continue" type="button" hidden>Продолжить локальный просмотр →</button>
+   </div>
+  </section>
+ </main>
+
+ <dialog id="info-dialog" class="info-dialog"><button class="icon-button dialog-close" type="button" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button><div id="dialog-content"></div></dialog>
+ <dialog id="photo-dialog" class="photo-dialog" aria-label="Фотография места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть фотографию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
+ <div id="toast" class="toast" role="status" aria-live="polite"></div>
+ <script type="module" src="./app.mjs"></script>
+</body>
+</html>

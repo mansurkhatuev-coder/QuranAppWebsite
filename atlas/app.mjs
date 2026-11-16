@@ -1,0 +1,852 @@
+import {groups,sites,searchCatalog} from './catalog.mjs';
+import {createAtlas} from './map.mjs';
+import {getPlaceMedia,imageFor} from './media.mjs';
+import {createInitialState,transition,restoreEntry,contextPanel} from './atlas-state.mjs';
+import {createTreeWizard} from './create-tree-view.mjs';
+import {settlements} from './settlements.mjs';
+import {rivers} from './rivers.mjs';
+import {createBottomSheet,getSheetStops} from './sheet.mjs';
+import {computeLayoutMode,measureViewport} from './viewport.mjs';
+import {completeAtlasEntrance} from './entry-motion.mjs';
+import {createWindAmbience} from './ambient-audio.mjs';
+
+const $=selector=>document.querySelector(selector);
+const shell=$('#atlas-shell');
+const state=createInitialState();
+const runtime={mapStatus:'loading'};
+let atlas=null;
+let sheetController=null;
+let currentEntry=null;
+let previousState=null;
+let searchReturnFocus=null;
+let measureFrame=0;
+let routeCounter=0;
+let lastViewport=null;
+let lastMapSize=null;
+let nekOpenedFromAtlas=false;
+let nekTreeContext=null;
+let nekReturnToConfirmation=false;
+const treeWizard=createTreeWizard({onAccount:({context})=>{
+ nekTreeContext=context;
+ openNekPreview('register');
+},onClose:()=>scheduleViewport()});
+
+const icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
+const escapeRoute=value=>encodeURIComponent(value??'');
+const teipCountLabel=count=>`${count} ${count%10===1&&count%100!==11?'тейп':count%10>=2&&count%10<=4&&(count%100<12||count%100>14)?'тейпа':'тейпов'}`;
+const statusLabel={loading:'Собираем рельеф',ready:'Атлас готов',degraded:'Облегчённый рельеф',unavailable:'Карта недоступна · каталог работает'};
+const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
+let atmosphereEnabled=!motionPreference.matches;
+const windAmbience=createWindAmbience();
+
+function toast(message){
+ const element=$('#toast');
+ element.textContent=message;
+ element.classList.add('visible');
+ clearTimeout(toast.timer);
+ toast.timer=setTimeout(()=>element.classList.remove('visible'),3000);
+}
+
+function setMapStatus(status){
+ runtime.mapStatus=status in statusLabel?status:'degraded';
+ const element=$('#map-status');
+ element.replaceChildren();
+ const dot=document.createElement('span');
+ dot.className='small-dot';
+ element.append(dot,document.createTextNode(statusLabel[runtime.mapStatus]));
+ document.body.dataset.mapStatus=runtime.mapStatus;
+ completeAtlasEntrance(document.body,runtime.mapStatus);
+ document.querySelectorAll('.camera-rail button').forEach(button=>{
+  button.disabled=runtime.mapStatus==='unavailable'&&button.id!=='view-toggle';
+ });
+}
+
+function currentRoute(value=state){
+ if(value.view==='group')return `#/group/${escapeRoute(value.groupId)}`;
+ if(value.view==='teip')return `#/teip/${escapeRoute(value.groupId)}/${escapeRoute(value.teipId)}`;
+ if(value.view==='place')return `#/place/${escapeRoute(value.placeId)}`;
+ if(value.view==='river')return `#/river/${escapeRoute(value.riverId)}`;
+ if(value.view==='city')return `#/city/${escapeRoute(value.cityId)}`;
+ if(value.view==='places')return '#/places';
+ if(value.view==='explore')return '#/roots';
+ if(value.view==='search')return '#/search';
+ return '#/';
+}
+
+function routeState(hash){
+ const parts=(hash||'').replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
+ const next=createInitialState();
+ if(parts[0]==='group'&&groups.some(group=>group.id===parts[1]))return transition(next,{type:'SELECT_GROUP',id:parts[1]});
+ if(parts[0]==='teip'){
+  const group=groups.find(item=>item.id===parts[1]);
+  if(group&&group.teips.some(teip=>teip.id===parts[2]))return transition(next,{type:'SELECT_TEIP',groupId:group.id,id:parts[2]});
+ }
+ if(parts[0]==='place'&&sites.some(site=>site.id===parts[1]))return transition(next,{type:'SELECT_PLACE',id:parts[1]});
+ if(parts[0]==='river'&&rivers.some(river=>river.id===parts[1]))return transition(next,{type:'SELECT_RIVER',id:parts[1]});
+ if(parts[0]==='city'&&settlements.some(city=>city.id===parts[1]))return transition(next,{type:'SELECT_CITY',id:parts[1]});
+ if(parts[0]==='places')return transition(next,{type:'SET_LAYER',layer:'sites'});
+ if(parts[0]==='roots')return transition(next,{type:'DISMISS_INTRO'});
+ if(parts[0]==='search')return transition(next,{type:'OPEN_SEARCH'});
+ return next;
+}
+
+function makeEntry(next,index,returnFocusId=null){
+ return {id:`atlas-${++routeCounter}`,index,state:restoreEntry(next),camera:atlas?.captureCamera()??null,returnFocusId,manuallyMoved:false};
+}
+
+function replaceCurrentEntry(){
+ if(!currentEntry)return;
+ currentEntry={...currentEntry,state:restoreEntry(state),camera:atlas?.captureCamera()??currentEntry.camera,manuallyMoved:currentEntry.manuallyMoved||false};
+ const existing=history.state??{};
+ history.replaceState({...existing,atlasEntry:currentEntry},'',currentRoute());
+}
+
+function saveViewState(){
+ if(!currentEntry)return;
+ if(document.body.classList.contains('nek-open')||history.state?.nekPreview)return;
+ currentEntry={...currentEntry,state:restoreEntry(state),camera:atlas?.captureCamera()??currentEntry.camera};
+ if(history.state?.atlasEntry?.id===currentEntry.id){
+  history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
+ }
+}
+
+function route(event,{returnFocusId=null,afterRender=null,replace=false}={}){
+ previousState=restoreEntry(state);
+ const next=transition(state,event);
+ const resetPanelScroll=['GO_HOME','SELECT_GROUP','SELECT_TEIP','SELECT_PLACE','GO_TO_GROUP','SET_LAYER','DISMISS_INTRO'].includes(event.type);
+ if(replace){
+  Object.assign(state,next);
+  render();
+  if(resetPanelScroll)$('#catalog-body').scrollTop=0;
+  currentEntry={...currentEntry,state:restoreEntry(state),camera:atlas?.captureCamera()??currentEntry?.camera};
+  if(currentEntry)history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
+ }else{
+  saveViewState();
+  Object.assign(state,next);
+  const index=(currentEntry?.index??0)+1;
+  currentEntry=makeEntry(state,index,returnFocusId);
+  history.pushState({atlasEntry:currentEntry},'',currentRoute());
+  render();
+  if(resetPanelScroll)$('#catalog-body').scrollTop=0;
+ }
+ afterRender?.();
+ scheduleViewport();
+ const plannedEntry=currentEntry?.id;
+ requestAnimationFrame(()=>{if(currentEntry?.id===plannedEntry)synchronizeAtlas(event);});
+}
+
+function setSheet(next){
+ if(!['peek','half','full'].includes(next))return;
+ state.sheet=next;
+ shell.dataset.sheet=next;
+ $('#sheet-handle').setAttribute('aria-expanded',String(next!=='peek'));
+ $('#sheet-handle').setAttribute('aria-label',next==='full'?'Свернуть каталог':next==='half'?'Развернуть каталог полностью':'Развернуть каталог');
+ if(currentEntry){currentEntry.state=restoreEntry(state);saveViewState();}
+ scheduleViewport();
+}
+
+function visibleCameraState(){
+ const mode=lastViewport?.mode?.panel??computeLayoutMode({width:innerWidth,height:innerHeight}).panel;
+ return runtime.mapStatus!=='unavailable'&&(mode==='side'||state.sheet!=='full')&&!state.mapOnly;
+}
+
+function synchronizeAtlas(event={}){
+ if(!atlas)return;
+ atlas.setLayer(state.layer);
+ atlas.setSelection(state.selectedEntity);
+ if(event.type==='SELECT_RIVER'&&state.riverId&&visibleCameraState())atlas.focusRiver(state.riverId,{focus:true,padding:lastViewport?.padding});
+ if(event.type==='SELECT_CITY'&&state.cityId&&visibleCameraState())atlas.focusCity(state.cityId,{focus:true,padding:lastViewport?.padding});
+ if(event.type==='SELECT_GROUP'&&state.groupId){
+  if(visibleCameraState())atlas.setGroup(state.groupId,{focus:true,padding:lastViewport?.padding});
+  else atlas.setGroup(state.groupId,{focus:false});
+ }
+ if(event.type==='SELECT_PLACE'&&state.placeId){
+  const shouldFocus=(lastViewport?.mode?.panel??computeLayoutMode({width:innerWidth,height:innerHeight}).panel)==='side';
+  atlas.focusSite(state.placeId,{focus:shouldFocus,padding:lastViewport?.padding});
+ }
+ if(event.type==='GO_HOME')atlas.home(lastViewport?.padding);
+ if(event.type==='SET_SHEET'&&state.view==='place'&&state.sheet==='peek'&&state.placeId){
+  atlas.focusSite(state.placeId,{focus:true,padding:lastViewport?.padding});
+ }
+ document.body.classList.toggle('is-exploring',state.introDismissed||state.view!=='overview');
+ document.body.classList.toggle('has-place',['place','city','river'].includes(state.view));
+ shell.classList.toggle('has-place',['place','city','river'].includes(state.view));
+}
+
+function row({title,index,meta,action,tower=false,branch=false,id}){
+ const button=document.createElement('button');
+ button.className='catalog-row';
+ button.type='button';
+ if(id)button.id=id;
+ const number=document.createElement('span');
+ number.className='row-number';
+ number.textContent=String(index+1).padStart(2,'0');
+ if(tower||branch){number.innerHTML=icon(tower?'tower':'branch');number.classList.add('row-tree');}
+ const label=document.createElement('span');
+ label.className='row-title';
+ label.textContent=title;
+ const small=document.createElement('span');
+ small.className='row-meta';
+ small.textContent=meta||'';
+ const arrow=document.createElement('span');
+ arrow.className='row-arrow';
+ arrow.innerHTML=icon('arrow');
+ button.append(number,label,small,arrow);
+ button.addEventListener('click',action);
+ return button;
+}
+
+function breadcrumb(label,action){
+ const button=document.createElement('button');
+ button.type='button';
+ button.innerHTML=`${icon('back')}<span></span>`;
+ button.querySelector('span').textContent=label;
+ button.addEventListener('click',action);
+ return button;
+}
+
+function currentGroup(){return groups.find(group=>group.id===state.groupId)??null;}
+function currentTeip(){return currentGroup()?.teips.find(teip=>teip.id===state.teipId)??null;}
+
+function aggregateMetric(label,value,note){
+ const card=document.createElement('article');card.className='aggregate-metric';
+ const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
+ const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
+ const detail=document.createElement('span');detail.className='aggregate-metric-note';detail.textContent=note;
+ card.append(name,amount,detail);
+ return card;
+}
+
+function renderAggregateDashboard({group=null,teip=null}={}){
+ const panel=$('#aggregate-dashboard');
+ panel.replaceChildren();
+ panel.hidden=false;
+
+ const teipCount=groups.reduce((total,item)=>total+item.teips.length,0);
+ const placeCount=group?sites.filter(site=>site.group===group.id).length:0;
+ const heading=document.createElement('div');heading.className='aggregate-heading';
+ const kicker=document.createElement('span');kicker.className='aggregate-kicker';kicker.textContent='ПУБЛИЧНАЯ СВОДКА · ДЕМО';
+ const title=document.createElement('h3');title.textContent=teip?`Тейп ${teip.name}`:group?`Тухум ${group.name}`:'Атлас Чечни';
+ const intro=document.createElement('p');intro.textContent='Только общие числа — без имён и карточек людей.';
+ heading.append(kicker,title,intro);
+
+ const grid=document.createElement('div');grid.className='aggregate-grid';
+ let metrics;
+ if(teip){
+  metrics=[
+   ['Открытых родословных','—','публичные данные не подключены'],
+   ['Людей в открытых деревьях','—','без имён и профилей'],
+   ['Поколений с источниками','—','подтверждённая сводка появится позже'],
+   ['Мест в демо-атласе',String(placeCount),'приблизительные связи']
+  ];
+ }else if(group){
+  metrics=[
+   ['Тейпов в демо-каталоге',String(group.teips.length),'выборка для прототипа'],
+   ['Открытых родословных','—','публичные данные не подключены'],
+   ['Людей в открытых деревьях','—','без имён и профилей'],
+   ['Поколений с источниками','—','подтверждённая сводка появится позже']
+  ];
+ }else{
+  metrics=[
+   ['Тухумов в демо-каталоге',String(groups.length),'выборка для прототипа'],
+   ['Тейпов в демо-каталоге',String(teipCount),'выборка для прототипа'],
+   ['Открытых родословных','—','публичные данные не подключены'],
+   ['Людей в открытых деревьях','—','без имён и профилей']
+  ];
+ }
+ metrics.forEach(([label,value,note])=>grid.append(aggregateMetric(label,value,note)));
+
+ const depth=document.createElement('section');depth.className='aggregate-depth';
+ const depthHeading=document.createElement('div');depthHeading.className='aggregate-depth-heading';
+ const depthTitle=document.createElement('h4');depthTitle.textContent='Глубина поколений';
+ const depthValue=document.createElement('span');depthValue.textContent='—';
+ depthHeading.append(depthTitle,depthValue);
+ const scale=document.createElement('div');scale.className='aggregate-depth-scale';scale.setAttribute('aria-hidden','true');
+ ['I','II','III','IV','V','VI','VII+'].forEach(label=>{const step=document.createElement('span');step.textContent=label;scale.append(step);});
+ const depthNote=document.createElement('p');depthNote.textContent='Показатель появится после публикации проверенных и разрешённых к показу данных.';
+ depth.append(depthHeading,scale,depthNote);
+
+ const privacy=document.createElement('p');privacy.className='aggregate-privacy';
+ privacy.textContent='Родословные и имена открываются отдельно — с учётом настроек доступа семьи.';
+ panel.append(heading,grid,depth,privacy);
+ if(group){
+  const create=document.createElement('button');create.type='button';create.className='context-create-tree';
+  create.textContent=teip?`Создать древо в тейпе ${teip.name}`:`Создать древо · ${group.name}`;
+  create.addEventListener('click',()=>treeWizard.open({groupId:group.id,teipId:teip?.id}));
+  panel.prepend(create);
+ }
+}
+
+function makePlacePicture(media,{className='',sizes='(min-width: 900px) 340px, 100vw',loading='lazy'}={}){
+ const picture=document.createElement('picture');
+ picture.className=className;
+ const source=document.createElement('source');
+ source.type='image/webp';source.srcset=media.webpSrcset;source.sizes=sizes;
+ const image=document.createElement('img');
+ image.src=imageFor(media);image.alt=media.alt;image.loading=loading;
+ image.width=media.width??1536;image.height=media.height??1024;
+ picture.append(source,image);
+ return {picture,image};
+}
+
+function renderBreadcrumbs(){
+ const crumbs=$('#breadcrumbs');
+ crumbs.replaceChildren();
+ const group=currentGroup();
+ const teip=currentTeip();
+ if(state.view==='teip'&&group){
+  crumbs.append(breadcrumb(group.name,()=>route({type:'GO_TO_GROUP',id:group.id},{returnFocusId:`catalog-row-${group.id}`})));
+  const label=document.createElement('span');label.className='current';label.textContent=teip?.name??'Тейп';crumbs.append(label);
+ }else if(state.view==='group'&&group){
+  crumbs.append(breadcrumb('Тухумы',()=>route({type:'GO_TO_GROUP',id:null},{returnFocusId:'catalog-layer-groups'})));
+  const label=document.createElement('span');label.className='current';label.textContent=group.name;crumbs.append(label);
+ }else if(state.view==='places'){
+  const label=document.createElement('span');label.className='current';label.textContent='Места';crumbs.append(label);
+ }else if(state.view==='place'){
+  crumbs.append(breadcrumb(state.catalogMode==='sites'?'Места':'Тухумы',goBack));
+  const site=sites.find(item=>item.id===state.placeId);
+  const label=document.createElement('span');label.className='current';label.textContent=site?.name??'Место';crumbs.append(label);
+ }else if(state.view==='search'){
+  const label=document.createElement('span');label.className='current';label.textContent='Поиск';crumbs.append(label);
+ }else{
+  const label=document.createElement('span');label.className='current';label.textContent=state.catalogMode==='sites'?'Места':'Тухумы';crumbs.append(label);
+ }
+}
+
+function renderRows(){
+ const list=$('#catalog-list');
+ const summary=$('#aggregate-dashboard');
+ const empty=$('#catalog-empty');
+ const searchResults=$('#search-results');
+ const query=state.query.trim();
+ list.replaceChildren();
+ list.hidden=false;
+ summary.replaceChildren();
+ summary.hidden=true;
+ empty.hidden=true;
+ searchResults.replaceChildren();
+ searchResults.hidden=true;
+ const group=currentGroup();
+ const teip=currentTeip();
+ let count='';
+ $('#catalog-label').textContent=state.view==='group'&&group?`ТУХУМ · ${group.name}`:state.view==='teip'&&teip?`ТЕЙП · ${teip.name}`:state.view==='search'?'ПОИСК ПО АТЛАСУ':'ИССЛЕДОВАТЬ ПРОИСХОЖДЕНИЕ';
+
+ if(state.view==='teip'&&teip){
+  $('#count').textContent='';
+  list.hidden=true;
+  renderAggregateDashboard({group,teip});
+  return;
+ }
+
+ if(query){
+  const results=searchCatalog(query);
+  searchResults.hidden=false;
+  if(!results.length){
+   const message=document.createElement('div');message.className='no-results';message.textContent='Совпадений пока нет. Попробуйте другое название.';searchResults.append(message);
+  }
+  results.forEach((match,index)=>{
+   const button=document.createElement('button');button.type='button';button.className='search-result';button.id=`search-result-${match.type}-${match.id}`;button.setAttribute('role','option');button.setAttribute('aria-selected','false');
+   const label=document.createElement('span');label.textContent=match.label;
+   const type=document.createElement('small');type.textContent=match.type;
+   button.append(label,type);
+   button.addEventListener('click',()=>{
+    if(match.type==='Река')route({type:'SELECT_RIVER',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet});
+    else if(match.type==='Город')openCity(match.id);
+    else if(match.type==='Место')route({type:'SELECT_PLACE',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'full':state.sheet},{returnFocusId:button.id});
+    else if(match.type==='Тейп')route({type:'SELECT_TEIP',groupId:match.group,id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet},{returnFocusId:button.id});
+    else route({type:'SELECT_GROUP',id:match.id},{returnFocusId:button.id});
+   });
+   searchResults.append(button);
+  });
+  $('#count').textContent=results.length?`${results.length} найдено`:'';
+  return;
+ }
+
+ if(state.view==='places'||state.catalogMode==='sites'){
+  count=`${sites.length} мест`;
+  sites.forEach((site,index)=>list.append(row({title:site.name,index,tower:true,meta:site.kind, id:`catalog-row-${site.id}`,action:()=>route({type:'SELECT_PLACE',id:site.id},{returnFocusId:`catalog-row-${site.id}`})})));
+ }else if(group){
+  count=teipCountLabel(group.teips.length);
+  renderAggregateDashboard({group});
+  if(group.teips.length){
+   const label=document.createElement('label');label.className='teip-filter';label.textContent='Найти тейп в тухуме';
+   const input=document.createElement('input');input.type='search';input.placeholder='Название тейпа';input.value=state.groupFilter;label.append(input);list.append(label);
+   const rows=group.teips.map((item,index)=>{const button=row({title:item.name,index,meta:'',id:`catalog-row-${item.id}`,action:()=>route({type:'SELECT_TEIP',id:item.id},{returnFocusId:`catalog-row-${item.id}`})});list.append(button);return {button,name:item.name.toLocaleLowerCase('ru')};});
+   const noMatch=document.createElement('p');noMatch.className='catalog-filter-empty';noMatch.textContent='Тейпы с таким названием не найдены.';list.append(noMatch);
+   const filter=()=>{const q=input.value.trim().toLocaleLowerCase('ru');let visibleCount=0;for(const item of rows){item.button.hidden=!item.name.includes(q);if(!item.button.hidden)visibleCount++;}noMatch.hidden=visibleCount>0;count=teipCountLabel(visibleCount);$('#count').textContent=count;};
+   input.addEventListener('input',()=>{state.groupFilter=input.value;filter();saveViewState();});filter();
+  }
+  else{
+   list.hidden=true;
+   empty.hidden=false;
+   empty.querySelector('p').textContent='Тейпы в демо-каталоге пока не добавлены.';
+  }
+ }else{
+  count=`${groups.length} тухумов`;
+  if(state.view==='overview'||state.view==='explore')renderAggregateDashboard();
+  groups.forEach((item,index)=>list.append(row({title:item.name,index,meta:teipCountLabel(item.teips.length),id:`catalog-row-${item.id}`,action:()=>route({type:'SELECT_GROUP',id:item.id},{returnFocusId:`catalog-row-${item.id}`})})));
+ }
+ $('#count').textContent=count;
+}
+
+function renderPlace(){
+ const detail=$('#place-detail');
+ const slot=contextPanel(state);
+ const place=slot.kind==='place'?sites.find(item=>item.id===slot.id):null;
+ const photo=$('#photo-dialog');
+ if(photo.open&&photo.dataset.placeId!==place?.id)photo.close();
+ $('#explorer').classList.toggle('has-place',Boolean(place));
+ detail.replaceChildren();
+ if(!place){detail.hidden=true;return;}
+ const media=getPlaceMedia(place.id);
+ const toolbar=document.createElement('div');toolbar.className='detail-toolbar';
+ const back=document.createElement('button');back.type='button';back.className='detail-back';back.innerHTML=`${icon('back')}<span>Назад</span>`;back.addEventListener('click',goBack);
+ const peekTitle=document.createElement('span');peekTitle.className='detail-peek-title';peekTitle.textContent=place.name;
+ const close=document.createElement('button');close.type='button';close.className='detail-close';close.setAttribute('aria-label','Закрыть карточку');close.innerHTML=`Закрыть ${icon('close')}`;close.addEventListener('click',goBack);
+ toolbar.append(back,peekTitle,close);
+ const figure=document.createElement('figure');figure.className='detail-photo';
+ if(media){
+  const {picture,image}=makePlacePicture(media,{className:'detail-photo-picture',sizes:'(min-width: 900px) 340px, 100vw',loading:'eager'});
+  image.className='detail-photo-image';image.style.objectPosition=media.focalPoint;
+  image.addEventListener('error',()=>{figure.replaceChildren();figure.classList.add('photo-missing');const missing=document.createElement('span');missing.textContent='Изображение недоступно';figure.append(missing);});
+  figure.append(picture);
+  const expand=document.createElement('button');expand.type='button';expand.className='detail-photo-button';expand.setAttribute('aria-label','Открыть фотографию крупно');expand.innerHTML=icon('search');expand.addEventListener('click',openPhoto);figure.append(expand);
+ }else{figure.classList.add('photo-missing');const missing=document.createElement('span');missing.textContent='Изображение недоступно';figure.append(missing);}
+ const content=document.createElement('div');content.className='detail-content';
+ const area=document.createElement('span');area.className='micro';area.textContent=place.area;
+ const title=document.createElement('h2');title.textContent=place.fullName;
+ const description=document.createElement('p');description.className='detail-description';description.textContent=place.description;
+ const meta=document.createElement('div');meta.className='detail-meta';meta.innerHTML=`${icon('tower')}<span></span>`;meta.querySelector('span').textContent=place.kind;
+ const note=document.createElement('p');note.className='detail-note';note.textContent='Точка на карте приблизительная.';
+ const showMap=document.createElement('button');showMap.type='button';showMap.className='detail-map-action';showMap.id='show-place-map';showMap.innerHTML=`<span>Показать на карте</span>${icon('arrow')}`;showMap.addEventListener('click',()=>{setSheet('peek');atlas?.focusSite(place.id,{focus:true,padding:lastViewport?.padding});scheduleViewport();});
+ content.append(area,title,description,meta,note,showMap);
+ detail.append(toolbar,figure,content);
+ detail.scrollTop=0;
+ detail.hidden=false;
+}
+
+function render(){
+ shell.dataset.sheet=state.sheet;
+ document.body.dataset.mapLayer=state.layer;
+ shell.classList.toggle('map-only',state.mapOnly);
+ document.body.classList.toggle('is-exploring',state.introDismissed||state.view!=='overview');
+ document.body.classList.toggle('has-place',['place','city','river'].includes(state.view));
+ document.querySelectorAll('[data-layer]').forEach(button=>{
+  const selected=(state.layer==='sites'&&button.dataset.layer==='sites')||(state.layer!=='sites'&&button.dataset.layer==='groups');
+  button.classList.toggle('selected',selected);
+  button.setAttribute('aria-pressed',String(selected));
+ });
+ renderBreadcrumbs();
+ renderRows();
+ renderPlace();
+ if(state.view==='city')renderCity();
+ if(state.view==='river')renderCity(rivers.find(item=>item.id===state.riverId),true);
+ $('#hero-group-count').textContent=String(groups.length).padStart(2,'0');
+ $('#hero-teip-count').textContent=String(groups.reduce((total,group)=>total+group.teips.length,0)).padStart(2,'0');
+ $('#hero-place-count').textContent=String(sites.length).padStart(2,'0');
+ $('#search').value=state.query;
+ const searchActive=state.view==='search';
+ $('#search-field').classList.toggle('is-active',searchActive);
+ $('#search-toggle').setAttribute('aria-pressed',String(searchActive));
+ $('#map-only').setAttribute('aria-pressed',String(state.mapOnly));
+ $('#map-only').querySelector('span').textContent=state.mapOnly?'Вернуть интерфейс':'Только карта';
+ $('#search-toggle').querySelector('span').textContent=state.view==='search'?'Закрыть':'Поиск по атласу';
+ const activeTab=state.view==='overview'?'atlas':state.layer==='sites'?'places':'roots';
+ document.querySelectorAll('[data-tab]').forEach(button=>{
+  const active=button.dataset.tab===activeTab;
+  button.classList.toggle('active',active);
+  if(active)button.setAttribute('aria-current','page');else button.removeAttribute('aria-current');
+ });
+ $('#sheet-handle').setAttribute('aria-expanded',String(state.sheet!=='peek'));
+ $('#pitch-slider').max=String(lastViewport?.mode?.pitchLimit??60);
+ if(atlas){atlas.setLayer(state.layer);atlas.setSelection(state.selectedEntity);}
+}
+
+function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=false){
+ if(!city)return;
+ const detail=$('#place-detail');detail.replaceChildren();detail.hidden=false;
+ $('#explorer').classList.add('has-place');shell.classList.add('has-place');document.body.classList.add('has-place');
+ const toolbar=document.createElement('div');toolbar.className='detail-toolbar';
+ const back=document.createElement('button');back.type='button';back.className='detail-back';back.textContent='← Назад';back.addEventListener('click',goBack);
+ const close=document.createElement('button');close.type='button';close.className='detail-close';close.textContent='Закрыть';close.addEventListener('click',goBack);toolbar.append(back,close);
+ const content=document.createElement('div');content.className='detail-content city-content';
+ const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'РЕКИ ЧЕЧНИ':'ГОРОДА ЧЕЧНИ';
+ const title=document.createElement('h2');title.textContent=city.name;
+ const intro=document.createElement('p');intro.className='detail-description';intro.textContent=isRiver?'Река на карте родных мест. Рассмотрите её русло, долины и близлежащие населённые пункты.':'Город на карте родных мест. Отсюда можно перейти к выбору происхождения и подготовить своё родовое древо.';
+ const coordinates=city.coordinates??city.center;
+ const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
+ const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Место на OpenStreetMap ↗';
+ const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>treeWizard.open());
+ content.append(kicker,title,intro,location,source,create);detail.append(toolbar,content);detail.scrollTop=0;
+}
+
+function focusTarget(id){
+ if(!id)return;
+ requestAnimationFrame(()=>{
+  const target=document.getElementById(id);
+  if(target&&!target.hidden&&target.getClientRects().length)target.focus({preventScroll:true});
+  else $('#breadcrumbs').querySelector('button')?.focus({preventScroll:true});
+ });
+}
+
+function goBack(){
+ if((currentEntry?.index??0)>0){history.back();return;}
+ if(state.view==='place'){
+  const group=sites.find(item=>item.id===state.placeId)?.group;
+  route(group?{type:'SELECT_GROUP',id:group}:{type:'SET_LAYER',layer:'sites'},{replace:true});
+  return;
+ }
+ if(state.view==='teip'){route({type:'GO_TO_GROUP',id:state.groupId},{replace:true});return;}
+ if(state.view==='group'){route({type:'GO_TO_GROUP',id:null},{replace:true});return;}
+ route({type:'GO_HOME'},{replace:true});
+}
+
+function captureHistoryTarget(returnFocusId){
+ saveViewState();
+ const index=(currentEntry?.index??0)+1;
+ currentEntry=makeEntry(state,index,returnFocusId);
+}
+
+function restoreFromHistory(entry,{preserveCamera=false}={}){
+ if(!entry?.state){stateTransitionFromHash();return;}
+ Object.assign(state,restoreEntry(entry.state));
+ currentEntry=entry;
+ render();
+ atlas?.setLayer(state.layer);
+ atlas?.setSelection(state.selectedEntity);
+ if(!preserveCamera&&entry.camera)atlas?.restoreCamera(entry.camera,lastViewport?.padding);
+ else if(preserveCamera)saveViewState();
+ synchronizeAtlas();
+ focusTarget(entry.returnFocusId);
+ scheduleViewport();
+}
+
+function stateTransitionFromHash(){
+ Object.assign(state,routeState(location.hash));
+ render();
+ synchronizeAtlas({type:state.view==='group'?'SELECT_GROUP':state.view==='place'?'SELECT_PLACE':'RESTORE_ENTRY'});
+ scheduleViewport();
+}
+
+window.addEventListener('popstate',event=>{
+ if(event.state?.nekPreview&&/^#\/nek\/(login|register)$/.test(location.hash)){
+  nekTreeContext=treeWizard.restoreAccountContext();
+  openNekPreview(location.hash.endsWith('register')?'register':'login',{replace:true});
+  nekOpenedFromAtlas=true;
+  return;
+ }
+ if(document.body.classList.contains('nek-open')){
+  $('#nek-preview').hidden=true;
+  document.body.classList.remove('nek-open');
+  nekOpenedFromAtlas=false;
+ }
+ const outgoing=currentEntry;
+ const entry=event.state?.atlasEntry;
+ const backwards=entry&&outgoing&&entry.index<outgoing.index;
+ const preserveCamera=Boolean(backwards&&outgoing.state?.view==='place'&&outgoing.manuallyMoved);
+ restoreFromHistory(entry,{preserveCamera});
+ if(nekTreeContext){
+  if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
+  nekReturnToConfirmation=false;
+  nekTreeContext=null;
+ }
+});
+
+function openPhoto(){
+ const place=sites.find(item=>item.id===state.placeId);
+ const media=getPlaceMedia(place?.id);
+ if(!place||!media)return;
+ const image=$('#photo-view-image');
+ $('#photo-view-source').srcset=media.full??'';
+ image.src=imageFor(media);
+ image.alt=media.alt;
+ image.width=media.width??1536;
+ image.height=media.height??1024;
+ $('#photo-view-caption').textContent=place.fullName;
+ $('#photo-dialog').dataset.placeId=place.id;
+ $('#photo-dialog').showModal();
+ $('#photo-close').focus();
+}
+
+function updateLayout(){
+ measureFrame=0;
+ const previousPanel=lastViewport?.mode?.panel??null;
+ const mapElement=$('#map');
+ const mapSize={width:mapElement.clientWidth,height:mapElement.clientHeight};
+ const mapResized=lastMapSize&&(Math.abs(mapSize.width-lastMapSize.width)>1||Math.abs(mapSize.height-lastMapSize.height)>1);
+ lastMapSize=mapSize;
+ const visual=window.visualViewport;
+ const elements=[$('#topbar'),$('#intro'),$('#overview-group-dock'),$('#explorer'),$('#camera-rail'),$('#map-topline'),$('#featured-place'),$('#view-menu').hidden?null:$('#view-menu')].filter(element=>{
+  if(!element||element.hidden)return false;
+  if(element.id==='camera-rail'&&state.view==='overview'&&!state.introDismissed)return false;
+  const style=getComputedStyle(element),rect=element.getBoundingClientRect();
+  return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0&&rect.width>0&&rect.height>0;
+ });
+ let measured=measureViewport({mapElement,occupiedElements:elements,visualViewport:visual,windowRef:window,documentRef:document});
+ shell.classList.toggle('compact-map',measured.compactRequired);
+ if(measured.compactRequired){
+  measured=measureViewport({mapElement,occupiedElements:elements,visualViewport:visual,windowRef:window,documentRef:document});
+ }
+ lastViewport=measured;
+ atlas?.setLabelOcclusion(elements.map(element=>{
+  const rect=element.getBoundingClientRect();
+  return {left:rect.left-8,top:rect.top-8,right:rect.right+8,bottom:rect.bottom+8};
+ }));
+ shell.dataset.layout=measured.mode.panel;
+ $('#pitch-slider').max=String(measured.mode.pitchLimit);
+ atlas?.setPitchLimit(measured.mode.pitchLimit);
+ const pitch=Math.round(Math.min(atlas?.getPitch?.()??Number($('#pitch-slider').value),measured.mode.pitchLimit));
+ $('#pitch-slider').value=String(pitch);
+ $('#pitch-value').textContent=`${pitch}°`;
+ atlas?.setPadding(measured.padding);
+ if(atlas?.isReady?.()){
+  atlas.resize();
+  const viewportChanged=Boolean(mapResized||previousPanel&&previousPanel!==measured.mode.panel);
+  if(viewportChanged&&!currentEntry?.manuallyMoved){
+   if(state.view==='overview')atlas.home(measured.padding);
+   else if(state.view==='river'&&state.riverId&&measured.mode.panel==='side')atlas.focusRiver(state.riverId,{focus:true,padding:measured.padding});
+   else if(state.view==='city'&&state.cityId&&measured.mode.panel==='side')atlas.focusCity(state.cityId,{focus:true,padding:measured.padding});
+   else if(state.view==='place'&&state.placeId&&measured.mode.panel==='side')atlas.focusSite(state.placeId,{focus:true,padding:measured.padding});
+   else if(['group','teip'].includes(state.view)&&state.groupId&&measured.mode.panel==='side')atlas.setGroup(state.groupId,{focus:true,padding:measured.padding});
+  }
+ }
+}
+
+function scheduleViewport(){
+ if(measureFrame)return;
+ measureFrame=requestAnimationFrame(updateLayout);
+}
+
+function homeAfterViewportMeasure(){
+ scheduleViewport();
+ requestAnimationFrame(()=>atlas?.home(lastViewport?.padding));
+}
+
+function openSearch(){
+ if(state.view!=='search')route({type:'OPEN_SEARCH'},{returnFocusId:document.activeElement?.id||'search-toggle',afterRender:()=>{$('#search').focus();if(lastViewport?.mode?.panel==='bottom')setSheet('full');}});
+ else{$('#search').focus();}
+}
+
+function setNekMode(mode){
+ const register=mode==='register';
+ $('#nek-login-tab').setAttribute('aria-selected',String(!register));
+ $('#nek-register-tab').setAttribute('aria-selected',String(register));
+ $('#nek-password').autocomplete=register?'new-password':'current-password';
+ $('#nek-status').textContent=register?'Экран создания аккаунта подготовлен; регистрация пока не подключена.':'Экран Некъ подготовлен отдельно; вход пока не подключён.';
+ $('#nek-context').hidden=!nekTreeContext;
+ $('#nek-preview-continue').hidden=!nekTreeContext;
+ if(nekTreeContext)$('#nek-context').textContent=`Ваш черновик: ${nekTreeContext.groupName} / ${nekTreeContext.teipName} / ${nekTreeContext.treeName}`;
+ if(document.body.classList.contains('nek-open'))history.replaceState({...history.state,nekPreview:true},'',`#/nek/${register?'register':'login'}`);
+}
+
+function openNekPreview(mode='login',{replace=false}={}){
+ const route=`#/nek/${mode==='register'?'register':'login'}`;
+ nekOpenedFromAtlas=!replace;
+ if(replace)history.replaceState({...history.state,nekPreview:true},'',route);
+ else history.pushState({...history.state,nekPreview:true},'',route);
+ setNekMode(mode);
+ $('#nek-preview').hidden=false;
+ document.body.classList.add('nek-open');
+ if(!replace)$('#nek-back').focus({preventScroll:true});
+}
+
+function closeNekPreview(){
+ if(nekOpenedFromAtlas&&location.hash.startsWith('#/nek/')&&history.state?.nekPreview){history.back();return;}
+ $('#nek-preview').hidden=true;
+ document.body.classList.remove('nek-open');
+ nekOpenedFromAtlas=false;
+ history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
+ if(nekTreeContext){
+  if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
+  nekReturnToConfirmation=false;nekTreeContext=null;
+ }
+}
+
+function openGroup(id,{focusTargetId=null}={}){
+ if(!groups.some(group=>group.id===id))return;
+ const sheet=lastViewport?.mode?.panel==='bottom'?'half':state.sheet;
+ route({type:'SELECT_GROUP',id,sheet},{returnFocusId:focusTargetId??`catalog-row-${id}`});
+}
+
+function openSite(id,{focusTargetId=null}={}){
+ if(!sites.some(site=>site.id===id))return;
+ const sheet=lastViewport?.mode?.panel==='bottom'?'full':state.sheet;
+ route({type:'SELECT_PLACE',id,sheet},{returnFocusId:focusTargetId??`catalog-row-${id}`});
+}
+
+function openCity(id){
+ if(!settlements.some(city=>city.id===id))return;
+ route({type:'SELECT_CITY',id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet});
+}
+
+function applyPitch(value){
+ const next=atlas?.setPitch(Number(value));
+ if(next!==undefined)$('#pitch-value').textContent=`${Math.round(next)}°`;
+}
+
+function setAtmosphere(next){
+ atmosphereEnabled=Boolean(next)&&!motionPreference.matches;
+ atlas?.setAtmosphere(atmosphereEnabled);
+ $('#motion-toggle').setAttribute('aria-pressed',String(atmosphereEnabled));
+}
+
+$('#brand-home').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
+$('#return-chechnya').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
+$('#world-view').addEventListener('click',()=>{if(currentEntry)currentEntry.manuallyMoved=true;$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();requestAnimationFrame(()=>atlas?.goWorld());});
+document.querySelectorAll('[data-overview-group]').forEach(button=>{
+ const preview=()=>atlas?.setGroupPreview(button.dataset.overviewGroup,button);
+ const clear=()=>atlas?.setGroupPreview(null);
+ button.addEventListener('pointerenter',preview);
+ button.addEventListener('pointerleave',()=>{if(document.activeElement!==button)clear();});
+ button.addEventListener('focus',preview);
+ button.addEventListener('blur',()=>{if(!button.matches(':hover'))clear();});
+ button.addEventListener('click',()=>{clear();openGroup(button.dataset.overviewGroup,{focusTargetId:button.id});});
+});
+$('#create-tree').addEventListener('click',()=>treeWizard.open({origins:[...document.querySelectorAll('[data-overview-group]')].map(button=>({id:button.dataset.overviewGroup,...button.getBoundingClientRect().toJSON()})).filter(rect=>rect.width>0)}));
+$('#atlas-login').addEventListener('click',()=>{nekTreeContext=null;openNekPreview('login');});
+$('#nek-preview-continue').addEventListener('click',()=>{nekReturnToConfirmation=true;closeNekPreview();});
+$('#nek-back').addEventListener('click',closeNekPreview);
+$('#nek-brand-home').addEventListener('click',closeNekPreview);
+$('#nek-login-tab').addEventListener('click',()=>setNekMode('login'));
+$('#nek-register-tab').addEventListener('click',()=>setNekMode('register'));
+$('#nek-form').addEventListener('submit',event=>{event.preventDefault();$('#nek-status').textContent='Локальный экран не отправляет данные. Подключение входа Некъ будет отдельным этапом.';});
+$('#search-toggle').addEventListener('click',()=>state.view==='search'?goBack():openSearch());
+$('#search').addEventListener('focus',()=>{if(state.view!=='search')route({type:'OPEN_SEARCH'},{returnFocusId:'search-toggle'});});
+$('#search').addEventListener('input',event=>route({type:'SET_QUERY',query:event.target.value},{replace:true}));
+$('#sheet-handle').addEventListener('click',()=>{});
+$('#catalog-toggle').addEventListener('click',event=>{
+ const collapsed=$('#explorer').classList.toggle('catalog-collapsed');
+ event.currentTarget.setAttribute('aria-expanded',String(!collapsed));
+ event.currentTarget.setAttribute('aria-label',collapsed?'Развернуть каталог':'Свернуть каталог');
+ event.currentTarget.querySelector('span').textContent=collapsed?'+':'−';
+ scheduleViewport();
+});
+$('#catalog-back').addEventListener('click',()=>{
+ if(state.view==='group'&&currentGroup()?.teips.length===0){route({type:'GO_HOME'},{returnFocusId:`overview-group-${state.groupId}`});return;}
+ route({type:'GO_TO_GROUP',id:state.groupId},{returnFocusId:`catalog-row-${state.groupId}`});
+});
+document.querySelectorAll('[data-layer]').forEach(button=>button.addEventListener('click',()=>{
+ const selected=button.dataset.layer;
+ route({type:'SET_LAYER',layer:selected},{replace:true});
+}));
+document.querySelector('[data-tab=roots]').addEventListener('click',()=>route({type:'DISMISS_INTRO'},{replace:true,afterRender:()=>{if(lastViewport?.mode?.panel==='bottom')setSheet('half');}}));
+document.querySelector('[data-tab=atlas]').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
+document.querySelector('[data-tab=places]').addEventListener('click',()=>route({type:'SET_LAYER',layer:'sites'},{replace:true}));
+$('#featured-place').addEventListener('click',()=>openSite('ushkaloi',{focusTargetId:'featured-place'}));
+$('#reset-north').addEventListener('click',()=>atlas?.resetNorth());
+$('#zoom-in').addEventListener('click',()=>atlas?.zoom(1));
+$('#zoom-out').addEventListener('click',()=>atlas?.zoom(-1));
+$('#rotate-left').addEventListener('click',()=>atlas?.rotateBy(-15));
+$('#rotate-right').addEventListener('click',()=>atlas?.rotateBy(15));
+$('#home-view').addEventListener('click',()=>{
+ if(currentEntry)currentEntry.manuallyMoved=false;
+ $('#view-menu').hidden=true;
+ $('#view-toggle').setAttribute('aria-expanded','false');
+ homeAfterViewportMeasure();
+});
+$('#view-toggle').addEventListener('click',event=>{
+ const menu=$('#view-menu');menu.hidden=!menu.hidden;event.currentTarget.setAttribute('aria-expanded',String(!menu.hidden));if(!menu.hidden)$('#view-close').focus();scheduleViewport();
+});
+$('#view-close').addEventListener('click',()=>{$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');$('#view-toggle').focus();scheduleViewport();});
+$('#pitch-slider').addEventListener('input',event=>applyPitch(event.target.value));
+$('#terrain-toggle').addEventListener('click',event=>{
+ const enabled=atlas?.toggleTerrain()??false;
+ event.currentTarget.setAttribute('aria-pressed',String(enabled));
+ $('#pitch-slider').value=String(Math.round(atlas?.getPitch?.()??0));
+ $('#pitch-value').textContent=`${Math.round(atlas?.getPitch?.()??0)}°`;
+});
+$('#motion-toggle').addEventListener('click',()=>setAtmosphere(!atmosphereEnabled));
+$('#sound-toggle').addEventListener('click',async event=>{
+ const button=event.currentTarget;
+ button.disabled=true;
+ try{button.setAttribute('aria-pressed',String(await windAmbience.setEnabled(!windAmbience.isEnabled())));}
+ catch{toast('Звук недоступен в этом браузере');}
+ finally{button.disabled=false;}
+});
+$('#map-only').addEventListener('click',()=>{
+ route({type:state.mapOnly?'EXIT_MAP_ONLY':'ENTER_MAP_ONLY'},{replace:true});
+ $('#view-menu').hidden=false;$('#view-toggle').setAttribute('aria-expanded','true');scheduleViewport();
+});
+$('#about').addEventListener('click',()=>{
+ $('#dialog-content').innerHTML='<div class="eyebrow">ДРЕВО · АТЛАС ПРОИСХОЖДЕНИЯ</div><h2>Земля хранит<br>общую память.</h2><p>Карта помогает исследовать тухумы, тейпы и места памяти. Публичная сводка показывает только общие числа, без имён и карточек людей.</p><p>Каждая родословная открывается отдельно — с учётом настроек доступа семьи. Этот локальный экран использует демонстрационный каталог, а не полный проверенный реестр.</p><div class="dialog-list"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer">Высоты местности<small>Локальная ограниченная копия Terrain Tiles</small></a><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Граница региона<small>© OpenStreetMap contributors</small></a></div>';
+ $('#info-dialog').showModal();
+});
+$('.dialog-close').addEventListener('click',()=>$('#info-dialog').close());
+$('#photo-close').addEventListener('click',()=>$('#photo-dialog').close());
+$('#info-dialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
+$('#photo-dialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
+$('#photo-dialog').addEventListener('close',()=>focusTarget('show-place-map'));
+$('#info-dialog').addEventListener('close',()=>focusTarget('about'));
+document.addEventListener('keydown',event=>{
+ if(document.querySelector('dialog[open]'))return;
+ if(event.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){event.preventDefault();openSearch();}
+ if(event.key==='Escape'){
+  if($('#photo-dialog').open||$('#info-dialog').open)return;
+  if(document.body.classList.contains('nek-open')){closeNekPreview();return;}
+  if(!$('#view-menu').hidden){$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();return;}
+  if(state.view==='search'){if((currentEntry?.index??0)>0)history.back();else route({type:'CLOSE_SEARCH'},{replace:true});return;}
+  if(['place','city','river','teip','group'].includes(state.view)){goBack();return;}
+  if(state.mapOnly){route({type:'EXIT_MAP_ONLY'},{replace:true});return;}
+ }
+});
+
+const sheetGeometry=()=>{
+ const style=getComputedStyle(document.documentElement);
+ const safeInsets={top:parseFloat(style.getPropertyValue('--safe-inset-top'))||0,bottom:parseFloat(style.getPropertyValue('--safe-inset-bottom'))||0};
+ return {panel:lastViewport?.mode?.panel??computeLayoutMode({width:innerWidth,height:innerHeight}).panel,safeInsets};
+};
+sheetController=createBottomSheet({shell,panel:$('#explorer'),handle:$('#sheet-handle'),getLayout:sheetGeometry,onSnap:setSheet});
+
+window.addEventListener('resize',scheduleViewport,{passive:true});
+window.visualViewport?.addEventListener('resize',scheduleViewport,{passive:true});
+document.addEventListener('visibilitychange',()=>atlas?.setPageVisible(!document.hidden));
+motionPreference.addEventListener('change',event=>{setAtmosphere(!event.matches);});
+
+const initialNekMode=location.hash.match(/^#\/nek\/(login|register)$/)?.[1]??null;
+Object.assign(state,routeState(initialNekMode?'#/':location.hash));
+currentEntry=makeEntry(state,0,null);
+history.replaceState({...history.state,atlasEntry:currentEntry},'',initialNekMode?`#/nek/${initialNekMode}`:currentRoute());
+render();
+if(initialNekMode){nekTreeContext=treeWizard.restoreAccountContext();openNekPreview(initialNekMode,{replace:true});}
+scheduleViewport();
+
+try{
+ atlas=await createAtlas({
+  onHome:()=>route({type:'GO_HOME'},{replace:true}),
+  onGroup:id=>openGroup(id),
+  onSite:id=>openSite(id),
+  onCity:id=>openCity(id),
+  onRiver:id=>route({type:'SELECT_RIVER',id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet}),
+  onStatus:setMapStatus,
+  onCameraInput:()=>{
+   currentEntry&&(currentEntry.manuallyMoved=true);
+   saveViewState();
+  },
+  onCameraSettled:()=>{
+   saveViewState();
+   if(atlas){const pitch=Math.round(atlas.getPitch());$('#pitch-slider').value=String(pitch);$('#pitch-value').textContent=`${pitch}°`;}
+  },
+  onResize:scheduleViewport,
+ });
+ atlas.setAtmosphere(atmosphereEnabled);
+ atlas.ready.then(()=>{
+  atlas.setLayer(state.layer);atlas.setSelection(state.selectedEntity);
+  scheduleViewport();
+  requestAnimationFrame(()=>{
+  if(state.view==='group'&&state.groupId)atlas.setGroup(state.groupId,{focus:true,padding:lastViewport?.padding});
+  else if(state.view==='river'&&state.riverId)atlas.focusRiver(state.riverId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});
+  else if(state.view==='city'&&state.cityId)atlas.focusCity(state.cityId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});
+  else if(state.view==='place'&&state.placeId){atlas.focusSite(state.placeId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});if(lastViewport?.mode?.panel==='bottom')setSheet('full');}
+  else if(state.view==='teip'&&state.groupId)atlas.setGroup(state.groupId,{focus:false});
+  if(state.view==='overview'&&!currentEntry?.manuallyMoved)homeAfterViewportMeasure();
+  else scheduleViewport();
+  });
+ });
+}catch(error){
+ console.error('Atlas initialization failed',error);
+ setMapStatus('unavailable');
+ $('#map').style.background='url(./assets/relief-overview.png) center/cover';
+ toast('Карта сейчас недоступна. Каталог и карточки работают.');
+}
+
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)saveViewState();});

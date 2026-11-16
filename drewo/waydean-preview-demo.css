@@ -58,3 +58,36 @@
   .demo-mode-notice strong { font-size: 11px; }
   .demo-mode-notice span { font-size: 9px; }
 }
+
+.demo-mode-atlas-link {
+  display: inline-flex;
+  align-items: center;
+  justify-self: center;
+  gap: 6px;
+  min-height: 26px;
+  margin-top: 3px;
+  padding: 3px 9px;
+  border: 1px solid rgba(218, 183, 111, .34);
+  border-radius: 999px;
+  color: #f0cf78;
+  font: 600 10px/1.2 var(--ui, "Segoe UI", sans-serif);
+  text-decoration: none;
+  pointer-events: auto;
+  transition: background .18s ease, border-color .18s ease;
+}
+
+.demo-mode-atlas-link:hover {
+  background: rgba(218, 183, 111, .1);
+  border-color: rgba(218, 183, 111, .72);
+}
+
+.demo-mode-atlas-link:focus-visible {
+  outline: 2px solid #f0cf78;
+  outline-offset: 2px;
+}
+
+.demo-mode-atlas-link span { color: inherit; font: inherit; }
+
+@media (prefers-reduced-motion: reduce) {
+  .demo-mode-atlas-link { transition: none; }
+}
