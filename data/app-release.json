@@ -14,7 +14,7 @@
   "ios": {
     "appStoreUrl": "https://apps.apple.com/app/id6782619598",
     "buildNumber": 26,
-    "latestVersion": "1.0.25"
+    "latestVersion": "1.0.26"
   },
   "messageRu": "Улучшили расположение текста на первых страницах Мусхафа. Добавили диктовку с прогрессом и плавающим управлением. Улучшили плеер, повтор страницы и аята, панель чтеца и раздел Азкары.",
   "messageEn": "Improved text layout on the opening Mushaf pages. Added dictation progress and floating controls. Improved the player, page and ayah repeat, reciter panel, and Azkar section."
