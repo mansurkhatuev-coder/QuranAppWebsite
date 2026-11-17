@@ -1,0 +1,66 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#081116">
+  <meta name="color-scheme" content="dark">
+  <meta name="robots" content="noindex,nofollow">
+  <meta http-equiv="refresh" content="0;url=../drewo/waydean-preview.html?source=family&amp;tree=drewo-eldarovy&amp;state=all-tree">
+  <title>Эльдаровы</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <style>
+    :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; background: #081116; color: #eee3ca; }
+    * { box-sizing: border-box; }
+    body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at 50% 0, #182820, #081116 68%); }
+    main { width: min(460px, 100%); padding: 28px; border: 1px solid #b9975566; border-radius: 18px; background: #091316eF; box-shadow: 0 24px 70px #0008; text-align: center; }
+    strong { color: #f0cf78; font: 700 18px Georgia, serif; }
+    p { color: #bdb49f; font-size: 13px; line-height: 1.55; }
+    a { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; margin-top: 8px; padding: 0 16px; border: 1px solid #b9975599; border-radius: 9px; background: #a77c36; color: #fff4d5; font-weight: 650; text-decoration: none; }
+  </style>
+</head>
+<body>
+  <div id="trees-hub-back" class="trees-hub-back" hidden>
+    <a href="/trees/">← К списку древ</a>
+  </div>
+  <script>
+    (function () {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        if (params.get("from") !== "trees") return;
+        var bar = document.getElementById("trees-hub-back");
+        if (!bar) return;
+        bar.hidden = false;
+        document.body.classList.add("has-trees-hub-back");
+      } catch (err) {}
+    })();
+  </script>
+  <main>
+    <strong>Открываем демо-древо «Некъ»</strong>
+    <p>Переходим в общий интерфейс Waydean. Если переход не сработал автоматически, нажмите кнопку.</p>
+    <a href="../drewo/waydean-preview.html?source=family&amp;tree=drewo-eldarovy&amp;state=all-tree">Открыть демо-древо</a>
+  </main>
+  <script>
+    const target = new URL('../drewo/waydean-preview.html?source=family&tree=drewo-eldarovy&state=all-tree', window.location.href);
+    window.location.replace(`${target.pathname}${target.search}${target.hash}`);
+  </script>
+
+<script type="application/json" id="tree-data">
+{
+  "id": "эльдар",
+  "name": "Эльдар",
+  "gender": "male",
+  "sons": []
+}
+</script>
+
+<script type="application/json" id="activity-log">
+[]
+</script>
+
+  <script src="/trees/billing-config.js?v=1"></script>
+  <script src="/assets/drewo-billing.js?v=1"></script>
+  <script src="/assets/drewo-billing-banner.js?v=1"></script>
+</body>
+</html>

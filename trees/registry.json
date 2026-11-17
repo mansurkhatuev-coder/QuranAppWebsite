@@ -45,6 +45,15 @@
       "ownership": "mine",
       "note": "Алихан ИПЛ",
       "createdAt": "2026-10-27T07:34:27.775Z"
+    },
+    {
+      "treeDir": "drewo-eldarovy",
+      "login": "eldarovy",
+      "code": "eldarovy",
+      "title": "Эльдаровы",
+      "ownership": "mine",
+      "note": "",
+      "createdAt": "2026-11-17T13:16:02.490Z"
     }
   ]
 }
