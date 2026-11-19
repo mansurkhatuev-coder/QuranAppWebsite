@@ -187,6 +187,7 @@
           const loan = payload.loan;
           if (!loan?.id) break;
           const current = snapshot.loans.find((item) => item.id === loan.id);
+          if (Number(current?.debt_written_off || 0) > 0) break;
           const projectedLoan = { ...loan, offline_version: current ? Number(current.offline_version || 1) + (operation.command.type === "loan.edit" ? 1 : 0) : Number(loan.offline_version || 1) };
           const index = snapshot.loans.findIndex((item) => item.id === loan.id);
           if (index < 0) snapshot.loans.push(projectedLoan); else snapshot.loans[index] = projectedLoan;
@@ -198,10 +199,16 @@
         case "payment.record": {
           const payment = payload.payment;
           if (!payment?.id || snapshot.payments.some((row) => row.idempotency_key === operation.id)) break;
-          snapshot.payments.push({ ...payment, cash_recorded_at: payment.cash_recorded_at || operation.createdAt, idempotency_key: operation.id });
           let remaining = Number(payment.amount);
           const rows = snapshot.schedules.filter((row) => row.loan_id === payment.loan_id).sort((a, b) => a.sequence_number - b.sequence_number);
           const start = rows.findIndex((row) => row.id === (payload.scheduleId || payment.schedule_id));
+          const current = snapshot.loans.find((item) => item.id === payment.loan_id);
+          if (Number(current?.debt_written_off || 0) > 0) {
+            const dueRows = rows.filter((row) => row.status !== "paid" && Number(row.amount) - Number(row.paid_amount || 0) > 0.009);
+            const dueTotal = dueRows.reduce((sum, row) => sum + Number(row.amount) - Number(row.paid_amount || 0), 0);
+            if (current.status === "closed" || start < 0 || dueRows[0]?.id !== rows[start]?.id || !(remaining > 0) || remaining > dueTotal + 0.009) break;
+          }
+          snapshot.payments.push({ ...payment, cash_recorded_at: payment.cash_recorded_at || operation.createdAt, idempotency_key: operation.id });
           for (const row of rows.slice(Math.max(0, start))) {
             if (remaining <= 0.009) break;
             const paid = Math.max(Number(row.paid_amount || 0), row.status === "paid" ? Number(row.amount) : 0);
@@ -211,7 +218,8 @@
             remaining = Math.round((remaining - applied) * 100) / 100;
             snapshot.schedules = snapshot.schedules.map((item) => item.id === row.id ? { ...item, paid_amount: totalPaid, paid_at: payment.paid_at, status: totalPaid + 0.009 >= Number(item.amount) ? "paid" : item.status } : item);
           }
-          snapshot.loans = snapshot.loans.map((loan) => loan.id === payment.loan_id ? { ...loan, offline_version: Number(loan.offline_version || 1) + 1 } : loan);
+          snapshot.loans = snapshot.loans.map((loan) => loan.id === payment.loan_id ? { ...loan, offline_version: Number(loan.offline_version || 1) + 1,
+            status: Number(loan.debt_written_off || 0) > 0 && snapshot.schedules.filter((row) => row.loan_id === loan.id).every((row) => row.status === "paid") ? "closed" : loan.status } : loan);
           break;
         }
         case "cash.transaction.create": {
@@ -607,7 +615,7 @@
       ["deal_invested_amount", "Вложение инвестора в сделку"],
       ["manager_share_percent", "Доля владельца в сделке, %"], ["deal_investor_share_percent", "Доля инвестора в сделке, %"],
       ["loan_title", "Название / товар"], ["cost_amount", "Цена"], ["markup_percent", "Наценка, %"],
-      ["principal", "К возврату"], ["down_payment", "Первоначальный взнос"], ["term_months", "Срок, мес."],
+      ["principal", "К возврату"], ["debt_written_off", "Списано по рассрочке"], ["writeoff_history", "История списаний (JSON)"], ["down_payment", "Первоначальный взнос"], ["term_months", "Срок, мес."],
       ["monthly_payment", "Платёж в месяц"], ["schedule_on_full_amount", "График на полную сумму"],
       ["start_date", "Дата начала"], ["loan_status", "Статус рассрочки"], ["loan_created_at", "Создана"],
       ["loan_offline_version", "Версия рассрочки"],
@@ -616,7 +624,7 @@
       ["guarantor_phone", "Телефон поручителя"], ["guarantor_address", "Адрес поручителя"],
       ["guarantor_notes", "Заметки поручителя"], ["guarantor_created_at", "Поручитель создан"],
       ["schedule_id", "ID платежа графика"], ["schedule_number", "Номер платежа"],
-      ["schedule_due_date", "Срок платежа"], ["schedule_amount", "Сумма по графику"],
+      ["schedule_due_date", "Срок платежа"], ["schedule_amount", "Сумма по графику после списаний"], ["schedule_written_off", "Списано по графику"],
       ["schedule_status", "Статус платежа"], ["schedule_paid_amount", "Оплачено по графику"],
       ["schedule_paid_at", "Дата оплаты по графику"], ["schedule_receipt_path", "Путь к чеку графика"],
       ["payment_id", "ID оплаты"], ["payment_schedule_id", "ID платежа графика для оплаты"],
@@ -659,6 +667,8 @@
         cost_amount: loan.cost_amount,
         markup_percent: loan.markup_percent,
         principal: loan.principal,
+        debt_written_off: loan.debt_written_off || 0,
+        writeoff_history: JSON.stringify(loan.writeoff_history || []),
         down_payment: loan.down_payment,
         term_months: loan.term_months,
         monthly_payment: loan.monthly_payment,
@@ -690,6 +700,7 @@
         schedule_number: item.sequence_number,
         schedule_due_date: item.due_date,
         schedule_amount: item.amount,
+        schedule_written_off: item.written_off_amount || 0,
         schedule_status: item.status,
         schedule_paid_amount: item.paid_amount,
         schedule_paid_at: item.paid_at,
@@ -769,6 +780,7 @@
         schedule_number: item.sequence_number,
         schedule_due_date: item.due_date,
         schedule_amount: item.amount,
+        schedule_written_off: item.written_off_amount || 0,
         schedule_status: item.status,
         schedule_paid_amount: item.paid_amount,
         schedule_paid_at: item.paid_at,
@@ -809,10 +821,12 @@
         <p class="muted">${text(loan.title || "Товар не указан")} · ${loan.status === "closed" ? "Закрыта" : "Активна"}</p>
         <p><strong>Сумма:</strong> ${text(money(loan.principal))}</p>
         <p><strong>Первый взнос:</strong> ${text(money(loan.down_payment))}</p>
+        <p><strong>Списано:</strong> ${text(money(loan.debt_written_off || 0))}. Списание выполняется только онлайн.</p>
+        ${(loan.writeoff_history || []).map((entry) => `<p class="muted">${text(date(entry.occurred_at))} · ${text(money(entry.amount))} · ${text(entry.reason)}</p>`).join("")}
         ${guarantors.length ? `<p><strong>Поручители:</strong> ${guarantors.map((g) => text(g.full_name)).join(", ")}</p>` : ""}
       </article>
       <article class="card"><h3>График платежей</h3><div class="table-wrap"><table><thead><tr><th>№</th><th>Срок</th><th>Сумма</th><th>Оплачено</th><th>Статус</th></tr></thead><tbody>${schedules.map((row) => `
-        <tr><td>${text(row.sequence_number)}</td><td>${date(row.due_date)}</td><td>${text(money(row.amount))}</td><td>${text(money(row.paid_amount || 0))}</td><td>${row.status === "paid" ? "Оплачен" : row.status === "overdue" ? "Просрочен" : "Ожидает"}</td></tr>`).join("")}</tbody></table></div></article>
+        <tr><td>${text(row.sequence_number)}</td><td>${date(row.due_date)}</td><td>${text(money(Number(row.amount) + Number(row.written_off_amount || 0)))}${Number(row.written_off_amount) > 0 ? " · списано " + text(money(row.written_off_amount)) : ""}</td><td>${text(money(row.paid_amount || 0))}</td><td>${row.status === "paid" ? Number(row.written_off_amount) > 0 ? "Закрыт списанием" : "Оплачен" : row.status === "overdue" ? "Просрочен" : "Ожидает"}</td></tr>`).join("")}</tbody></table></div></article>
       <article class="card"><h3>История оплат</h3>${payments.length ? `<div class="list">${payments.map((row) => `<div class="row"><span>${date(row.paid_at)}${row.notes ? `<div class="muted">${text(row.notes)}</div>` : ""}</span><strong>${text(money(row.amount))}</strong></div>`).join("")}</div>` : '<p class="muted">Оплат нет.</p>'}</article>
     `;
   }
@@ -870,6 +884,7 @@
 
   function renderLoanForm(loanId = null) {
     const loan = loanId ? app.snapshot.loans.find((item) => item.id === loanId) : null;
+    if (Number(loan?.debt_written_off || 0) > 0) return '<article class="card">Условия рассрочки со списаниями нельзя изменять.</article>';
     const clients = app.snapshot.clients.filter((client) => !client.is_blacklisted || client.id === loan?.client_id);
     if (!clients.length) return `<article class="card"><h2>Новая рассрочка</h2><p class="muted">Сначала добавьте клиента. Это можно сделать офлайн.</p><button type="button" data-action="new-client">Добавить клиента</button><button type="button" data-action="cancel-form">Отмена</button></article>`;
     const value = (key, fallback = "") => text(loan?.[key] ?? fallback);
@@ -1173,6 +1188,7 @@
         const loanId = editing ? form.dataset.loanId : crypto.randomUUID();
         const current = editing ? app.snapshot.loans.find((item) => item.id === loanId) : null;
         if (editing && !current) throw new Error("Рассрочка больше не найдена в сохранённых данных.");
+        if (editing && Number(current?.debt_written_off || 0) > 0) throw new Error("Условия рассрочки со списаниями нельзя изменять.");
         if (editing && app.operations.some((item) => item.state === "conflict" && (item.command?.payload?.loanId === loanId || item.command?.payload?.loan?.id === loanId || item.command?.payload?.payment?.loan_id === loanId))) {
           throw new Error("Сначала разрешите конфликт этой рассрочки.");
         }
@@ -1389,6 +1405,10 @@
         return;
       }
       if (action === "edit-loan" && loanId) {
+        if (Number(app.snapshot.loans.find((item) => item.id === loanId)?.debt_written_off || 0) > 0) {
+          window.alert("Условия рассрочки со списаниями нельзя изменять.");
+          return;
+        }
         if (app.operations.some((item) => item.state === "conflict" && (item.command?.payload?.loanId === loanId || item.command?.payload?.loan?.id === loanId || item.command?.payload?.payment?.loan_id === loanId))) {
           window.alert("Сначала разрешите конфликт этой рассрочки на главной странице.");
           return;

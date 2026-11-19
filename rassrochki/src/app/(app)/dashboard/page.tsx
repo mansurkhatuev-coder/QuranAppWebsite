@@ -111,6 +111,10 @@ function normalizeLoanRow(loan: Record<string, unknown>, schedulePrincipal?: num
     principal: Number(loan.principal) || 0,
     down_payment: Number(loan.down_payment ?? 0),
     schedulePrincipal,
+    debt_written_off: Number(loan.debt_written_off ?? 0),
+    writeoff_owner_profit: Number(loan.writeoff_owner_profit ?? 0),
+    writeoff_investor_profit: Number(loan.writeoff_investor_profit ?? 0),
+    writeoff_investor_capital: Number(loan.writeoff_investor_capital ?? 0),
     investor_amount: loan.investor_amount == null ? null : Number(loan.investor_amount),
     income_share_manager:
       loan.income_share_manager == null ? null : Number(loan.income_share_manager),
@@ -215,7 +219,10 @@ export default function DashboardPage() {
     const loan = normalizeLoanRow(row);
     const profit = profitFromPaymentForLoan(Number(p.amount), loan);
     const shares = resolveProfitShares(loan);
-    const parts = splitIncome(profit, shares.manager, shares.investor);
+    const adjusted = projectedRemaining(loan, 0);
+    const parts = Number(loan.debt_written_off) > 0
+      ? splitIncome(profit, adjusted.ownerProfit, adjusted.investorProfit)
+      : splitIncome(profit, shares.manager, shares.investor);
     profit30d += profit;
     ownerProfit30d += parts.manager;
     investorProfit30d += parts.investor;
@@ -267,6 +274,8 @@ export default function DashboardPage() {
           + Рассрочка
         </Link>
       </div>
+
+      <div className="card"><p className="text-sm text-[var(--muted)]">Списано задолженностей за всё время</p><p className="text-xl font-bold">{formatMoney(loans.reduce((sum, loan) => sum + Number(loan.debt_written_off ?? 0), 0))}</p><p className="text-xs text-[var(--muted)]">Не входит в поступления в кассу.</p></div>
 
       <section className="rounded-2xl border-0 bg-gradient-to-br from-teal-800 to-teal-600 p-4 text-white shadow-sm md:p-6">
         <p className="text-sm text-teal-100">Предполагаемая прибыль по активным сделкам</p>

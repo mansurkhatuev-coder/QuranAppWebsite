@@ -277,7 +277,7 @@ function LoanActions({ loan, busy, onDelete, compact = false }: {
   return (
     <div className={"flex items-center " + (compact ? "gap-1" : "justify-end gap-2")}>
       {!compact ? <Link className="text-teal-700 underline" href={"/loans/" + loan.id}>Открыть</Link> : null}
-      <Link className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] transition hover:bg-white hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600" href={"/loans/" + loan.id + "/edit"} aria-label={"Изменить рассрочку: " + (loan.clients?.full_name ?? loan.title ?? "без названия")} title="Изменить"><PencilIcon /></Link>
+      {Number(loan.debt_written_off ?? 0) <= 0 && (<Link className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] transition hover:bg-white hover:text-teal-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-teal-600" href={"/loans/" + loan.id + "/edit"} aria-label={"Изменить рассрочку: " + (loan.clients?.full_name ?? loan.title ?? "без названия")} title="Изменить"><PencilIcon /></Link> )}
       <button type="button" className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-[var(--border)] text-[var(--muted)] transition hover:border-red-200 hover:bg-red-50 hover:text-red-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-600 disabled:cursor-not-allowed disabled:opacity-50" onClick={onDelete} disabled={busy} aria-label={"Удалить рассрочку: " + (loan.clients?.full_name ?? loan.title ?? "без названия")} title={busy ? "Удаляем…" : "Удалить"}>{busy ? <Spinner className="h-4 w-4" /> : <TrashIcon />}</button>
     </div>
   );

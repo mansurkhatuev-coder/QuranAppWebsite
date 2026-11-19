@@ -25,7 +25,7 @@ function buildLoansSheet(data: LoanExportData, loans: Loan[]): XlsxSheet {
       "ID рассрочки", "ID клиента", "ID инвестора", "Инвестор", "Клиент", "Телефон клиента", "Адрес клиента",
       "Поручители", "Телефоны поручителей", "Адреса поручителей", "Товар / услуга", "Цена", "Наценка, %",
       "К возврату", "Первоначальный взнос", "Срок, мес.", "Платёж в месяц", "Дата начала", "Дата окончания",
-      "Статус", "Вложение инвестора", "Доля владельца, %", "Доля инвестора, %", "Заметки",
+      "Статус", "Вложение инвестора", "Доля владельца, %", "Доля инвестора, %", "Заметки", "Списано",
     ], ...loans.map((loan) => {
       const client = clientById.get(loan.client_id);
       const guarantors = guarantorsByLoan.get(loan.id) ?? [];
@@ -42,7 +42,7 @@ function buildLoansSheet(data: LoanExportData, loans: Loan[]): XlsxSheet {
           ? formatDateShort(loanEndDate(loan.start_date, loan.term_months)!)
           : "—",
         loan.status === "closed" ? "Закрыта" : "Активна", Number(loan.investor_amount ?? 0),
-        Number(loan.income_share_manager), Number(loan.income_share_investor), loan.notes ?? "",
+        Number(loan.income_share_manager), Number(loan.income_share_investor), loan.notes ?? "", Number(loan.debt_written_off ?? 0),
       ];
     })],
   };
@@ -82,14 +82,20 @@ function buildPaymentSheets(data: LoanExportData, loans: Loan[]): XlsxSheet[] {
     },
     {
       name: "График",
-      rows: [["ID платежа", "ID рассрочки", "Клиент", "№", "Дата", "Сумма", "Оплачено", "Остаток", "Статус", "Дата оплаты", "Чек"], ...schedules.map((row) => [
+      rows: [["ID платежа", "ID рассрочки", "Клиент", "№", "Дата", "Исходная сумма", "Оплачено", "Остаток", "Статус", "Дата оплаты", "Чек", "Списано"], ...schedules.map((row) => [
         row.id, row.loan_id, clientLabel.get(loans.find((loan) => loan.id === row.loan_id)?.client_id ?? "") ?? "",
-        Number(row.sequence_number), formatDateShort(row.due_date), Number(row.amount),
+        Number(row.sequence_number), formatDateShort(row.due_date), Number(row.amount) + Number(row.written_off_amount ?? 0),
         Number(row.paid_amount ?? (row.status === "paid" ? row.amount : 0)),
         Math.max(0, Number(row.amount) - Number(row.paid_amount ?? (row.status === "paid" ? row.amount : 0))),
-        row.status === "paid" ? "Оплачен" : row.status === "overdue" ? "Просрочен" : "Ожидает",
-        row.paid_at ? formatDateShort(row.paid_at.slice(0, 10)) : "", row.receipt_path ?? "",
+        row.status === "paid" ? Number(row.written_off_amount) > 0 ? "Закрыт списанием" : "Оплачен" : row.status === "overdue" ? "Просрочен" : "Ожидает",
+        row.paid_at ? formatDateShort(row.paid_at.slice(0, 10)) : "", row.receipt_path ?? "", Number(row.written_off_amount ?? 0),
       ])],
+    },
+    {
+      name: "Списания",
+      rows: [["ID рассрочки", "Дата", "Сумма", "Причина", "Режим", "Прибыль владельца", "Прибыль инвестора", "Капитал владельца", "Капитал инвестора", "Администратор"], ...loans.flatMap((loan) => (loan.writeoff_history ?? []).map((entry) => [
+        loan.id, entry.occurred_at, entry.amount, entry.reason, entry.mode, entry.owner_profit_loss, entry.investor_profit_loss, entry.owner_capital_loss, entry.investor_capital_loss, entry.actor_id,
+      ]))],
     },
     {
       name: "Оплаты",

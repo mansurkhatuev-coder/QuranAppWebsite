@@ -18,6 +18,10 @@ export type LoanFinanceInput = {
   income_share_manager?: number | null;
   income_share_investor?: number | null;
   status?: string;
+  debt_written_off?: number | null;
+  writeoff_owner_profit?: number | null;
+  writeoff_investor_profit?: number | null;
+  writeoff_investor_capital?: number | null;
 };
 
 const EPS = 0.009;
@@ -83,18 +87,29 @@ export function dealTotals(loan: LoanFinanceInput) {
       : cost > 0
         ? calcProfit(cost, markup)
         : 0;
+  const writtenOff = Math.max(0, Number(loan.debt_written_off) || 0);
+  const effectivePrincipal = money(Math.max(0, (principal || cost + profit) - writtenOff));
   const financed = loan.schedulePrincipal == null
-    ? calcSchedulePrincipal(principal || cost + profit, down)
+    ? calcSchedulePrincipal(effectivePrincipal, down)
     : Math.max(0, Number(loan.schedulePrincipal) || 0);
   const shares = resolveProfitShares(loan);
-  const profitSplit = splitIncome(profit, shares.manager, shares.investor);
-  const invested = Number(loan.investor_amount) || 0;
+  const originalSplit = splitIncome(profit, shares.manager, shares.investor);
+  const profitSplit = {
+    manager: money(Math.max(0, originalSplit.manager - (Number(loan.writeoff_owner_profit) || 0))),
+    investor: money(Math.max(0, originalSplit.investor - (Number(loan.writeoff_investor_profit) || 0))),
+  };
+  const effectiveProfit = money(profitSplit.manager + profitSplit.investor);
+  const originalInvestorCapital = Number(loan.investor_amount) || 0;
+  const invested = money(Math.max(0, originalInvestorCapital - (Number(loan.writeoff_investor_capital) || 0)));
 
   return {
     cost,
-    profit,
-    profitTotal: profit,
+    profit: effectiveProfit,
+    profitTotal: effectiveProfit,
     principal: principal || cost + profit,
+    effectivePrincipal,
+    writtenOff,
+    originalInvestorCapital,
     down,
     financed,
     shares,
@@ -121,8 +136,8 @@ export function collectionProgress(
   loan: LoanFinanceInput,
   paidScheduleTotal: number
 ) {
-  const principal = Number(loan.principal) || 0;
-  if (principal <= 0) return 0;
+  const principal = dealTotals(loan).effectivePrincipal;
+  if (principal <= 0) return loan.status === "closed" && Number(loan.debt_written_off) > 0 ? 1 : 0;
   const collected = collectedAmount(loan, paidScheduleTotal);
   return Math.min(1, Math.max(0, collected / principal));
 }
@@ -136,7 +151,7 @@ export function capitalProgress(
   paidScheduleTotal: number
 ) {
   const totals = dealTotals(loan);
-  if (totals.financed <= EPS) return 0;
+  if (totals.financed <= EPS) return loan.status === "closed" && Number(loan.debt_written_off) > 0 ? 1 : 0;
   return Math.min(1, Math.max(0, paidScheduleTotal / totals.financed));
 }
 
@@ -158,8 +173,8 @@ export function projectedRemaining(loan: LoanFinanceInput, paidScheduleTotal: nu
   );
   const earnedSplit = splitIncome(
     earnedProfit,
-    totals.shares.manager,
-    totals.shares.investor
+    totals.writtenOff > 0 ? totals.ownerProfit : totals.shares.manager,
+    totals.writtenOff > 0 ? totals.investorProfit : totals.shares.investor
   );
 
   const capitalReturned = Math.min(
@@ -192,6 +207,12 @@ export function profitFromPaymentForLoan(
   paidAmount: number,
   loan: LoanFinanceInput
 ) {
+  if ((Number(loan.debt_written_off) || 0) > 0) {
+    const totals = dealTotals(loan);
+    return totals.effectivePrincipal > 0
+      ? money(Math.max(0, paidAmount) * totals.profit / totals.effectivePrincipal)
+      : 0;
+  }
   return profitFromPaid(
     paidAmount,
     Number(loan.markup_percent) || 0,

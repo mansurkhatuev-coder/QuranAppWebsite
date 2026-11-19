@@ -71,6 +71,19 @@ export type Client = {
   offline_version?: number;
 };
 
+export type DebtWriteoff = {
+  id: string;
+  occurred_at: string;
+  actor_id: string;
+  amount: number;
+  mode: "proportional" | "owner";
+  reason: string;
+  owner_profit_loss: number;
+  investor_profit_loss: number;
+  owner_capital_loss: number;
+  investor_capital_loss: number;
+};
+
 export type Loan = {
   id: string;
   organization_id: string;
@@ -101,6 +114,11 @@ export type Loan = {
   notes: string | null;
   created_at: string;
   offline_version?: number;
+  debt_written_off?: number;
+  writeoff_owner_profit?: number;
+  writeoff_investor_profit?: number;
+  writeoff_investor_capital?: number;
+  writeoff_history?: DebtWriteoff[];
 };
 
 export type PaymentSchedule = {
@@ -113,6 +131,7 @@ export type PaymentSchedule = {
   status: "pending" | "paid" | "overdue";
   paid_at: string | null;
   paid_amount: number | null;
+  written_off_amount?: number;
   receipt_path: string | null;
 };
 
