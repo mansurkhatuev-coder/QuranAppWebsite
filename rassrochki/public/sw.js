@@ -1,5 +1,5 @@
 /* PWA-оболочка кэшируется; приватные данные остаются в IndexedDB приложения. */
-const CACHE = "rassrochki-shell-v17";
+const CACHE = "rassrochki-shell-v18";
 const PRECACHE = [
   "/manifest.webmanifest",
   "/offline.html",
@@ -23,7 +23,7 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(
     caches
       .keys()
-      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+      .then((keys) => Promise.all(keys.filter((k) => k.startsWith("rassrochki-shell-") && k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
@@ -52,27 +52,25 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Only cache the public shell and immutable Next.js build assets.
+  // Never cache arbitrary images, documents, receipts or authenticated endpoints.
   const isStatic =
-    url.pathname.startsWith("/icons") ||
-    url.pathname === "/manifest.webmanifest" ||
-    url.pathname === "/sw.js" ||
-    url.pathname === "/offline.js" ||
-    req.destination === "style" ||
-    req.destination === "script" ||
-    req.destination === "image" ||
-    req.destination === "font";
+    PRECACHE.includes(url.pathname) ||
+    (url.pathname.startsWith("/_next/static/") &&
+      ["script", "style", "font", "image"].includes(req.destination));
 
   if (!isStatic) return;
 
   event.respondWith(
     fetch(req)
       .then((res) => {
-        if (res.ok) {
+        const cacheControl = res.headers.get("Cache-Control") || "";
+        if (res.ok && !res.redirected && !/\b(private|no-store|no-cache)\b/i.test(cacheControl)) {
           const copy = res.clone();
           caches.open(CACHE).then((cache) => cache.put(req, copy));
         }
         return res;
       })
-      .catch(() => caches.match(req).then((cached) => cached || Response.error()))
+      .catch(() => caches.match(req, { cacheName: CACHE }).then((cached) => cached || Response.error()))
   );
 });
