@@ -1,0 +1,42 @@
+name: Prepare Rassrochki security dependency update
+on:
+  push:
+    branches: [security/rassrochki-npm-remediation]
+    paths:
+      - '.github/workflows/rassrochki-dependency-remediation.yml'
+permissions:
+  contents: read
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: rassrochki
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+      - name: Prepare compatible security upgrades without executing package scripts
+        run: npm audit fix --package-lock-only --ignore-scripts
+        continue-on-error: true
+      - name: Verify production dependency audit
+        run: npm audit --package-lock-only --omit=dev --audit-level=high
+      - name: Verify complete dependency audit
+        if: always()
+        run: npm audit --package-lock-only --include=dev --audit-level=high
+      - name: Show proposed package versions
+        if: always()
+        run: |
+          node -e 'const p=require("./package-lock.json"); for (const n of ["next","sharp","source-map-js","dompurify","vitest","postcss"]) console.log(n,p.packages["node_modules/"+n]?.version)'
+          git diff --stat -- package.json package-lock.json
+      - name: Preserve proposed package files for review
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: rassrochki-dependency-update
+          path: |
+            rassrochki/package.json
+            rassrochki/package-lock.json
+          retention-days: 1
+          if-no-files-found: error
