@@ -1,45 +1,37 @@
 import { calcTotalWithMarkup } from "@/lib/utils";
 
-export const PAYMENT_ROUNDING_STEP = 100;
-
-function money(value: number) {
+/** Currency precision only; never round the contract to a multiple of rubles. */
+export function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
-function percent(value: number) {
-  return Math.round((value + Number.EPSILON) * 100) / 100;
+export function markupFromTotal(cost: number, total: number) {
+  return cost > 0 ? roundMoney((total - cost) / cost * 100) : 0;
 }
 
-/** Rounds every scheduled payment to the nearest hundred rubles and reports the resulting contract rate. */
-export function calculateRoundedLoanTerms(
+/** Explicit total is authoritative; monthly override is a schedule preference.
+ * For old drafts without a total, a manual payment establishes the total.
+ */
+export function calculateLoanTerms(
   cost: number,
   requestedMarkupPercent: number,
   downPayment: number,
   termMonths: number,
+  explicitTotal?: number,
   monthlyOverride?: number
 ) {
-  const targetPrincipal = calcTotalWithMarkup(cost, requestedMarkupPercent);
-  const targetSchedulePrincipal = money(Math.max(0, targetPrincipal - downPayment));
-  const step = PAYMENT_ROUNDING_STEP;
-  const monthlyPayment = termMonths > 0 && targetSchedulePrincipal > 0
-    ? Math.max(step, Math.round((monthlyOverride && monthlyOverride > 0
-        ? monthlyOverride
-        : targetSchedulePrincipal / termMonths) / step) * step)
-    : 0;
-  const schedulePrincipal = money(monthlyPayment * Math.max(0, termMonths));
-  const principal = money(schedulePrincipal + downPayment);
-  const effectiveMarkupPercent = cost > 0
-    ? percent(((principal - cost) / cost) * 100)
-    : percent(requestedMarkupPercent);
-
+  const validTerm = Number.isInteger(termMonths) && termMonths > 0;
+  const manual = monthlyOverride !== undefined && Number.isFinite(monthlyOverride) && monthlyOverride > 0
+    ? roundMoney(monthlyOverride) : 0;
+  const principal = roundMoney(explicitTotal ?? (
+    validTerm && manual > 0 ? downPayment + manual * termMonths
+      : cost > 0 ? calcTotalWithMarkup(cost, requestedMarkupPercent) : 0
+  ));
+  const schedulePrincipal = roundMoney(Math.max(0, principal - downPayment));
+  const monthlyPayment = validTerm && schedulePrincipal > 0
+    ? manual || Math.max(0.01, roundMoney(schedulePrincipal / termMonths)) : 0;
   return {
-    targetPrincipal,
-    targetSchedulePrincipal,
-    monthlyPayment,
-    schedulePrincipal,
-    principal,
-    effectiveMarkupPercent,
-    markupChangePercent: percent(effectiveMarkupPercent - requestedMarkupPercent),
-    totalChange: money(principal - targetPrincipal),
+    principal, schedulePrincipal, monthlyPayment,
+    effectiveMarkupPercent: cost > 0 ? markupFromTotal(cost, principal) : roundMoney(requestedMarkupPercent),
   };
 }

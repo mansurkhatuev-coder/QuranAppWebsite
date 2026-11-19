@@ -8,7 +8,7 @@ import { FormSkeleton } from "@/components/Skeleton";
 import { NumericInput } from "@/components/NumericInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { PhoneInput } from "@/components/PhoneInput";
-import { calculateRoundedLoanTerms, PAYMENT_ROUNDING_STEP } from "@/lib/rounded-loan";
+import { calculateLoanTerms, markupFromTotal, roundMoney } from "@/lib/rounded-loan";
 import { Spinner } from "@/components/Spinner";
 import { PassportNameScan } from "@/components/PassportNameScan";
 import { useDraft } from "@/hooks/useDraft";
@@ -29,9 +29,6 @@ import {
   buildSchedule,
   calcInvestorCapitalBase,
   calcInvestorShareByCapital,
-  calcMonthlyPayment,
-  calcSchedulePrincipal,
-  calcTotalWithMarkup,
   formatDateShort,
   formatMoney,
   splitIncome,
@@ -43,6 +40,7 @@ type LoanDraft = {
   investor_amount: string;
   title: string;
   cost_amount: string;
+  total_amount?: string;
   markup_percent: string;
   down_payment: string;
   term_months: string;
@@ -209,6 +207,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
             investor_amount: loanRow.investor_amount == null ? "" : String(loanRow.investor_amount),
             title: loanRow.title ?? "",
             cost_amount: loanRow.cost_amount == null ? "" : String(loanRow.cost_amount),
+            total_amount: String(loanRow.principal),
             markup_percent: String(loanRow.markup_percent),
             down_payment: String(loanRow.down_payment ?? 0),
             term_months: String(loanRow.term_months),
@@ -249,22 +248,45 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     selectedClient?.is_blacklisted && selectedClient.id !== existingLoan?.client_id
   );
   const hasInvestors = investors.length > 0;
-  const cost = Number(value.cost_amount) || 0;
+  const cost = roundMoney(Number(value.cost_amount) || 0);
   const markup = Number(value.markup_percent) || 0;
-  const downPayment = Number(value.down_payment) || 0;
+  const downPayment = roundMoney(Number(value.down_payment) || 0);
   const termMonths = Number(value.term_months) || 0;
-  const roundedTerms = cost > 0 && termMonths > 0
-    ? calculateRoundedLoanTerms(
-        cost,
-        markup,
-        downPayment,
-        termMonths,
-        Number(value.monthly_payment)
-      )
-    : null;
-  const principal = roundedTerms?.principal ?? (cost > 0 ? calcTotalWithMarkup(cost, markup) : 0);
-  const schedulePrincipal = roundedTerms?.schedulePrincipal ??
-    (principal > 0 ? calcSchedulePrincipal(principal, downPayment) : 0);
+  const terms = calculateLoanTerms(
+    cost, markup, downPayment, termMonths,
+    value.total_amount === undefined ? undefined : Number(value.total_amount),
+    Number(value.monthly_payment) || undefined
+  );
+  const { principal, schedulePrincipal } = terms;
+  const displayedMarkup = value.total_amount === undefined || cost <= 0
+    ? value.markup_percent
+    : String(markupFromTotal(cost, principal));
+  const displayedTotal = value.total_amount ?? (cost > 0 ? String(principal) : "");
+
+  function changeMarkup(markup_percent: string) {
+    setValue({ ...value, markup_percent, total_amount: undefined, monthly_payment: "" });
+  }
+
+  function changeTotal(total_amount: string) {
+    setValue({
+      ...value, total_amount, monthly_payment: "",
+      markup_percent: cost > 0 && total_amount !== ""
+        ? String(markupFromTotal(cost, Number(total_amount)))
+        : value.markup_percent,
+    });
+  }
+
+  function changeMonthly(monthly_payment: string) {
+    if (monthly_payment === "" || !(Number(monthly_payment) > 0) || !Number.isInteger(termMonths) || termMonths <= 0) {
+      setValue({ ...value, monthly_payment: "", total_amount: displayedTotal });
+      return;
+    }
+    const total = roundMoney(downPayment + roundMoney(Number(monthly_payment)) * termMonths);
+    setValue({
+      ...value, monthly_payment, total_amount: String(total),
+      markup_percent: cost > 0 ? String(markupFromTotal(cost, total)) : value.markup_percent,
+    });
+  }
   const profit = cost > 0 ? Math.round((principal - cost) * 100) / 100 : 0;
   const withInvestor = Boolean(value.investor_id);
   const invested = Number(value.investor_amount) || 0;
@@ -314,8 +336,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
   const previewSchedule = useMemo(() => {
     const term = Number(value.term_months);
     if (!schedulePrincipal || !term || !value.start_date) return [];
-    const monthly = roundedTerms?.monthlyPayment ||
-      Number(value.monthly_payment) || calcMonthlyPayment(schedulePrincipal, term);
+    const monthly = terms.monthlyPayment;
     const fullSchedule = buildSchedule(schedulePrincipal, term, value.start_date, monthly).map((row) => ({
       ...row,
       paid_amount: 0,
@@ -371,7 +392,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     }
   }, [
     schedulePrincipal,
-    roundedTerms?.monthlyPayment,
+    terms.monthlyPayment,
     value.term_months,
     value.start_date,
     value.monthly_payment,
@@ -478,28 +499,33 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     }
 
     const termMonths = Number(value.term_months);
-    const targetTotal = calcTotalWithMarkup(cost, markup);
-    const down = Number(value.down_payment) || 0;
-    if (down > targetTotal) {
+    const down = downPayment;
+    const total = terms.principal;
+    const scheduleAmount = terms.schedulePrincipal;
+    if (!Number.isFinite(cost) || cost <= 0 || !Number.isFinite(total) || total < cost ||
+        !Number.isFinite(down) || down < 0 || !Number.isInteger(termMonths) || termMonths <= 0 ||
+        !Number.isFinite(terms.effectiveMarkupPercent) || terms.effectiveMarkupPercent > 999.99 ||
+        value.total_amount === "") {
+      setError("Проверьте цену, общую сумму, срок и наценку (от 0 до 999,99%).");
+      setLoading(false);
+      return;
+    }
+    if (down > total) {
       setError("Взнос не может быть больше суммы к возврату");
       setLoading(false);
       return;
     }
-    const roundedLoan = calculateRoundedLoanTerms(
-      cost,
-      markup,
-      down,
-      termMonths,
-      Number(value.monthly_payment)
-    );
-    const total = roundedLoan.principal;
-    const scheduleAmount = roundedLoan.schedulePrincipal;
     if (scheduleAmount <= 0) {
       setError("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
       setLoading(false);
       return;
     }
-    const monthlyPayment = roundedLoan.monthlyPayment;
+    const monthlyPayment = terms.monthlyPayment;
+    if (!(monthlyPayment > 0)) {
+      setError("Ежемесячный платёж должен быть больше нуля.");
+      setLoading(false);
+      return;
+    }
     const useInvestor = Boolean(value.investor_id);
     const investorAmount =
       useInvestor && value.investor_amount ? Number(value.investor_amount) : null;
@@ -512,7 +538,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
       investor_amount: investorAmount,
       title: value.title.trim() || null,
       cost_amount: cost,
-      markup_percent: roundedLoan.effectiveMarkupPercent,
+      markup_percent: terms.effectiveMarkupPercent,
       principal: total,
       down_payment: down,
       // Legacy database/RPC field; new schedules always deduct the down payment.
@@ -783,11 +809,27 @@ export function LoanForm({ loanId }: { loanId?: string }) {
               <NumericInput
                 mode="decimal"
                 value={value.cost_amount}
-                onChange={(cost_amount) => setValue({ ...value, cost_amount })}
+                onChange={(cost_amount) => setValue({
+                  ...value, cost_amount,
+                  markup_percent: value.total_amount !== undefined && Number(cost_amount) > 0
+                    ? String(markupFromTotal(roundMoney(Number(cost_amount)), principal))
+                    : value.markup_percent,
+                })}
                 required
               />
             </div>
             <div>
+              <label className="label">Общая сумма с надбавкой, ₽</label>
+              <NumericInput
+                mode="decimal"
+                value={displayedTotal}
+                onChange={changeTotal}
+                required
+              />
+            </div>
+          </div>
+
+          <div>
               <label className="label">Дата начала</label>
               <input
                 className="input"
@@ -799,7 +841,6 @@ export function LoanForm({ loanId }: { loanId?: string }) {
               <p className="mt-1 text-xs text-[var(--muted)]">
                 Первый платёж — через месяц после этой даты
               </p>
-            </div>
           </div>
 
           <div>
@@ -863,11 +904,11 @@ export function LoanForm({ loanId }: { loanId?: string }) {
                   key={p}
                   type="button"
                   className={`rounded-lg px-3 py-1.5 text-sm font-medium ${
-                    Number(value.markup_percent) === p
+                    Number(displayedMarkup) === p
                       ? "bg-teal-700 text-white"
                       : "border border-[var(--border)] bg-white text-slate-700"
                   }`}
-                  onClick={() => setValue({ ...value, markup_percent: String(p), monthly_payment: "" })}
+                  onClick={() => changeMarkup(String(p))}
                 >
                   {p}%
                 </button>
@@ -875,30 +916,13 @@ export function LoanForm({ loanId }: { loanId?: string }) {
             </div>
             <NumericInput
               mode="decimal"
-              value={value.markup_percent}
-              onChange={(markup_percent) => setValue({ ...value, markup_percent, monthly_payment: "" })}
+              value={displayedMarkup}
+              onChange={changeMarkup}
             />
             <p className="mt-1 text-xs text-[var(--muted)]">
               Пример: товар 10 000 ₽ + 30% → к возврату 13 000 ₽, прибыль 3 000 ₽
             </p>
           </div>
-
-          <div>
-            <p className="text-xs text-[var(--muted)]">Ежемесячный платёж округляется до ближайших {PAYMENT_ROUNDING_STEP} ₽.</p>
-          </div>
-
-          {roundedTerms && (
-            <p className="-mt-2 rounded-lg bg-teal-50 px-3 py-2 text-xs text-teal-900">
-              Платёж округлён до {PAYMENT_ROUNDING_STEP} ₽: {formatMoney(roundedTerms.monthlyPayment)} в месяц. Фактическая наценка составит{" "}
-              <strong>{roundedTerms.effectiveMarkupPercent}%</strong>
-              {roundedTerms.markupChangePercent !== 0
-                ? ` (${roundedTerms.markupChangePercent > 0 ? "+" : ""}${roundedTerms.markupChangePercent} п.п.)`
-                : " (без изменения)"}
-              {roundedTerms.totalChange !== 0
-                ? `; сумма к возврату изменится на ${roundedTerms.totalChange > 0 ? "+" : ""}${formatMoney(roundedTerms.totalChange)}`
-                : ""}.
-            </p>
-          )}
 
           <div>
             <label className="label">Первоначальный взнос, ₽</label>
@@ -915,11 +939,14 @@ export function LoanForm({ loanId }: { loanId?: string }) {
           <div>
             <label className="label">Платёж в месяц</label>
             <NumericInput
-              mode="integer"
+              mode="decimal"
               value={value.monthly_payment}
-              onChange={(monthly_payment) => setValue({ ...value, monthly_payment })}
-              placeholder={roundedTerms ? String(roundedTerms.monthlyPayment) : "Авто"}
+              onChange={changeMonthly}
+              placeholder={terms.monthlyPayment > 0 ? String(terms.monthlyPayment) : "Авто"}
             />
+            <p className="mt-1 text-xs text-[var(--muted)]">
+              Введите удобный платёж — общая сумма и процент изменятся. Разница в копейках учитывается в последнем платеже.
+            </p>
           </div>
         </div>
 
@@ -951,10 +978,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
               <div className="flex justify-between gap-2">
                 <span className="text-[var(--muted)]">≈ платёж / мес</span>
                 <span className="font-semibold">
-                  {formatMoney(roundedTerms?.monthlyPayment ?? (
-                    Number(value.monthly_payment) ||
-                    calcMonthlyPayment(schedulePrincipal, Number(value.term_months))
-                  ))}
+                  {formatMoney(terms.monthlyPayment)}
                 </span>
               </div>
             )}

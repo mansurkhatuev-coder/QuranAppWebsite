@@ -3,7 +3,6 @@
 
   const DB_NAME = "rassrochki-offline-v1";
   const ACTIVE_ACCOUNT_KEY = "rassrochki:offline-account";
-  const PAYMENT_ROUNDING_STEP = 100;
   const app = { snapshot: null, baseSnapshot: null, operations: [], account: null, view: "dashboard", loanId: null, clientId: null, cashType: null, form: null, syncError: null };
   const content = document.getElementById("content");
   const syncInfo = document.getElementById("sync-info");
@@ -878,13 +877,12 @@
       <label class="field full">Клиент<select name="client_id" required>${clients.map((client) => `<option value="${text(client.id)}" ${client.id === loan?.client_id ? "selected" : ""}>${text(client.full_name)}${client.is_blacklisted ? " · чёрный список" : ""}</option>`).join("")}</select></label>
       <label class="field full">Название / товар<input name="title" maxlength="200" value="${value("title")}" placeholder="Например, холодильник"></label>
       <label class="field">Цена товара<input name="cost_amount" type="number" min="0.01" step="0.01" value="${value("cost_amount")}" ${loan ? "" : "required"}></label>
-      <label class="field">Наценка, %<input name="markup_percent" type="number" min="0" step="0.01" value="${value("markup_percent", app.snapshot.settings?.default_markup_percent || 0)}"></label>
-      <label class="field full">Сумма к возврату<input name="principal" type="number" min="0.01" step="0.01" required readonly value="${value("principal", "")}"></label>
+      <label class="field">Общая сумма с надбавкой<input name="principal" type="number" min="0.01" step="0.01" required value="${value("principal", "")}"></label>
+      <label class="field">Наценка, %<input name="markup_percent" type="number" min="0" max="999.99" step="0.01" value="${value("markup_percent", app.snapshot.settings?.default_markup_percent || 0)}"></label>
       <label class="field">Первоначальный взнос<input name="down_payment" type="number" min="0" step="0.01" value="${value("down_payment", "0")}"></label>
       <label class="field">Срок, месяцев<input name="term_months" type="number" min="1" max="120" step="1" required value="${value("term_months", app.snapshot.settings?.default_term_months || 6)}"></label>
       <label class="field">Начало рассрочки<input name="start_date" type="date" required value="${value("start_date", new Date().toISOString().slice(0, 10))}"></label>
-      <p class="field full muted">Ежемесячный платёж округляется до ближайших 100 ₽.</p>
-      <label class="field">Платёж в месяц (0 — автоматически)<input name="monthly_payment" type="number" min="0" step="0.01" value="${value("monthly_payment", "0")}"></label>
+      <label class="field">Платёж в месяц<input name="monthly_payment" type="number" min="0" step="0.01" value="${value("monthly_payment", "")}"></label>
       <label class="field">Инвестор<select name="investor_id"><option value="">Без инвестора</option>${app.snapshot.investors.map((investor) => `<option value="${text(investor.id)}" ${investor.id === loan?.investor_id ? "selected" : ""}>${text(investor.name)}</option>`).join("")}</select></label>
       <label class="field">Вложение инвестора<input name="investor_amount" type="number" min="0" step="0.01" value="${value("investor_amount")}"></label>
       <label class="field">Доля владельца, %<input name="income_share_manager" type="number" min="0" max="100" step="0.01" value="${value("income_share_manager", app.snapshot.settings?.income_share_manager || 100)}"></label>
@@ -1013,9 +1011,7 @@
     const costText = String(data.get("cost_amount") || "").trim();
     const costAmount = costText ? number("cost_amount") : null;
     const markupPercent = number("markup_percent");
-    const targetPrincipal = costAmount !== null
-      ? Math.round(costAmount * (100 + markupPercent) / 100 * 100) / 100
-      : rawPrincipal;
+    const targetPrincipal = rawPrincipal;
     const downPayment = number("down_payment");
     const termMonths = number("term_months");
     const startDate = String(data.get("start_date") || "");
@@ -1025,13 +1021,13 @@
     }
     if (targetScheduled <= 0.009) throw new Error("После взноса не осталось суммы для графика. Уменьшите взнос или проверьте условия рассрочки.");
     const monthlyInput = number("monthly_payment");
-    const roundingStep = PAYMENT_ROUNDING_STEP;
-    const monthlyPayment = Math.max(roundingStep, Math.round((monthlyInput > 0 ? monthlyInput : targetScheduled / termMonths) / roundingStep) * roundingStep);
-    const scheduled = Math.round(monthlyPayment * termMonths * 100) / 100;
-    const principal = Math.round((scheduled + downPayment) * 100) / 100;
+    const monthlyPayment = monthlyInput > 0 ? monthlyInput : Math.max(0.01, Math.round(targetScheduled / termMonths * 100) / 100);
+    const scheduled = Math.round(targetScheduled * 100) / 100;
+    const principal = targetPrincipal;
     const effectiveMarkupPercent = costAmount > 0
       ? Math.round(((principal - costAmount) / costAmount) * 10000) / 100
       : markupPercent;
+    if (costAmount > 0 && (principal < costAmount || effectiveMarkupPercent > 999.99)) throw new Error("Проверьте общую сумму и наценку (от 0 до 999,99%).");
     const investorId = String(data.get("investor_id") || "") || null;
     const selectedClient = app.snapshot.clients.find((client) => client.id === data.get("client_id"));
     if (!selectedClient || selectedClient.is_blacklisted) throw new Error("Выберите клиента, которого нет в чёрном списке.");
@@ -1058,46 +1054,33 @@
     return { data, loan, schedulePrincipal: scheduled, monthlyPayment, termMonths, startDate };
   }
 
-  function updateLoanEstimate(form) {
+  function updateLoanEstimate(form, changed) {
     if (!(form instanceof HTMLFormElement) || !form.dataset.form?.startsWith("loan-")) return;
-    const data = new FormData(form);
-    const cost = Number(data.get("cost_amount")) || 0;
-    const markup = Number(data.get("markup_percent")) || 0;
-    const principal = form.elements.namedItem("principal");
-    if (!(principal instanceof HTMLInputElement)) return;
-    const down = Number(data.get("down_payment")) || 0;
-    const months = Number(data.get("term_months")) || 0;
-    const target = cost > 0
-      ? Math.round(cost * (100 + markup) / 100 * 100) / 100
-      : form.dataset.form === "loan-edit"
-        ? Number(form.dataset.originalPrincipal) || 0
-        : Number(principal.value) || 0;
-    const targetScheduled = Math.max(0, target - down);
-    const inputMonthly = Number(data.get("monthly_payment")) || 0;
-    const roundingStep = PAYMENT_ROUNDING_STEP;
-    const monthly = months > 0 ? Math.max(roundingStep, Math.round((inputMonthly > 0 ? inputMonthly : targetScheduled / months) / roundingStep) * roundingStep) : 0;
-    const total = months > 0 ? Math.round((down + monthly * months) * 100) / 100 : target;
-    if (months > 0 && (cost > 0 || form.dataset.form === "loan-edit")) principal.value = String(total);
-    else if (form.dataset.form === "loan-create") principal.value = "";
-    let note = form.querySelector("[data-rounding-note]");
-    if (!note && principal.parentElement) {
-      note = document.createElement("p");
-      note.dataset.roundingNote = "true";
-      note.className = "field full muted";
-      principal.parentElement.insertAdjacentElement("afterend", note);
+    const field = (name) => form.elements.namedItem(name);
+    const principal = field("principal");
+    const markup = field("markup_percent");
+    const monthly = field("monthly_payment");
+    if (!(principal instanceof HTMLInputElement) || !(markup instanceof HTMLInputElement) || !(monthly instanceof HTMLInputElement)) return;
+    const money = (n) => Math.round((n + Number.EPSILON) * 100) / 100;
+    const cost = money(Number(field("cost_amount").value) || 0);
+    const down = money(Number(field("down_payment").value) || 0);
+    const months = Number(field("term_months").value) || 0;
+    const validTerm = Number.isInteger(months) && months > 0;
+    if (!form.dataset.totalMode) form.dataset.totalMode = form.dataset.form === "loan-edit" ? "total" : "markup";
+    if (changed === "markup_percent") form.dataset.totalMode = "markup";
+    if (changed === "principal") form.dataset.totalMode = "total";
+    if (changed === "monthly_payment" && Number(monthly.value) > 0 && validTerm) {
+      form.dataset.totalMode = "total";
+      principal.value = String(money(down + money(Number(monthly.value)) * months));
+    } else if (form.dataset.totalMode === "markup" && changed !== "monthly_payment") {
+      principal.value = cost > 0 ? String(money(cost * (1 + (Number(markup.value) || 0) / 100))) : "";
     }
-    if (note && months > 0) {
-      const totalChange = Math.round((total - target) * 100) / 100;
-      const effectiveMarkup = cost > 0
-        ? (() => {
-          const effective = Math.round(((total - cost) / cost) * 10000) / 100;
-          const change = Math.round((effective - markup) * 100) / 100;
-          return effective + "% (" + (change > 0 ? "+" : "") + change + " п.п.)";
-        })()
-        : "не рассчитывается без исходной цены";
-      note.textContent = "Округление до " + roundingStep + " ₽: " + monthly + " ₽ в месяц. Фактическая наценка " + effectiveMarkup +
-        ". Сумма к возврату изменится на " +
-        (totalChange > 0 ? "+" : "") + totalChange + " ₽.";
+    const total = money(Number(principal.value) || 0);
+    if (form.dataset.totalMode === "total" && cost > 0 && changed !== "markup_percent") {
+      markup.value = principal.value === "" ? "" : String(money((total - cost) / cost * 100));
+    }
+    if (changed !== "monthly_payment" && (changed || form.dataset.form !== "loan-edit")) {
+      monthly.value = validTerm && total > down ? String(Math.max(0.01, money((total - down) / months))) : "";
     }
   }
 
@@ -1673,7 +1656,7 @@
     content.addEventListener("submit", (event) => { void handleFormSubmit(event); });
     content.addEventListener("input", (event) => {
       const target = event.target;
-      if (target instanceof HTMLInputElement && ["cost_amount", "markup_percent", "down_payment", "term_months", "monthly_payment"].includes(target.name)) updateLoanEstimate(target.form);
+      if (target instanceof HTMLInputElement && ["cost_amount", "principal", "markup_percent", "down_payment", "term_months", "monthly_payment"].includes(target.name)) updateLoanEstimate(target.form, target.name);
     });
     try {
       const { snapshot, operations, account, db } = await loadAccount();
