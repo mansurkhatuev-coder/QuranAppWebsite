@@ -15,6 +15,10 @@ export function whoAmIPersonStorageKey(treeKey) {
   return `waydean-preview:my-person:v1:${normalizedTreeKey(treeKey)}`;
 }
 
+function whoAmIPersonSourceStorageKey(treeKey) {
+  return `${whoAmIPersonStorageKey(treeKey)}:source`;
+}
+
 export function readWhoAmIPerson(storage, treeKey, validPersonIds) {
   const normalizedKey = normalizedTreeKey(treeKey);
   const key = whoAmIPersonStorageKey(normalizedKey);
@@ -23,17 +27,21 @@ export function readWhoAmIPerson(storage, treeKey, validPersonIds) {
     : new Set(Array.isArray(validPersonIds) ? validPersonIds : []);
   try {
     const personId = storage?.getItem(key);
-    if (personId != null) {
-      if (!personId) return null;
-      return validIds.has(personId) ? personId : null;
+
+    if (FAMILY_TREE_KEYS.has(normalizedKey)) {
+      const sourceKey = whoAmIPersonSourceStorageKey(normalizedKey);
+      if (storage?.getItem(sourceKey) !== 'explicit-v1') {
+        // Discard values written by the old shared-key migration. Their tree of origin is unknown.
+        try {
+          storage?.removeItem(key);
+          storage?.removeItem(sourceKey);
+        } catch { /* Ignore unavailable browser storage. */ }
+        return null;
+      }
     }
 
-    // Older family-tree builds stored every non-demo identity under HOTI.
-    if (normalizedKey === 'demo' || normalizedKey === 'hoti') return null;
-    const legacyId = storage?.getItem('waydean-preview:my-person:v1:hoti');
-    if (!legacyId || !validIds.has(legacyId)) return null;
-    try { storage?.setItem(key, legacyId); } catch { /* A valid legacy identity still works for this visit. */ }
-    return legacyId;
+    if (!personId) return null;
+    return validIds.has(personId) ? personId : null;
   } catch {
     return null;
   }
@@ -43,7 +51,11 @@ export function saveWhoAmIPerson(storage, treeKey, personId) {
   if (typeof personId !== 'string' || !personId.trim()) return false;
   try {
     if (!storage) return false;
-    storage.setItem(whoAmIPersonStorageKey(treeKey), personId);
+    const normalizedKey = normalizedTreeKey(treeKey);
+    if (FAMILY_TREE_KEYS.has(normalizedKey)) {
+      storage.setItem(whoAmIPersonSourceStorageKey(normalizedKey), 'explicit-v1');
+    }
+    storage.setItem(whoAmIPersonStorageKey(normalizedKey), personId);
     return true;
   } catch {
     return false;
@@ -54,12 +66,9 @@ export function clearWhoAmIPerson(storage, treeKey) {
   try {
     if (!storage) return false;
     const normalizedKey = normalizedTreeKey(treeKey);
-    const key = whoAmIPersonStorageKey(normalizedKey);
+    storage.removeItem(whoAmIPersonStorageKey(normalizedKey));
     if (FAMILY_TREE_KEYS.has(normalizedKey)) {
-      // Block migration from the old shared HOTI key after an explicit reset.
-      storage.setItem(key, '');
-    } else {
-      storage.removeItem(key);
+      storage.removeItem(whoAmIPersonSourceStorageKey(normalizedKey));
     }
     return true;
   } catch {

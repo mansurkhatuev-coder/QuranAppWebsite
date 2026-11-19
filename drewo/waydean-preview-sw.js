@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v70';
+const CACHE_NAME = 'waydean-preview-shell-v71';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -42,7 +42,7 @@ const PRECACHE = [
   './waydean-preview-admin-api.mjs?v=admin-push-20261028-1',
   './waydean-preview-admin-controls.mjs?v=account-admin-controls-1',
   './waydean-admin-identity.mjs?v=1',
-  './waydean-preview-whoami.mjs?v=identity-storage-per-tree-20261119-1',
+  './waydean-preview-whoami.mjs?v=identity-storage-explicit-per-tree-20261119-1',
   './waydean-preview-account-history.mjs?v=1',
   './waydean-preview-pwa.mjs?v=touch-guard-20261114-1',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
