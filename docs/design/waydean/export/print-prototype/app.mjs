@@ -1,4 +1,5 @@
-import { getPrintTreeSource } from "./print-data.mjs";
+import { getPrintTreeSource } from "./print-data.mjs?v=family-tree-snapshots-1";
+import { isFamilyTreeId } from "../workshop-model.mjs?v=shared-export-3-family-trees";
 import { buildPrintLayout, getScopedPeople, recommendPaper } from "./layout.mjs";
 import { getPrintPageRule } from "./print-page-size.mjs";
 import { embedSvgImageAssets } from "./svg-photo-embed.mjs";
@@ -83,7 +84,7 @@ const requestedScope = ["person", "branch", "all"].includes(requestedRoute.get("
   : ["person", "branch", "all"].includes(requestedHandoff?.scope) ? requestedHandoff.scope : null;
 const initialSource = getPrintTreeSource(requestedSource);
 const state = {
-  scopeType: requestedScope ?? (initialSource.id === "hoti" ? "all" : "person"),
+  scopeType: requestedScope ?? (isFamilyTreeId(initialSource.id) ? "all" : "person"),
   pageNumber: 1,
   workspaceZoom: 0,
   workspaceZoomMode: "page",
@@ -1176,28 +1177,28 @@ function changeTreeSource(sourceId) {
   state.excludedPersonIds.clear();
   state.excludedScopeKey = null;
   state.draftTouched = false;
-  state.scopeType = state.source.id === "hoti" ? "all" : "person";
+  state.scopeType = isFamilyTreeId(state.source.id) ? "all" : "person";
   state.pageNumber = 1;
   populateSelects();
   const sourceDraftRestored = restorePrintDraft(readPrintDraft());
   syncScopeControls();
   const url = new URL(window.location.href);
-  if (state.source.id === "hoti") url.searchParams.set("tree", "hoti");
+  if (isFamilyTreeId(state.source.id)) url.searchParams.set("tree", state.source.id);
   else url.searchParams.delete("tree");
   window.history.replaceState(null, "", url);
   update();
   updateSourceCopy();
   setStatus(sourceDraftRestored
     ? "Локальный черновик для этого дерева восстановлен."
-    : state.source.id === "hoti"
-      ? "Древо HOTI готово к макету."
+    : isFamilyTreeId(state.source.id)
+      ? "Текущее древо готово к макету."
       : "Демонстрационное древо готово к макету.");
 }
 
 function updateSourceCopy() {
   updateDraftCopy();
-  document.getElementById("footerDataMode").textContent = state.source.id === "hoti"
-    ? "Источник: HOTI"
+  document.getElementById("footerDataMode").textContent = isFamilyTreeId(state.source.id)
+    ? `Источник: ${state.source.label}`
     : "Источник: демонстрационное дерево";
 }
 
@@ -1214,7 +1215,7 @@ function resetPrintDraft() {
   state.placementEdits.clear();
   state.excludedPersonIds.clear();
   state.excludedScopeKey = null;
-  state.scopeType = state.source.id === "hoti" ? "all" : "person";
+  state.scopeType = isFamilyTreeId(state.source.id) ? "all" : "person";
   state.pageNumber = 1;
   elements.includePhotos.checked = true;
   elements.includeDates.checked = true;
@@ -1345,7 +1346,7 @@ async function exportSvg(svgMarkup = state.currentSvg, filename = fileStem(), su
   try {
     const allowedAssetRoots = [new URL("../../assets/demo/", import.meta.url), new URL("./assets/backgrounds/", import.meta.url)];
     const loopbackHosts = new Set(["localhost", "127.0.0.1", "[::1]"]);
-    if (state.source.id === "hoti" && loopbackHosts.has(location.hostname)) {
+    if (isFamilyTreeId(state.source.id) && loopbackHosts.has(location.hostname)) {
       allowedAssetRoots.push(new URL("../../../../../drewo/photos/", import.meta.url));
     }
     const portableSvg = await embedSvgImageAssets(svgMarkup, async href => {
@@ -1369,10 +1370,18 @@ function printPdf() {
   window.requestAnimationFrame(() => window.print());
 }
 
+if (![...elements.treeSource.options].some(option => option.value === state.source.id)) {
+  const currentTreeOption = document.createElement("option");
+  currentTreeOption.value = state.source.id;
+  currentTreeOption.textContent = state.source.label;
+  elements.treeSource.insertBefore(currentTreeOption, elements.treeSource.firstChild);
+}
 elements.treeSource.value = state.source.id;
 if (getPrintTreeSource("hoti").id !== "hoti") {
   elements.treeSource.querySelector('option[value="hoti"]')?.remove();
-  document.getElementById("treeSourceHint").textContent = "Здесь доступно демонстрационное дерево.";
+  document.getElementById("treeSourceHint").textContent = isFamilyTreeId(state.source.id)
+    ? "Снимок текущего древа доступен в списке."
+    : "Здесь доступно демонстрационное дерево.";
 }
 elements.treeSource.addEventListener("change", event => changeTreeSource(event.currentTarget.value));
 populateSelects();

@@ -1,10 +1,11 @@
 import {
+  FAMILY_TREE_IDS,
   PRINT_HANDOFF_KEY,
   VIDEO_HANDOFF_KEY,
   readExportWorkshopHandoff,
   updateExportWorkshopHandoff,
   writeExportWorkshopHandoff
-} from "./workshop-model.mjs?v=shared-export-2";
+} from "./workshop-model.mjs?v=shared-export-3-family-trees";
 
 const tabs = [...document.querySelectorAll('[role="tab"][data-mode]')];
 const frame = document.getElementById("workshop-frame");
@@ -21,7 +22,9 @@ function treeReturnHref(value) {
     url.searchParams.set("source", value.returnContext);
   }
   if (value?.treeId === "demo") url.searchParams.set("fixture", "master");
-  if (value?.treeId === "drewo-reklama") url.searchParams.set("tree", "drewo-reklama");
+  if (FAMILY_TREE_IDS.includes(value?.treeId) && value.treeId !== "hoti") {
+    url.searchParams.set("tree", value.treeId);
+  }
   url.searchParams.set("state", value?.returnView || "all-tree");
   url.searchParams.set("workshopReturn", "1");
   return url.href;

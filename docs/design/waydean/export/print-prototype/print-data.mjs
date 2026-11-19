@@ -1,6 +1,6 @@
 import { PROTOTYPE_PEOPLE } from "../../fixtures/prototype-people.mjs";
 import { loadLocalTreeDraft, listLocalTreePhotos } from "../../../../../drewo/waydean-preview-storage.mjs?v=2";
-import { readExportWorkshopHandoff } from "../workshop-model.mjs?v=shared-export-2";
+import { isFamilyTreeId, readExportWorkshopHandoff } from "../workshop-model.mjs?v=shared-export-3-family-trees";
 
 const LOOPBACK_HOSTS = new Set(["localhost", "127.0.0.1", "[::1]"]);
 const mayReadHoti = typeof window !== "undefined" && LOOPBACK_HOSTS.has(window.location.hostname);
@@ -103,13 +103,12 @@ function loadWorkshopPeople() {
 }
 
 const WORKSHOP_SNAPSHOT = loadWorkshopPeople();
-const WORKSHOP_HOTI_PEOPLE = WORKSHOP_SNAPSHOT?.treeId === "hoti" ? WORKSHOP_SNAPSHOT.people : [];
-const WORKSHOP_DEMO_PEOPLE = ["demo", "drewo-reklama"].includes(WORKSHOP_SNAPSHOT?.treeId) ? WORKSHOP_SNAPSHOT.people : [];
-const WORKSHOP_DEMO_LABEL = WORKSHOP_SNAPSHOT?.treeId === "drewo-reklama"
-  ? "Некъ · снимок этой сессии"
-  : "Демонстрация · снимок этой сессии";
-const AVAILABLE_HOTI_PEOPLE = WORKSHOP_HOTI_PEOPLE.length ? WORKSHOP_HOTI_PEOPLE : HOTI_PEOPLE;
-const AVAILABLE_DEMO_PEOPLE = WORKSHOP_DEMO_PEOPLE.length ? WORKSHOP_DEMO_PEOPLE : PROTOTYPE_PEOPLE;
+const WORKSHOP_TREE_ID = WORKSHOP_SNAPSHOT?.treeId ?? "";
+const WORKSHOP_FAMILY_PEOPLE = isFamilyTreeId(WORKSHOP_TREE_ID) ? WORKSHOP_SNAPSHOT.people : [];
+const WORKSHOP_DEMO_PEOPLE = WORKSHOP_TREE_ID === "demo" ? WORKSHOP_SNAPSHOT.people : [];
+const WORKSHOP_DEMO_LABEL = "Демонстрация · снимок этой сессии";
+const AVAILABLE_HOTI_PEOPLE = WORKSHOP_TREE_ID === "hoti" ? WORKSHOP_FAMILY_PEOPLE : HOTI_PEOPLE;
+const AVAILABLE_DEMO_PEOPLE = WORKSHOP_TREE_ID === "demo" ? WORKSHOP_DEMO_PEOPLE : PROTOTYPE_PEOPLE;
 
 const DEMO_BRANCH_LABELS = Object.freeze({
   main: "Основная линия",
@@ -166,15 +165,30 @@ function createSource(id, people, label, rawTree = null) {
   });
 }
 
+const WORKSHOP_FAMILY_SOURCE = isFamilyTreeId(WORKSHOP_TREE_ID)
+  ? createSource(
+    WORKSHOP_TREE_ID,
+    WORKSHOP_FAMILY_PEOPLE,
+    WORKSHOP_TREE_ID === "hoti"
+      ? "HOTI · снимок этой сессии"
+      : WORKSHOP_TREE_ID === "drewo-reklama"
+        ? "Некъ · снимок этой сессии"
+        : `Текущее дерево · ${WORKSHOP_FAMILY_PEOPLE.length} человек`
+  )
+  : null;
+
 const SOURCES = Object.freeze({
   demo: createSource("demo", AVAILABLE_DEMO_PEOPLE, WORKSHOP_DEMO_PEOPLE.length
     ? WORKSHOP_DEMO_LABEL
     : "Демонстрационное дерево · 12 человек"),
-  hoti: createSource("hoti", AVAILABLE_HOTI_PEOPLE, WORKSHOP_HOTI_PEOPLE.length
-    ? "Текущее дерево · снимок этой сессии"
-    : hotiDraftLoaded ? "HOTI · сохранённая локальная версия" : "HOTI · локальная копия", HOTI_RAW_TREE)
+  hoti: createSource("hoti", AVAILABLE_HOTI_PEOPLE, WORKSHOP_TREE_ID === "hoti" && WORKSHOP_FAMILY_PEOPLE.length
+    ? "HOTI · снимок этой сессии"
+    : hotiDraftLoaded ? "HOTI · сохранённая локальная версия" : "HOTI · локальная копия", HOTI_RAW_TREE),
+  ...(WORKSHOP_FAMILY_SOURCE ? { [WORKSHOP_TREE_ID]: WORKSHOP_FAMILY_SOURCE } : {})
 });
 
 export function getPrintTreeSource(id = "demo") {
-  return id === "hoti" && AVAILABLE_HOTI_PEOPLE.length ? SOURCES.hoti : SOURCES.demo;
+  const requestedId = String(id ?? "demo");
+  if (WORKSHOP_FAMILY_SOURCE?.id === requestedId) return WORKSHOP_FAMILY_SOURCE;
+  return requestedId === "hoti" && AVAILABLE_HOTI_PEOPLE.length ? SOURCES.hoti : SOURCES.demo;
 }

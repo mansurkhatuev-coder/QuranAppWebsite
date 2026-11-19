@@ -31,7 +31,7 @@ import {
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
 import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-scope-20261119-2';
-import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-2';
+import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
@@ -2285,6 +2285,20 @@ function selectPerson(id, { preserveContext = false } = {}) {
   if (filterResult.changed) announce('Фильтр расширен, чтобы показать выбранного человека.');
 }
 
+function exportPreparationErrorMessage(error) {
+  const message = String(error?.message || '');
+  if (/out of memory|not enough memory|insufficient memory|недостаточно памяти|не хватает памяти/i.test(message)) {
+    return 'Браузеру не хватает оперативной памяти для снимка древа. Закройте лишние вкладки и повторите.';
+  }
+  if (error?.name === 'QuotaExceededError' || error?.code === 22 || /quota|storage.{0,20}full/i.test(message)) {
+    return 'Во временном хранилище браузера не хватает места. Закройте лишние вкладки сайта и повторите.';
+  }
+  if (error?.name === 'SecurityError') {
+    return 'Браузер запретил временное хранилище. Разрешите хранение данных для сайта и повторите.';
+  }
+  return 'Не удалось подготовить снимок древа для экспорта. Обновите страницу и повторите.';
+}
+
 function openExportWorkshop(initialMode = 'print') {
   if (!Array.isArray(records) || records.length === 0) {
     announce('Древо ещё загружается. Повторите через несколько секунд.');
@@ -2311,8 +2325,9 @@ function openExportWorkshop(initialMode = 'print') {
     workshopUrl.searchParams.set('mode', initialMode === 'video' ? 'video' : 'print');
     closePopovers();
     window.location.assign(workshopUrl.href);
-  } catch {
-    announce('Браузер не разрешил подготовить снимок древа. Освободите память браузера и повторите.');
+  } catch (error) {
+    console.error('[Waydean] Export handoff preparation failed', error?.name || 'Error', error?.message || '');
+    announce(exportPreparationErrorMessage(error));
   }
 }
 
