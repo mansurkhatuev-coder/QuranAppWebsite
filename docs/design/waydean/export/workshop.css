@@ -39,6 +39,7 @@ button:focus-visible, a:focus-visible { outline: 2px solid var(--gold-bright); o
 .workshop-tabs button:hover { color: #eee5d1; }
 .workshop-tabs button[aria-selected="true"] { transform: translateY(-1px); border-color: rgba(217,182,111,.55); background: linear-gradient(135deg, rgba(190,144,63,.27), rgba(87,66,34,.2)); color: #f6e2ae; box-shadow: inset 0 1px 0 rgba(255,255,255,.09), 0 5px 16px rgba(0,0,0,.24); }
 .workshop-tab-icon { display: grid; width: 29px; height: 29px; flex: 0 0 29px; place-items: center; border: 1px solid rgba(217,182,111,.29); border-radius: 8px; color: var(--gold-bright); font-size: 14px; }
+.workshop-tab-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
 .workshop-tabs strong, .workshop-tabs small { display: block; }
 .workshop-tabs strong { font-size: 12px; font-weight: 650; }
 .workshop-tabs small { margin-top: 2px; color: #a5a397; font-size: 9px; }
