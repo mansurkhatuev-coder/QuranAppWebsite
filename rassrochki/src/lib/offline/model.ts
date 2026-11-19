@@ -64,6 +64,15 @@ function applyPayment(snapshot: OfflineSnapshot, operation: OfflineOperation, pa
   const startId = typeof payload.scheduleId === "string" ? payload.scheduleId : payment.schedule_id;
   const start = snapshot.schedules.find((row) => row.id === startId);
   if (!start) return;
+  const current = snapshot.loans.find((row) => row.id === payment.loan_id);
+  if (current && Number(current.debt_written_off ?? 0) > 0) {
+    const dueRows = snapshot.schedules.filter((row) => row.loan_id === payment.loan_id &&
+      row.status !== "paid" && Number(row.amount) - Number(row.paid_amount ?? 0) > 0.009)
+      .sort((a, b) => a.sequence_number - b.sequence_number);
+    const dueTotal = dueRows.reduce((sum, row) => sum + Number(row.amount) - Number(row.paid_amount ?? 0), 0);
+    if (current.status === "closed" || dueRows[0]?.id !== start.id ||
+        !(Number(payment.amount) > 0) || Number(payment.amount) > dueTotal + 0.009) return;
+  }
 
   snapshot.payments = [
     ...snapshot.payments,
@@ -105,7 +114,10 @@ function applyPayment(snapshot: OfflineSnapshot, operation: OfflineOperation, pa
   }
   snapshot.loans = snapshot.loans.map((loan) =>
     loan.id === payment.loan_id
-      ? { ...loan, offline_version: Number(loan.offline_version ?? 1) + 1 }
+      ? { ...loan, offline_version: Number(loan.offline_version ?? 1) + 1,
+          status: Number(loan.debt_written_off ?? 0) > 0 &&
+            snapshot.schedules.filter((row) => row.loan_id === loan.id).every((row) => row.status === "paid")
+            ? "closed" as const : loan.status }
       : loan
   );
 }
@@ -181,6 +193,7 @@ export function applyPendingOperations(
         const loanId = idOf(loan);
         if (!loanId) break;
         const existing = snapshot.loans.find((item) => item.id === loanId);
+        if (Number(existing?.debt_written_off ?? 0) > 0) break;
         const updatedLoan = {
           ...loan,
           offline_version: existing
