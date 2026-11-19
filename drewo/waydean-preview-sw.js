@@ -1,9 +1,9 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v69';
+const CACHE_NAME = 'waydean-preview-shell-v70';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
-  './waydean-preview.html?state=all-tree',
+  './waydean-preview.html',
   './waydean-preview.webmanifest',
   './family-tree.json',
   './bg-day-2.jpg',
@@ -42,7 +42,7 @@ const PRECACHE = [
   './waydean-preview-admin-api.mjs?v=admin-push-20261028-1',
   './waydean-preview-admin-controls.mjs?v=account-admin-controls-1',
   './waydean-admin-identity.mjs?v=1',
-  './waydean-preview-whoami.mjs?v=identity-storage-retain-20261030-1',
+  './waydean-preview-whoami.mjs?v=identity-storage-per-tree-20261119-1',
   './waydean-preview-account-history.mjs?v=1',
   './waydean-preview-pwa.mjs?v=touch-guard-20261114-1',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
@@ -100,7 +100,7 @@ async function notifyClients() {
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    const required = ['./waydean-preview.html?state=all-tree', './family-tree.json'];
+    const required = ['./waydean-preview.html', './family-tree.json'];
     for (const resource of required) await precacheOne(resource);
     await Promise.allSettled(PRECACHE.filter(resource => !required.includes(resource)).map(precacheOne));
     await self.skipWaiting();
@@ -179,7 +179,7 @@ self.addEventListener('push', event => {
 
 self.addEventListener('notificationclick', event => {
   event.notification.close();
-  const target = new URL('./waydean-preview.html?state=all-tree', self.location.href);
+  const target = new URL('./waydean-preview.html', self.location.href);
   try {
     const requested = new URL(event.notification.data?.url || target.href, self.location.href);
     if (requested.origin === self.location.origin && requested.pathname === PAGE_PATH) target.href = requested.href;

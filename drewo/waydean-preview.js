@@ -13,7 +13,7 @@ import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } fr
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import {
   clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
-} from './waydean-preview-whoami.mjs?v=identity-storage-retain-20261030-1';
+} from './waydean-preview-whoami.mjs?v=identity-storage-per-tree-20261119-1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -1057,7 +1057,7 @@ function renderProfile(tab = 'info') {
     selfAction.addEventListener('click', () => isSelf ? clearSelfPerson() : setSelfPerson(person.id));
     const selfNote = document.createElement('small');
     selfNote.className = 'self-person-note';
-    selfNote.textContent = isSelf ? 'Теперь «Мой путь» ведёт от предков к этой карточке.' : 'Отметка хранится отдельно для HOTI и демонстрационного дерева.';
+    selfNote.textContent = isSelf ? 'Теперь «Мой путь» ведёт от предков к этой карточке.' : 'Отметка хранится в этом браузере отдельно для каждого древа.';
     body.append(facts, bio, branch);
     body.append(selfAction, selfNote);
     if (canEditDraft()) body.append(buildEditControls(person));
@@ -4198,6 +4198,12 @@ async function initialize() {
     for (const person of records) if (person.parentId) childrenById.get(person.parentId)?.push(person);
     loadWomenPreference();
     loadMyPersonPreference();
+    if (familyPreview && !params.has('state') && !params.has('person') && !params.has('workshopReturn')
+      && myPersonId && byId.has(myPersonId)) {
+      mode = 'path';
+      initialView.fit = true;
+      syncModeButtons(mode);
+    }
     const workshopReturn = params.get('workshopReturn') === '1'
       ? readExportWorkshopHandoff(window.sessionStorage)
       : null;

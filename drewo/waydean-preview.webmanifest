@@ -3,7 +3,7 @@
   "name": "Waydean — Семейное древо",
   "short_name": "Waydean",
   "description": "Семейное древо Waydean",
-  "start_url": "./waydean-preview.html?state=all-tree",
+  "start_url": "./waydean-preview.html",
   "scope": "./waydean-preview.html",
   "display": "standalone",
   "orientation": "any",
