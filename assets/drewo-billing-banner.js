@@ -3,6 +3,23 @@
  * Expired premium → simple mode CTA (edits stay). Disabled → lock message.
  */
 (function () {
+  const FAMILY_TREE_DIRS = new Set([
+    'drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama'
+  ]);
+
+  function legacyTreeDirFromPath() {
+    const match = window.location.pathname.match(/^\/(drewo(?:-[a-z0-9-]+)?)(?:\/|$)/i);
+    if (!match) return '';
+    const rest = window.location.pathname.slice(match[0].length);
+    return rest === '' || rest === 'index.html' || rest === 'legacy.html' ? match[1].toLowerCase() : '';
+  }
+
+  function resolveFamilyTreeDir() {
+    const params = new URLSearchParams(window.location.search);
+    const candidate = String(params.get('tree') || window.TREE_DIR || legacyTreeDirFromPath() || '').trim().toLowerCase();
+    return FAMILY_TREE_DIRS.has(candidate) ? candidate : '';
+  }
+
   function ensureBanner() {
     let el = document.getElementById('billing-banner');
     if (el) return el;
@@ -44,12 +61,15 @@
       '.billing-wa-btn,.billing-sbp-btn{display:inline-flex;align-items:center;justify-content:center;' +
       'padding:8px 12px;border-radius:999px;background:#128c7e;color:#fff;text-decoration:none;font-size:13px;font-weight:600}' +
       '.billing-sbp-btn{background:#1f4b7a}' +
-      'body.view-locked .billing-banner{display:none!important}';
+      'body.view-locked .billing-banner{display:none!important}' +
+      'body.waydean-preview .billing-banner{position:fixed;z-index:30;left:50%;top:calc(env(safe-area-inset-top) + 74px);transform:translateX(-50%);width:min(620px,calc(100vw - 20px));margin:0;padding:12px 14px;background:rgba(9,19,23,.97);border-color:rgba(202,164,91,.55);color:#f0e9d8;box-shadow:0 14px 36px rgba(0,0,0,.5)}' +
+      'body.waydean-preview .billing-banner.is-blocked{background:rgba(45,24,20,.97);border-color:rgba(180,90,76,.55);color:#f2d7ce}' +
+      '@media(max-width:700px){body.waydean-preview .billing-banner{top:calc(env(safe-area-inset-top) + 64px);width:calc(100vw - 14px);gap:8px}body.waydean-preview .billing-banner-actions{width:100%}body.waydean-preview .billing-banner-actions a{flex:1}}';
     document.head.appendChild(style);
   }
 
   function treeMeta() {
-    const dir = typeof window.TREE_DIR === 'string' ? window.TREE_DIR : '';
+    const dir = resolveFamilyTreeDir();
     const title =
       document.getElementById('gate-title')?.textContent?.replace(/^Вход в\s+/i, '').trim() ||
       document.title ||
@@ -110,7 +130,7 @@
   function applyPremiumGate(billing) {
     const premiumOk = !billing || billing.hasPremium !== false || billing.status === 'exempt';
     document.body.classList.toggle('billing-simple', Boolean(billing) && !premiumOk);
-    const themeSelect = document.getElementById('theme-select');
+    const themeSelect = document.getElementById('theme-select') || document.getElementById('appearanceTheme');
     if (!themeSelect) return;
     const premiumOpt = themeSelect.querySelector('option[value="premium"]');
     if (premiumOpt) premiumOpt.disabled = !premiumOk;
@@ -118,7 +138,11 @@
       themeSelect.value = 'classic';
       document.body.setAttribute('data-theme', 'classic');
       try {
-        if (typeof window.setTheme === 'function') window.setTheme('classic', false);
+        if (typeof window.applyWaydeanAppearance === 'function') {
+          window.applyWaydeanAppearance({ persist: false });
+        } else if (typeof window.setTheme === 'function') {
+          window.setTheme('classic', false);
+        }
       } catch (_) {}
     }
   }
@@ -181,9 +205,17 @@
   }
 
   function boot() {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('source') === 'account'
+      || ['video-export', 'export-workshop'].includes(params.get('view'))) return;
+    const isFamilyRoute = params.get('source') === 'family' || params.has('nek') || params.has('invite');
+    const treeDir = resolveFamilyTreeDir();
+    const isLegacyTreePage = Boolean(treeDir && legacyTreeDirFromPath());
+    if (!treeDir || (!isFamilyRoute && !isLegacyTreePage)) return;
+
     injectStyles();
     ensureBanner();
-    fetch('access.json?v=' + Date.now(), { cache: 'no-store' })
+    fetch('/' + encodeURIComponent(treeDir) + '/access.json?v=' + Date.now(), { cache: 'no-store' })
       .then(function (res) {
         return res.ok ? res.json() : null;
       })

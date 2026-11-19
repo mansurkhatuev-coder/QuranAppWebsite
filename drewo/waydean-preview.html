@@ -48,7 +48,7 @@
   <link rel="stylesheet" href="waydean-preview-demo.css?v=demo-interface-2">
   <link rel="stylesheet" href="waydean-color-scheme.css?v=dark-default-20261103-1">
 </head>
-<body>
+<body class="waydean-preview">
   <main class="app-shell">
     <header class="topbar">
       <div class="brand-cluster">
@@ -236,7 +236,7 @@
         <h3 id="moreDeviceHeading">Устройство</h3>
         <button class="more-item" id="morePwa" type="button"><strong>Приложение и уведомления</strong><small>Установка на устройство, офлайн и проверка уведомлений</small></button>
         <button class="more-item" id="moreRefresh" type="button"><strong>Обновить дерево</strong><small>Загрузить свежую версию данных</small></button>
-        <button class="more-item current-version-item" id="openCurrentTree" type="button"><strong>Открыть основное древо</strong><small>Перейти к привычной версии</small></button>
+        <button class="more-item current-version-item" id="openCurrentTree" type="button" hidden><strong>Старый интерфейс</strong><small>Открыть прежнюю версию этого древа</small></button>
       </section>
       <section class="more-group" id="moreSectionAccount" aria-labelledby="moreAccountHeading">
         <h3 id="moreAccountHeading">Аккаунт и доступ</h3>
@@ -381,9 +381,12 @@
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script src="../admin/supabase-config.js?v=6"></script>
   <script src="../admin/admin-supabase.js?v=16"></script>
+  <script src="../trees/billing-config.js?v=1"></script>
+  <script src="../assets/drewo-billing.js?v=1"></script>
+  <script src="../assets/drewo-billing-banner.js?v=2"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&family-route=20261118-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&family-default=20261119-1&tree-assets=20261119-1');
     }
   </script>
 </body>

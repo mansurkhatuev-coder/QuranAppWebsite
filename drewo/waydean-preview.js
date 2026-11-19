@@ -40,7 +40,7 @@ import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSessio
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
-const PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos/drewo';
+const PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
 const FIXTURE_PHOTOS = new Map([
   ['demo-01', '../docs/design/waydean/assets/demo/waydean-demo-elder-portrait.jpg'],
   ['demo-03', '../docs/design/waydean/assets/demo/waydean-demo-middle-aged-portrait.jpg']
@@ -320,7 +320,7 @@ function photoSource(person) {
     return localPhotoUrls.get(person.id) || null;
   }
   return person.hasPhoto
-    ? `photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(String(person.photoKey || '1'))}`
+    ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(String(person.photoKey || '1'))}`
     : null;
 }
 
@@ -331,7 +331,7 @@ function fullPhotoSource(person) {
     return localPhotoFullUrls.get(person.id) || null;
   }
   return person.hasPhoto
-    ? `photos/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`
+    ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`
     : null;
 }
 
@@ -374,7 +374,7 @@ function openPhotoLightbox(person) {
       return;
     }
     ui.photoLightboxImage.dataset.photoFallback = 'remote';
-    ui.photoLightboxImage.src = `${PHOTO_FALLBACK_BASE}/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`;
+    ui.photoLightboxImage.src = `${PHOTO_FALLBACK_BASE}/${encodeURIComponent(activeTreeDir)}/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`;
   };
   ui.photoLightboxImage.src = source;
   if (!ui.photoLightbox.open) ui.photoLightbox.showModal();
@@ -3194,7 +3194,10 @@ function bindControls() {
   $('#createLocalBackup').addEventListener('click', makeLocalBackup);
   $('#createAccountBackup').addEventListener('click', createAccountBackup);
   $('#moreTreesCabinet').addEventListener('click', () => window.location.assign(new URL('../trees/', location.href)));
-  $('#openCurrentTree').addEventListener('click', () => window.location.assign('./index.html'));
+  $('#openCurrentTree').addEventListener('click', () => {
+    const legacyUrl = new URL(`../${activeTreeDir}/legacy.html`, location.href);
+    window.location.assign(legacyUrl.href);
+  });
   $('#shareOpen').addEventListener('click', shareLocalPreview);
   $('#printOpen').addEventListener('click', openPrintStudio);
   $('#moreExport').addEventListener('click', openPrintStudio);
@@ -3915,6 +3918,7 @@ async function initialize() {
     accountPreview = params.get('source') === 'account';
     familyPreview = familyRoute.enabled;
     activeTreeDir = familyRoute.treeDir;
+    $('#openCurrentTree').hidden = !familyPreview;
     activeTreeId = syntheticFixture ? 'demo' : activeTreeDir === 'drewo' ? 'hoti' : activeTreeDir;
     demoMode = !syntheticFixture && familyRoute.demoMode;
     if (demoMode && params.has('invite')) {
@@ -4020,7 +4024,7 @@ async function initialize() {
       ? '../docs/design/waydean/fixtures/master-tree.json'
       : demoMode && !familyPreview
         ? '../drewo-reklama/family-tree.json'
-        : './family-tree.json';
+        : `../${activeTreeDir}/family-tree.json`;
     setLoadingText('Загружаем данные рода');
     let root;
     if (accountPreview) {
@@ -4241,6 +4245,7 @@ function initializeAppearanceControls() {
   };
 
   applyAppearancePreferences = apply;
+  window.applyWaydeanAppearance = apply;
 
   themeSelect.addEventListener('change', () => apply({ persist: true }));
   skySelect.addEventListener('change', () => apply({ persist: true }));

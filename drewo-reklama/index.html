@@ -7,14 +7,14 @@
   <meta name="color-scheme" content="dark">
   <meta name="robots" content="noindex,nofollow">
   <meta http-equiv="refresh" content="0;url=../drewo/waydean-preview.html?source=family&amp;tree=drewo-reklama&amp;state=all-tree">
-  <title>Некъ · демонстрационное семейное древо</title>
+  <title>Демо-древо · Waydean</title>
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
   <style>
     :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; background: #081116; color: #eee3ca; }
     * { box-sizing: border-box; }
     body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at 50% 0, #182820, #081116 68%); }
-    main { width: min(460px, 100%); padding: 28px; border: 1px solid #b9975566; border-radius: 18px; background: #091316eF; box-shadow: 0 24px 70px #0008; text-align: center; }
+    main { width: min(460px, 100%); padding: 28px; border: 1px solid #b9975566; border-radius: 18px; background: #091316ef; box-shadow: 0 24px 70px #0008; text-align: center; }
     strong { color: #f0cf78; font: 700 18px Georgia, serif; }
     p { color: #bdb49f; font-size: 13px; line-height: 1.55; }
     a { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; margin-top: 8px; padding: 0 16px; border: 1px solid #b9975599; border-radius: 9px; background: #a77c36; color: #fff4d5; font-weight: 650; text-decoration: none; }
@@ -22,13 +22,22 @@
 </head>
 <body>
   <main>
-    <strong>Открываем демо-древо «Некъ»</strong>
-    <p>Переходим в общий интерфейс Waydean. Если переход не сработал автоматически, нажмите кнопку.</p>
+    <strong>Открываем древо «Демо-древо»</strong>
+    <p>Переходим в новый интерфейс Waydean. Если переход не сработал автоматически, нажмите кнопку.</p>
     <a href="../drewo/waydean-preview.html?source=family&amp;tree=drewo-reklama&amp;state=all-tree">Открыть демо-древо</a>
   </main>
   <script>
-    const target = new URL('../drewo/waydean-preview.html?source=family&tree=drewo-reklama&state=all-tree', window.location.href);
-    window.location.replace(`${target.pathname}${target.search}${target.hash}`);
+    (function () {
+      var target = new URL('../drewo/waydean-preview.html', window.location.href);
+      target.search = window.location.search;
+      target.searchParams.set('source', 'family');
+      target.searchParams.set('tree', 'drewo-reklama');
+      if (!['path', 'branch', 'all-tree'].includes(target.searchParams.get('state'))) {
+        target.searchParams.set('state', 'all-tree');
+      }
+      target.hash = window.location.hash;
+      window.location.replace(target.pathname + target.search + target.hash);
+    })();
   </script>
 </body>
 </html>
