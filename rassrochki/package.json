@@ -11,7 +11,7 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@supabase/ssr": "^0.12.5",
+    "@supabase/ssr": "^0.12.7",
     "@supabase/supabase-js": "^2.112.4",
     "date-fns": "^4.4.0",
     "fflate": "^0.8.3",
@@ -31,7 +31,7 @@
     "eslint-config-next": "15.1.0",
     "fake-indexeddb": "^6.2.8",
     "postcss": "^8",
-    "sharp": "^0.35.3",
+    "sharp": "^0.35.5",
     "tailwindcss": "^3.4.1",
     "typescript": "^5",
     "vitest": "^4.1.11"
