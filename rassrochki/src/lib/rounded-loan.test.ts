@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateLoanTerms, markupFromTotal } from "@/lib/rounded-loan";
+import { calculateLoanTerms, markupFromTotal, totalFromMonthly } from "@/lib/rounded-loan";
 import { buildSchedule } from "@/lib/utils";
 
 describe("loan terms without automatic ruble rounding", () => {
@@ -24,7 +24,9 @@ describe("loan terms without automatic ruble rounding", () => {
     expect(calculateLoanTerms(12345, r.effectiveMarkupPercent, 1000, 7, 15000).principal).toBe(15000);
   });
   it("handles manually chosen payments and includes the down payment in the total", () => {
-    expect(calculateLoanTerms(10000, 30, 1000, 3, 14000.2, 4333.4)).toEqual({
+    const total = totalFromMonthly(1000, 4333.4, 3);
+    expect(total).toBe(14000.2);
+    expect(calculateLoanTerms(10000, 30, 1000, 3, total, 4333.4)).toEqual({
       principal: 14000.2, schedulePrincipal: 13000.2, monthlyPayment: 4333.4, effectiveMarkupPercent: 40,
     });
     expect(calculateLoanTerms(10000, 30, 1000, 3, undefined, 4333.4).principal).toBe(14000.2);

@@ -8,7 +8,7 @@ import { FormSkeleton } from "@/components/Skeleton";
 import { NumericInput } from "@/components/NumericInput";
 import { PersonNameInput } from "@/components/PersonNameInput";
 import { PhoneInput } from "@/components/PhoneInput";
-import { calculateLoanTerms, markupFromTotal, roundMoney } from "@/lib/rounded-loan";
+import { calculateLoanTerms, markupFromTotal, roundMoney, totalFromMonthly } from "@/lib/rounded-loan";
 import { Spinner } from "@/components/Spinner";
 import { PassportNameScan } from "@/components/PassportNameScan";
 import { useDraft } from "@/hooks/useDraft";
@@ -258,9 +258,9 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     Number(value.monthly_payment) || undefined
   );
   const { principal, schedulePrincipal } = terms;
-  const displayedMarkup = value.total_amount === undefined || cost <= 0
-    ? value.markup_percent
-    : String(markupFromTotal(cost, principal));
+  const displayedMarkup = cost > 0 && (value.total_amount !== undefined || Number(value.monthly_payment) > 0)
+    ? String(terms.effectiveMarkupPercent)
+    : value.markup_percent;
   const displayedTotal = value.total_amount ?? (cost > 0 ? String(principal) : "");
 
   function changeMarkup(markup_percent: string) {
@@ -278,10 +278,10 @@ export function LoanForm({ loanId }: { loanId?: string }) {
 
   function changeMonthly(monthly_payment: string) {
     if (monthly_payment === "" || !(Number(monthly_payment) > 0) || !Number.isInteger(termMonths) || termMonths <= 0) {
-      setValue({ ...value, monthly_payment: "", total_amount: displayedTotal });
+      setValue({ ...value, monthly_payment, total_amount: displayedTotal });
       return;
     }
-    const total = roundMoney(downPayment + roundMoney(Number(monthly_payment)) * termMonths);
+    const total = totalFromMonthly(downPayment, Number(monthly_payment), termMonths);
     setValue({
       ...value, monthly_payment, total_amount: String(total),
       markup_percent: cost > 0 ? String(markupFromTotal(cost, total)) : value.markup_percent,
@@ -521,7 +521,7 @@ export function LoanForm({ loanId }: { loanId?: string }) {
       return;
     }
     const monthlyPayment = terms.monthlyPayment;
-    if (!(monthlyPayment > 0)) {
+    if (!Number.isFinite(monthlyPayment) || !(monthlyPayment > 0)) {
       setError("Ежемесячный платёж должен быть больше нуля.");
       setLoading(false);
       return;

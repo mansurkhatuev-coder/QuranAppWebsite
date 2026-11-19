@@ -1079,7 +1079,7 @@
     if (form.dataset.totalMode === "total" && cost > 0 && changed !== "markup_percent") {
       markup.value = principal.value === "" ? "" : String(money((total - cost) / cost * 100));
     }
-    if (changed !== "monthly_payment" && (changed || form.dataset.form !== "loan-edit")) {
+    if (changed !== "monthly_payment" && !(changed === "cost_amount" && form.dataset.totalMode === "total") && (changed || form.dataset.form !== "loan-edit")) {
       monthly.value = validTerm && total > down ? String(Math.max(0.01, money((total - down) / months))) : "";
     }
   }

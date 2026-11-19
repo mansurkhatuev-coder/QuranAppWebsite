@@ -5,6 +5,10 @@ export function roundMoney(value: number) {
   return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
+export function totalFromMonthly(downPayment: number, monthlyPayment: number, termMonths: number) {
+  return roundMoney(downPayment + roundMoney(monthlyPayment) * termMonths);
+}
+
 export function markupFromTotal(cost: number, total: number) {
   return cost > 0 ? roundMoney((total - cost) / cost * 100) : 0;
 }
@@ -24,7 +28,7 @@ export function calculateLoanTerms(
   const manual = monthlyOverride !== undefined && Number.isFinite(monthlyOverride) && monthlyOverride > 0
     ? roundMoney(monthlyOverride) : 0;
   const principal = roundMoney(explicitTotal ?? (
-    validTerm && manual > 0 ? downPayment + manual * termMonths
+    validTerm && manual > 0 ? totalFromMonthly(downPayment, manual, termMonths)
       : cost > 0 ? calcTotalWithMarkup(cost, requestedMarkupPercent) : 0
   ));
   const schedulePrincipal = roundMoney(Math.max(0, principal - downPayment));
