@@ -18,6 +18,13 @@ const nextConfig: NextConfig = {
           },
         ],
       },
+      {
+        source: "/offline.html",
+        headers: [
+          // Static offline shell uses an external same-origin script and inline styles.
+          { key: "Content-Security-Policy", value: "default-src 'none'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'; form-action 'self'; manifest-src 'self'; worker-src 'self'" },
+        ],
+      },
     ];
   },
 };
