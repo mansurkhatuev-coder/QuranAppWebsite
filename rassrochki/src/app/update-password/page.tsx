@@ -53,8 +53,8 @@ export default function UpdatePasswordPage() {
     if (loading) return;
     setError(null);
 
-    if (password.length < 6) {
-      setError("Пароль должен быть не короче 6 символов");
+    if (password.length < 12) {
+      setError("Пароль должен быть не короче 12 символов");
       return;
     }
     if (password !== confirmPassword) {
@@ -114,7 +114,7 @@ export default function UpdatePasswordPage() {
               onChange={setPassword}
               autoComplete="new-password"
               name="new-password"
-              minLength={6}
+              minLength={12}
               required
               disabled={loading || Boolean(success)}
               autoFocus
@@ -128,7 +128,7 @@ export default function UpdatePasswordPage() {
             onChange={setConfirmPassword}
             autoComplete="new-password"
             name="confirm-password"
-            minLength={6}
+            minLength={12}
             required
             disabled={loading || Boolean(success)}
           />
