@@ -27,7 +27,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       # `_private/` holds the encrypted credential vault written by publish-drewo.
       # It must never reach the public site; strip it from the checkout (not the repo).
