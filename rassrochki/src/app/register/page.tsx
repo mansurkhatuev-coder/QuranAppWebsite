@@ -29,8 +29,8 @@ export default function RegisterPage() {
     if (loading) return;
     setError(null);
 
-    if (form.password.length < 6) {
-      setError("Пароль должен быть не короче 6 символов");
+    if (form.password.length < 12) {
+      setError("Пароль должен быть не короче 12 символов");
       return;
     }
     if (form.password !== form.confirmPassword) {
@@ -142,7 +142,7 @@ export default function RegisterPage() {
             onChange={(password) => setForm({ ...form, password })}
             autoComplete="new-password"
             name="new-password"
-            minLength={6}
+            minLength={12}
             required
             disabled={loading}
           />
@@ -155,7 +155,7 @@ export default function RegisterPage() {
           onChange={(confirmPassword) => setForm({ ...form, confirmPassword })}
           autoComplete="new-password"
           name="confirm-password"
-          minLength={6}
+          minLength={12}
           required
           disabled={loading}
         />
