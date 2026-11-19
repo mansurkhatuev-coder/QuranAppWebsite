@@ -30,6 +30,16 @@ jobs:
         run: |
           node -e 'const p=require("./package-lock.json"); for (const n of ["next","sharp","source-map-js","dompurify","vitest","postcss"]) console.log(n,p.packages["node_modules/"+n]?.version)'
           git diff --stat -- package.json package-lock.json
+      - name: Emit proposed lockfile and manifest for review
+        if: always()
+        run: |
+          node -e 'const fs=require("node:fs"); for (const name of ["package.json","package-lock.json"]) {const data=fs.readFileSync(name,"utf8"); for(let i=0;i<data.length;i+=1500) console.log("PACKAGE_REVIEW "+name+" "+i+" "+JSON.stringify(data.slice(i,i+1500)));}'
+      - name: Install and test candidate
+        if: always()
+        run: |
+          npm ci --ignore-scripts
+          npm test
+          npx --no-install tsc --noEmit
       - name: Preserve proposed package files for review
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
