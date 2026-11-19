@@ -1,19 +1,5 @@
 version: 2
 updates:
-  - package-ecosystem: "npm"
-    directory: "/rassrochki"
-    schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
-    groups:
-      safe-patch-updates:
-        applies-to: version-updates
-        update-types:
-          - "patch"
-      security-updates:
-        applies-to: security-updates
-        patterns:
-          - "*"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
