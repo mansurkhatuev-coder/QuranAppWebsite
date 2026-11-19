@@ -23,30 +23,19 @@
   </script>
   <title>Waydean — семейное древо</title>
   <link rel="manifest" href="./waydean-preview.webmanifest">
+  <script>
+    (function () {
+      var params = new URLSearchParams(window.location.search);
+      var dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
+      var treeDir = String(params.get('tree') || '').trim().toLowerCase();
+      if (dirs.has(treeDir) && (params.get('source') === 'family' || params.has('nek') || params.has('invite'))) {
+        var manifest = document.querySelector('link[rel="manifest"]');
+        if (manifest) manifest.href = '../' + treeDir + '/manifest.webmanifest';
+      }
+    })();
+  </script>
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
-  <link rel="stylesheet" href="waydean-preview.css?v=account-history-1">
-  <link rel="stylesheet" href="waydean-preview-loading.css?v=1">
-  <link rel="stylesheet" href="waydean-preview-camera.css?v=camera-pan-20261116-2">
-  <link rel="stylesheet" href="waydean-preview-master.css?v=person-card-width-1">
-  <link rel="stylesheet" href="waydean-preview-lod.css?v=uniform-markers-20261030-1">
-  <link rel="stylesheet" href="waydean-preview-edit.css?v=person-actions-20261108-1">
-  <link rel="stylesheet" href="waydean-preview-readiness.css">
-  <link rel="stylesheet" href="waydean-preview-main-polish.css?v=6">
-  <link rel="stylesheet" href="waydean-preview-desktop-controls.css">
-  <link rel="stylesheet" href="waydean-preview-mobile-controls.css?v=touch-guard-20261114-1">
-  <link rel="stylesheet" href="waydean-preview-layout.css?v=pwa-fixed-app-shell-3">
-  <link rel="stylesheet" href="waydean-preview-minimap.css?v=4">
-  <link rel="stylesheet" href="waydean-preview-editorial.css?v=cards-dock-5-person-card-width-1">
-  <link rel="stylesheet" href="waydean-preview-history.css?v=local-history-1">
-  <link rel="stylesheet" href="waydean-preview-pwa.css?v=dialog-close-20261102-1">
-  <link rel="stylesheet" href="waydean-preview-video.css?v=video-local-1">
-  <link rel="stylesheet" href="waydean-preview-self.css?v=uniform-markers-20261030-1">
-  <link rel="stylesheet" href="waydean-preview-glass-cards.css?v=uniform-markers-20261030-1">
-  <link rel="stylesheet" href="waydean-preview-auth.css?v=dialog-close-20261102-1">
-  <link rel="stylesheet" href="waydean-preview-person-sheet.css?v=person-actions-20261108-1">
-  <link rel="stylesheet" href="waydean-preview-appearance.css?v=dropdown-polish-20261106-1">
-  <link rel="stylesheet" href="waydean-preview-demo.css?v=demo-interface-2">
-  <link rel="stylesheet" href="waydean-color-scheme.css?v=dark-default-20261103-1">
+  <link rel="stylesheet" href="waydean-preview-bundle.css?v=20261119-2">
 </head>
 <body class="waydean-preview">
   <main class="app-shell">
@@ -378,15 +367,40 @@
       document.body.append(frame);
     }
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script src="../admin/supabase-config.js?v=6"></script>
-  <script src="../admin/admin-supabase.js?v=16"></script>
+  <script>
+    window.ensureWaydeanAdminSupabase = (function () {
+      var pending = null;
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = function () { reject(new Error('Не удалось загрузить вход администратора.')); };
+          document.head.appendChild(script);
+        });
+      }
+      return function () {
+        if (window.AdminSupabase) return Promise.resolve(window.AdminSupabase);
+        if (!pending) {
+          pending = loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2')
+            .then(function () { return loadScript('../admin/supabase-config.js?v=6'); })
+            .then(function () { return loadScript('../admin/admin-supabase.js?v=16'); })
+            .then(function () {
+              if (!window.AdminSupabase) throw new Error('Не удалось настроить вход администратора.');
+              return window.AdminSupabase;
+            });
+        }
+        return pending;
+      };
+    })();
+  </script>
   <script src="../trees/billing-config.js?v=1"></script>
   <script src="../assets/drewo-billing.js?v=1"></script>
   <script src="../assets/drewo-billing-banner.js?v=2"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&family-default=20261119-1&tree-assets=20261119-1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2');
     }
   </script>
 </body>

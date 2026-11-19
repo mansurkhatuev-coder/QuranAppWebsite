@@ -9,6 +9,27 @@ function isInstalled() {
   return Boolean(window.matchMedia?.('(display-mode: standalone)').matches || navigator.standalone === true);
 }
 
+function activeTreeDir() {
+  const dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
+  const params = new URLSearchParams(location.search);
+  const requested = String(params.get('tree') || '').trim().toLowerCase();
+  if (dirs.has(requested)) return requested;
+  const match = location.pathname.match(/^\/(drewo(?:-[a-z0-9-]+)?)(?:\/|$)/i);
+  return match && dirs.has(match[1].toLowerCase()) ? match[1].toLowerCase() : 'drewo';
+}
+
+function familyAppUrl() {
+  const url = new URL(location.href);
+  url.searchParams.set('source', 'family');
+  url.searchParams.set('tree', activeTreeDir());
+  url.searchParams.set('state', 'all-tree');
+  url.searchParams.delete('person');
+  url.searchParams.delete('view');
+  url.searchParams.delete('nek');
+  url.searchParams.delete('invite');
+  return url.href;
+}
+
 function installInstructions() {
   const ua = navigator.userAgent || '';
   if (/iphone|ipad|ipod/i.test(ua)) {
@@ -45,7 +66,9 @@ export function createWaydeanPwaController(onChange = () => {}, {
   let deferredInstallPrompt = null;
   let registration = null;
   let registrationPromise = Promise.resolve(null);
-  if (!state.localPreview) document.querySelector('link[rel="manifest"]')?.remove();
+  const params = new URLSearchParams(location.search);
+  const familyApp = params.get('source') === 'family' || params.has('nek') || params.has('invite');
+  if (!state.localPreview && !familyApp) document.querySelector('link[rel="manifest"]')?.remove();
 
   const emit = () => {
     state.online = navigator.onLine !== false;
@@ -58,8 +81,8 @@ export function createWaydeanPwaController(onChange = () => {}, {
     if (!state.serviceWorkerReady || !('caches' in window)) return;
     try {
       const cache = await caches.open(CACHE_NAME);
-      const page = new URL('./waydean-preview.html?state=all-tree', location.href).href;
-      const tree = new URL('./family-tree.json', location.href).href;
+      const page = familyAppUrl();
+      const tree = new URL(`../${activeTreeDir()}/family-tree.json`, location.href).href;
       state.offlineReady = Boolean(await cache.match(page, { ignoreSearch: true }) && await cache.match(tree, { ignoreSearch: true }));
     } catch {
       state.offlineReady = false;
@@ -203,11 +226,12 @@ export function createWaydeanPwaController(onChange = () => {}, {
       if (Notification.permission !== 'granted') throw new Error('Сначала разрешите уведомления в браузере.');
       const readyRegistration = registration || await registrationPromise;
       if (!readyRegistration?.showNotification) throw new Error('Локальный сервис уведомлений пока недоступен.');
-      const target = new URL('./waydean-preview.html?state=all-tree', location.href).href;
+      const target = familyAppUrl();
+      const icon = new URL(`../${activeTreeDir()}/icon-192.png`, location.href).href;
       await readyRegistration.showNotification('Waydean · проверка', {
         body: 'Это локальное тестовое уведомление. Подписка на серверные события древа не создавалась.',
-        icon: new URL('./icon-192.png', location.href).href,
-        badge: new URL('./icon-192.png', location.href).href,
+        icon,
+        badge: icon,
         tag: 'waydean-local-notification-test',
         data: { url: target },
         lang: 'ru'

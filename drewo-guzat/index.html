@@ -2,42 +2,413 @@
 <html lang="ru">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<script>
+  (function () {
+    var url = new URL(window.location.href);
+    var params = url.searchParams;
+    if (params.has('view')) return;
+    if (params.get('source') !== 'account' && !params.has('source') && !params.has('nek') && !params.has('invite')) {
+      params.set('source', 'family');
+    }
+    if (params.get('source') === 'family' || params.has('nek') || params.has('invite')) {
+      if (!params.has('tree')) params.set('tree', 'drewo-guzat');
+      if (!params.has('state')) params.set('state', 'all-tree');
+    }
+    var next = url.pathname + url.search + url.hash;
+    if (next !== window.location.pathname + window.location.search + window.location.hash) {
+      window.history.replaceState(null, '', next);
+    }
+  })();
+</script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <meta name="waydean-local-build" content="release-candidate-2026-11-18-family-route-2">
+  <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
   <meta name="color-scheme" content="dark">
-  <meta name="robots" content="noindex,nofollow">
-  <meta http-equiv="refresh" content="0;url=../drewo/waydean-preview.html?source=family&amp;tree=drewo-guzat&amp;state=all-tree">
-  <title>ГIузат · Waydean</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <script>
+    try {
+      const scheme = localStorage.getItem('drewo-color-scheme-v2') === 'light' ? 'light' : 'dark';
+      document.documentElement.dataset.colorScheme = scheme;
+      document.documentElement.style.colorScheme = scheme;
+      document.querySelector('meta[name="color-scheme"]')?.setAttribute('content', scheme);
+      document.querySelector('meta[name="theme-color"]')?.setAttribute('content', scheme === 'light' ? '#f4f0e7' : '#081116');
+    } catch {
+      document.documentElement.dataset.colorScheme = 'dark';
+    }
+  </script>
+  <title>Waydean — семейное древо</title>
   <link rel="manifest" href="manifest.webmanifest">
-  <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <style>
-    :root { color-scheme: dark; font-family: "Segoe UI", sans-serif; background: #081116; color: #eee3ca; }
-    * { box-sizing: border-box; }
-    body { min-height: 100svh; margin: 0; display: grid; place-items: center; padding: 24px; background: radial-gradient(ellipse at 50% 0, #182820, #081116 68%); }
-    main { width: min(460px, 100%); padding: 28px; border: 1px solid #b9975566; border-radius: 18px; background: #091316ef; box-shadow: 0 24px 70px #0008; text-align: center; }
-    strong { color: #f0cf78; font: 700 18px Georgia, serif; }
-    p { color: #bdb49f; font-size: 13px; line-height: 1.55; }
-    a { display: inline-flex; min-height: 42px; align-items: center; justify-content: center; margin-top: 8px; padding: 0 16px; border: 1px solid #b9975599; border-radius: 9px; background: #a77c36; color: #fff4d5; font-weight: 650; text-decoration: none; }
-  </style>
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+  <link rel="stylesheet" href="../drewo/waydean-preview-bundle.css?v=20261119-2">
 </head>
-<body>
-  <main>
-    <strong>Открываем древо «ГIузат»</strong>
-    <p>Переходим в новый интерфейс Waydean. Если переход не сработал автоматически, нажмите кнопку.</p>
-    <a href="../drewo/waydean-preview.html?source=family&amp;tree=drewo-guzat&amp;state=all-tree">Открыть новое древо</a>
+<body class="waydean-preview">
+  <main class="app-shell">
+    <header class="topbar">
+      <div class="brand-cluster">
+        <button class="rail-toggle" id="railToggle" type="button" aria-controls="treeActions" aria-expanded="true" aria-label="Скрыть панель действий" title="Скрыть панель действий"><svg viewBox="0 0 20 20" aria-hidden="true"><path d="M3 5h14M3 10h14M3 15h14"/></svg></button>
+        <a class="brand" href="./?source=family&amp;tree=drewo-guzat&amp;state=all-tree" aria-label="Waydean — показать всё дерево">
+          <svg class="brand-tree" viewBox="0 0 44 48" aria-hidden="true" focusable="false"><path d="M22 44V19m0 14c-6 0-10-4-10-10 6 0 9 3 10 8m0-8c6 0 10-4 10-10-6 0-9 3-10 8m0 16c-4-1-7-4-10-8m10 8c4-1 7-4 10-8M22 23c-5 0-8-3-8-8 5 0 7 2 8 6m0-4c5 0 8-3 8-8-5 0-7 2-8 6"/><circle cx="22" cy="5" r="2.1"/></svg><span><strong>WAYDEAN</strong><small>Семейное древо</small></span>
+        </a>
+      </div>
+      <nav class="main-nav" aria-label="Основная навигация">
+        <button class="nav-item active" data-nav="tree">♧ <span>Древо</span></button>
+        <button class="nav-item" data-nav="people">♙ <span>Люди</span></button>
+        <button class="nav-item" id="searchOpen">⌕ <span>Поиск</span></button>
+        <button class="nav-item" data-mode="branch">♧ <span>Ветви</span></button>
+        <button class="nav-item" id="statsOpen">▥ <span>Статистика</span></button>
+      </nav>
+      <div class="top-actions">
+        <button class="top-action" id="shareOpen" type="button" title="Поделиться семейным древом">Поделиться</button>
+        <button class="top-action" id="printOpen" type="button" title="Экспортировать дерево в SVG или PDF">Экспорт</button>
+        <button class="top-action" id="moreOpen">··· Ещё</button>
+      </div>
+    </header>
+
+    <span class="sr-only" id="datasetSummary" aria-live="polite"></span>
+
+    <button class="mobile-search-trigger" id="mobileSearchTrigger" type="button" aria-label="Поиск человека"><span aria-hidden="true">⌕</span><span>Поиск человека…</span></button>
+
+    <section class="workspace">
+      <aside class="rail" id="treeActions" aria-label="Действия с древом">
+        <button class="rail-action" id="railSearch" aria-label="Поиск человека" title="Поиск человека"><span class="rail-icon" aria-hidden="true">⌕</span><span class="rail-label">Поиск человека</span></button>
+        <span class="rail-section-label">Вид древа</span>
+        <button class="rail-action" data-mode="path" aria-label="Мой путь" title="Мой путь"><span class="rail-icon" aria-hidden="true">⌖</span><span class="rail-label">Мой путь</span></button>
+        <button class="rail-action" data-mode="branch" aria-label="Моя ветвь" title="Моя ветвь"><span class="rail-icon" aria-hidden="true">♧</span><span class="rail-label">Моя ветвь</span></button>
+        <button class="rail-action" data-mode="all-tree" aria-label="Все поколения" title="Все поколения"><span class="rail-icon" aria-hidden="true">⌘</span><span class="rail-label">Все поколения</span></button>
+        <span class="rail-section-label">Инструменты</span>
+        <button class="rail-action" id="filtersOpen" aria-label="Фильтры" title="Фильтры"><span class="rail-icon" aria-hidden="true">⚑</span><span class="rail-label">Фильтры</span></button>
+        <button class="rail-stat" id="railStats" aria-label="Статистика древа"><span class="rail-icon" aria-hidden="true">♙</span><span class="rail-stat-copy"><strong id="railCount">…</strong><small>человек</small></span></button>
+      </aside>
+
+      <section class="tree-stage" id="treeStage" aria-label="Полотно древа">
+        <div class="stage-wash" aria-hidden="true"></div>
+        <aside class="demo-mode-notice" id="demoModeNotice" hidden aria-label="Демонстрационный режим">
+          <strong>Демо, не ваше древо</strong>
+          <span>Вымышленные имена · без фото · до 90 человек · пароль не меняется</span>
+          <a class="demo-mode-atlas-link" href="/atlas/" target="_blank" rel="noopener">Открыть атлас происхождения <span aria-hidden="true">↗</span></a>
+        </aside>
+        <div class="tree-loading-overlay" id="treeLoading" role="status" aria-live="polite">
+          <div class="tree-loading-card">
+            <svg class="tree-loading-mark" viewBox="0 0 64 64" aria-hidden="true" focusable="false">
+              <circle class="tree-loader-halo" cx="32" cy="35" r="25"></circle>
+              <path class="tree-loader-line tree-loader-trunk" d="M32 54V23"></path>
+              <path class="tree-loader-line tree-loader-branch-left" d="M32 43L18 29"></path>
+              <path class="tree-loader-line tree-loader-branch-right" d="M32 43L46 29"></path>
+              <path class="tree-loader-line tree-loader-branch-upper-left" d="M32 32L24 21"></path>
+              <path class="tree-loader-line tree-loader-branch-upper-right" d="M32 32L40 21"></path>
+              <circle class="tree-loader-node" cx="32" cy="54" r="3.4"></circle>
+              <circle class="tree-loader-node" cx="18" cy="29" r="3.1"></circle>
+              <circle class="tree-loader-node" cx="46" cy="29" r="3.1"></circle>
+              <circle class="tree-loader-node" cx="24" cy="21" r="2.8"></circle>
+              <circle class="tree-loader-node" cx="40" cy="21" r="2.8"></circle>
+              <circle class="tree-loader-node" cx="32" cy="32" r="2.5"></circle>
+            </svg>
+            <strong>Открываем семейное древо</strong>
+            <span id="treeLoadingText">Подготавливаем данные и связи</span>
+            <span class="tree-loading-track" aria-hidden="true"><span></span></span>
+          </div>
+        </div>
+        <div class="mode-label" id="modeLabel" aria-live="polite"></div>
+        <button class="show-full-tree" id="showFullTree" type="button" title="Вернуться к полному древу">← Назад к полному древу</button>
+        <div class="graph-viewport" id="graphViewport" tabindex="0" title="Колесо мыши — масштаб; перетаскивание — перемещение" aria-label="Полотно древа. Колесо мыши меняет масштаб, перетаскивание перемещает древо; на телефоне масштаб меняется щипком.">
+          <div class="graph-extent" id="graphExtent">
+            <div class="graph" id="graph">
+              <svg class="tree-lines" id="treeLines" aria-hidden="true"></svg>
+              <div id="treeNodes"></div>
+            </div>
+          </div>
+        </div>
+        <div class="empty-state" id="emptyState" hidden><strong>В этой выборке никого нет</strong><span>Измени или сбрось фильтры, чтобы вернуть людей на древо.</span><button id="emptyReset">Сбросить фильтры</button></div>
+        <section class="mini-map" id="miniMap" aria-label="Мини-карта древа">
+          <button class="mini-map-toggle" id="miniMapToggle" type="button" aria-controls="miniMapContent" aria-expanded="true" aria-label="Свернуть мини-карту" title="Свернуть мини-карту">
+            <svg class="mini-map-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 18 9 6l6 12 5-12"/><circle cx="4" cy="18" r="1.7"/><circle cx="9" cy="6" r="1.7"/><circle cx="15" cy="18" r="1.7"/><circle cx="20" cy="6" r="1.7"/></svg>
+            <span class="mini-map-title">Карта</span><span class="mini-map-chevron" aria-hidden="true">⌄</span>
+          </button>
+          <div class="mini-map-content" id="miniMapContent"><svg id="miniMapSvg" viewBox="0 0 180 80" tabindex="0" role="group" aria-label="Мини-карта: нажмите для перехода, перетащите обзор или используйте стрелки"></svg><span id="miniMapSummary"></span></div>
+        </section>
+        <div class="tree-controls" role="group" aria-label="Управление видом древа"><button id="zoomOut" type="button" aria-label="Уменьшить масштаб" title="Уменьшить масштаб (−)">−</button><span id="zoomValue">100%</span><button id="zoomIn" type="button" aria-label="Увеличить масштаб" title="Увеличить масштаб (+)">+</button><button id="fitTree" type="button" aria-label="Показать всю текущую схему" title="Показать текущую схему целиком (0)">⛶</button><button id="whoAmI" type="button" aria-label="Показать мой путь" title="Мой путь">◎ Кто я?</button></div>
+      </section>
+
+      <button class="mobile-selected" id="mobileSelected" type="button" aria-label="Открыть профиль выбранного человека"></button>
+      <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>
+      <button class="profile-reopen" id="profileReopen" type="button" hidden aria-controls="profilePanel" aria-expanded="false" aria-label="Показать профиль выбранного человека" title="Показать профиль выбранного человека"><span aria-hidden="true">‹</span> Профиль</button>
+    </section>
+
+    <nav class="mobile-nav" aria-label="Мобильная навигация">
+      <button class="active" data-nav="tree" type="button" aria-label="Показать всё древо" title="Показать всё древо"><span aria-hidden="true">♧</span><small>Древо</small></button>
+      <button data-nav="people" type="button" aria-label="Найти человека" title="Найти человека"><span aria-hidden="true">⌕</span><small>Поиск</small></button>
+      <button id="mobileWhoAmI" type="button" aria-label="Отметить себя в древе" title="Кто я?"><span aria-hidden="true">◎</span><small id="mobileWhoAmILabel">Кто я?</small></button>
+      <button id="mobileFilters" type="button" aria-label="Фильтры поколений и фото" title="Фильтры"><span aria-hidden="true">☷</span><small>Фильтры</small></button>
+      <button id="mobileMore" type="button" aria-label="Дополнительные действия" title="Ещё"><span aria-hidden="true">···</span><small>Ещё</small></button>
+    </nav>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <section class="popover search-popover" id="searchPopover" hidden aria-label="Поиск людей">
+      <div class="popover-head"><strong>Поиск человека</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <label class="sr-only" for="searchInput">Поиск по имени, году или тейпу</label><input id="searchInput" type="search" placeholder="Имя, год или тейп…" autocomplete="off">
+      <div class="search-results" id="searchResults"></div>
+    </section>
+    <section class="popover filters-popover" id="filtersPopover" hidden aria-label="Фильтры древа">
+      <div class="popover-head"><strong>Фильтры древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <label>Поколения от <select id="minGeneration"></select></label><label>до <select id="maxGeneration"></select></label>
+      <label class="check-row"><span>Только с фото</span><input id="photosOnly" type="checkbox"></label>
+      <label class="check-row"><span>Показывать женщин</span><input id="showWomen" type="checkbox"></label>
+      <div class="popover-actions"><button class="primary-action" id="applyFilters">Применить</button><button class="secondary-action" id="resetFilters">Сбросить</button></div>
+    </section>
+    <section class="popover stats-popover" id="statsPopover" hidden aria-label="Статистика древа">
+      <div class="popover-head"><strong>Статистика древа</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <div class="stats-grid" id="statsGrid"></div><p id="statsNote"></p>
+    </section>
+    <section class="popover local-history-popover" id="historyPopover" hidden aria-label="История действий с древом">
+      <div class="popover-head"><strong id="historyTitle">История действий</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <p class="local-data-note" id="historyNote">Сохранения черновика и операции с локальными снимками в этом браузере.</p>
+      <div class="local-history-list" id="localHistoryList" aria-live="polite"></div>
+    </section>
+    <section class="popover local-backups-popover" id="backupsPopover" hidden aria-label="Резервные копии локального дерева">
+      <div class="popover-head"><strong>Резервные копии</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <section id="accountBackupGroup" hidden aria-label="Серверные резервные копии">
+        <h3>Копии на сайте</h3>
+        <p class="local-data-note">Серверный снимок сохраняет дерево и журнал. Файлы фотографий хранятся отдельно.</p>
+        <button class="primary-action local-snapshot-create" id="createAccountBackup" type="button">Создать снимок на сайте</button>
+        <p class="local-backup-status" id="accountBackupStatus" aria-live="polite"></p>
+        <div class="local-backup-list" id="accountBackupList" aria-live="polite"></div>
+      </section>
+      <h3 id="localBackupHeading">Копии на этом устройстве</h3>
+      <p class="local-data-note">Локальные снимки хранятся только в этом браузере и не заменяют серверные копии. Фотофайлы в них не входят.</p>
+      <button class="primary-action local-snapshot-create" id="createLocalBackup" type="button">Создать снимок сейчас</button>
+      <p class="local-backup-status" id="localBackupStatus" aria-live="polite"></p>
+      <div class="local-backup-list" id="localBackupList" aria-live="polite"></div>
+    </section>
+    <section class="popover more-popover" id="morePopover" hidden aria-label="Дополнительные действия">
+      <div class="popover-head"><strong>Ещё</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <section class="more-group" id="moreSectionTree" aria-labelledby="moreTreeHeading">
+        <h3 id="moreTreeHeading">Древо</h3>
+        <button class="more-item" data-mode="path"><strong>Мой путь</strong><small>Линия от старшего известного предка</small></button>
+        <button class="more-item" data-mode="branch"><strong>Моя ветвь</strong><small>Выбранный человек и его родные</small></button>
+        <button class="more-item" data-mode="all-tree"><strong>Все поколения</strong><small>Показать всё дерево целиком</small></button>
+        <button class="more-item" id="moreFilters"><strong>Фильтры</strong><small>Поколения и наличие фото</small></button>
+        <button class="more-item" id="moreStats"><strong>Статистика</strong><small>Число людей и поколений в древе</small></button>
+      </section>
+      <section class="more-group" id="moreSectionAppearance" aria-labelledby="appearanceHeading">
+        <h3 id="appearanceHeading">Оформление</h3>
+        <section class="appearance-controls" aria-label="Настройки оформления">
+          <div class="appearance-heading"><strong>Вид дерева</strong><small id="appearanceSummary" aria-live="polite">Настройки сохраняются на этом устройстве</small></div>
+          <label for="appearanceTheme">Стиль</label>
+          <select id="appearanceTheme" aria-label="Стиль оформления">
+            <option value="classic">Классика</option>
+            <option value="premium">Премиум</option>
+          </select>
+          <label for="appearanceColorScheme">Цвет интерфейса</label>
+          <select id="appearanceColorScheme" aria-label="Цветовая тема интерфейса">
+            <option value="dark">Тёмная</option>
+            <option value="light">Светлая</option>
+          </select>
+          <label for="appearanceSky">День и ночь</label>
+          <select id="appearanceSky" aria-label="Режим дня и ночи">
+            <option value="auto">Авто · по времени устройства</option>
+            <option value="day">День</option>
+            <option value="night">Ночь</option>
+          </select>
+        </section>
+        <button class="more-item weather-action" id="weatherAction" type="button" aria-label="Погода рядом. Нажмите, чтобы обновить">
+          <strong id="weatherActionTitle">Погода рядом</strong>
+          <small id="weatherActionDetail" aria-live="polite">Нажмите, чтобы узнать погоду по геолокации</small>
+        </button>
+      </section>
+      <section class="more-group" id="moreSectionSaving" aria-labelledby="moreSavingHeading" hidden>
+        <h3 id="moreSavingHeading">Сохранение</h3>
+        <button class="more-item local-data-action" id="moreHistory" type="button" hidden><strong>История локальных действий</strong><small>Сохранения и восстановление в этом браузере</small></button>
+        <button class="more-item local-data-action" id="moreBackups" type="button" hidden><strong>Резервные копии</strong><small>Создать снимок, закрепить или восстановить</small></button>
+      </section>
+      <section class="more-group" id="moreSectionExport" aria-labelledby="moreExportHeading">
+        <h3 id="moreExportHeading">Экспорт и обмен</h3>
+        <button class="more-item" id="moreExport"><strong>Печать и экспорт дерева</strong><small>Скачать SVG или подготовить PDF и печать</small></button>
+        <button class="more-item" id="moreVideo" type="button" hidden><strong>Создать видео</strong><small>Соберите ролик и скачайте его на этом устройстве</small></button>
+      </section>
+      <section class="more-group" id="moreSectionDevice" aria-labelledby="moreDeviceHeading">
+        <h3 id="moreDeviceHeading">Устройство</h3>
+        <button class="more-item" id="morePwa" type="button"><strong>Приложение и уведомления</strong><small>Установка на устройство, офлайн и проверка уведомлений</small></button>
+        <button class="more-item" id="moreRefresh" type="button"><strong>Обновить дерево</strong><small>Загрузить свежую версию данных</small></button>
+        <button class="more-item current-version-item" id="openCurrentTree" type="button" hidden><strong>Старый интерфейс</strong><small>Открыть прежнюю версию этого древа</small></button>
+      </section>
+      <section class="more-group" id="moreSectionAccount" aria-labelledby="moreAccountHeading">
+        <h3 id="moreAccountHeading">Аккаунт и доступ</h3>
+        <button class="more-item" id="moreTreesCabinet" type="button" hidden><strong>Кабинет деревьев</strong><small>Управление семьями, доступом и аккаунтом</small></button>
+        <button class="more-item family-logout-action" id="familyLogout" type="button" hidden><strong>Выйти из семейного входа</strong><small>Завершить сессию в этой вкладке</small></button>
+        <section class="account-admin-tools" id="accountAdminPanel" hidden aria-label="Управление доступом к древу">
+          <div class="account-admin-tools-heading"><small>АДМИНИСТРИРОВАНИЕ</small><strong>Доступ к древу</strong></div>
+          <div class="account-admin-lock-state" aria-live="polite"><strong id="accountAdminLockState">Загружаем состояние…</strong><small id="accountAdminLockDetail">Проверяем доступ по администраторской учётной записи.</small></div>
+          <button class="secondary-action" id="accountAdminLockToggle" type="button" disabled>Загрузка…</button>
+          <p class="account-admin-message" id="accountAdminLockMessage" role="status" aria-live="polite"></p>
+          <button class="secondary-action" id="accountAdminPasswordOpen" type="button">Сменить семейный пароль</button>
+          <small class="account-admin-warning">При смене пароля прежние семейные входы завершатся. Учётная запись администратора Waydean останется активной.</small>
+        </section>
+      </section>
+    </section>
+    <dialog class="account-admin-password-dialog" id="accountAdminPasswordDialog" aria-labelledby="accountAdminPasswordTitle">
+      <form id="accountAdminPasswordForm" autocomplete="off">
+        <div class="account-admin-dialog-heading"><div><small>УПРАВЛЕНИЕ ДОСТУПОМ</small><strong id="accountAdminPasswordTitle">Новый пароль семейного входа</strong></div><button class="person-sheet-close dialog-close" id="accountAdminPasswordClose" type="button" aria-label="Закрыть окно">×</button></div>
+        <p>После смены пароля людям понадобится войти заново.</p>
+        <label for="accountAdminNewPassword">Новый пароль</label>
+        <input id="accountAdminNewPassword" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
+        <label for="accountAdminPasswordConfirm">Повторите пароль</label>
+        <input id="accountAdminPasswordConfirm" type="password" autocomplete="new-password" minlength="2" maxlength="64" required>
+        <p class="account-admin-message" id="accountAdminPasswordMessage" role="status" aria-live="polite"></p>
+        <div class="account-admin-dialog-actions"><button class="primary-action" id="accountAdminPasswordSubmit" type="submit">Сменить пароль</button><button class="secondary-action" id="accountAdminPasswordCancel" type="button">Отмена</button></div>
+      </form>
+    </dialog>
+    <section class="popover pwa-popover" id="pwaPopover" hidden aria-label="Приложение Waydean и уведомления">
+      <div class="popover-head"><strong>Waydean на устройстве</strong><button class="close-popover" data-close aria-label="Закрыть">×</button></div>
+      <div class="pwa-state-card">
+        <span class="pwa-state-icon" aria-hidden="true">♧</span>
+        <div><strong id="pwaInstallStatus">Подготовка приложения…</strong><small id="pwaInstallHelp">Можно установить Waydean на компьютер как отдельное приложение.</small></div>
+      </div>
+      <button class="primary-action pwa-install-action" id="pwaInstall" type="button">Установить Waydean</button>
+      <div class="pwa-state-row"><span>Офлайн-режим</span><strong id="pwaOfflineStatus" aria-live="polite">Подготовка кеша…</strong></div>
+      <div class="pwa-state-row"><span>Подключение</span><strong id="pwaNetworkStatus" aria-live="polite">Проверка…</strong></div>
+      <div class="pwa-notification-block" id="pwaLocalNotificationArea">
+        <div class="pwa-state-row"><span>Уведомления на устройстве</span><strong id="pwaNotificationStatus" aria-live="polite">Проверка…</strong></div>
+        <button class="secondary-action pwa-notification-action" id="pwaNotificationEnable" type="button">Разрешить уведомления</button>
+        <button class="secondary-action pwa-notification-action" id="pwaNotificationTest" type="button" disabled>Отправить тестовое уведомление</button>
+        <p class="pwa-note" id="pwaLocalPushNote">Тестовое уведомление создаётся только на этом устройстве. Серверные push-уведомления о новых людях подключаются после привязки аккаунта Waydean; локальный просмотр не меняет подписки в проде.</p>
+      </div>
+      <div class="pwa-server-push" id="pwaServerPush" hidden>
+        <div class="pwa-state-row"><span>Push-уведомления древа</span><strong id="pwaServerPushStatus" aria-live="polite">Проверка подписки…</strong></div>
+        <button class="secondary-action pwa-notification-action" id="pwaServerPushEnable" type="button">Получать уведомления об изменениях</button>
+        <button class="secondary-action pwa-notification-action" id="pwaServerPushDisable" type="button" hidden>Отключить уведомления на этом устройстве</button>
+        <p class="pwa-note" id="pwaServerPushNote">Подписка создаётся после вашего действия и подтверждается администраторской учётной записью. Она привязана к этому устройству.</p>
+      </div>
+      <div class="pwa-push-note" id="pwaOfflineNote"><strong>Офлайн-данные</strong><span>После первой загрузки кешируются оболочка Waydean и снимок HOTI. Локальные правки остаются в хранилище этого браузера.</span></div>
+    </section>
+    <dialog class="pwa-push-dialog" id="pwaPushDialog" aria-labelledby="pwaPushDialogTitle">
+      <form id="pwaPushForm">
+        <div class="pwa-push-dialog-heading"><strong id="pwaPushDialogTitle">Пароль редактора</strong><button class="person-sheet-close dialog-close" id="pwaPushClose" type="button" aria-label="Закрыть окно">×</button></div>
+        <p id="pwaPushDialogHelp">Подтвердите доступ, чтобы изменить подписку этого устройства на уведомления дерева.</p>
+        <label for="pwaPushPassword">Пароль для правок</label>
+        <input id="pwaPushPassword" type="password" autocomplete="current-password" required>
+        <p class="pwa-push-error" id="pwaPushError" role="alert" hidden></p>
+        <div class="pwa-push-dialog-actions"><button class="primary-action" id="pwaPushSubmit" type="submit">Продолжить</button><button class="secondary-action" id="pwaPushCancel" type="button">Отмена</button></div>
+      </form>
+    </dialog>
+    <dialog class="person-sheet-dialog" id="personSheetDialog" aria-labelledby="personSheetTitle">
+      <section class="person-sheet-shell">
+        <header class="person-sheet-heading">
+          <div><small>КАРТОЧКА ЧЕЛОВЕКА</small><strong id="personSheetTitle">Человек</strong></div>
+          <button class="person-sheet-close" id="personSheetClose" type="button" aria-label="Закрыть карточку">×</button>
+        </header>
+        <div class="person-sheet-content" id="personSheetContent"></div>
+      </section>
+    </dialog>
+    <dialog class="photo-crop-dialog" id="photoCropDialog" aria-labelledby="photoCropTitle">
+      <section class="photo-crop-shell">
+        <header class="person-sheet-heading">
+          <div><small>ФОТОГРАФИЯ</small><strong id="photoCropTitle">Кадрирование</strong></div>
+          <button class="person-sheet-close" id="photoCropClose" type="button" aria-label="Закрыть кадрирование">×</button>
+        </header>
+        <div class="photo-crop-content">
+          <p class="photo-crop-hint">Передвигайте фото, чтобы выбрать кадр. Масштаб меняется жестом, колёсиком или ползунком.</p>
+          <div class="photo-crop-stage"><canvas id="photoCropCanvas" width="640" height="640" aria-label="Предварительный просмотр кадрирования"></canvas></div>
+          <label class="photo-crop-zoom-label" for="photoCropZoom">Масштаб <output id="photoCropZoomValue">1×</output></label>
+          <input id="photoCropZoom" type="range" min="1" max="3" step="0.01" value="1">
+          <p class="photo-crop-status" id="photoCropStatus" role="status" aria-live="polite"></p>
+          <div class="person-sheet-actions"><button class="primary-action" id="photoCropApply" type="button">Применить фото</button><button class="secondary-action" id="photoCropCancel" type="button">Отмена</button></div>
+        </div>
+      </section>
+    </dialog>
+    <dialog class="photo-lightbox-dialog" id="photoLightboxDialog" aria-labelledby="photoLightboxTitle">
+      <section class="photo-lightbox-shell">
+        <header class="person-sheet-heading"><div><small>ФОТОГРАФИЯ</small><strong id="photoLightboxTitle">Фото</strong></div><button class="person-sheet-close" id="photoLightboxClose" type="button" aria-label="Закрыть фото">×</button></header>
+        <div class="photo-lightbox-frame"><img id="photoLightboxImage" alt=""></div>
+        <p class="photo-lightbox-status" id="photoLightboxStatus" role="status" aria-live="polite"></p>
+      </section>
+    </dialog>
+    <div class="backdrop" id="popoverBackdrop" hidden></div>
+    <div class="load-error" id="loadError" hidden>
+      <strong id="loadErrorTitle">Не удалось загрузить дерево</strong>
+      <span id="loadErrorText"></span>
+      <form id="waydeanAdminLoginForm" class="waydean-admin-login" hidden>
+        <p>Войдите с тем же email и паролем, что используете в разделе управления.</p>
+        <p class="waydean-admin-account-hint" id="waydeanAccountHint" hidden></p>
+        <label for="waydeanAdminEmail">Email</label>
+        <input id="waydeanAdminEmail" name="email" type="email" autocomplete="username" required>
+        <label for="waydeanAdminPassword">Пароль</label>
+        <input id="waydeanAdminPassword" name="password" type="password" autocomplete="current-password" required>
+        <p class="waydean-admin-login-error" id="waydeanAdminLoginError" role="alert" hidden></p>
+        <button id="waydeanAdminLoginSubmit" type="submit">Войти и открыть древо</button>
+        <a class="waydean-login-switch" href="./?source=family&amp;tree=drewo-guzat&amp;state=all-tree">Войти логином семьи</a>
+      </form>
+      <form id="waydeanFamilyLoginForm" class="waydean-admin-login" hidden>
+        <p>Вход по семейному логину и паролю. Сессия действует только в этой вкладке.</p>
+        <p class="demo-login-hint" id="demoLoginHint" hidden><strong>Демо-вход:</strong> логин и пароль уже заполнены. Это отдельное демонстрационное дерево.</p>
+        <label for="waydeanFamilyLogin">Логин семьи</label>
+        <input id="waydeanFamilyLogin" name="login" type="text" autocomplete="username" required>
+        <label for="waydeanFamilyPassword">Пароль семьи</label>
+        <input id="waydeanFamilyPassword" name="password" type="password" autocomplete="current-password" required>
+        <p class="waydean-admin-login-error" id="waydeanFamilyLoginError" role="alert" hidden></p>
+        <button id="waydeanFamilyLoginSubmit" type="submit">Войти и открыть древо</button>
+        <a class="waydean-login-switch" href="./?source=account&amp;state=all-tree">Войти администратором Waydean</a>
+      </form>
+      <div class="load-error-actions"><button id="retryTreeLoad" type="button">Повторить загрузку</button><a href="index.html">Открыть текущее древо</a></div>
+    </div>
   </main>
   <script>
-    (function () {
-      var target = new URL('../drewo/waydean-preview.html', window.location.href);
-      target.search = window.location.search;
-      target.searchParams.set('source', 'family');
-      target.searchParams.set('tree', 'drewo-guzat');
-      if (!['path', 'branch', 'all-tree'].includes(target.searchParams.get('state'))) {
-        target.searchParams.set('state', 'all-tree');
+    const view = new URLSearchParams(window.location.search).get('view');
+    if (view === 'video-export' || view === 'export-workshop') {
+      const isWorkshop = view === 'export-workshop';
+      document.title = isWorkshop ? 'Waydean — мастерская экспорта' : 'Waydean — видео семейного древа';
+      document.body.replaceChildren();
+      document.body.style.cssText = 'margin:0;padding:0;overflow:hidden;background:#080d0e;';
+      const frame = document.createElement('iframe');
+      frame.title = isWorkshop ? 'Мастерская экспорта семейного древа' : 'Экспорт семейного древа в видео';
+      frame.allow = 'autoplay';
+      if (isWorkshop) {
+        const requestedMode = new URLSearchParams(window.location.search).get('mode') === 'video' ? 'video' : 'print';
+        frame.src = `/docs/design/waydean/export/?mode=${requestedMode}`;
+      } else {
+        frame.src = '/docs/design/waydean/export/video-prototype/browser-export.html?source=tree&layout=orthogonal-20261027';
       }
-      target.hash = window.location.hash;
-      window.location.replace(target.pathname + target.search + target.hash);
+      frame.style.cssText = 'position:fixed;inset:0;display:block;width:100vw;height:100vh;height:100dvh;border:0;background:#080d0e;z-index:2147483647;';
+      document.body.append(frame);
+    }
+  </script>
+  <script>
+    window.ensureWaydeanAdminSupabase = (function () {
+      var pending = null;
+      function loadScript(src) {
+        return new Promise(function (resolve, reject) {
+          var script = document.createElement('script');
+          script.src = src;
+          script.async = true;
+          script.onload = resolve;
+          script.onerror = function () { reject(new Error('Не удалось загрузить вход администратора.')); };
+          document.head.appendChild(script);
+        });
+      }
+      return function () {
+        if (window.AdminSupabase) return Promise.resolve(window.AdminSupabase);
+        if (!pending) {
+          pending = loadScript('https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2')
+            .then(function () { return loadScript('../admin/supabase-config.js?v=6'); })
+            .then(function () { return loadScript('../admin/admin-supabase.js?v=16'); })
+            .then(function () {
+              if (!window.AdminSupabase) throw new Error('Не удалось настроить вход администратора.');
+              return window.AdminSupabase;
+            });
+        }
+        return pending;
+      };
     })();
+  </script>
+  <script src="../trees/billing-config.js?v=1"></script>
+  <script src="../assets/drewo-billing.js?v=1"></script>
+  <script src="../assets/drewo-billing-banner.js?v=2"></script>
+  <script type="module">
+    if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
+          import('../drewo/waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2');
+    }
   </script>
 </body>
 </html>

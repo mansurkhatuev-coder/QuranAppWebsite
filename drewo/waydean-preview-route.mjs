@@ -86,7 +86,7 @@ export function buildTreeSharePayload({ href, title = 'WAYDEAN', localPreview = 
     for (const key of ['refresh', 'source', 'nek', 'invite']) url.searchParams.delete(key);
     url.hash = '';
   } else {
-    url.pathname = treeDir === 'drewo-reklama' ? '/drewo-reklama/' : '/drewo/';
+    url.pathname = `/${treeDir}/`;
     url.search = '';
     url.hash = '';
   }

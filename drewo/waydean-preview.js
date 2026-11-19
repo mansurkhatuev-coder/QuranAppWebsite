@@ -23,14 +23,14 @@ import {
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
-} from './waydean-preview-route.mjs?v=family-route-8';
+} from './waydean-preview-route.mjs?v=family-route-9-tree-share';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=touch-guard-20261114-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-scope-20261119-2';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-2';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -2307,7 +2307,7 @@ function openExportWorkshop(initialMode = 'print') {
       printPeople: demoMode ? records.map(person => ({ ...person, hasPhoto: false, photoKey: null })) : records
     });
     writeExportWorkshopHandoff(window.sessionStorage, handoff);
-    const workshopUrl = new URL('./waydean-preview.html?view=export-workshop', window.location.href);
+    const workshopUrl = new URL('../drewo/waydean-preview.html?view=export-workshop', window.location.href);
     workshopUrl.searchParams.set('mode', initialMode === 'video' ? 'video' : 'print');
     closePopovers();
     window.location.assign(workshopUrl.href);
@@ -3746,6 +3746,7 @@ function bindWaydeanAdminLogin() {
     }
 
     try {
+      await window.ensureWaydeanAdminSupabase?.();
       if (!window.AdminSupabase?.isEnabled?.()) throw new Error('Supabase auth is unavailable');
       await window.AdminSupabase.signIn(emailInput.value.trim(), passwordInput.value);
       passwordInput.value = '';
@@ -3872,10 +3873,15 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
   let legacyViewSession = null;
   try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
   setLoadingText('Проверяем семейный доступ');
+  if (token) {
+    familySessionTokenMemory = token;
+    storeFamilySession(familySessionStorage(), activeTreeDir, token);
+    return true;
+  }
   try {
     const access = await resolveFamilyPreviewAccess({
-    endpoint: familyEndpoint(), treeDir: activeTreeDir, token, legacyViewSession,
-    allowLegacyReadOnly: !demoMode
+    endpoint: familyEndpoint(), treeDir: activeTreeDir, token: '',
+    legacyViewSession, allowLegacyReadOnly: !demoMode
     });
     if (access.legacyReadOnly) {
       familyLegacyReadOnly = true;
@@ -3970,10 +3976,48 @@ async function initialize() {
     }
     if (accountPreview) {
       setLoadingText('Проверяем доступ к данным');
+      await window.ensureWaydeanAdminSupabase?.();
       accountAdminAccess = await requireWaydeanAdminAccess('drewo');
     }
     $('#moreTreesCabinet').hidden = !accountAdminAccess;
     if (familyPreview && !(await requireFamilyPreviewSession(params, setLoadingText))) return;
+    let initialFamilySnapshot = null;
+    if (familyPreview && !familyLegacyReadOnly) {
+      let legacyViewSession = null;
+      try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
+      setLoadingText('Загружаем данные древа');
+      try {
+        initialFamilySnapshot = await callFamilyTreeAction('family-load', {}, {
+          endpoint: familyEndpoint(), treeDir: activeTreeDir, sessionToken: familySessionTokenMemory
+        });
+        accountServerTreeJson = initialFamilySnapshot.treeJson;
+        accountServerActivityJson = initialFamilySnapshot.activityJson || '[]';
+        accountServerFingerprint = initialFamilySnapshot.fingerprint;
+        familySessionRole = String(initialFamilySnapshot.role || '').trim();
+        familySessionLocked = initialFamilySnapshot.locked !== false;
+        familySessionLockReason = typeof initialFamilySnapshot.lockedReason === 'string' ? initialFamilySnapshot.lockedReason : '';
+      } catch (error) {
+        const canUseLegacyReadOnly = !demoMode && Boolean(String(legacyViewSession?.personId || '').trim());
+        const mayFallBackToLegacy = canUseLegacyReadOnly
+          && ['WAYDEAN_FAMILY_AUTH_REQUIRED', 'WAYDEAN_FAMILY_AUTH_UNAVAILABLE'].includes(error?.code);
+        if (mayFallBackToLegacy) {
+          familyLegacyReadOnly = true;
+          familyLegacyViewPersonId = String(legacyViewSession.personId);
+          familySessionTokenMemory = '';
+          familySessionRole = '';
+          familySessionLocked = true;
+          familySessionLockReason = '';
+          storeFamilySession(familySessionStorage(), activeTreeDir, '');
+        } else {
+          if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED') {
+            familySessionTokenMemory = '';
+            storeFamilySession(familySessionStorage(), activeTreeDir, '');
+            familySessionRole = '';
+          }
+          throw error;
+        }
+      }
+    }
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname)
       || (familyPreview && canEditFamilyTreeRole(familySessionRole)));
     $('#moreHistory').hidden = !localTreeDraft;
@@ -4041,9 +4085,7 @@ async function initialize() {
       accountBaseFingerprint = accountServerFingerprint;
       accountBaseActivityJson = accountServerActivityJson;
     } else if (familyPreview && !familyLegacyReadOnly) {
-      const serverSnapshot = await callFamilyTreeAction('family-load', {}, {
-        endpoint: familyEndpoint(), treeDir: activeTreeDir, sessionToken: familySessionTokenMemory
-      });
+      const serverSnapshot = initialFamilySnapshot;
       accountServerTreeJson = serverSnapshot.treeJson;
       accountServerActivityJson = serverSnapshot.activityJson || '[]';
       accountServerFingerprint = serverSnapshot.fingerprint;
