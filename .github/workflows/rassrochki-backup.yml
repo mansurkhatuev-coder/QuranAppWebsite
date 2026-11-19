@@ -1,11 +1,11 @@
 # Weekly + manual full database backup for Рассрочки
-# Saves as a GitHub Actions artifact (NOT committed to the public website tree).
+# Never publishes database backups as Actions artifacts. Requires a verified private destination.
 #
 # Secrets required:
 #   RASSROCHKI_SUPABASE_URL
 #   RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY
 #
-# Optional private repo push:
+# Required private repo push:
 #   RASSROCHKI_BACKUP_REPO   e.g. mansurkhatuev-coder/rassrochki-backups (private)
 #   RASSROCHKI_BACKUP_TOKEN  PAT with contents:write on that private repo
 
@@ -18,7 +18,6 @@ on:
 
 permissions:
   contents: read
-  actions: write
 
 jobs:
   backup:
@@ -31,6 +30,21 @@ jobs:
         run: |
           if [ -z "$URL" ] || [ -z "$KEY" ]; then
             echo "Add secrets RASSROCHKI_SUPABASE_URL and RASSROCHKI_SUPABASE_SERVICE_ROLE_KEY"
+            exit 1
+          fi
+
+      - name: Verify private backup destination before exporting data
+        env:
+          BACKUP_REPO: ${{ secrets.RASSROCHKI_BACKUP_REPO }}
+          GH_TOKEN: ${{ secrets.RASSROCHKI_BACKUP_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ ! "${BACKUP_REPO:-}" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]] || [ -z "${GH_TOKEN:-}" ]; then
+            echo "A private backup repository and its token must be configured."
+            exit 1
+          fi
+          if [ "$(gh api "repos/${BACKUP_REPO}" --jq '.visibility')" != "private" ]; then
+            echo "Backup destination is not private. Refusing to export data."
             exit 1
           fi
 
@@ -58,22 +72,15 @@ jobs:
           echo "STAMP=${STAMP}" >> "$GITHUB_ENV"
           echo "ARCHIVE=rassrochki-backup-${STAMP}.tar.gz" >> "$GITHUB_ENV"
 
-      - name: Upload artifact (kept ~90 days)
-        uses: actions/upload-artifact@v4
-        with:
-          name: rassrochki-backup-${{ env.STAMP }}
-          path: ${{ env.ARCHIVE }}
-          retention-days: 90
-
-      - name: Push to private backup repo (optional)
+      - name: Push to verified private backup repo
         env:
           BACKUP_REPO: ${{ secrets.RASSROCHKI_BACKUP_REPO }}
           BACKUP_TOKEN: ${{ secrets.RASSROCHKI_BACKUP_TOKEN }}
         run: |
           set -euo pipefail
           if [ -z "${BACKUP_REPO:-}" ] || [ -z "${BACKUP_TOKEN:-}" ]; then
-            echo "Skip private repo push (secrets RASSROCHKI_BACKUP_REPO / RASSROCHKI_BACKUP_TOKEN not set)"
-            exit 0
+            echo "Private backup destination is not configured."
+            exit 1
           fi
           git clone --depth 1 "https://x-access-token:${BACKUP_TOKEN}@github.com/${BACKUP_REPO}.git" backup-repo
           mkdir -p backup-repo/backups
