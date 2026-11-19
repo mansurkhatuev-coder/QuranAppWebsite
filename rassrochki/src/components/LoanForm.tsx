@@ -552,6 +552,11 @@ export function LoanForm({ loanId }: { loanId?: string }) {
     };
 
     if (loanId) {
+      if (Number(existingLoan?.debt_written_off ?? 0) > 0) {
+        setError("Условия рассрочки со списаниями нельзя изменять.");
+        setLoading(false);
+        return;
+      }
       if (!existingLoan) {
         setLoading(false);
         setError("Рассрочка ещё загружается. Обновите страницу и попробуйте снова.");

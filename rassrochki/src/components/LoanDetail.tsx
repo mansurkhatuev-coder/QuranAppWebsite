@@ -31,6 +31,7 @@ import {
   formatMoney,
 } from "@/lib/utils";
 import { projectedRemaining, resolveProfitShares } from "@/lib/finance";
+import { previewWriteoff, type WriteoffMode } from "@/lib/writeoff";
 import { WhatsAppButton } from "@/components/WhatsAppButton";
 import { defaultPaymentReminderText } from "@/lib/whatsapp";
 import { friendlyError, statusLabelRu } from "@/lib/friendly";
@@ -57,7 +58,17 @@ export function LoanDetail({
   settings: OrganizationSettings;
   orgName: string;
 }) {
-  const { operations, enqueueCommand } = useOfflineWorkspace();
+  const { operations, enqueueCommand, online, syncing, refreshSnapshot } = useOfflineWorkspace();
+  const [writeoffOpen, setWriteoffOpen] = useState(false);
+  const [writeoffAmount, setWriteoffAmount] = useState("");
+  const [writeoffMode, setWriteoffMode] = useState<WriteoffMode>("proportional");
+  const [writeoffReason, setWriteoffReason] = useState("");
+  const [writeoffConfirmed, setWriteoffConfirmed] = useState(false);
+  const [capitalConfirmed, setCapitalConfirmed] = useState(false);
+  const [writeoffBusy, setWriteoffBusy] = useState(false);
+  const [writeoffVersion, setWriteoffVersion] = useState<number | null>(null);
+  const [writeoffRemaining, setWriteoffRemaining] = useState(0);
+  const [writeoffRequestId, setWriteoffRequestId] = useState("");
   const [pendingSchedule, setPendingSchedule] = useState<PaymentSchedule | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
@@ -70,14 +81,24 @@ export function LoanDetail({
 
   const downPayment = Number(loan.down_payment ?? 0);
   const scheduledTotal = schedules.reduce((sum, row) => sum + Number(row.amount || 0), 0);
-  const financed = scheduledTotal > 0
+  const financed = schedules.length > 0
     ? scheduledTotal
     : calcFinancedAmount(Number(loan.principal), downPayment);
   const paidTotal = sumSchedulePaid(schedules);
-  const remaining = Math.max(0, Math.round((financed - paidTotal) * 100) / 100);
   const loanRemaining = loanScheduleRemaining(schedules);
+  const remaining = loanRemaining;
+  const writtenOff = Number(loan.debt_written_off ?? 0);
+  const writeoffPreview = previewWriteoff(loan, Number(writeoffAmount.trim().replace(",", ".")), writeoffRemaining, writeoffMode);
+  const hasPendingOperations = operations.some((operation) => {
+    const p = operation.command.payload;
+    return p.loanId === loan.id || (p.loan as { id?: string } | undefined)?.id === loan.id ||
+      (p.payment as { loan_id?: string } | undefined)?.loan_id === loan.id;
+  });
+  const writeoffAvailable = online === true && !syncing && !hasPendingOperations &&
+    loan.offline_version != null && loan.debt_written_off != null;
+  const writeoffStale = writeoffOpen && (writeoffVersion !== Number(loan.offline_version) || writeoffRemaining !== loanRemaining);
   const projection = projectedRemaining(
-    { ...loan, schedulePrincipal: scheduledTotal > 0 ? scheduledTotal : undefined },
+    { ...loan, schedulePrincipal: schedules.length > 0 ? scheduledTotal : undefined },
     paidTotal
   );
   const shares = resolveProfitShares(loan);
@@ -93,6 +114,50 @@ export function LoanDetail({
         dueDate: formatDateShort(nextUnpaid.due_date),
       })
     : undefined;
+
+  function openWriteoff() {
+    setWriteoffAmount(String(loanRemaining));
+    setWriteoffRemaining(loanRemaining);
+    setWriteoffVersion(Number(loan.offline_version ?? 0));
+    setWriteoffRequestId(crypto.randomUUID());
+    setWriteoffReason("");
+    setWriteoffMode("proportional");
+    setWriteoffConfirmed(false);
+    setCapitalConfirmed(false);
+    setError(null);
+    setInfo(null);
+    setWriteoffOpen(true);
+  }
+
+  async function submitWriteoff() {
+    if (writeoffBusy || !writeoffAvailable || writeoffStale || !writeoffConfirmed || "error" in writeoffPreview ||
+        !writeoffReason.trim() || (writeoffPreview.capitalLoss > 0 && !capitalConfirmed)) return;
+    setWriteoffBusy(true);
+    setError(null);
+    setInfo(null);
+    try {
+      const { error: rpcError } = await createClient().rpc("write_off_loan_debt", {
+        p_loan_id: loan.id,
+        p_amount: writeoffPreview.amount,
+        p_expected_remaining: writeoffRemaining,
+        p_expected_version: writeoffVersion,
+        p_mode: writeoffMode,
+        p_reason: writeoffReason.trim(),
+        p_accept_capital_loss: capitalConfirmed,
+        p_request_id: writeoffRequestId,
+      });
+      if (rpcError) throw rpcError;
+      setWriteoffOpen(false);
+      setInfo("Списание выполнено без поступления в кассу. Обновляем данные.");
+      await refreshSnapshot();
+    } catch (e) {
+      setError(friendlyError("Не удалось подтвердить списание. Обновите данные перед повторной операцией.", e));
+      await refreshSnapshot().catch(() => undefined);
+      setWriteoffOpen(false);
+    } finally {
+      setWriteoffBusy(false);
+    }
+  }
 
   async function confirmPayment(values: PaymentConfirmValues) {
     if (!pendingSchedule) return;
@@ -174,14 +239,15 @@ export function LoanDetail({
     setInfo("Откроется меню отправки: выберите Numbers или «Сохранить в Файлы».");
     try {
       const delivery = await downloadCsv(`rassrochka_${loan.id.slice(0, 8)}.csv`, [
-        ["Клиент", "Рассрочка", "Дата", "Сумма", "Статус", "Оплачено", "Чек"],
+        ["Клиент", "Рассрочка", "Дата", "Исходная сумма", "Статус", "Оплачено", "Списано", "Чек"],
         ...schedules.map((s) => [
           loan.clients?.full_name ?? "",
           loan.title ?? "",
           formatDateShort(s.due_date),
-          String(s.amount),
-          statusLabelRu(s.status),
+          String(Number(s.amount) + Number(s.written_off_amount ?? 0)),
+          Number(s.written_off_amount) > 0 && s.status === "paid" ? "Закрыт списанием" : statusLabelRu(s.status),
           s.paid_amount != null ? String(s.paid_amount) : "",
+          String(s.written_off_amount ?? 0),
           s.receipt_path ? "да" : "",
         ]),
       ]);
@@ -202,13 +268,15 @@ export function LoanDetail({
     const template = formattedSample
       ? DEFAULT_CONTRACT_TEMPLATE
       : settings.contract_template;
+    const originalSchedules = schedules.map((row) => ({ ...row, amount: Number(row.amount) + Number(row.written_off_amount ?? 0),
+      status: Number(row.written_off_amount) > 0 ? "pending" as const : row.status }));
     const scheduleText = formatScheduleForContract(
-      schedules,
+      originalSchedules,
       formatDateShort,
       formatMoney
     );
     const paymentScheduleText = formatPaymentScheduleForContract(
-      schedules,
+      originalSchedules,
       formatDateShort,
       formatMoney
     );
@@ -225,7 +293,7 @@ export function LoanDetail({
             )
             .join("\n");
 
-    const paidCount = schedules.filter((s) => s.status === "paid").length;
+    const paidCount = originalSchedules.filter((s) => s.status === "paid").length;
     const sampleText = (value: string) =>
       formattedSample ? protectSampleContractText(value) : value;
     const body = fillContractTemplate(template, {
@@ -234,7 +302,7 @@ export function LoanDetail({
       phone: sampleText(loan.clients?.phone ?? ""),
       amount: formatMoney(Number(loan.principal)),
       down_payment: formatMoney(Number(loan.down_payment ?? 0)),
-      financed: formatMoney(financed),
+      financed: formatMoney(financed + writtenOff),
       term_months: String(loan.term_months),
       monthly_payment: formatMoney(Number(loan.monthly_payment)),
       start_date: formatDateShort(loan.start_date),
@@ -275,9 +343,15 @@ export function LoanDetail({
           </div>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Link href={`/loans/${loan.id}/edit`} className="btn-secondary">
+          {writtenOff <= 0 && <Link href={`/loans/${loan.id}/edit`} className="btn-secondary">
             Изменить
-          </Link>
+          </Link>}
+          {loan.status !== "closed" && loanRemaining > 0 && (
+            <button type="button" className="btn-secondary border-red-300 text-red-700"
+              disabled={!writeoffAvailable || writeoffBusy || Boolean(pendingSchedule)} onClick={openWriteoff}>
+              Списать задолженность
+            </button>
+          )}
           {loan.clients?.phone ? (
             <WhatsAppButton
               phone={loan.clients.phone}
@@ -299,6 +373,63 @@ export function LoanDetail({
       {info && !error && (
         <p className="rounded-xl bg-emerald-50 px-3 py-2 text-sm text-emerald-800">{info}</p>
       )}
+
+      {loan.status !== "closed" && loanRemaining > 0 && !writeoffAvailable && (
+        <p className="text-xs text-[var(--muted)]">Списание доступно после подключения, обновления базы и завершения синхронизации платежей.</p>
+      )}
+      {writeoffOpen && (
+        <section className="card space-y-3 border-red-300" role="dialog" aria-label="Подтверждение списания">
+          <h2 className="font-semibold text-red-800">Списание задолженности</h2>
+          <p className="text-sm">Остаток: {formatMoney(writeoffRemaining)}. Списанная сумма не поступит в кассу. Исходный договор, оплаты и чеки сохранятся.</p>
+          {writeoffStale && <p className="text-sm text-red-700">Условия или остаток изменились. Закройте окно и проверьте данные заново.</p>}
+          <label className="block text-sm">Сумма списания, ₽
+            <input className="input mt-1" inputMode="decimal" value={writeoffAmount}
+              onChange={(e) => { setWriteoffAmount(e.target.value); setWriteoffConfirmed(false); setCapitalConfirmed(false); }} disabled={writeoffBusy}/>
+          </label>
+          <button type="button" className="btn-secondary" onClick={() => { setWriteoffAmount(String(writeoffRemaining)); setWriteoffConfirmed(false); setCapitalConfirmed(false); }} disabled={writeoffBusy}>Списать весь остаток</button>
+          <label className="block text-sm">За чей счёт
+            <select className="input mt-1" value={writeoffMode} onChange={(e) => { setWriteoffMode(e.target.value as WriteoffMode); setWriteoffConfirmed(false); setCapitalConfirmed(false); }} disabled={writeoffBusy}>
+              <option value="proportional">Пропорционально долям прибыли / капитала</option>
+              <option value="owner">Только за счёт прибыли владельца</option>
+            </select>
+          </label>
+          {"error" in writeoffPreview ? <p className="text-sm text-red-700">{writeoffPreview.error}</p> : (
+            <div className="space-y-1 rounded-xl bg-slate-50 p-3 text-sm">
+              <p>Уменьшение прибыли владельца: {formatMoney(writeoffPreview.ownerProfitLoss)}</p>
+              <p>Уменьшение прибыли инвестора: {formatMoney(writeoffPreview.investorProfitLoss)}</p>
+              <p>После операции: {writeoffPreview.closes ? "рассрочка будет закрыта" : `остаток ${formatMoney(writeoffRemaining - writeoffPreview.amount)}`}</p>
+              {writeoffPreview.capitalLoss > 0 && <div className="rounded-lg bg-red-50 p-2 text-red-800">
+                <p className="font-semibold">Внимание! Затронут вложенный капитал: {formatMoney(writeoffPreview.capitalLoss)}.</p>
+                <p>Владелец: {formatMoney(writeoffPreview.ownerCapitalLoss)} · инвестор: {formatMoney(writeoffPreview.investorCapitalLoss)}</p>
+                <label className="flex gap-2"><input type="checkbox" checked={capitalConfirmed} onChange={(e) => setCapitalConfirmed(e.target.checked)} disabled={writeoffBusy}/> Подтверждаю потерю капитала.</label>
+              </div>}
+            </div>
+          )}
+          <label className="block text-sm">Причина списания (обязательно)
+            <textarea className="input mt-1" rows={2} maxLength={1000} value={writeoffReason}
+              onChange={(e) => { setWriteoffReason(e.target.value); setWriteoffConfirmed(false); }} disabled={writeoffBusy}/>
+          </label>
+          <label className="flex gap-2 text-sm"><input type="checkbox" checked={writeoffConfirmed} onChange={(e) => setWriteoffConfirmed(e.target.checked)} disabled={writeoffBusy}/> Я понимаю последствия. Это списание, а не получение денег. Изменение условий после списания блокируется.</label>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" className="btn-secondary" disabled={writeoffBusy} onClick={() => setWriteoffOpen(false)}>Отмена</button>
+            <button type="button" className="rounded-xl bg-red-700 px-4 py-2 font-medium text-white disabled:opacity-50"
+              disabled={writeoffBusy || !writeoffAvailable || writeoffStale || !writeoffConfirmed || !writeoffReason.trim() ||
+                "error" in writeoffPreview || (writeoffPreview.capitalLoss > 0 && !capitalConfirmed)}
+              onClick={() => void submitWriteoff()}>
+              {writeoffBusy ? "Списание…" : !("error" in writeoffPreview) && writeoffPreview.closes ? "Списать и закрыть" : "Подтвердить списание"}
+            </button>
+          </div>
+        </section>
+      )}
+      {writtenOff > 0 && <section className="card space-y-2">
+        <h2 className="font-semibold">История списаний · {formatMoney(writtenOff)}</h2>
+        {(loan.writeoff_history ?? []).map((entry) => <div key={entry.id} className="rounded-xl border border-[var(--border)] p-3 text-sm">
+          <p className="font-medium">{formatMoney(entry.amount)} · {formatDateShort(entry.occurred_at.slice(0, 10))}</p>
+          <p>{entry.reason}</p>
+          <p className="text-xs text-[var(--muted)]">Прибыль: владелец −{formatMoney(entry.owner_profit_loss)}, инвестор −{formatMoney(entry.investor_profit_loss)}. Капитал: −{formatMoney(entry.owner_capital_loss + entry.investor_capital_loss)}.</p>
+        </div>)}
+        <p className="text-xs text-[var(--muted)]">Условия сделки после списания защищены от редактирования, чтобы сохранить историю.</p>
+      </section>}
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
@@ -370,12 +501,13 @@ export function LoanDetail({
               </p>
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--muted)]">Капитал вложен</span>
-                <span>{formatMoney(projection.investorCapital)}</span>
+                <span>{formatMoney(projection.originalInvestorCapital)}</span>
               </div>
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--muted)]">Капитал возвращён</span>
                 <span>{formatMoney(projection.capitalReturned)}</span>
               </div>
+              {Number(loan.writeoff_investor_capital) > 0 && <div className="flex justify-between text-sm text-red-700"><span>Списано капитала</span><span>{formatMoney(Number(loan.writeoff_investor_capital))}</span></div>}
               <div className="flex justify-between text-sm">
                 <span className="text-[var(--muted)]">Капитал осталось</span>
                 <span>{formatMoney(projection.capitalLeft)}</span>
@@ -458,9 +590,10 @@ export function LoanDetail({
                 <p className="text-sm text-[var(--muted)]">
                   по графику {formatDateShort(schedule.due_date)}
                   {schedule.status === "paid" && schedule.paid_at
-                    ? ` · оплачен ${formatDateShort(schedule.paid_at.slice(0, 10))}`
+                    ? ` · ${Number(schedule.written_off_amount) > 0 ? "последняя оплата" : "оплачен"} ${formatDateShort(schedule.paid_at.slice(0, 10))}`
                     : ""}
                 </p>
+                {Number(schedule.written_off_amount) > 0 && <p className="text-sm text-amber-800">Исходно {formatMoney(expected + Number(schedule.written_off_amount))} · списано {formatMoney(Number(schedule.written_off_amount))}</p>}
                 {schedule.status === "paid" && paid > 0 && (
                   <p className="text-sm font-medium text-teal-800">
                     получено {formatMoney(paid)}
@@ -482,7 +615,9 @@ export function LoanDetail({
                 <span className="font-semibold">
                   {formatMoney(schedule.status === "paid" ? expected : dueLeft)}
                 </span>
-                <StatusBadge status={schedule.status} />
+                {Number(schedule.written_off_amount) > 0 && schedule.status === "paid"
+                  ? <span className="badge-yellow">{paid > 0 ? "Оплата + списание" : "Списан"}</span>
+                  : <StatusBadge status={schedule.status} />}
                 {schedule.receipt_path && (
                   <button
                     type="button"
@@ -497,6 +632,7 @@ export function LoanDetail({
                   <button
                     type="button"
                     className="btn-primary text-xs"
+                    disabled={writeoffOpen || writeoffBusy}
                     onClick={() => setPendingSchedule(schedule)}
                   >
                     Внести оплату
