@@ -1,0 +1,41 @@
+name: Rassrochki dependency security audit
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'rassrochki/package.json'
+      - 'rassrochki/package-lock.json'
+      - '.github/workflows/rassrochki-security-audit.yml'
+  pull_request:
+    paths:
+      - 'rassrochki/package.json'
+      - 'rassrochki/package-lock.json'
+      - '.github/workflows/rassrochki-security-audit.yml'
+  schedule:
+    - cron: '30 4 * * 1'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: rassrochki
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683
+        with:
+          persist-credentials: false
+          sparse-checkout: |
+            rassrochki/package.json
+            rassrochki/package-lock.json
+          sparse-checkout-cone-mode: false
+      - name: Audit production dependencies
+        run: npm audit --package-lock-only --omit=dev --audit-level=high
+      - name: Audit development and production dependencies
+        if: always()
+        run: npm audit --package-lock-only --include=dev --audit-level=high
