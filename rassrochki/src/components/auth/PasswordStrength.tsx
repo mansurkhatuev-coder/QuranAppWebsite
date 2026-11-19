@@ -2,9 +2,10 @@
 
 function scorePassword(password: string): { score: number; label: string } {
   if (!password) return { score: 0, label: "" };
+  if (password.length < 12) return { score: 1, label: "Минимум 12 символов" };
   let score = 0;
-  if (password.length >= 6) score += 1;
-  if (password.length >= 10) score += 1;
+  if (password.length >= 12) score += 1;
+  if (password.length >= 16) score += 1;
   if (/[A-ZА-Я]/.test(password) && /[a-zа-я]/.test(password)) score += 1;
   if (/\d/.test(password)) score += 1;
   if (/[^A-Za-zА-Яа-я0-9]/.test(password)) score += 1;
