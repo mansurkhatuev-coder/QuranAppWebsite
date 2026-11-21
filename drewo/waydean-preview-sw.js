@@ -1,11 +1,10 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v71';
+const CACHE_NAME = 'waydean-preview-shell-v74';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
   './waydean-preview.html',
   './waydean-preview.webmanifest',
-  './family-tree.json',
   './bg-day-2.jpg',
   './icon-192.png',
   './icon-512.png',
@@ -13,6 +12,7 @@ const PRECACHE = [
   './waydean-preview-loading.css?v=1',
   './waydean-preview.css?v=account-history-1',
   './waydean-preview.css',
+  './waydean-preview-bundle.css?v=20261119-2',
   './waydean-preview-camera.css?v=camera-pan-20261116-2',
   './waydean-preview-master.css?v=person-card-width-1',
   './waydean-preview-lod.css?v=uniform-markers-20261030-1',
@@ -34,17 +34,17 @@ const PRECACHE = [
   './waydean-preview-appearance.css?v=dropdown-polish-20261106-1',
   './waydean-preview-demo.css?v=demo-interface-2',
   './waydean-color-scheme.css?v=dark-default-20261103-1',
-  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&family-route=20261118-1',
+  './waydean-preview.js?v=private-pages-1',
   './waydean-preview-appearance.mjs?v=dark-default-20261103-1',
   './waydean-preview-family-auth.mjs?v=family-auth-3',
-  './waydean-preview-family-api.mjs?v=family-lock-2',
+  './waydean-preview-family-api.mjs?v=private-pages-1',
   './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1',
   './waydean-preview-admin-api.mjs?v=admin-push-20261028-1',
   './waydean-preview-admin-controls.mjs?v=account-admin-controls-1',
   './waydean-admin-identity.mjs?v=1',
   './waydean-preview-whoami.mjs?v=identity-storage-explicit-per-tree-20261119-1',
   './waydean-preview-account-history.mjs?v=1',
-  './waydean-preview-pwa.mjs?v=touch-guard-20261114-1',
+  './waydean-preview-pwa.mjs?v=legacy-transition-1',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
   './waydean-preview-model.mjs?v=person-card-gender-20261108-1',
   './waydean-preview-camera.mjs?v=camera-pan-20261116-1',
@@ -54,7 +54,7 @@ const PRECACHE = [
   './waydean-preview-selection.mjs',
   './waydean-preview-lod.mjs?v=lod-13-camera-style-buckets',
   './waydean-preview-dates.mjs?v=calendar-parity-1',
-  './waydean-preview-route.mjs?v=family-route-8',
+  './waydean-preview-route.mjs?v=family-route-9-tree-share',
   './waydean-preview-edit.mjs?v=person-gender-20261108-1',
   './waydean-preview-storage.mjs?v=3',
   '../docs/design/waydean/assets/references/waydean-mobile-tree-background.png',
@@ -68,12 +68,10 @@ function isPreviewResource(url) {
     url.pathname === PAGE_PATH
     || url.pathname.startsWith('/drewo/waydean-preview-')
     || url.pathname === '/drewo/waydean-color-scheme.css'
-    || url.pathname === '/drewo/family-tree.json'
     || url.pathname === '/drewo/waydean-preview.webmanifest'
     || url.pathname === '/drewo/icon-192.png'
     || url.pathname === '/drewo/icon-512.png'
     || url.pathname === '/drewo/apple-touch-icon.png'
-    || url.pathname.startsWith('/drewo/photos/')
     || url.pathname.startsWith('/docs/design/waydean/assets/')
     || url.pathname.startsWith('/docs/design/waydean/fixtures/')
   );
@@ -100,7 +98,7 @@ async function notifyClients() {
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    const required = ['./waydean-preview.html', './family-tree.json'];
+    const required = ['./waydean-preview.html'];
     for (const resource of required) await precacheOne(resource);
     await Promise.allSettled(PRECACHE.filter(resource => !required.includes(resource)).map(precacheOne));
     await self.skipWaiting();
@@ -132,16 +130,6 @@ self.addEventListener('fetch', event => {
         return await cacheResponse(request, await fetch(request));
       } catch {
         return cached || new Response('Waydean сохранён для офлайн-просмотра после первого открытия.', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      }
-    }
-    if (url.pathname === '/drewo/family-tree.json') {
-      try {
-        return await cacheResponse(request, await fetch(request));
-      } catch {
-        return cached || new Response('Снимок древа ещё не сохранён для офлайн-просмотра.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });

@@ -1,5 +1,8 @@
 const TREE_MODES = new Set(['path', 'branch', 'all-tree']);
-const FAMILY_TREE_DIRS = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
+const FAMILY_TREE_DIRS = new Set([
+  'drewo', 'drewo-adam', 'drewo-covza', 'drewo-dada-yurt', 'drewo-eldarovy',
+  'drewo-guzat', 'drewo-reklama', 'drewo-shahiid-nek'
+]);
 
 export function initialPreviewView(state, { mobile = false } = {}) {
   const mode = TREE_MODES.has(state) ? state : 'all';

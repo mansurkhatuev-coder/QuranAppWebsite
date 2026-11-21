@@ -118,81 +118,6 @@
     return rtf.format(-Math.round(diffSec / 86400), 'day');
   }
 
-  function walkNodes(root) {
-    const out = [];
-    function visit(node) {
-      if (!node || typeof node !== 'object') return;
-      out.push(node);
-      const sons = Array.isArray(node.sons) ? node.sons : [];
-      sons.forEach(visit);
-    }
-    visit(root);
-    return out;
-  }
-
-  function analyzeTreeJson(data) {
-    const nodes = walkNodes(data);
-    let photos = 0;
-    let withYears = 0;
-    let withBio = 0;
-    let maxDepth = 0;
-
-    function depthWalk(node, depth) {
-      if (!node) return;
-      maxDepth = Math.max(maxDepth, depth);
-      const sons = Array.isArray(node.sons) ? node.sons : [];
-      sons.forEach((child) => depthWalk(child, depth + 1));
-    }
-    depthWalk(data, 1);
-
-    nodes.forEach((node) => {
-      if (node.photo) photos += 1;
-      if (node.born || node.died) withYears += 1;
-      if (node.bio || node.note) withBio += 1;
-    });
-
-    return {
-      people: nodes.length,
-      photos,
-      withYears,
-      withBio,
-      maxDepth,
-    };
-  }
-
-  function analyzeManifest(manifest) {
-    const items = Array.isArray(manifest?.items) ? manifest.items : [];
-    const withPeople = items.filter((item) => Number(item.personCount) > 0);
-    const latest = withPeople[0] || items[0] || null;
-    const previousDifferent = withPeople.find(
-      (item, index) => index > 0 && Number(item.personCount) !== Number(latest?.personCount)
-    );
-    const baseline = [...withPeople].reverse()[0] || null;
-    const personCount = Number(latest?.personCount) || 0;
-    const addedSinceBaseline =
-      baseline && personCount >= Number(baseline.personCount)
-        ? personCount - Number(baseline.personCount)
-        : null;
-    const addedSincePrevious =
-      previousDifferent && personCount >= Number(previousDifferent.personCount)
-        ? personCount - Number(previousDifferent.personCount)
-        : 0;
-
-    return {
-      backupCount: items.length,
-      lastSavedAt: latest?.savedAt || null,
-      manifestPeople: personCount,
-      addedSinceBaseline,
-      addedSincePrevious,
-    };
-  }
-
-  async function fetchJson(url) {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
-    return response.json();
-  }
-
   async function authHeaders() {
     const headers = {
       'Content-Type': 'application/json',
@@ -221,7 +146,9 @@
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `hub-overview ${response.status}`);
+      const error = new Error(err.error || `hub-overview ${response.status}`);
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   }
@@ -337,32 +264,19 @@
     return Array.from(byDir.values());
   }
 
-  async function loadLocalStats(meta) {
-    const base = meta.path;
-    const [treeResult, manifestResult] = await Promise.allSettled([
-      fetchJson(`${base}family-tree.json`),
-      fetchJson(`${base}backups/manifest.json`),
-    ]);
-
-    const treeStats =
-      treeResult.status === 'fulfilled' ? analyzeTreeJson(treeResult.value) : null;
-    const manifestStats =
-      manifestResult.status === 'fulfilled' ? analyzeManifest(manifestResult.value) : null;
-
-    const people = treeStats?.people ?? manifestStats?.manifestPeople ?? null;
-
+  async function loadLocalStats(meta, overview) {
     return {
       meta,
-      people,
-      photos: treeStats?.photos ?? null,
-      withYears: treeStats?.withYears ?? null,
-      withBio: treeStats?.withBio ?? null,
-      maxDepth: treeStats?.maxDepth ?? null,
-      backupCount: manifestStats?.backupCount ?? null,
-      lastSavedAt: manifestStats?.lastSavedAt ?? null,
-      addedSinceBaseline: manifestStats?.addedSinceBaseline ?? null,
-      addedSincePrevious: manifestStats?.addedSincePrevious ?? null,
-      treeOk: treeResult.status === 'fulfilled',
+      people: overview?.personCount ?? null,
+      photos: null,
+      withYears: null,
+      withBio: null,
+      maxDepth: null,
+      backupCount: overview?.backupCount ?? null,
+      lastSavedAt: overview?.lastSavedAt ?? null,
+      addedSinceBaseline: overview?.addedSinceBaseline ?? null,
+      addedSincePrevious: overview?.addedSincePrevious ?? null,
+      treeOk: Boolean(overview),
     };
   }
 
@@ -375,12 +289,15 @@
         overviewTrees = overview.trees;
         overview.trees.forEach((row) => overviewByDir.set(row.treeDir, row));
       }
-    } catch {
+    } catch (error) {
+      if ([401, 403, 503].includes(error?.status)) throw error;
       overviewByDir = new Map();
     }
 
     const metas = mergeTreeMetas(overviewTrees);
-    const locals = await Promise.all(metas.map((meta) => loadLocalStats(meta)));
+    const locals = await Promise.all(
+      metas.map((meta) => loadLocalStats(meta, overviewByDir.get(meta.dir) || null))
+    );
 
     return Promise.all(
       locals.map(async (local) => {
@@ -636,6 +553,13 @@
       $('#updated-at').textContent = `Обновлено в ${stamp}`;
       if (status) status.textContent = 'Данные с сайта и live-статуса. Старые ссылки /drewo/ не менялись.';
     } catch (error) {
+      if ([401, 403, 503].includes(error?.status)) {
+        renderCards([]);
+        $('#sum-people').textContent = '—';
+        $('#sum-added').textContent = '—';
+        credentials = [];
+        renderCredentials();
+      }
       if (status) {
         status.textContent =
           error instanceof Error ? error.message : 'Не удалось обновить данные';
