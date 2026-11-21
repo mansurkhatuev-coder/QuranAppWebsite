@@ -46,6 +46,35 @@ test('all legacy family viewers use server-authenticated loading instead of stat
     assert.match(html, /function loadAuthenticatedFamilyTree\(\)[\s\S]*?applyRemoteTreeData\(remoteData\.tree, remoteData\.activityJson\)/);
     assert.match(html, /return hasSession \? loadAuthenticatedFamilyTree\(\) : false/);
     assert.match(html, /function expireNekSession\(\)[\s\S]*?setViewLocked\(true\)/);
+    const helperStart = html.indexOf('function expireNekSession()');
+    const helperEnd = html.indexOf('\n      function applyRemoteTreeData', helperStart);
+    assert.ok(helperStart >= 0 && helperEnd > helperStart, `${directory} authenticated loader boundaries exist`);
+    const createLoader = new Function(
+      'fetchRemoteTree', 'applyRemoteTreeData', 'clearNekToken', 'rememberSession', 'setViewLocked',
+      `let nekSessionActive = true; ${html.slice(helperStart, helperEnd)}; return { loadAuthenticatedFamilyTree, active: () => nekSessionActive };`
+    );
+    const applied = [];
+    const expirations = [];
+    const validLoader = createLoader(
+      () => Promise.resolve({ tree: { id: 'synthetic-tree' }, activityJson: '[]' }),
+      (...args) => applied.push(args),
+      () => expirations.push('token'),
+      (...args) => expirations.push(['session', ...args]),
+      value => expirations.push(['locked', value])
+    );
+    assert.equal(await validLoader.loadAuthenticatedFamilyTree(), true);
+    assert.equal(validLoader.active(), true);
+    assert.deepEqual(applied, [[{ id: 'synthetic-tree' }, '[]']]);
+
+    const invalidLoader = createLoader(
+      () => Promise.resolve(null), () => assert.fail('must not apply an invalid tree'),
+      () => expirations.push('token'),
+      (...args) => expirations.push(['session', ...args]),
+      value => expirations.push(['locked', value])
+    );
+    assert.equal(await invalidLoader.loadAuthenticatedFamilyTree(), false);
+    assert.equal(invalidLoader.active(), false);
+    assert.deepEqual(expirations.slice(-3), ['token', ['session', '', null], ['locked', true]]);
     const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
     for (const [, attributes, body] of scripts) {
       if (/\btype\s*=\s*(["'])application\/(?:json|ld\+json)\1/i.test(attributes)) continue;
