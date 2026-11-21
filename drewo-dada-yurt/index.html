@@ -5126,11 +5126,8 @@
           storeNekToken(token);
           return applyNekSession().then(function (ok) {
             if (!ok) throw new Error('Не удалось открыть древо. Попробуйте ещё раз.');
-            return fetchRemoteTree().then(function (remoteData) {
-              if (!remoteData || !remoteData.tree || !remoteData.tree.id) {
-                throw new Error('Не удалось загрузить защищённые данные древа.');
-              }
-              applyRemoteTreeData(remoteData.tree, remoteData.activityJson);
+            return loadAuthenticatedFamilyTree().then(function (loaded) {
+              if (!loaded) throw new Error('Не удалось загрузить защищённые данные древа.');
               return 'ok';
             });
           });
@@ -6695,6 +6692,30 @@
           })
           .catch(function () {
             return null;
+          });
+      }
+
+
+      function expireNekSession() {
+        clearNekToken();
+        nekSessionActive = false;
+        rememberSession('', null);
+        setViewLocked(true);
+      }
+
+      function loadAuthenticatedFamilyTree() {
+        return fetchRemoteTree()
+          .then(function (remoteData) {
+            if (!remoteData || !remoteData.tree || !remoteData.tree.id) {
+              expireNekSession();
+              return false;
+            }
+            applyRemoteTreeData(remoteData.tree, remoteData.activityJson);
+            return true;
+          })
+          .catch(function () {
+            expireNekSession();
+            return false;
           });
       }
 
@@ -9811,6 +9832,8 @@
         return hydratePendingPhotos();
       }).then(function () {
         return applyNekSession();
+      }).then(function (hasSession) {
+        return hasSession ? loadAuthenticatedFamilyTree() : false;
       }).then(function () {
         finishBoot();
       }).catch(function () {
@@ -9819,6 +9842,9 @@
           .then(hydratePendingPhotos)
           .catch(function () {})
           .then(applyNekSession)
+          .then(function (hasSession) {
+            return hasSession ? loadAuthenticatedFamilyTree() : false;
+          })
           .finally(finishBoot);
       });
     })();
