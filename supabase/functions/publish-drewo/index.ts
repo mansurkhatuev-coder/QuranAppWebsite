@@ -9,6 +9,7 @@ import {
 } from './waydean-admin-actions.ts';
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 import { familyPublishGuardError } from './family-publish-guard.ts';
+import { corsHeaders, jsonResponse } from './http.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -68,22 +69,6 @@ import {
   type VaultEntry,
   type VaultMap,
 } from './vault.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-function jsonResponse(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    },
-  });
-}
 
 function normalizePassword(value: unknown) {
   return String(value ?? '')
@@ -1258,6 +1243,8 @@ Deno.serve(async (request) => {
 
     /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
     if (action === 'hub-overview') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
       const trees = await Promise.all(
         allowedDirs.map(async (dir) => {
           const meta = registryEntryFor(registry, dir) || {
@@ -1877,6 +1864,38 @@ Deno.serve(async (request) => {
         fingerprint,
         locked: lock.locked,
         lockedReason: lock.lockedReason,
+      });
+    }
+
+    if (action === 'photo-load') {
+      const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
+      const variant = body.variant === 'thumbnail' ? 'thumbnail' : body.variant === 'full' ? 'full' : '';
+      if (!/^[A-Za-z0-9_-]{1,80}$/.test(personId) || !variant) {
+        return jsonResponse({ ok: false, error: 'Некорректный запрос фотографии.' }, 400);
+      }
+
+      const suffix = variant === 'thumbnail' ? '-thumb' : '';
+      const photoPath = `${treeDir}/photos/${personId}${suffix}.jpg`;
+      const { ok, status, json } = await githubJson(
+        githubToken,
+        `https://api.github.com/repos/${githubRepo}/contents/${photoPath}`
+      );
+      if (status === 404) return jsonResponse({ ok: false, error: 'Фотография не найдена.' }, 404);
+      if (!ok) return jsonResponse({ ok: false, error: 'Не удалось загрузить фотографию.' }, 502);
+      const content = typeof json.content === 'string' ? json.content.replace(/\s/g, '') : '';
+      const byteLength = Number(json.size);
+      if (json.type !== 'file' || json.encoding !== 'base64' || !content
+        || !Number.isFinite(byteLength) || byteLength < 1 || byteLength > 900_000
+        || content.length > 1_200_000 || !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(content)) {
+        return jsonResponse({ ok: false, error: 'Файл фотографии не прошёл проверку.' }, 422);
+      }
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        personId,
+        variant,
+        contentType: 'image/jpeg',
+        contentBase64: content,
       });
     }
 

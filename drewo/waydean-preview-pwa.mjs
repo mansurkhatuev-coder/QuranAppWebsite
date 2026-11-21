@@ -81,9 +81,8 @@ export function createWaydeanPwaController(onChange = () => {}, {
     if (!state.serviceWorkerReady || !('caches' in window)) return;
     try {
       const cache = await caches.open(CACHE_NAME);
-      const page = familyAppUrl();
-      const tree = new URL(`../${activeTreeDir()}/family-tree.json`, location.href).href;
-      state.offlineReady = Boolean(await cache.match(page, { ignoreSearch: true }) && await cache.match(tree, { ignoreSearch: true }));
+      const page = new URL(location.href);
+      state.offlineReady = !familyApp && Boolean(await cache.match(page, { ignoreSearch: true }));
     } catch {
       state.offlineReady = false;
     }

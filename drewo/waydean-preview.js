@@ -40,7 +40,6 @@ import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSessio
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
-const PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
 const FIXTURE_PHOTOS = new Map([
   ['demo-01', '../docs/design/waydean/assets/demo/waydean-demo-elder-portrait.jpg'],
   ['demo-03', '../docs/design/waydean/assets/demo/waydean-demo-middle-aged-portrait.jpg']
@@ -133,6 +132,8 @@ let pwaController = null;
 let pwaPushAction = 'subscribe';
 const localPhotoUrls = new Map();
 const localPhotoFullUrls = new Map();
+const remoteFamilyPhotoUrls = new Map();
+const remoteFamilyPhotoRequests = new Map();
 const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
@@ -319,9 +320,10 @@ function photoSource(person) {
   if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
     return localPhotoUrls.get(person.id) || null;
   }
-  return person.hasPhoto
-    ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(String(person.photoKey || '1'))}`
-    : null;
+  if (person.hasPhoto && familyPreview && familySessionTokenMemory) {
+    return remoteFamilyPhotoUrls.get(`${activeTreeDir}:${person.id}:thumbnail`) || null;
+  }
+  return null;
 }
 
 function fullPhotoSource(person) {
@@ -330,9 +332,39 @@ function fullPhotoSource(person) {
   if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
     return localPhotoFullUrls.get(person.id) || null;
   }
-  return person.hasPhoto
-    ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`
-    : null;
+  if (person.hasPhoto && familyPreview && familySessionTokenMemory) {
+    return remoteFamilyPhotoUrls.get(`${activeTreeDir}:${person.id}:full`) || null;
+  }
+  return null;
+}
+
+function loadPrivateFamilyPhoto(personId, variant = 'thumbnail') {
+  const id = String(personId || '').trim();
+  if (!familyPreview || !familySessionTokenMemory || !/^[A-Za-z0-9_-]{1,80}$/.test(id)) return Promise.resolve(null);
+  if (variant !== 'thumbnail' && variant !== 'full') return Promise.resolve(null);
+  const key = `${activeTreeDir}:${id}:${variant}`;
+  if (remoteFamilyPhotoUrls.has(key)) return Promise.resolve(remoteFamilyPhotoUrls.get(key));
+  if (remoteFamilyPhotoRequests.has(key)) return remoteFamilyPhotoRequests.get(key);
+
+  const request = callFamilyTreeAction('photo-load', { personId: id, variant }, {
+    endpoint: familyEndpoint(), treeDir: activeTreeDir, sessionToken: familySessionTokenMemory
+  }).then(result => {
+    if (result.contentType !== 'image/jpeg' || typeof result.contentBase64 !== 'string') return null;
+    const binary = atob(result.contentBase64);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    const url = URL.createObjectURL(new Blob([bytes], { type: 'image/jpeg' }));
+    remoteFamilyPhotoUrls.set(key, url);
+    return url;
+  }).catch(() => null).finally(() => remoteFamilyPhotoRequests.delete(key));
+  remoteFamilyPhotoRequests.set(key, request);
+  return request;
+}
+
+function clearRemoteFamilyPhotoCache() {
+  for (const url of remoteFamilyPhotoUrls.values()) URL.revokeObjectURL(url);
+  remoteFamilyPhotoUrls.clear();
+  remoteFamilyPhotoRequests.clear();
 }
 
 function jpegFallbackSource(source) {
@@ -356,28 +388,35 @@ async function restoreLocalPhotoUrls() {
 }
 
 function hasDisplayPhoto(person) {
-  return Boolean(photoSource(person));
+  return Boolean(photoSource(person) || (familyPreview && familySessionTokenMemory && person?.hasPhoto));
 }
 
 function openPhotoLightbox(person) {
   if (!person || !ui.photoLightbox || !ui.photoLightboxImage) return;
   const source = fullPhotoSource(person);
-  if (!source) return;
+  const requiresPrivateLoad = !source && familyPreview && person.hasPhoto && Boolean(familySessionTokenMemory);
+  if (!source && !requiresPrivateLoad) return;
   ui.photoLightboxTitle.textContent = person.name || 'Фото';
   ui.photoLightboxImage.alt = `Полное фото: ${person.name || 'человек'}`;
   ui.photoLightboxStatus.textContent = '';
   ui.photoLightboxImage.dataset.photoFallback = '';
   ui.photoLightboxImage.onerror = () => {
-    if (ui.photoLightboxImage.dataset.photoFallback === 'remote'
-      || source.startsWith('blob:') || syntheticFixture) {
-      ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
-      return;
-    }
-    ui.photoLightboxImage.dataset.photoFallback = 'remote';
-    ui.photoLightboxImage.src = `${PHOTO_FALLBACK_BASE}/${encodeURIComponent(activeTreeDir)}/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`;
+    ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
   };
-  ui.photoLightboxImage.src = source;
   if (!ui.photoLightbox.open) ui.photoLightbox.showModal();
+  if (source) {
+    ui.photoLightboxImage.src = source;
+  } else {
+    ui.photoLightboxStatus.textContent = 'Загружаем фотографию…';
+    loadPrivateFamilyPhoto(person.id, 'full').then(url => {
+      if (!url || !ui.photoLightbox.open || ui.photoLightboxImage.alt !== `Полное фото: ${person.name || 'человек'}`) {
+        if (!url && ui.photoLightbox.open) ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
+        return;
+      }
+      ui.photoLightboxStatus.textContent = '';
+      ui.photoLightboxImage.src = url;
+    });
+  }
 }
 
 function closePhotoLightbox() {
@@ -713,15 +752,18 @@ function clearSelfPerson() {
 function createAvatar(person, className = 'avatar') {
   const src = photoSource(person);
   const fallbackSrc = jpegFallbackSource(src);
+  const loadRemote = !src && familyPreview && familySessionTokenMemory && person?.hasPhoto;
   const wrapper = document.createElement('span');
   wrapper.className = `${className} ${src ? 'has-photo' : 'is-empty'}`;
   wrapper.setAttribute('aria-hidden', 'true');
-  if (src) {
+  if (src || loadRemote) {
+    if (!src) wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
     const image = document.createElement('img');
     image.alt = '';
     image.loading = 'lazy';
     image.decoding = 'async';
-    image.src = src;
+    image.hidden = !src;
+    if (src) image.src = src;
     image.addEventListener('error', () => {
       if (fallbackSrc && image.dataset.photoFallback !== 'jpeg') {
         image.dataset.photoFallback = 'jpeg';
@@ -734,6 +776,16 @@ function createAvatar(person, className = 'avatar') {
       wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
     });
     wrapper.append(image);
+    if (loadRemote) {
+      loadPrivateFamilyPhoto(person.id, 'thumbnail').then(url => {
+        if (!url || !image.isConnected) return;
+        wrapper.querySelector('svg')?.remove();
+        wrapper.classList.remove('is-empty');
+        wrapper.classList.add('has-photo');
+        image.hidden = false;
+        image.src = url;
+      });
+    }
   } else {
     wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
   }
@@ -3850,6 +3902,7 @@ function bindWaydeanFamilyLogin() {
     logout.dataset.bound = 'true';
     logout.addEventListener('click', () => {
       familySessionTokenMemory = '';
+      clearRemoteFamilyPhotoCache();
       familySessionRole = '';
       familySessionLocked = false;
       familySessionLockReason = '';
@@ -4083,7 +4136,7 @@ async function initialize() {
       ? '../docs/design/waydean/fixtures/master-tree.json'
       : demoMode && !familyPreview
         ? '../drewo-reklama/family-tree.json'
-        : `../${activeTreeDir}/family-tree.json`;
+        : null;
     setLoadingText('Загружаем данные рода');
     let root;
     if (accountPreview) {
@@ -4125,6 +4178,9 @@ async function initialize() {
         accountBaseActivityJson = accountServerActivityJson;
       }
     } else {
+      if (!dataUrl) {
+        throw new Error('Для семейного древа требуется действующий вход. Войдите снова и повторите попытку.');
+      }
       const response = await fetch(dataUrl, { cache: 'no-cache' });
       if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
       root = await response.json();
@@ -4135,7 +4191,7 @@ async function initialize() {
       originalFixtureRoot = cloneTree(root);
       fixtureRoot = cloneTree(root);
     } else if (localTreeDraft) {
-      localDraftKey = new URL(dataUrl, location.href).pathname
+      localDraftKey = (dataUrl ? new URL(dataUrl, location.href).pathname : `/family/${activeTreeDir}`)
         + `::${activeTreeDir}`
         + (accountPreview ? '::admin-account' : familyPreview ? '::family-session' : '');
       sourceFixtureRoot = cloneTree(root);

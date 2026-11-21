@@ -1,11 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
 import { flattenTree, getCardWidthForName } from './waydean-preview-model.mjs';
 import * as model from './waydean-preview-model.mjs';
-
-const familyTreePath = fileURLToPath(new URL('./family-tree.json', import.meta.url));
 
 test('flattens parent links, generations, dates, photo flags, and child counts', () => {
   const flat = flattenTree({
@@ -65,11 +61,17 @@ test('expands a person card to fit the full name while keeping short names at th
   assert.equal(getCardWidthForName('Сын', options), 154);
 });
 
-test('loads the current local family dataset without exposing records in test output', async () => {
-  const root = JSON.parse(await readFile(familyTreePath, 'utf8'));
-  const flat = flattenTree(root);
-  assert.equal(flat.length, 162);
-  assert.equal(Math.max(...flat.map(person => person.generation)), 19);
+test('flattens a synthetic family fixture without reading production family data', () => {
+  const flat = flattenTree({
+    id: 'fixture-root', name: 'Тестовый корень', born: 1800, sons: [
+      { id: 'fixture-child-a', name: 'Тестовый потомок А', photo: 'synthetic-v1', sons: [
+        { id: 'fixture-grandchild', name: 'Тестовый внук', sons: [] }
+      ] },
+      { id: 'fixture-child-b', name: 'Тестовый потомок Б', sons: [] }
+    ]
+  });
+  assert.equal(flat.length, 4);
+  assert.equal(Math.max(...flat.map(person => person.generation)), 3);
   assert.equal(flat.filter(person => person.hasPhoto).length, 1);
-  assert.equal(new Set(flat.map(person => person.id)).size, 162);
+  assert.equal(new Set(flat.map(person => person.id)).size, 4);
 });
