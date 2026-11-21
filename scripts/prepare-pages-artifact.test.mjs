@@ -89,3 +89,13 @@ test('the legacy trees cabinet reads only server-generated aggregates', async ()
   assert.match(cabinet, /overview\?\.personCount/);
   assert.doesNotThrow(() => new Function(cabinet));
 });
+
+test('every GitHub Pages publisher builds and uploads the same sanitized artifact', async () => {
+  for (const workflow of ['deploy.yml', 'deploy-pages-keepalive.yml']) {
+    const source = await readFile(new URL(`../.github/workflows/${workflow}`, import.meta.url), 'utf8');
+    assert.match(source, /node scripts\/prepare-pages-artifact\.mjs/);
+    assert.match(source, /path: dist\/pages/);
+    assert.match(source, /scripts\/legacy-route-transitions\.test\.mjs/);
+    assert.doesNotMatch(source, /path: \.\s*$/m);
+  }
+});

@@ -35,7 +35,7 @@ jobs:
           node-version: '22'
 
       - name: Verify public artifact builder
-        run: node --test scripts/prepare-pages-artifact.test.mjs
+        run: node --test scripts/prepare-pages-artifact.test.mjs scripts/legacy-route-transitions.test.mjs
 
       # Build a separate public tree. Private family JSON, access files, backups
       # and embedded family/activity payloads stay in the source repository only.
