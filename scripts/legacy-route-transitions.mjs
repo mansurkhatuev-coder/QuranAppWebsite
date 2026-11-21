@@ -2,7 +2,7 @@ import { lstat, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 
 const familyKeys = new Set([
-  'drewo', 'drewo-adam', 'drewo-covza', 'drewo-dada-yurt', 'drewo-guzat', 'drewo-shahiid-nek'
+  'drewo', 'drewo-adam', 'drewo-covza', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-shahiid-nek'
 ]);
 const uuidPattern = /^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/;
 
@@ -33,6 +33,9 @@ export async function applyLegacyRouteTransitions(artifactRoot, manifest) {
     throw new Error('Маршруты можно менять только в проверенном dist/pages-артефакте.');
   }
   const origin = originOf(manifest?.origin);
+  if (manifest.replaceNekLanding !== undefined && typeof manifest.replaceNekLanding !== 'boolean') {
+    throw new TypeError('Для замены главной страницы Некъ требуется логическое значение.');
+  }
   if (!Array.isArray(manifest.routes) || manifest.routes.length > familyKeys.size) {
     throw new TypeError('Список маршрутов имеет неверный формат.');
   }
@@ -57,6 +60,15 @@ export async function applyLegacyRouteTransitions(artifactRoot, manifest) {
     await mkdir(directory, { recursive: true });
     await writeFile(join(directory, 'index.html'), html, { flag: 'wx' });
     applied.push(route.directory);
+  }
+  if (manifest.replaceNekLanding) {
+    const entry = join(root, 'nek', 'index.html');
+    const info = await lstat(entry);
+    if (!info.isFile() || info.isSymbolicLink()) throw new Error('В артефакте отсутствует страница Некъ.');
+    const html = await readFile(entry, 'utf8');
+    const marker = '<!-- drewo-atlas-transition -->';
+    if (html.split(marker).length !== 2) throw new Error('В странице Некъ требуется одна точка перехода на Атлас.');
+    await writeFile(entry, html.replace(marker, `<meta name="drewo-atlas-transition" content="${origin}/atlas/">`));
   }
   return applied;
 }

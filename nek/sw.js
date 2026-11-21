@@ -1,11 +1,11 @@
 /* Некъ PWA — network-first shell for offline reopen. */
-const CACHE = 'waydean-nek-v6';
+const CACHE = 'waydean-nek-v7';
 const PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
-  './nek.css?v=8',
-  './nek.js?v=9',
+  './nek.css?v=9',
+  './nek.js?v=11',
   './icon-192.png',
   './icon-512.png',
   './apple-touch-icon.png',
@@ -25,7 +25,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
+        Promise.all(keys.filter((key) => key.startsWith('waydean-nek-') && key !== CACHE).map((key) => caches.delete(key)))
       )
       .then(() => self.clients.claim())
   );
@@ -36,14 +36,12 @@ self.addEventListener('fetch', (event) => {
   if (request.method !== 'GET') return;
 
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/')) return;
-  if (url.pathname.includes('/functions/v1/')) return;
+  if (url.origin !== self.location.origin || !url.pathname.startsWith('/nek/')) return;
 
   event.respondWith(
     fetch(request)
       .then((response) => {
-        if (response.ok && url.pathname.includes('/nek/')) {
+        if (response.ok && (request.mode !== 'navigate' || !url.search)) {
           const copy = response.clone();
           void caches.open(CACHE).then((cache) => cache.put(request, copy));
         }

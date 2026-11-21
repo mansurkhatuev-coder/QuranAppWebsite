@@ -1,4 +1,10 @@
 (function initNek() {
+  const atlas = document.querySelector('meta[name="drewo-atlas-transition"]')?.content;
+  if (atlas && !window.location.search && !window.location.hash) {
+    window.location.replace(atlas);
+    return;
+  }
+
   const RECENT_KEY = 'nek:lastTree';
   const REMEMBER_KEY = 'nek:remember';
   const PWA_DISMISS_KEY = 'nek:pwaDismissed';
@@ -131,14 +137,9 @@
   }
 
   function treePathOf(data) {
-    const raw = String(data.path || '').trim() || '/' + String(data.treeDir || '') + '/';
-    try {
-      const url = new URL(raw, window.location.origin);
-      if (url.origin !== window.location.origin) return '';
-      return url.pathname;
-    } catch (err) {
-      return '';
-    }
+    if (typeof data.treeDir !== 'string' || !/^drewo(?:-[a-z0-9][a-z0-9-]{0,58})?$/.test(data.treeDir)) return '';
+    const path = `/${data.treeDir}/`;
+    return data.path == null || data.path === path ? path : '';
   }
 
   /** Returns false when the answer is unusable, so the caller can re-enable the form. */
@@ -147,19 +148,26 @@
     const token = String(data.sessionToken || '');
     if (!path || !token) return false;
 
+    try {
+      window.sessionStorage.setItem(`nek-session:${data.treeDir}`, token);
+    } catch {
+      setBusy(false);
+      showError('Разрешите этому сайту сохранять сессию в браузере и попробуйте снова.');
+      return true;
+    }
+
     saveRemembered(rememberInput?.checked ? normalizeLogin(data.login || loginInput?.value) : '');
     if (typeof window.NekRemember === 'function') {
       window.NekRemember(path, String(data.title || ''));
     }
 
-    const target = path + '?nek=' + encodeURIComponent(token);
     if (reducedMotion()) {
-      window.location.assign(target);
+      window.location.assign(path);
       return true;
     }
     loginPanel?.classList.add('is-done');
     stage?.classList.add('is-done');
-    window.setTimeout(() => window.location.assign(target), 400);
+    window.setTimeout(() => window.location.assign(path), 400);
     return true;
   }
 
