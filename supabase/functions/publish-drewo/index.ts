@@ -9,6 +9,7 @@ import {
 } from './waydean-admin-actions.ts';
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 import { familyPublishGuardError } from './family-publish-guard.ts';
+import { corsHeaders, jsonResponse } from './http.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -68,22 +69,6 @@ import {
   type VaultEntry,
   type VaultMap,
 } from './vault.ts';
-
-const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-};
-
-function jsonResponse(body: Record<string, unknown>, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: {
-      ...corsHeaders,
-      'Content-Type': 'application/json',
-    },
-  });
-}
 
 function normalizePassword(value: unknown) {
   return String(value ?? '')
