@@ -27,7 +27,10 @@
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
-      var dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
+      var dirs = new Set([
+        'drewo', 'drewo-adam', 'drewo-covza', 'drewo-dada-yurt', 'drewo-eldarovy',
+        'drewo-guzat', 'drewo-reklama', 'drewo-shahiid-nek'
+      ]);
       var treeDir = String(params.get('tree') || '').trim().toLowerCase();
       var family = params.get('source') !== 'account'
         && (params.get('source') === 'family' || params.has('nek') || params.has('invite'));

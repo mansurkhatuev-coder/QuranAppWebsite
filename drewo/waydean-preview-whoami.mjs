@@ -1,8 +1,10 @@
 const FAMILY_TREE_KEYS = new Set([
   'drewo-adam',
+  'drewo-covza',
   'drewo-dada-yurt',
   'drewo-eldarovy',
   'drewo-guzat',
+  'drewo-shahiid-nek',
   'drewo-reklama'
 ]);
 

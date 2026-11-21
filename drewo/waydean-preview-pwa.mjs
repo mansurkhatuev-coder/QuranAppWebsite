@@ -10,7 +10,10 @@ function isInstalled() {
 }
 
 function activeTreeDir() {
-  const dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
+  const dirs = new Set([
+    'drewo', 'drewo-adam', 'drewo-covza', 'drewo-dada-yurt', 'drewo-eldarovy',
+    'drewo-guzat', 'drewo-reklama', 'drewo-shahiid-nek'
+  ]);
   const params = new URLSearchParams(location.search);
   const requested = String(params.get('tree') || '').trim().toLowerCase();
   if (dirs.has(requested)) return requested;
