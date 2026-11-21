@@ -1,4 +1,4 @@
-const CACHE_NAME = 'waydean-preview-shell-v73';
+const CACHE_NAME = 'waydean-preview-shell-v74';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');

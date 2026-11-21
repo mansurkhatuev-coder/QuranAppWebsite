@@ -19,8 +19,15 @@ test('Pages build transitions only explicit family routes and removes their old 
   await mkdir(join(source, 'scripts'), { recursive: true });
   await writeFile(join(source, 'drewo', 'index.html'), '<main>Old family</main>');
   await writeFile(join(source, 'drewo', 'viewer.js'), 'old private viewer');
+  await writeFile(join(source, 'drewo', 'legacy.html'), '<main>Old family archive</main>');
+  await writeFile(join(source, 'drewo', 'waydean-preview.js'), 'shared viewer');
+  await writeFile(join(source, 'drewo', 'waydean-preview-bundle.css'), 'shared style');
+  await writeFile(join(source, 'drewo', 'waydean-preview-unknown.mjs'), 'unapproved module');
+  await writeFile(join(source, 'drewo', 'waydean-preview.html'),
+    await readFile(new URL('../drewo/waydean-preview.html', import.meta.url)));
   await writeFile(join(source, 'drewo-guzat', 'index.html'), '<main>Old family</main>');
-  await writeFile(join(source, 'drewo-eldarovy', 'index.html'), '<main>Existing viewer</main>');
+  const sibling = '<link rel="stylesheet" href="../drewo/waydean-preview-bundle.css"><script src="../drewo/waydean-preview.js"></script>';
+  await writeFile(join(source, 'drewo-eldarovy', 'index.html'), sibling);
   await writeFile(join(source, 'scripts', 'legacy-transitions.json'), '{"routes":["internal registry"]}');
 
   await preparePagesArtifact(source, artifact, { transitionManifest: {
@@ -35,11 +42,42 @@ test('Pages build transitions only explicit family routes and removes their old 
   const moved = await readFile(join(artifact, 'drewo', 'index.html'), 'utf8');
   assert.match(moved, /https:\/\/trees\.example\.test\/t\/123e4567-e89b-12d3-a456-426614174000\//);
   assert.doesNotMatch(moved, /Old family|tree-data|\?nek|<script/i);
+  assert.equal(await readFile(join(artifact, 'drewo', 'legacy.html'), 'utf8'), moved);
   await assert.rejects(readFile(join(artifact, 'drewo', 'viewer.js')));
+  await assert.rejects(readFile(join(artifact, 'drewo', 'waydean-preview-unknown.mjs')));
+  assert.equal(await readFile(join(artifact, 'drewo', 'waydean-preview.js'), 'utf8'), 'shared viewer');
+  assert.equal(await readFile(join(artifact, 'drewo', 'waydean-preview-bundle.css'), 'utf8'), 'shared style');
+  const preview = await readFile(join(artifact, 'drewo', 'waydean-preview.html'), 'utf8');
+  const retired = preview.match(/<meta name="waydean-retired-families" content="([^"]+)">/)?.[1];
+  assert.equal(retired, 'drewo,drewo-guzat');
+  const guard = [...preview.matchAll(/<script>([\s\S]*?)<\/script>/g)]
+    .find(([, source]) => source.includes('waydean-retired-families'))?.[1];
+  assert.ok(guard);
+  const visitPreview = query => {
+    const url = new URL(`https://old.example.test/drewo/waydean-preview.html${query}`);
+    const redirects = [];
+    const dataset = {};
+    runInNewContext(guard, {
+      URL, URLSearchParams,
+      document: {
+        documentElement: { dataset },
+        querySelector: selector => selector.includes('waydean-retired-families') ? { content: retired } : null
+      },
+      window: { location: { href: url.href, search: url.search, replace: value => redirects.push(value) } }
+    });
+    return { redirects, dataset };
+  };
+  assert.deepEqual(visitPreview('?source=family&nek=fixture#branch'), {
+    redirects: ['https://old.example.test/drewo/'], dataset: { familyTransition: 'true' }
+  });
+  assert.deepEqual(visitPreview('?source=family&tree=drewo-guzat&invite=fixture').redirects, ['https://old.example.test/drewo-guzat/']);
+  assert.deepEqual(visitPreview('?source=family&tree=drewo-eldarovy').redirects, []);
+  assert.deepEqual(visitPreview('?source=family&tree=drewo-reklama').redirects, []);
+  assert.deepEqual(visitPreview('?source=account&tree=drewo').redirects, []);
   const transferring = await readFile(join(artifact, 'drewo-guzat', 'index.html'), 'utf8');
   assert.match(transferring, /Древо переносится/);
   assert.deepEqual(await readdir(join(artifact, 'drewo-guzat')), ['index.html']);
-  assert.equal(await readFile(join(artifact, 'drewo-eldarovy', 'index.html'), 'utf8'), '<main>Existing viewer</main>');
+  assert.equal(await readFile(join(artifact, 'drewo-eldarovy', 'index.html'), 'utf8'), sibling);
   await assert.rejects(readFile(join(artifact, 'scripts', 'legacy-transitions.json')));
 });
 

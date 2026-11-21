@@ -23,11 +23,21 @@
   </script>
   <title>Waydean — семейное древо</title>
   <link rel="manifest" href="./waydean-preview.webmanifest">
+  <!-- waydean-retired-families -->
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
       var dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
       var treeDir = String(params.get('tree') || '').trim().toLowerCase();
+      var family = params.get('source') !== 'account'
+        && (params.get('source') === 'family' || params.has('nek') || params.has('invite'));
+      var retired = document.querySelector('meta[name="waydean-retired-families"]');
+      var familyDir = dirs.has(treeDir) ? treeDir : 'drewo';
+      if (family && retired?.content.split(',').includes(familyDir)) {
+        document.documentElement.dataset.familyTransition = 'true';
+        window.location.replace(new URL('../' + familyDir + '/', window.location.href).href);
+        return;
+      }
       if (dirs.has(treeDir) && (params.get('source') === 'family' || params.has('nek') || params.has('invite'))) {
         var manifest = document.querySelector('link[rel="manifest"]');
         if (manifest) manifest.href = '../' + treeDir + '/manifest.webmanifest';
@@ -399,7 +409,8 @@
   <script src="../assets/drewo-billing.js?v=1"></script>
   <script src="../assets/drewo-billing-banner.js?v=2"></script>
   <script type="module">
-    if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
+    if (!document.documentElement.dataset.familyTransition
+        && !['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
           import('./waydean-preview.js?v=private-pages-1');
     }
   </script>
