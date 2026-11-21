@@ -43,6 +43,9 @@ test('all legacy family viewers use server-authenticated loading instead of stat
     assert.doesNotMatch(html, /fetch\(['"]access\.json/);
     assert.match(html, /action: 'family-load', treeDir: TREE_DIR/);
     assert.match(html, /action: 'status', treeDir: TREE_DIR/);
+    assert.match(html, /function loadAuthenticatedFamilyTree\(\)[\s\S]*?applyRemoteTreeData\(remoteData\.tree, remoteData\.activityJson\)/);
+    assert.match(html, /return hasSession \? loadAuthenticatedFamilyTree\(\) : false/);
+    assert.match(html, /function expireNekSession\(\)[\s\S]*?setViewLocked\(true\)/);
     const scripts = [...html.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)];
     for (const [, attributes, body] of scripts) {
       if (/\btype\s*=\s*(["'])application\/(?:json|ld\+json)\1/i.test(attributes)) continue;
