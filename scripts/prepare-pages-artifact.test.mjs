@@ -99,3 +99,11 @@ test('every GitHub Pages publisher builds and uploads the same sanitized artifac
     assert.doesNotMatch(source, /path: \.\s*$/m);
   }
 });
+
+test('Edge Function deploy workflow only publishes code and never changes auth or project secrets', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/deploy-supabase-publish-drewo.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /supabase functions deploy publish-drewo/);
+  assert.match(workflow, /SUPABASE_ACCESS_TOKEN/);
+  assert.doesNotMatch(workflow, /supabase secrets (?:set|unset)/i);
+  assert.doesNotMatch(workflow, /DREWO_PASSWORD|WEBSITE_PUBLISH_TOKEN|DREWO_HUB_EMAILS|GITHUB_TOKEN/);
+});
