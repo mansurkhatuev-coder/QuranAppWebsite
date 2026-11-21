@@ -1,4 +1,4 @@
-const CACHE_NAME = 'waydean-preview-shell-v64';
+const CACHE_NAME = 'waydean-preview-shell-v73';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');
@@ -78,11 +78,12 @@ export function createWaydeanPwaController(onChange = () => {}, {
   };
 
   async function refreshOfflineState() {
-    if (!state.serviceWorkerReady || !('caches' in window)) return;
+    if (familyApp || !state.serviceWorkerReady || !('caches' in window)) return;
     try {
+      if (!(await caches.has(CACHE_NAME))) return;
       const cache = await caches.open(CACHE_NAME);
       const page = new URL(location.href);
-      state.offlineReady = !familyApp && Boolean(await cache.match(page, { ignoreSearch: true }));
+      state.offlineReady = Boolean(await cache.match(page, { ignoreSearch: true }));
     } catch {
       state.offlineReady = false;
     }

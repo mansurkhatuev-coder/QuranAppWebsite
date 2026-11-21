@@ -47,15 +47,22 @@ test('family entry points use authenticated loading and the PWA does not cache p
   const preview = await readFile(new URL('../drewo/waydean-preview.js', import.meta.url), 'utf8');
   assert.match(preview, /callFamilyTreeAction\('family-load'/);
   assert.doesNotMatch(preview, /`\.\.\/\$\{activeTreeDir\}\/family-tree\.json`/);
+  assert.doesNotMatch(preview, /drewo-reklama\/family-tree\.json/);
+  assert.match(preview, /demoMode && !familyPreview\)\s*\? '\.\.\/docs\/design\/waydean\/fixtures\/master-tree\.json'/);
   for (const directory of directories) {
     const html = await readFile(new URL(`${directory}/index.html`, root), 'utf8');
     assert.doesNotMatch(html, /fetch\(['"](?:family-tree|access)\.json/);
-    if (html.includes(`tree=${directory}`)) assert.match(html, /waydean-preview\.js/);
+    if (html.includes(`tree=${directory}`)) assert.match(html, /waydean-preview\.js\?v=private-pages-1/);
     else assert.match(html, /action: 'family-load', treeDir: TREE_DIR/);
   }
   const worker = await readFile(new URL('../drewo/waydean-preview-sw.js', import.meta.url), 'utf8');
+  const controller = await readFile(new URL('../drewo/waydean-preview-pwa.mjs', import.meta.url), 'utf8');
+  const version = /const CACHE_NAME = '(waydean-preview-shell-v\d+)'/;
   assert.doesNotMatch(worker, /family-tree\.json|\/photos\//);
-  assert.match(worker, /waydean-preview-shell-v72/);
+  assert.match(worker, version);
+  assert.equal(controller.match(version)?.[1], worker.match(version)?.[1]);
+  assert.match(controller, /if \(familyApp \|\| !state\.serviceWorkerReady/);
+  assert.match(worker, /waydean-preview\.js\?v=private-pages-1/);
 });
 
 test('public tree overview requires an authenticated hub session before exposing registry or billing data', async () => {
@@ -74,6 +81,8 @@ test('the legacy trees cabinet reads only server-generated aggregates', async ()
 
 test('every GitHub Pages publisher builds and uploads the same sanitized artifact', async () => {
   const workflows = await import('node:fs/promises').then(({ readdir }) => readdir(new URL('../.github/workflows/', import.meta.url)));
+  assert.ok(workflows.includes('deploy.yml'));
+  assert.ok(workflows.includes('deploy-pages-keepalive.yml'));
   for (const workflow of workflows.filter(name => name.endsWith('.yml') || name.endsWith('.yaml'))) {
     const source = await readFile(new URL(`../.github/workflows/${workflow}`, import.meta.url), 'utf8');
     if (!source.includes('actions/upload-pages-artifact')) continue;

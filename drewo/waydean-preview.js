@@ -30,13 +30,13 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-scope-20261119-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-pages-1';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
 import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-3';
-import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
+import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=private-pages-1';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
@@ -4132,11 +4132,9 @@ async function initialize() {
     document.body.classList.toggle('synthetic-fixture', syntheticFixture);
     document.body.classList.toggle('local-tree-draft', localTreeDraft);
     document.title = 'Waydean — семейное древо';
-    const dataUrl = syntheticFixture
+    const dataUrl = syntheticFixture || (demoMode && !familyPreview)
       ? '../docs/design/waydean/fixtures/master-tree.json'
-      : demoMode && !familyPreview
-        ? '../drewo-reklama/family-tree.json'
-        : null;
+      : null;
     setLoadingText('Загружаем данные рода');
     let root;
     if (accountPreview) {
