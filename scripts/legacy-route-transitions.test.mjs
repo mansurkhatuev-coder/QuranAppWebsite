@@ -4,6 +4,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { runInNewContext } from 'node:vm';
+import { execFileSync, spawnSync } from 'node:child_process';
 import { applyLegacyRouteTransitions } from './legacy-route-transitions.mjs';
 import { preparePagesArtifact } from './prepare-pages-artifact.mjs';
 
@@ -14,17 +15,20 @@ test('Pages build transitions only explicit family routes and removes their old 
   t.after(() => rm(root, { recursive: true, force: true }));
   await mkdir(join(source, 'drewo'), { recursive: true });
   await mkdir(join(source, 'drewo-guzat'), { recursive: true });
+  await mkdir(join(source, 'drewo-eldarovy'), { recursive: true });
   await mkdir(join(source, 'scripts'), { recursive: true });
   await writeFile(join(source, 'drewo', 'index.html'), '<main>Old family</main>');
   await writeFile(join(source, 'drewo', 'viewer.js'), 'old private viewer');
   await writeFile(join(source, 'drewo-guzat', 'index.html'), '<main>Old family</main>');
+  await writeFile(join(source, 'drewo-eldarovy', 'index.html'), '<main>Existing viewer</main>');
   await writeFile(join(source, 'scripts', 'legacy-transitions.json'), '{"routes":["internal registry"]}');
 
   await preparePagesArtifact(source, artifact, { transitionManifest: {
     origin: 'https://trees.example.test',
     routes: [
       { directory: 'drewo', state: 'migrated', treeId: '123e4567-e89b-12d3-a456-426614174000' },
-      { directory: 'drewo-guzat', state: 'transferring' }
+      { directory: 'drewo-guzat', state: 'transferring' },
+      { directory: 'drewo-eldarovy', state: 'frozen' }
     ]
   } });
 
@@ -35,7 +39,63 @@ test('Pages build transitions only explicit family routes and removes their old 
   const transferring = await readFile(join(artifact, 'drewo-guzat', 'index.html'), 'utf8');
   assert.match(transferring, /Древо переносится/);
   assert.deepEqual(await readdir(join(artifact, 'drewo-guzat')), ['index.html']);
+  assert.equal(await readFile(join(artifact, 'drewo-eldarovy', 'index.html'), 'utf8'), '<main>Existing viewer</main>');
   await assert.rejects(readFile(join(artifact, 'scripts', 'legacy-transitions.json')));
+});
+
+test('the common manifest freezes writes for all migration states and leaves other trees out of scope', async () => {
+  const { frozenWriteDirectories, parseLegacyTransitionManifest } =
+    await import('../supabase/functions/publish-drewo/legacy-transition-manifest.mjs');
+  const manifest = parseLegacyTransitionManifest({
+    origin: 'https://trees.example.test', routes: [
+      { directory: 'drewo', state: 'frozen' },
+      { directory: 'drewo-adam', state: 'transferring' },
+      { directory: 'drewo-eldarovy', state: 'migrated', treeId: '123e4567-e89b-12d3-a456-426614174000' }
+    ]
+  });
+  assert.deepEqual(frozenWriteDirectories(manifest, ['drewo-guzat/index.html']), []);
+  assert.deepEqual(frozenWriteDirectories(manifest, ['drewo/photos/fake.jpg', 'drewo-adam/access.json']), ['drewo', 'drewo-adam']);
+  assert.deepEqual(frozenWriteDirectories(manifest, ['_private/credentials.vault.json'], ['drewo-eldarovy']), ['drewo-eldarovy']);
+  assert.throws(() => parseLegacyTransitionManifest({ origin: 'https://trees.example.test', routes: [
+    { directory: 'drewo', state: 'unrecognized' }
+  ] }));
+});
+
+test('advancing the branch with a freeze rejects an in-flight sibling commit', async t => {
+  const root = await mkdtemp(join(tmpdir(), 'waydean-freeze-race-'));
+  t.after(() => rm(root, { recursive: true, force: true }));
+  const origin = join(root, 'origin.git');
+  const source = join(root, 'source');
+  const git = (cwd, ...args) => execFileSync('git', args, { cwd, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] }).trim();
+  await mkdir(source);
+  git(root, 'init', '--bare', '--initial-branch=main', origin);
+  git(source, 'init', '--initial-branch=main');
+  git(source, 'config', 'user.name', 'Synthetic fixture');
+  git(source, 'config', 'user.email', 'fixture@example.test');
+  const manifest = { origin: 'https://trees.example.test', routes: [] };
+  await mkdir(join(source, 'scripts'));
+  await writeFile(join(source, 'scripts', 'legacy-transitions.json'), JSON.stringify(manifest));
+  git(source, 'add', 'scripts/legacy-transitions.json');
+  git(source, 'commit', '-m', 'Initial state');
+  git(source, 'push', origin, 'main');
+  const parent = git(source, 'rev-parse', 'HEAD');
+
+  await writeFile(join(source, 'synthetic-change.txt'), 'pending family edit');
+  git(source, 'add', 'synthetic-change.txt');
+  const stale = git(source, 'commit-tree', git(source, 'write-tree'), '-p', parent, '-m', 'Prepared edit');
+  git(source, 'reset', '--', 'synthetic-change.txt');
+
+  manifest.routes.push({ directory: 'drewo', state: 'frozen' });
+  await writeFile(join(source, 'scripts', 'legacy-transitions.json'), JSON.stringify(manifest));
+  git(source, 'add', 'scripts/legacy-transitions.json');
+  git(source, 'commit', '-m', 'Freeze approved tree');
+  git(source, 'push', origin, 'main');
+  const frozenHead = git(source, 'rev-parse', 'HEAD');
+
+  const { status, stderr } = spawnSync('git', ['push', origin, `${stale}:refs/heads/main`], { cwd: source, encoding: 'utf8' });
+  assert.equal(status, 1);
+  assert.match(stderr, /non-fast-forward|fetch first/);
+  assert.equal(git(root, '--git-dir', origin, 'rev-parse', 'main'), frozenHead);
 });
 
 test('transition manifest rejects unknown routes, duplicate routes, caller URLs and malformed IDs', async t => {

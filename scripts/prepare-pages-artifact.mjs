@@ -2,6 +2,7 @@ import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile, copyFile } fr
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { applyLegacyRouteTransitions } from './legacy-route-transitions.mjs';
+import { legacyTransitionManifestPath } from '../supabase/functions/publish-drewo/legacy-transition-manifest.mjs';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const excludedDirectories = new Set(['.git', '.github', '_private', 'backups', 'node_modules', 'dist']);
@@ -20,7 +21,7 @@ function scriptId(attributes) {
 function isPrivateArtifact(path) {
   const name = path.split(sep).at(-1).toLowerCase();
   if (excludedFiles.has(name)) return true;
-  if (path.split(sep).join('/') === 'scripts/legacy-transitions.json') return true;
+  if (path.split(sep).join('/') === legacyTransitionManifestPath) return true;
   if (name === 'family-tree.json') return true;
   return /^\.env(?:\.|$)/i.test(name) || /\.(?:sqlite|sqlite3|db|pem|key)$/i.test(name);
 }

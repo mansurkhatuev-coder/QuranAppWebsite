@@ -11,6 +11,7 @@ import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydean
 import { familyPublishGuardError } from './family-publish-guard.ts';
 import { corsHeaders, jsonResponse } from './http.ts';
 import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
+import { frozenWriteDirectories, legacyTransitionManifestPath, parseLegacyTransitionManifest } from './legacy-transition-manifest.mjs';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -177,11 +178,13 @@ async function githubJson(
 async function githubGetFile(
   token: string,
   repo: string,
-  path: string
+  path: string,
+  ref?: string,
 ): Promise<{ sha?: string; content?: string } | null> {
+  const query = ref ? `?ref=${encodeURIComponent(ref)}` : '';
   const { ok, status, json } = await githubJson(
     token,
-    `https://api.github.com/repos/${repo}/contents/${path}`
+    `https://api.github.com/repos/${repo}/contents/${path}${query}`
   );
   if (status === 404) return null;
   if (!ok) {
@@ -383,6 +386,12 @@ function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unkno
   return out;
 }
 
+class LegacyWriteError extends Error {
+  constructor(message: string, readonly status: 409 | 423 | 503) {
+    super(message);
+  }
+}
+
 /** One atomic commit for multiple file writes/deletes (much faster than Contents API). */
 async function githubCommitChanges(options: {
   token: string;
@@ -390,6 +399,7 @@ async function githubCommitChanges(options: {
   message: string;
   branch?: string;
   changes: TreeChange[];
+  additionalTrees?: string[];
 }) {
   const branch = options.branch || 'main';
   const changes = options.changes.filter((c) => {
@@ -410,6 +420,23 @@ async function githubCommitChanges(options: {
   }
   const headSha = String((refRes.json.object as { sha?: string } | undefined)?.sha || '');
   if (!headSha) throw new Error('Empty branch SHA');
+
+  // Read the migration state from the same immutable parent that the commit
+  // will use. A concurrent freeze advances the ref and rejects this write.
+  let frozenDirectories: string[];
+  try {
+    if (changes.some(change => change.path === legacyTransitionManifestPath)) {
+      throw new Error('The migration manifest is managed by repository operators.');
+    }
+    const file = await githubGetFile(options.token, options.repo, legacyTransitionManifestPath, headSha);
+    const transition = parseLegacyTransitionManifest(JSON.parse(file?.content ?? 'null'));
+    frozenDirectories = frozenWriteDirectories(transition, changes.map(change => change.path), options.additionalTrees);
+  } catch {
+    throw new LegacyWriteError('Не удалось проверить состояние переноса. Изменения не сохранены.', 503);
+  }
+  if (frozenDirectories.length) {
+    throw new LegacyWriteError('Древо переносится. Запись в старую версию временно закрыта.', 423);
+  }
 
   const commitRes = await githubJson(
     options.token,
@@ -517,10 +544,13 @@ async function githubCommitChanges(options: {
     `https://api.github.com/repos/${options.repo}/git/refs/heads/${branch}`,
     {
       method: 'PATCH',
-      body: JSON.stringify({ sha: newCommitSha }),
+      body: JSON.stringify({ sha: newCommitSha, force: false }),
     }
   );
   if (!updateRes.ok) {
+    if (updateRes.status === 409 || updateRes.status === 422) {
+      throw new LegacyWriteError('Ветка обновилась во время сохранения. Обновите страницу и повторите попытку.', 409);
+    }
     throw new Error(String(updateRes.json.message || 'Branch update failed'));
   }
 
@@ -1543,6 +1573,7 @@ Deno.serve(async (request) => {
           repo: githubRepo,
           message: `Update credential vault for ${targetDir}`,
           changes,
+          additionalTrees: [targetDir],
         });
       }
       return jsonResponse({
@@ -2760,6 +2791,9 @@ Deno.serve(async (request) => {
       pushNotify,
     });
   } catch (error) {
+    if (error instanceof LegacyWriteError) {
+      return jsonResponse({ error: error.message }, error.status);
+    }
     const message = error instanceof Error ? error.message : 'Unknown publish error';
     return jsonResponse({ error: message }, 500);
   }

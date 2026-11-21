@@ -82,6 +82,16 @@ test('the legacy trees cabinet reads only server-generated aggregates', async ()
   assert.doesNotThrow(() => new Function(cabinet));
 });
 
+test('tree commits check the migration manifest at the commit parent and update the ref without force', async () => {
+  const api = await readFile(new URL('../supabase/functions/publish-drewo/index.ts', import.meta.url), 'utf8');
+  const commit = api.slice(api.indexOf('async function githubCommitChanges('), api.indexOf('type TreeDir'));
+  assert.match(commit, /githubGetFile\(options\.token, options\.repo, legacyTransitionManifestPath, headSha\)/);
+  assert.match(commit, /frozenWriteDirectories\(transition, changes\.map\(change => change\.path\), options\.additionalTrees\)/);
+  assert.match(commit, /parents: \[headSha\]/);
+  assert.match(commit, /JSON\.stringify\(\{ sha: newCommitSha, force: false \}\)/);
+  assert.match(api, /Update credential vault for \$\{targetDir\}`\s*,\s*changes,\s*additionalTrees: \[targetDir\]/);
+});
+
 test('every GitHub Pages publisher builds and uploads the same sanitized artifact', async () => {
   const workflows = await import('node:fs/promises').then(({ readdir }) => readdir(new URL('../.github/workflows/', import.meta.url)));
   assert.ok(workflows.includes('deploy.yml'));
