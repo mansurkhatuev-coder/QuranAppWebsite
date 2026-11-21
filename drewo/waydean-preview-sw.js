@@ -1,11 +1,10 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v64';
+const CACHE_NAME = 'waydean-preview-shell-v65';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
   './waydean-preview.html?state=all-tree',
   './waydean-preview.webmanifest',
-  './family-tree.json',
   './bg-day-2.jpg',
   './icon-192.png',
   './icon-512.png',
@@ -68,12 +67,10 @@ function isPreviewResource(url) {
     url.pathname === PAGE_PATH
     || url.pathname.startsWith('/drewo/waydean-preview-')
     || url.pathname === '/drewo/waydean-color-scheme.css'
-    || url.pathname === '/drewo/family-tree.json'
     || url.pathname === '/drewo/waydean-preview.webmanifest'
     || url.pathname === '/drewo/icon-192.png'
     || url.pathname === '/drewo/icon-512.png'
     || url.pathname === '/drewo/apple-touch-icon.png'
-    || url.pathname.startsWith('/drewo/photos/')
     || url.pathname.startsWith('/docs/design/waydean/assets/')
     || url.pathname.startsWith('/docs/design/waydean/fixtures/')
   );
@@ -100,7 +97,7 @@ async function notifyClients() {
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    const required = ['./waydean-preview.html?state=all-tree', './family-tree.json'];
+    const required = ['./waydean-preview.html?state=all-tree'];
     for (const resource of required) await precacheOne(resource);
     await Promise.allSettled(PRECACHE.filter(resource => !required.includes(resource)).map(precacheOne));
     await self.skipWaiting();
@@ -132,16 +129,6 @@ self.addEventListener('fetch', event => {
         return await cacheResponse(request, await fetch(request));
       } catch {
         return cached || new Response('Waydean сохранён для офлайн-просмотра после первого открытия.', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      }
-    }
-    if (url.pathname === '/drewo/family-tree.json') {
-      try {
-        return await cacheResponse(request, await fetch(request));
-      } catch {
-        return cached || new Response('Снимок древа ещё не сохранён для офлайн-просмотра.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });

@@ -5025,10 +5025,7 @@
       }
 
       function fetchAccessFile() {
-        return fetch('access.json?v=' + Date.now(), { cache: 'no-store' })
-          .then(function (res) {
-            return res.ok ? res.json() : null;
-          })
+        return callPublishApi({ action: 'status', treeDir: TREE_DIR })
           .then(function (data) {
             applyAccessFile(data);
             return data;
@@ -5129,7 +5126,13 @@
           storeNekToken(token);
           return applyNekSession().then(function (ok) {
             if (!ok) throw new Error('Не удалось открыть древо. Попробуйте ещё раз.');
-            return 'ok';
+            return fetchRemoteTree().then(function (remoteData) {
+              if (!remoteData || !remoteData.tree || !remoteData.tree.id) {
+                throw new Error('Не удалось загрузить защищённые данные древа.');
+              }
+              applyRemoteTreeData(remoteData.tree, remoteData.activityJson);
+              return 'ok';
+            });
           });
         });
       }
@@ -6678,10 +6681,17 @@
       }
 
       function fetchRemoteTree() {
-        return fetch('family-tree.json?v=' + Date.now(), { cache: 'no-store' })
-          .then(function (res) {
-            if (!res.ok) return null;
-            return res.json();
+        return callPublishApi({ action: 'family-load', treeDir: TREE_DIR })
+          .then(function (data) {
+            if (!data || !data.ok || typeof data.treeJson !== 'string') return null;
+            try {
+              return {
+                tree: JSON.parse(data.treeJson),
+                activityJson: typeof data.activityJson === 'string' ? data.activityJson : '[]',
+              };
+            } catch (err) {
+              return null;
+            }
           })
           .catch(function () {
             return null;
@@ -9785,10 +9795,15 @@
       // Свежие данные из JSON (обход кэша HTML на GitHub Pages ~10 мин).
       setGateBusy('Загружаем древо…');
       Promise.all([fetchRemoteTree(), fetchAccessFile()]).then(function (pair) {
-        var remote = pair[0];
+        var remoteData = pair[0];
+        var remote = remoteData && remoteData.tree;
         if (remote && typeof remote === 'object' && remote.id) {
           tree = TreeModel.markAllowAdd(remote, NUTSU_ID);
           if (dataEl) dataEl.textContent = treeJsonForEmbed(tree);
+          if (activityEl && typeof remoteData.activityJson === 'string') {
+            activityEl.textContent = remoteData.activityJson;
+            refreshActivityUi();
+          }
         }
         setGateBusy('Открываем…');
         return rememberFingerprintFromTree();
