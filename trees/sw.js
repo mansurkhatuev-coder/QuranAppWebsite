@@ -1,11 +1,11 @@
 /* Trees PWA — network-first shell cache for offline reopen. */
-const CACHE = 'waydean-trees-v6';
+const CACHE = 'waydean-trees-v7';
 const PRECACHE = [
   './',
   './index.html',
   './manifest.webmanifest',
   './trees.css',
-  './trees.js',
+  './trees.js?v=11',
   './icon-192.png',
   './icon-512.png',
 ];
@@ -24,7 +24,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
+        Promise.all(keys.filter((key) => key.startsWith('waydean-trees-') && key !== CACHE).map((key) => caches.delete(key)))
       )
       .then(() => self.clients.claim())
   );

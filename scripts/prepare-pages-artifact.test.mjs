@@ -65,11 +65,14 @@ test('family entry points use authenticated loading and the PWA does not cache p
   assert.match(worker, /waydean-preview\.js\?v=private-pages-1/);
 });
 
-test('public tree overview requires an authenticated hub session before exposing registry or billing data', async () => {
+test('cabinet operations require an authorized operator and public status uses the public projection', async () => {
   const api = await readFile(new URL('../supabase/functions/publish-drewo/index.ts', import.meta.url), 'utf8');
-  const branch = api.slice(api.indexOf("if (action === 'hub-overview')"), api.indexOf("if (action === 'create-tree')"));
-  assert.match(branch, /const denied = await hubUserGuard\(request\)/);
-  assert.match(branch, /if \(denied\) return denied/);
+  for (const action of ['hub-overview', 'create-tree', 'hub-credentials', 'hub-credentials-upsert', 'set-billing']) {
+    const branch = api.slice(api.indexOf(`if (action === '${action}'`));
+    assert.match(branch, /^[^\n]+\n\s*const denied = await hubUserGuard\(request\);\s*if \(denied\) return denied;/);
+  }
+  assert.match(api, /hubOperatorDenial\(user, Deno\.env\.get\('DREWO_HUB_USER_IDS'\)\)/);
+  assert.match(api, /if \(action === 'status'\) \{\s*return jsonResponse\(publicTreeStatus\(treeDir, lockPresentation\(access\)\)\);/);
 });
 
 test('the legacy trees cabinet reads only server-generated aggregates', async () => {

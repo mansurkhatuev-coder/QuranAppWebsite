@@ -146,7 +146,9 @@
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `hub-overview ${response.status}`);
+      const error = new Error(err.error || `hub-overview ${response.status}`);
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   }
@@ -287,7 +289,8 @@
         overviewTrees = overview.trees;
         overview.trees.forEach((row) => overviewByDir.set(row.treeDir, row));
       }
-    } catch {
+    } catch (error) {
+      if ([401, 403, 503].includes(error?.status)) throw error;
       overviewByDir = new Map();
     }
 
@@ -550,6 +553,13 @@
       $('#updated-at').textContent = `Обновлено в ${stamp}`;
       if (status) status.textContent = 'Данные с сайта и live-статуса. Старые ссылки /drewo/ не менялись.';
     } catch (error) {
+      if ([401, 403, 503].includes(error?.status)) {
+        renderCards([]);
+        $('#sum-people').textContent = '—';
+        $('#sum-added').textContent = '—';
+        credentials = [];
+        renderCredentials();
+      }
       if (status) {
         status.textContent =
           error instanceof Error ? error.message : 'Не удалось обновить данные';
