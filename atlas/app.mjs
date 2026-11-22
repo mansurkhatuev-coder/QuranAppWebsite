@@ -1,12 +1,12 @@
 import {groups,sites,searchCatalog} from './catalog.mjs';
 import {createAtlas} from './map.mjs';
 import {getPlaceMedia,imageFor} from './media.mjs';
-import {createInitialState,transition,restoreEntry,contextPanel} from './atlas-state.mjs';
+import {createInitialState,transition,restoreEntry,contextPanel} from './atlas-state.mjs?v=f3463c6';
 import {createTreeWizard} from './create-tree-view.mjs';
 import {settlements} from './settlements.mjs';
 import {rivers} from './rivers.mjs';
 import {createBottomSheet,getSheetStops} from './sheet.mjs';
-import {computeLayoutMode,measureViewport} from './viewport.mjs';
+import {computeLayoutMode,measureViewport} from './viewport.mjs?v=f3463c6';
 import {completeAtlasEntrance} from './entry-motion.mjs';
 import {createWindAmbience} from './ambient-audio.mjs';
 
