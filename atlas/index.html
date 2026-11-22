@@ -12,6 +12,7 @@
  <link rel="stylesheet" href="./style.css">
  <link rel="stylesheet" href="./opening.css">
  <link rel="stylesheet" href="./journey.css">
+ <link rel="stylesheet" href="./interface.css">
 </head>
 <body data-atlas-entrance="pending">
  <svg class="svg-defs" aria-hidden="true"><defs>
@@ -40,11 +41,11 @@
    </button>
    <nav class="main-nav" aria-label="Разделы">
     <button class="active" data-tab="atlas" type="button" aria-current="page">Атлас</button>
-    <button data-tab="roots" type="button">Происхождение</button>
-    <button data-tab="places" type="button">Места</button>
+    <button id="nav-roots" data-tab="roots" type="button">Тухумы</button>
+    <button id="nav-places" data-tab="places" type="button">Места</button>
    </nav>
    <div class="top-actions">
-    <button class="top-action" id="search-toggle" type="button" aria-label="Поиск по атласу"><svg><use href="#i-search"/></svg><span>Поиск по атласу</span></button>
+    <button class="top-action" id="search-toggle" type="button" aria-label="Поиск по атласу"><svg aria-hidden="true"><use href="#i-search"/></svg><span>Поиск</span></button>
     <button class="about-link" id="about" type="button">О проекте</button>
     <a class="demo-tree-link" id="atlas-demo-tree" href="/drewo-reklama/" target="_blank" rel="noopener" aria-label="Открыть публичное демонстрационное родовое древо" title="Публичное демо-древо">
      <svg aria-hidden="true"><use href="#i-branch"/></svg><span class="demo-full-label">Демо-древо</span><span class="demo-compact-label" aria-hidden="true">Демо</span>
@@ -53,41 +54,43 @@
    </div>
   </header>
 
-  <section class="intro" id="intro">
-   <div class="eyebrow"><span class="gold-line"></span>НОХЧИЙН МОХК · АТЛАС ЧЕЧНИ</div>
-   <h1>Земля<br><em>предков.</em></h1>
-   <p>От родного селения —<br>к истории твоего рода.</p>
-   <div class="map-gesture" aria-hidden="true"><span class="gesture-orbit">↔</span><span>Вращайте и приближайте карту<small>Перетаскивание · колесо мыши</small></span></div>
+  <section class="atlas-opening" aria-labelledby="opening-title">
+   <div class="intro" id="intro">
+    <div class="eyebrow"><span class="gold-line"></span>НОХЧИЙН МОХК · АТЛАС ЧЕЧНИ</div>
+    <h1 id="opening-title">Земля <em>предков.</em></h1>
+    <p>Тухумы, тейпы и родовые места на карте Чечни.</p>
+   </div>
+   <nav class="opening-dock" id="overview-group-dock" aria-label="Исследовать атлас">
+    <button class="opening-search" id="opening-search" type="button">
+     <svg aria-hidden="true"><use href="#i-search"/></svg>
+     <span><strong>Найти в атласе</strong><small>Тухум, тейп или место</small></span>
+     <svg class="opening-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+    </button>
+    <div class="opening-catalogs">
+     <button class="opening-link" id="opening-roots" type="button" data-tab="roots">
+      <svg aria-hidden="true"><use href="#i-branch"/></svg>
+      <span><strong>Тухумы</strong><small>Каталог тейпов</small></span>
+      <svg class="opening-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+     </button>
+     <button class="opening-link" id="opening-places" type="button" data-tab="places">
+      <svg aria-hidden="true"><use href="#i-tower"/></svg>
+      <span><strong>Места</strong><small>Башни и селения</small></span>
+      <svg class="opening-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
+     </button>
+    </div>
+    <button class="opening-create" id="create-tree" type="button">
+     <svg aria-hidden="true"><use href="#i-plus"/></svg><span>Создать древо</span>
+    </button>
+   </nav>
   </section>
-
-  <aside class="group-choice-panel" id="overview-group-dock" aria-label="Выбор тухума">
-   <div class="group-choice-grid" role="group" aria-label="Тухумы">
-    <button class="group-choice" id="overview-group-akki" type="button" data-overview-group="akki"><span>Аккий</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-melkhiy" type="button" data-overview-group="melkhiy"><span>Мелхий</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-nokhch" type="button" data-overview-group="nokhch"><span>Нохчмахкахой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-orst" type="button" data-overview-group="orst"><span>Орстхой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-terloy" type="button" data-overview-group="terloy"><span>Терлой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-chantiy" type="button" data-overview-group="chantiy"><span>Чантий</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-cheber" type="button" data-overview-group="cheber"><span>Чебарлой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-sharoi" type="button" data-overview-group="sharoi"><span>Шарой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-    <button class="group-choice" id="overview-group-shatoi" type="button" data-overview-group="shatoi"><span>Шатой</span><svg aria-hidden="true"><use href="#i-arrow"/></svg></button>
-   </div>
-   <div class="hero-actions">
-    <button class="hero-primary" id="create-tree" type="button"><svg><use href="#i-plus"/></svg><span>Создать древо</span><svg class="hero-arrow"><use href="#i-arrow"/></svg></button>
-   </div>
-   <div class="hero-stats" aria-label="Состав демо-каталога">
-    <article data-hero-stat><strong id="hero-group-count">—</strong><span>тухумов</span></article>
-    <article data-hero-stat><strong id="hero-teip-count">—</strong><span>тейпов</span></article>
-    <article data-hero-stat><strong id="hero-place-count">—</strong><span>мест</span></article>
-   </div>
-  </aside>
 
   <aside class="explorer" id="explorer" aria-label="Каталог происхождения">
    <button class="sheet-handle" id="sheet-handle" type="button" aria-label="Развернуть каталог" aria-expanded="false"><span></span></button>
    <div class="panel-heading">
-    <span class="panel-kicker" id="catalog-label">ИССЛЕДОВАТЬ ПРОИСХОЖДЕНИЕ</span>
+    <button class="icon-button catalog-return" id="catalog-return" type="button" aria-label="Назад к предыдущему разделу"><svg aria-hidden="true"><use href="#i-back"/></svg></button>
+    <h2 class="panel-kicker" id="catalog-label" tabindex="-1">Тухумы</h2>
     <div class="panel-heading-actions">
-     <span class="count" id="count"></span>
+     <span class="count" id="count" role="status"></span>
      <button class="icon-button panel-toggle" id="catalog-toggle" type="button" aria-expanded="true" aria-label="Свернуть каталог"><span aria-hidden="true">−</span></button>
     </div>
    </div>
@@ -98,7 +101,7 @@
      <input id="search" type="search" placeholder="Тухум, тейп или место" autocomplete="off" aria-label="Поиск по атласу">
      <kbd aria-hidden="true">↵</kbd>
     </label>
-    <div class="search-results" id="search-results" hidden role="listbox" aria-label="Результаты поиска"></div>
+    <div class="search-results" id="search-results" hidden role="group" aria-label="Результаты поиска"></div>
     <div class="catalog-heading"><div id="breadcrumbs" class="breadcrumbs"><span>Тухумы</span></div><div class="layer-tabs" aria-label="Содержание атласа"><button class="selected" type="button" data-layer="groups" aria-pressed="true">Тухумы</button><button type="button" data-layer="sites" aria-pressed="false">Места</button></div></div>
     <section class="aggregate-dashboard" id="aggregate-dashboard" hidden aria-label="Публичная сводка"></section>
     <div id="catalog-list" class="catalog-list"></div>
@@ -113,7 +116,6 @@
   </aside>
 
   <div class="map-topline"><span class="map-status" id="map-status" role="status" aria-live="polite"><span class="small-dot"></span>Загружаем рельеф</span></div>
-  <div class="atlas-edition" aria-hidden="true"><span>Память начинается с места.</span></div>
 
   <aside class="camera-rail" id="camera-rail" aria-label="Управление картой">
    <button class="icon-button north-button" id="reset-north" type="button" aria-label="Север сверху" title="Север сверху"><span class="north-needle" aria-hidden="true">↑</span><small>N</small></button>

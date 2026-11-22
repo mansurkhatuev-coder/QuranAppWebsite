@@ -37,7 +37,7 @@ export function transition(state,event){
    const layer=validLayers.has(event.layer)?event.layer:'all';
    const leavesEntity=layer==='groups'&&['place','city','river','places'].includes(next.view);
    const incompatible=next.selectedEntity&&(layer==='groups'&&next.selectedEntity.type==='site'||layer==='sites'&&next.selectedEntity.type==='group');
-   return {...next,view:layer==='sites'?'places':leavesEntity?'explore':next.view,layer,catalogMode:layer==='sites'?'sites':'groups',groupId:leavesEntity?null:next.groupId,teipId:leavesEntity?null:next.teipId,selectedEntity:incompatible||leavesEntity?null:next.selectedEntity,placeId:layer==='sites'||leavesEntity?null:next.placeId};
+   return {...next,view:layer==='sites'?'places':leavesEntity?'explore':next.view,query:layer==='sites'?'':next.query,layer,catalogMode:layer==='sites'?'sites':'groups',groupId:leavesEntity?null:next.groupId,teipId:leavesEntity?null:next.teipId,selectedEntity:incompatible||leavesEntity?null:next.selectedEntity,placeId:layer==='sites'||leavesEntity?null:next.placeId};
   }
   case 'OPEN_SEARCH':
    return {...next,searchReturnView:next.view,view:'search',introDismissed:true};

@@ -120,9 +120,11 @@ export function measureViewport({mapElement,occupiedElements=[],visualViewport=w
   const leftContent=leftPanel??overviewDock??intro;
   if(leftContent){
    const leftDock={...leftContent,right:Math.max(leftContent.right,intro?.right??0)};
-   const rightDocks=['featured-place','view-menu'].map(id=>relativeRect(occupiedElements.find(element=>element?.id===id))).filter(rect=>rect&&rect.left>leftDock.right).sort((a,b)=>a.left-b.left);
+   const rightDockIds=overviewDock?['camera-rail','view-menu']:['featured-place','view-menu'];
+   const rightDocks=rightDockIds.map(id=>relativeRect(occupiedElements.find(element=>element?.id===id))).filter(rect=>rect&&rect.left>leftDock.right).sort((a,b)=>a.left-b.left);
    const topDock=relativeRect(occupiedElements.find(element=>element?.id==='topbar'));
-   const sideResult=computeSidePadding({width:mapRect.width,height:mapRect.height,safeInsets,leftDock,rightDock:rightDocks[0]??null,topDock});
+   const bottomDock=overviewDock?{top:mapRect.height-Math.max(safeInsets.bottom,28)}:null;
+   const sideResult=computeSidePadding({width:mapRect.width,height:mapRect.height,safeInsets,leftDock,rightDock:rightDocks[0]??null,topDock,bottomDock});
    if(!sideResult.compactRequired)result=sideResult;
   }else{
    const topDock=relativeRect(occupiedElements.find(element=>element?.id==='topbar'));

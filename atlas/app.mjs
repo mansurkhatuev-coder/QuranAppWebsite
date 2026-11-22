@@ -76,6 +76,10 @@ function currentRoute(value=state){
 function routeState(hash){
  const parts=(hash||'').replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
  const next=createInitialState();
+ if(computeLayoutMode({width:innerWidth,height:innerHeight}).panel==='bottom'){
+  if(['roots','places'].includes(parts[0]))next.sheet='half';
+  if(parts[0]==='search')next.sheet='full';
+ }
  if(parts[0]==='group'&&groups.some(group=>group.id===parts[1]))return transition(next,{type:'SELECT_GROUP',id:parts[1]});
  if(parts[0]==='teip'){
   const group=groups.find(item=>item.id===parts[1]);
@@ -180,8 +184,8 @@ function row({title,index,meta,action,tower=false,branch=false,id}){
  if(id)button.id=id;
  const number=document.createElement('span');
  number.className='row-number';
- number.textContent=String(index+1).padStart(2,'0');
  if(tower||branch){number.innerHTML=icon(tower?'tower':'branch');number.classList.add('row-tree');}
+ else number.textContent=String(index+1).padStart(2,'0');
  const label=document.createElement('span');
  label.className='row-title';
  label.textContent=title;
@@ -300,16 +304,6 @@ function renderBreadcrumbs(){
  }else if(state.view==='group'&&group){
   crumbs.append(breadcrumb('Тухумы',()=>route({type:'GO_TO_GROUP',id:null},{returnFocusId:'catalog-layer-groups'})));
   const label=document.createElement('span');label.className='current';label.textContent=group.name;crumbs.append(label);
- }else if(state.view==='places'){
-  const label=document.createElement('span');label.className='current';label.textContent='Места';crumbs.append(label);
- }else if(state.view==='place'){
-  crumbs.append(breadcrumb(state.catalogMode==='sites'?'Места':'Тухумы',goBack));
-  const site=sites.find(item=>item.id===state.placeId);
-  const label=document.createElement('span');label.className='current';label.textContent=site?.name??'Место';crumbs.append(label);
- }else if(state.view==='search'){
-  const label=document.createElement('span');label.className='current';label.textContent='Поиск';crumbs.append(label);
- }else{
-  const label=document.createElement('span');label.className='current';label.textContent=state.catalogMode==='sites'?'Места':'Тухумы';crumbs.append(label);
  }
 }
 
@@ -329,7 +323,7 @@ function renderRows(){
  const group=currentGroup();
  const teip=currentTeip();
  let count='';
- $('#catalog-label').textContent=state.view==='group'&&group?`ТУХУМ · ${group.name}`:state.view==='teip'&&teip?`ТЕЙП · ${teip.name}`:state.view==='search'?'ПОИСК ПО АТЛАСУ':'ИССЛЕДОВАТЬ ПРОИСХОЖДЕНИЕ';
+ $('#catalog-label').textContent=state.view==='group'&&group?group.name:state.view==='teip'&&teip?teip.name:state.view==='search'?'Поиск по атласу':state.catalogMode==='sites'?'Места':'Тухумы';
 
  if(state.view==='teip'&&teip){
   $('#count').textContent='';
@@ -338,14 +332,23 @@ function renderRows(){
   return;
  }
 
- if(query){
-  const results=searchCatalog(query);
+ if(state.view==='search'){
+  list.hidden=true;
   searchResults.hidden=false;
+  if(!query){
+   const hint=document.createElement('p');
+   hint.className='no-results';
+   hint.textContent='Введите название тухума, тейпа или места.';
+   searchResults.append(hint);
+   $('#count').textContent='';
+   return;
+  }
+  const results=searchCatalog(query);
   if(!results.length){
    const message=document.createElement('div');message.className='no-results';message.textContent='Совпадений пока нет. Попробуйте другое название.';searchResults.append(message);
   }
-  results.forEach((match,index)=>{
-   const button=document.createElement('button');button.type='button';button.className='search-result';button.id=`search-result-${match.type}-${match.id}`;button.setAttribute('role','option');button.setAttribute('aria-selected','false');
+  results.forEach(match=>{
+   const button=document.createElement('button');button.type='button';button.className='search-result';button.id=`search-result-${match.type}-${match.id}`;
    const label=document.createElement('span');label.textContent=match.label;
    const type=document.createElement('small');type.textContent=match.type;
    button.append(label,type);
@@ -354,7 +357,7 @@ function renderRows(){
     else if(match.type==='Город')openCity(match.id);
     else if(match.type==='Место')route({type:'SELECT_PLACE',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'full':state.sheet},{returnFocusId:button.id});
     else if(match.type==='Тейп')route({type:'SELECT_TEIP',groupId:match.group,id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet},{returnFocusId:button.id});
-    else route({type:'SELECT_GROUP',id:match.id},{returnFocusId:button.id});
+    else openGroup(match.id,{focusTargetId:button.id});
    });
    searchResults.append(button);
   });
@@ -364,7 +367,7 @@ function renderRows(){
 
  if(state.view==='places'||state.catalogMode==='sites'){
   count=`${sites.length} мест`;
-  sites.forEach((site,index)=>list.append(row({title:site.name,index,tower:true,meta:site.kind, id:`catalog-row-${site.id}`,action:()=>route({type:'SELECT_PLACE',id:site.id},{returnFocusId:`catalog-row-${site.id}`})})));
+  sites.forEach((site,index)=>list.append(row({title:site.name,index,tower:true,meta:site.kind,id:`catalog-row-${site.id}`,action:()=>openSite(site.id)})));
  }else if(group){
   count=teipCountLabel(group.teips.length);
   renderAggregateDashboard({group});
@@ -384,7 +387,7 @@ function renderRows(){
  }else{
   count=`${groups.length} тухумов`;
   if(state.view==='overview'||state.view==='explore')renderAggregateDashboard();
-  groups.forEach((item,index)=>list.append(row({title:item.name,index,meta:teipCountLabel(item.teips.length),id:`catalog-row-${item.id}`,action:()=>route({type:'SELECT_GROUP',id:item.id},{returnFocusId:`catalog-row-${item.id}`})})));
+  groups.forEach(item=>list.append(row({title:item.name,branch:true,meta:teipCountLabel(item.teips.length),id:`catalog-row-${item.id}`,action:()=>openGroup(item.id)})));
  }
  $('#count').textContent=count;
 }
@@ -441,16 +444,16 @@ function render(){
  renderPlace();
  if(state.view==='city')renderCity();
  if(state.view==='river')renderCity(rivers.find(item=>item.id===state.riverId),true);
- $('#hero-group-count').textContent=String(groups.length).padStart(2,'0');
- $('#hero-teip-count').textContent=String(groups.reduce((total,group)=>total+group.teips.length,0)).padStart(2,'0');
- $('#hero-place-count').textContent=String(sites.length).padStart(2,'0');
  $('#search').value=state.query;
  const searchActive=state.view==='search';
  $('#search-field').classList.toggle('is-active',searchActive);
- $('#search-toggle').setAttribute('aria-pressed',String(searchActive));
+ shell.classList.toggle('is-searching',searchActive);
+ $('.catalog-heading').hidden=searchActive;
+ $('#search-toggle').setAttribute('aria-label',searchActive?'Закрыть поиск':'Поиск по атласу');
  $('#map-only').setAttribute('aria-pressed',String(state.mapOnly));
  $('#map-only').querySelector('span').textContent=state.mapOnly?'Вернуть интерфейс':'Только карта';
- $('#search-toggle').querySelector('span').textContent=state.view==='search'?'Закрыть':'Поиск по атласу';
+ $('#search-toggle').querySelector('span').textContent=searchActive?'Закрыть поиск':'Поиск';
+ $('#search-toggle use').setAttribute('href',searchActive?'#i-close':'#i-search');
  const activeTab=state.view==='overview'?'atlas':state.layer==='sites'?'places':'roots';
  document.querySelectorAll('[data-tab]').forEach(button=>{
   const active=button.dataset.tab===activeTab;
@@ -507,7 +510,7 @@ function captureHistoryTarget(returnFocusId){
  currentEntry=makeEntry(state,index,returnFocusId);
 }
 
-function restoreFromHistory(entry,{preserveCamera=false}={}){
+function restoreFromHistory(entry,{preserveCamera=false,returnFocusId=null}={}){
  if(!entry?.state){stateTransitionFromHash();return;}
  Object.assign(state,restoreEntry(entry.state));
  currentEntry=entry;
@@ -517,7 +520,7 @@ function restoreFromHistory(entry,{preserveCamera=false}={}){
  if(!preserveCamera&&entry.camera)atlas?.restoreCamera(entry.camera,lastViewport?.padding);
  else if(preserveCamera)saveViewState();
  synchronizeAtlas();
- focusTarget(entry.returnFocusId);
+ focusTarget(returnFocusId??entry.returnFocusId);
  scheduleViewport();
 }
 
@@ -544,7 +547,7 @@ window.addEventListener('popstate',event=>{
  const entry=event.state?.atlasEntry;
  const backwards=entry&&outgoing&&entry.index<outgoing.index;
  const preserveCamera=Boolean(backwards&&outgoing.state?.view==='place'&&outgoing.manuallyMoved);
- restoreFromHistory(entry,{preserveCamera});
+ restoreFromHistory(entry,{preserveCamera,returnFocusId:backwards?outgoing.returnFocusId:null});
  if(nekTreeContext){
   if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
   nekReturnToConfirmation=false;
@@ -573,12 +576,13 @@ function updateLayout(){
  const previousPanel=lastViewport?.mode?.panel??null;
  const mapElement=$('#map');
  const mapSize={width:mapElement.clientWidth,height:mapElement.clientHeight};
+ const mode=computeLayoutMode(mapSize);
  const mapResized=lastMapSize&&(Math.abs(mapSize.width-lastMapSize.width)>1||Math.abs(mapSize.height-lastMapSize.height)>1);
  lastMapSize=mapSize;
  const visual=window.visualViewport;
  const elements=[$('#topbar'),$('#intro'),$('#overview-group-dock'),$('#explorer'),$('#camera-rail'),$('#map-topline'),$('#featured-place'),$('#view-menu').hidden?null:$('#view-menu')].filter(element=>{
   if(!element||element.hidden)return false;
-  if(element.id==='camera-rail'&&state.view==='overview'&&!state.introDismissed)return false;
+  if(element.id==='camera-rail'&&state.view==='overview'&&mode.panel==='bottom')return false;
   const style=getComputedStyle(element),rect=element.getBoundingClientRect();
   return style.display!=='none'&&style.visibility!=='hidden'&&Number(style.opacity)!==0&&rect.width>0&&rect.height>0;
  });
@@ -622,9 +626,16 @@ function homeAfterViewportMeasure(){
  requestAnimationFrame(()=>atlas?.home(lastViewport?.padding));
 }
 
-function openSearch(){
- if(state.view!=='search')route({type:'OPEN_SEARCH'},{returnFocusId:document.activeElement?.id||'search-toggle',afterRender:()=>{$('#search').focus();if(lastViewport?.mode?.panel==='bottom')setSheet('full');}});
- else{$('#search').focus();}
+function openSearch(triggerId=document.activeElement?.id){
+ if($('#explorer').classList.contains('catalog-collapsed'))$('#catalog-toggle').click();
+ if(state.view==='search'){$('#search').focus();return;}
+ route({type:'OPEN_SEARCH'},{
+  returnFocusId:triggerId==='search'?'catalog-label':triggerId||'search-toggle',
+  afterRender:()=>{
+   if(sheetGeometry().panel==='bottom')setSheet('full');
+   $('#search').focus();
+  },
+ });
 }
 
 function setNekMode(mode){
@@ -693,16 +704,7 @@ function setAtmosphere(next){
 $('#brand-home').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#return-chechnya').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#world-view').addEventListener('click',()=>{if(currentEntry)currentEntry.manuallyMoved=true;$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();requestAnimationFrame(()=>atlas?.goWorld());});
-document.querySelectorAll('[data-overview-group]').forEach(button=>{
- const preview=()=>atlas?.setGroupPreview(button.dataset.overviewGroup,button);
- const clear=()=>atlas?.setGroupPreview(null);
- button.addEventListener('pointerenter',preview);
- button.addEventListener('pointerleave',()=>{if(document.activeElement!==button)clear();});
- button.addEventListener('focus',preview);
- button.addEventListener('blur',()=>{if(!button.matches(':hover'))clear();});
- button.addEventListener('click',()=>{clear();openGroup(button.dataset.overviewGroup,{focusTargetId:button.id});});
-});
-$('#create-tree').addEventListener('click',()=>treeWizard.open({origins:[...document.querySelectorAll('[data-overview-group]')].map(button=>({id:button.dataset.overviewGroup,...button.getBoundingClientRect().toJSON()})).filter(rect=>rect.width>0)}));
+$('#create-tree').addEventListener('click',()=>treeWizard.open());
 $('#atlas-login').addEventListener('click',()=>{nekTreeContext=null;openNekPreview('login');});
 $('#nek-preview-continue').addEventListener('click',()=>{nekReturnToConfirmation=true;closeNekPreview();});
 $('#nek-back').addEventListener('click',closeNekPreview);
@@ -710,10 +712,20 @@ $('#nek-brand-home').addEventListener('click',closeNekPreview);
 $('#nek-login-tab').addEventListener('click',()=>setNekMode('login'));
 $('#nek-register-tab').addEventListener('click',()=>setNekMode('register'));
 $('#nek-form').addEventListener('submit',event=>{event.preventDefault();$('#nek-status').textContent='Локальный экран не отправляет данные. Подключение входа Некъ будет отдельным этапом.';});
-$('#search-toggle').addEventListener('click',()=>state.view==='search'?goBack():openSearch());
-$('#search').addEventListener('focus',()=>{if(state.view!=='search')route({type:'OPEN_SEARCH'},{returnFocusId:'search-toggle'});});
+$('#search-toggle').addEventListener('click',()=>state.view==='search'?goBack():openSearch('search-toggle'));
+$('#opening-search').addEventListener('click',()=>openSearch('opening-search'));
+$('#search').addEventListener('focus',()=>{if(state.view!=='search')openSearch();});
 $('#search').addEventListener('input',event=>route({type:'SET_QUERY',query:event.target.value},{replace:true}));
+$('#search').addEventListener('keydown',event=>{
+ if(event.isComposing||!['Enter','ArrowDown'].includes(event.key))return;
+ const first=$('#search-results .search-result');
+ if(!first)return;
+ event.preventDefault();
+ if(event.key==='Enter')first.click();
+ else first.focus();
+});
 $('#sheet-handle').addEventListener('click',()=>{});
+$('#catalog-return').addEventListener('click',goBack);
 $('#catalog-toggle').addEventListener('click',event=>{
  const collapsed=$('#explorer').classList.toggle('catalog-collapsed');
  event.currentTarget.setAttribute('aria-expanded',String(!collapsed));
@@ -722,16 +734,28 @@ $('#catalog-toggle').addEventListener('click',event=>{
  scheduleViewport();
 });
 $('#catalog-back').addEventListener('click',()=>{
- if(state.view==='group'&&currentGroup()?.teips.length===0){route({type:'GO_HOME'},{returnFocusId:`overview-group-${state.groupId}`});return;}
+ if(state.view==='group'&&currentGroup()?.teips.length===0){goBack();return;}
  route({type:'GO_TO_GROUP',id:state.groupId},{returnFocusId:`catalog-row-${state.groupId}`});
 });
 document.querySelectorAll('[data-layer]').forEach(button=>button.addEventListener('click',()=>{
  const selected=button.dataset.layer;
  route({type:'SET_LAYER',layer:selected},{replace:true});
 }));
-document.querySelector('[data-tab=roots]').addEventListener('click',()=>route({type:'DISMISS_INTRO'},{replace:true,afterRender:()=>{if(lastViewport?.mode?.panel==='bottom')setSheet('half');}}));
+for(const button of document.querySelectorAll('[data-tab=roots],[data-tab=places]')){
+ button.addEventListener('click',()=>{
+  const roots=button.dataset.tab==='roots';
+  if($('#explorer').classList.contains('catalog-collapsed'))$('#catalog-toggle').click();
+  if(state.view===(roots?'explore':'places'))return;
+  route(roots?{type:'DISMISS_INTRO'}:{type:'SET_LAYER',layer:'sites'},{
+   returnFocusId:button.id||null,
+   afterRender:()=>{
+    if(sheetGeometry().panel==='bottom')setSheet('half');
+    focusTarget('catalog-label');
+   },
+  });
+ });
+}
 document.querySelector('[data-tab=atlas]').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
-document.querySelector('[data-tab=places]').addEventListener('click',()=>route({type:'SET_LAYER',layer:'sites'},{replace:true}));
 $('#featured-place').addEventListener('click',()=>openSite('ushkaloi',{focusTargetId:'featured-place'}));
 $('#reset-north').addEventListener('click',()=>atlas?.resetNorth());
 $('#zoom-in').addEventListener('click',()=>atlas?.zoom(1));
