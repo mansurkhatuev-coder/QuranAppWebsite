@@ -23,7 +23,7 @@ import {
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
-} from './waydean-preview-route.mjs?v=family-route-9-tree-share';
+} from './waydean-preview-route.mjs?v=family-route-10-initial-full-tree';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
@@ -4198,12 +4198,6 @@ async function initialize() {
     for (const person of records) if (person.parentId) childrenById.get(person.parentId)?.push(person);
     loadWomenPreference();
     loadMyPersonPreference();
-    if (familyPreview && !params.has('state') && !params.has('person') && !params.has('workshopReturn')
-      && myPersonId && byId.has(myPersonId)) {
-      mode = 'path';
-      initialView.fit = true;
-      syncModeButtons(mode);
-    }
     const workshopReturn = params.get('workshopReturn') === '1'
       ? readExportWorkshopHandoff(window.sessionStorage)
       : null;

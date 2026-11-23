@@ -2,10 +2,12 @@ const TREE_MODES = new Set(['path', 'branch', 'all-tree']);
 const FAMILY_TREE_DIRS = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
 
 export function initialPreviewView(state, { mobile = false } = {}) {
-  const mode = TREE_MODES.has(state) ? state : 'all';
+  const mode = state === 'all' || ['filtersEmpty', 'search', 'stats'].includes(state)
+    ? 'all'
+    : TREE_MODES.has(state) ? state : 'all-tree';
   return {
     mode,
-    fit: TREE_MODES.has(state) || mobile
+    fit: mode === 'all-tree' || TREE_MODES.has(state) || mobile
   };
 }
 
