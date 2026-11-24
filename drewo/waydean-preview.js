@@ -2255,6 +2255,7 @@ function centerVisiblePerson() {
 
 function selectPerson(id, { preserveContext = false } = {}) {
   if (!byId.has(id)) return;
+  const selectionChanged = selectedId !== id;
   if (!showWomen && !filterPeopleByWomen(records, false).some(person => person.id === String(id))) {
     setWomenVisibility(true);
   }
@@ -2279,6 +2280,7 @@ function selectPerson(id, { preserveContext = false } = {}) {
   closePopovers();
   drawTree();
   renderProfile();
+  if (selectionChanged) animateTreeLayer(ui.profile, 0.8, 180);
   syncWhoAmIButton();
   if (zoom < 0.9 && mode !== 'all-tree') setZoom(0.9);
   centerPerson(id);
@@ -2947,6 +2949,23 @@ function resetGenerationFilters() {
   $('#photosOnly').checked = false;
 }
 
+// Keep motion on the visual layers only: the camera, layout, and hit testing
+// are controlled by the existing tree renderer. Cancel stale effects on repeat.
+const drewoMotionAnimations = new WeakMap();
+function animateTreeLayer(element, fromOpacity = 0.72, duration = 220) {
+  if (!element || typeof element.animate !== 'function') return;
+  drewoMotionAnimations.get(element)?.cancel();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const animation = element.animate(
+    [{ opacity: fromOpacity }, { opacity: 1 }],
+    { duration, easing: 'cubic-bezier(.2,.75,.25,1)' }
+  );
+  drewoMotionAnimations.set(element, animation);
+  animation.onfinish = () => {
+    if (drewoMotionAnimations.get(element) === animation) drewoMotionAnimations.delete(element);
+  };
+}
+
 function setMode(next, announceMode = true) {
   masterMobileOverview = false;
   if (next === 'path' && (!myPersonId || !byId.has(myPersonId))) {
@@ -2969,6 +2988,8 @@ function setMode(next, announceMode = true) {
   syncModeButtons(next);
   drawTree();
   fitTree();
+  animateTreeLayer(ui.nodes, 0.65, 240);
+  animateTreeLayer(ui.lines, 0.65, 240);
   syncWhoAmIButton();
   const labels = { path: 'Подсвечен путь от старшего известного предка.', branch: 'Показана выбранная ветвь.', all: 'Показаны ближайшие три поколения.', 'all-tree': 'Всё дерево доступно. Мини-карта поможет перейти к другим ветвям.' };
   if (announceMode) announce(labels[next] || labels.all);
