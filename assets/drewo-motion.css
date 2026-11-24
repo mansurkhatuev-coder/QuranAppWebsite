@@ -104,10 +104,10 @@ dialog[open]::backdrop { animation: drewo-motion-fade var(--motion-standard) eas
     animation: drewo-motion-enter var(--motion-panel) var(--motion-ease) both;
   }
 }
-@media (pointer: coarse) {
+@media (any-pointer: coarse), (max-width: 768px) {
   /* Prevent iOS focus zoom; do not disable pinch zoom or change viewport scale. */
   :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),
-      textarea,select) { font-size: max(16px, 1em); }
+      textarea,select) { font-size: max(16px, 1em) !important; }
 }
 @media (prefers-reduced-motion: reduce) {
   :where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
@@ -122,5 +122,36 @@ dialog[open]::backdrop { animation: drewo-motion-fade var(--motion-standard) eas
   :where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
     .app-shell,.login-shell,.create-dialog,.tree-list,.stage) :where(button,a.btn):active {
     scale: 1;
+  }
+}
+
+/* Additional entrances for the existing atlas authentication view and editor.
+   Do not animate the entire map canvas, the draggable sheet, or every node. */
+.nek-preview:not([hidden]) .nek-form-wrap,
+.waydean-preview .profile-panel .profile-person {
+  animation: drewo-motion-enter var(--motion-standard) var(--motion-ease) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .nek-preview .nek-form-wrap,
+  .waydean-preview .profile-panel .profile-person { animation: none !important; }
+}
+/* Entrance/exit of the opening dock without changing the map or catalog layout. */
+@supports (transition-behavior: allow-discrete) {
+  body[data-atlas-entrance="revealed"] .atlas-opening {
+    transition: opacity var(--motion-standard) var(--motion-ease),
+      display var(--motion-standard) allow-discrete;
+  }
+  body.is-exploring[data-atlas-entrance="revealed"] .atlas-opening,
+  body[data-atlas-entrance="revealed"] .atlas-shell.map-only .atlas-opening {
+    opacity: 0;
+  }
+  body.is-exploring .atlas-opening *,
+  .atlas-shell.map-only .atlas-opening * { pointer-events: none; }
+  @starting-style {
+    body[data-atlas-entrance="revealed"]:not(.is-exploring)
+    .atlas-shell:not(.map-only) .atlas-opening { opacity: 0; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    body[data-atlas-entrance="revealed"] .atlas-opening { transition: none; }
   }
 }
