@@ -377,3 +377,23 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
 @media (prefers-reduced-motion: reduce) {
  .opening-dock button { transition: none; }
 }
+
+.opening-dock a.opening-link {
+ display: flex; align-items: center; justify-content: center;
+ padding: 8px; border: 1px solid var(--opening-line); border-radius: 8px;
+ text-decoration: none; font: 600 15px/1.2 var(--atlas-body);
+}
+.access-dialog { color-scheme: dark; width: min(420px, 92vw); overflow-y: auto; overscroll-behavior: contain; }
+.access-dialog h2 { padding-inline-end: 35px; }
+.access-dialog #login-panel { display: grid; gap: 8px; }
+.access-dialog input:not([type=checkbox]) {
+ width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border-radius: 8px;
+ border: 1px solid #788c7d; background: #122d26; color: ivory;
+}
+.access-dialog .password-field { display: flex; gap: 6px; }
+.access-dialog .remember { display: flex; gap: 8px; align-items: center; min-height: 44px; }
+.access-dialog a { display: inline-flex; align-items: center; min-height: 44px; color: #e7d5ab; }
+.access-dialog .access-primary {
+ display: flex; justify-content: center; align-items: center; min-height: 44px;
+ padding: 8px 14px; border-radius: 8px; background: #e2c68b; color: #182c23; text-decoration: none;
+}

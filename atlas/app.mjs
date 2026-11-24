@@ -2,7 +2,6 @@ import {groups,sites,searchCatalog} from './catalog.mjs';
 import {createAtlas} from './map.mjs';
 import {getPlaceMedia,imageFor} from './media.mjs';
 import {createInitialState,transition,restoreEntry,contextPanel} from './atlas-state.mjs?v=f3463c6';
-import {createTreeWizard} from './create-tree-view.mjs';
 import {settlements} from './settlements.mjs';
 import {rivers} from './rivers.mjs';
 import {createBottomSheet,getSheetStops} from './sheet.mjs';
@@ -23,14 +22,6 @@ let measureFrame=0;
 let routeCounter=0;
 let lastViewport=null;
 let lastMapSize=null;
-let nekOpenedFromAtlas=false;
-let nekTreeContext=null;
-let nekReturnToConfirmation=false;
-const treeWizard=createTreeWizard({onAccount:({context})=>{
- nekTreeContext=context;
- openNekPreview('register');
-},onClose:()=>scheduleViewport()});
-
 const icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeRoute=value=>encodeURIComponent(value??'');
 const teipCountLabel=count=>`${count} ${count%10===1&&count%100!==11?'тейп':count%10>=2&&count%10<=4&&(count%100<12||count%100>14)?'тейпа':'тейпов'}`;
@@ -107,7 +98,6 @@ function replaceCurrentEntry(){
 
 function saveViewState(){
  if(!currentEntry)return;
- if(document.body.classList.contains('nek-open')||history.state?.nekPreview)return;
  currentEntry={...currentEntry,state:restoreEntry(state),camera:atlas?.captureCamera()??currentEntry.camera};
  if(history.state?.atlasEntry?.id===currentEntry.id){
   history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
@@ -273,12 +263,7 @@ function renderAggregateDashboard({group=null,teip=null}={}){
  const privacy=document.createElement('p');privacy.className='aggregate-privacy';
  privacy.textContent='Родословные и имена открываются отдельно — с учётом настроек доступа семьи.';
  panel.append(heading,grid,depth,privacy);
- if(group){
-  const create=document.createElement('button');create.type='button';create.className='context-create-tree';
-  create.textContent=teip?`Создать древо в тейпе ${teip.name}`:`Создать древо · ${group.name}`;
-  create.addEventListener('click',()=>treeWizard.open({groupId:group.id,teipId:teip?.id}));
-  panel.prepend(create);
- }
+
 }
 
 function makePlacePicture(media,{className='',sizes='(min-width: 900px) 340px, 100vw',loading='lazy'}={}){
@@ -479,7 +464,7 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const coordinates=city.coordinates??city.center;
  const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
  const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Место на OpenStreetMap ↗';
- const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>treeWizard.open());
+ const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>document.querySelector('#create-tree').click());
  content.append(kicker,title,intro,location,source,create);detail.append(toolbar,content);detail.scrollTop=0;
 }
 
@@ -532,27 +517,11 @@ function stateTransitionFromHash(){
 }
 
 window.addEventListener('popstate',event=>{
- if(event.state?.nekPreview&&/^#\/nek\/(login|register)$/.test(location.hash)){
-  nekTreeContext=treeWizard.restoreAccountContext();
-  openNekPreview(location.hash.endsWith('register')?'register':'login',{replace:true});
-  nekOpenedFromAtlas=true;
-  return;
- }
- if(document.body.classList.contains('nek-open')){
-  $('#nek-preview').hidden=true;
-  document.body.classList.remove('nek-open');
-  nekOpenedFromAtlas=false;
- }
  const outgoing=currentEntry;
  const entry=event.state?.atlasEntry;
  const backwards=entry&&outgoing&&entry.index<outgoing.index;
  const preserveCamera=Boolean(backwards&&outgoing.state?.view==='place'&&outgoing.manuallyMoved);
  restoreFromHistory(entry,{preserveCamera,returnFocusId:backwards?outgoing.returnFocusId:null});
- if(nekTreeContext){
-  if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
-  nekReturnToConfirmation=false;
-  nekTreeContext=null;
- }
 });
 
 function openPhoto(){
@@ -638,41 +607,6 @@ function openSearch(triggerId=document.activeElement?.id){
  });
 }
 
-function setNekMode(mode){
- const register=mode==='register';
- $('#nek-login-tab').setAttribute('aria-selected',String(!register));
- $('#nek-register-tab').setAttribute('aria-selected',String(register));
- $('#nek-password').autocomplete=register?'new-password':'current-password';
- $('#nek-status').textContent=register?'Экран создания аккаунта подготовлен; регистрация пока не подключена.':'Экран Некъ подготовлен отдельно; вход пока не подключён.';
- $('#nek-context').hidden=!nekTreeContext;
- $('#nek-preview-continue').hidden=!nekTreeContext;
- if(nekTreeContext)$('#nek-context').textContent=`Ваш черновик: ${nekTreeContext.groupName} / ${nekTreeContext.teipName} / ${nekTreeContext.treeName}`;
- if(document.body.classList.contains('nek-open'))history.replaceState({...history.state,nekPreview:true},'',`#/nek/${register?'register':'login'}`);
-}
-
-function openNekPreview(mode='login',{replace=false}={}){
- const route=`#/nek/${mode==='register'?'register':'login'}`;
- nekOpenedFromAtlas=!replace;
- if(replace)history.replaceState({...history.state,nekPreview:true},'',route);
- else history.pushState({...history.state,nekPreview:true},'',route);
- setNekMode(mode);
- $('#nek-preview').hidden=false;
- document.body.classList.add('nek-open');
- if(!replace)$('#nek-back').focus({preventScroll:true});
-}
-
-function closeNekPreview(){
- if(nekOpenedFromAtlas&&location.hash.startsWith('#/nek/')&&history.state?.nekPreview){history.back();return;}
- $('#nek-preview').hidden=true;
- document.body.classList.remove('nek-open');
- nekOpenedFromAtlas=false;
- history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
- if(nekTreeContext){
-  if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
-  nekReturnToConfirmation=false;nekTreeContext=null;
- }
-}
-
 function openGroup(id,{focusTargetId=null}={}){
  if(!groups.some(group=>group.id===id))return;
  const sheet=lastViewport?.mode?.panel==='bottom'?'half':state.sheet;
@@ -704,16 +638,7 @@ function setAtmosphere(next){
 $('#brand-home').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#return-chechnya').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#world-view').addEventListener('click',()=>{if(currentEntry)currentEntry.manuallyMoved=true;$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();requestAnimationFrame(()=>atlas?.goWorld());});
-$('#create-tree').addEventListener('click',()=>treeWizard.open());
-$('#atlas-login').addEventListener('click',()=>{nekTreeContext=null;openNekPreview('login');});
-$('#nek-preview-continue').addEventListener('click',()=>{nekReturnToConfirmation=true;closeNekPreview();});
-$('#nek-back').addEventListener('click',closeNekPreview);
-$('#nek-brand-home').addEventListener('click',closeNekPreview);
-$('#nek-login-tab').addEventListener('click',()=>setNekMode('login'));
-$('#nek-register-tab').addEventListener('click',()=>setNekMode('register'));
-$('#nek-form').addEventListener('submit',event=>{event.preventDefault();$('#nek-status').textContent='Локальный экран не отправляет данные. Подключение входа Некъ будет отдельным этапом.';});
 $('#search-toggle').addEventListener('click',()=>state.view==='search'?goBack():openSearch('search-toggle'));
-$('#opening-search').addEventListener('click',()=>openSearch('opening-search'));
 $('#search').addEventListener('focus',()=>{if(state.view!=='search')openSearch();});
 $('#search').addEventListener('input',event=>route({type:'SET_QUERY',query:event.target.value},{replace:true}));
 $('#search').addEventListener('keydown',event=>{
@@ -795,7 +720,7 @@ $('#about').addEventListener('click',()=>{
  $('#dialog-content').innerHTML='<div class="eyebrow">ДРЕВО · АТЛАС ПРОИСХОЖДЕНИЯ</div><h2>Земля хранит<br>общую память.</h2><p>Карта помогает исследовать тухумы, тейпы и места памяти. Публичная сводка показывает только общие числа, без имён и карточек людей.</p><p>Каждая родословная открывается отдельно — с учётом настроек доступа семьи. Этот локальный экран использует демонстрационный каталог, а не полный проверенный реестр.</p><div class="dialog-list"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer">Высоты местности<small>Локальная ограниченная копия Terrain Tiles</small></a><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Граница региона<small>© OpenStreetMap contributors</small></a></div>';
  $('#info-dialog').showModal();
 });
-$('.dialog-close').addEventListener('click',()=>$('#info-dialog').close());
+$('#info-dialog .dialog-close').addEventListener('click',()=>$('#info-dialog').close());
 $('#photo-close').addEventListener('click',()=>$('#photo-dialog').close());
 $('#info-dialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
 $('#photo-dialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
@@ -806,7 +731,6 @@ document.addEventListener('keydown',event=>{
  if(event.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){event.preventDefault();openSearch();}
  if(event.key==='Escape'){
   if($('#photo-dialog').open||$('#info-dialog').open)return;
-  if(document.body.classList.contains('nek-open')){closeNekPreview();return;}
   if(!$('#view-menu').hidden){$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();return;}
   if(state.view==='search'){if((currentEntry?.index??0)>0)history.back();else route({type:'CLOSE_SEARCH'},{replace:true});return;}
   if(['place','city','river','teip','group'].includes(state.view)){goBack();return;}
@@ -826,12 +750,10 @@ window.visualViewport?.addEventListener('resize',scheduleViewport,{passive:true}
 document.addEventListener('visibilitychange',()=>atlas?.setPageVisible(!document.hidden));
 motionPreference.addEventListener('change',event=>{setAtmosphere(!event.matches);});
 
-const initialNekMode=location.hash.match(/^#\/nek\/(login|register)$/)?.[1]??null;
-Object.assign(state,routeState(initialNekMode?'#/':location.hash));
+Object.assign(state,routeState(location.hash));
 currentEntry=makeEntry(state,0,null);
-history.replaceState({...history.state,atlasEntry:currentEntry},'',initialNekMode?`#/nek/${initialNekMode}`:currentRoute());
+history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
 render();
-if(initialNekMode){nekTreeContext=treeWizard.restoreAccountContext();openNekPreview(initialNekMode,{replace:true});}
 scheduleViewport();
 
 try{

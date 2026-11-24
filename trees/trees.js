@@ -98,6 +98,10 @@
   function showApp() {
     $('#login-screen').hidden = true;
     $('#app-screen').hidden = false;
+    if (location.hash === '#create') {
+      history.replaceState(null, '', location.pathname + location.search);
+      openCreateDialog();
+    }
   }
 
   function formatNumber(value) {

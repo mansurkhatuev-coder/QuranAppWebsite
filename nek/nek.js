@@ -1,7 +1,6 @@
 (function initNek() {
   const RECENT_KEY = 'nek:lastTree';
   const REMEMBER_KEY = 'nek:remember';
-  const PWA_DISMISS_KEY = 'nek:pwaDismissed';
   const PUBLISH_URL =
     (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.publishDrewoUrl) ||
     'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
@@ -29,7 +28,6 @@
     'Логин и пароль семьи — те, что прислал родственник. Доступ откроется сразу.';
   const submitLabel = 'Войти';
 
-  let deferredInstall = null;
   let busy = false;
 
   function reducedMotion() {
@@ -41,7 +39,7 @@
     let value = String(raw || '').trim();
     try {
       if (/^https?:\/\//i.test(value) || value.includes('waydean.ru') || value.includes('/t/')) {
-        const withProto = /^https?:\/\//i.test(value) ? value : 'https://' + value.replace(/^\/+/, '');
+        const withProto = value.startsWith('/') ? new URL(value, window.location.origin).href : /^https?:\/\//i.test(value) ? value : 'https://' + value.replace(/^\/+/, '');
         const url = new URL(withProto, window.location.origin);
         const fromQuery = url.searchParams.get('c') || url.searchParams.get('code');
         if (fromQuery) value = fromQuery;
@@ -134,7 +132,7 @@
     const raw = String(data.path || '').trim() || '/' + String(data.treeDir || '') + '/';
     try {
       const url = new URL(raw, window.location.origin);
-      if (url.origin !== window.location.origin) return '';
+      if (url.origin !== window.location.origin || !/^\/drewo(?:-[a-z0-9-]+)?\/$/.test(url.pathname)) return '';
       return url.pathname;
     } catch (err) {
       return '';
@@ -257,7 +255,7 @@
       const data = JSON.parse(raw);
       const path = String(data?.path || '').trim();
       const title = String(data?.title || '').trim();
-      if (path.startsWith('/') && !path.startsWith('//')) {
+      if (treePathOf({path}) && path === treePathOf({path})) {
         recentLink.href = path;
         recentLink.textContent = title
           ? `Открыть «${title}»`
@@ -284,41 +282,4 @@
     }
   };
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      void navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
-  }
-
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstall = event;
-    try {
-      if (localStorage.getItem(PWA_DISMISS_KEY) === '1') return;
-    } catch (err) {
-      /* ignore */
-    }
-    if (pwaBanner) pwaBanner.hidden = false;
-  });
-
-  pwaInstall?.addEventListener('click', async () => {
-    if (!deferredInstall) return;
-    deferredInstall.prompt();
-    try {
-      await deferredInstall.userChoice;
-    } catch (err) {
-      /* ignore */
-    }
-    deferredInstall = null;
-    if (pwaBanner) pwaBanner.hidden = true;
-  });
-
-  pwaDismiss?.addEventListener('click', () => {
-    if (pwaBanner) pwaBanner.hidden = true;
-    try {
-      localStorage.setItem(PWA_DISMISS_KEY, '1');
-    } catch (err) {
-      /* ignore */
-    }
-  });
 })();

@@ -2,7 +2,7 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#E6EDE8" />
     <meta name="mobile-web-app-capable" content="yes" />
@@ -54,8 +54,8 @@
 
     <div id="pwa-banner" class="pwa-banner" hidden>
       <div>
-        <strong>Установить Trees</strong>
-        <p>Пульт древ на экран Домой</p>
+        <strong>Установить кабинет</strong>
+        <p>Добавить на главный экран</p>
       </div>
       <div class="pwa-banner-actions">
         <button type="button" id="pwa-install" class="btn btn-primary">Установить</button>
@@ -73,12 +73,12 @@
     <div id="login-screen" class="login-shell">
       <div class="login-stage">
         <div class="hero-light" aria-hidden="true"></div>
-        <p class="brand-word brand-hero">Trees</p>
+        <p class="brand-word brand-hero">Древо</p>
         <span class="hero-rule" aria-hidden="true"></span>
-        <p class="login-tagline">Пульт разработчика: древа и оплаты. Семья сюда не заходит.</p>
+        <p class="login-tagline">Кабинет управляющего родословными</p>
         <p class="login-public">
-          Родственникам — публичный вход
-          <a href="/nek/">Некъ</a>
+          Для родственников
+          <a href="/atlas/?login=1">Семейный вход</a>
         </p>
         <form id="login-form" class="login-form" method="post" action="/trees/" autocomplete="on">
           <label>
@@ -113,7 +113,7 @@
     <div id="app-screen" class="shell" hidden>
       <header class="topbar">
         <div class="topbar-brand">
-          <p class="brand-word">Trees</p>
+          <p class="brand-word">Древо</p>
           <p class="muted" id="updated-at">Обновление…</p>
         </div>
         <div class="topbar-actions">
@@ -173,7 +173,7 @@
           </button>
         </header>
         <p class="muted create-dialog-lead">
-          Пустое древо на сайте. Семье потом дадите имя и пароль — без лишних кодов в интерфейсе.
+          Сайт опубликует страницу семьи. Пароль защищает редактирование. Данные родословной хранятся в открытом репозитории.
         </p>
         <label>
           Название
@@ -187,7 +187,7 @@
             type="text"
             maxlength="25"
             required
-            pattern="[A-Za-z][A-Za-z0-9_-]{1,24}"
+            pattern="[A-Za-z][A-Za-z0-9_\-]{1,24}"
             title="Латиница, 2–25 символов, начинается с буквы (например hoti)"
             placeholder="hoti"
             autocapitalize="off"
@@ -199,10 +199,10 @@
         <p class="field-hint">Латиницей, как <code>hoti</code>. Короткая ссылка <code id="create-path-preview">/t/…</code> (старый путь /drewo-…/ тоже останется)</p>
         <label>
           Пароль семьи
-          <input id="create-password" name="password" type="text" maxlength="64" required minlength="2" autocomplete="off" inputmode="text" />
+          <input id="create-password" name="password" type="password" maxlength="64" required minlength="2" autocomplete="new-password" inputmode="text" />
         </label>
         <label>
-          Имя корня
+          Имя первого родственника
           <input id="create-root" name="rootName" type="text" maxlength="80" required placeholder="Ахмад" />
         </label>
         <label>
