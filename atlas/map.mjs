@@ -43,7 +43,8 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
  const initialPitch=()=>innerHeight<600?32:innerWidth<900?35:46;
  const terrainSource={type:'raster-dem',tiles:[new URL('./data/terrain/{z}/{x}/{y}.png',location.href).href.replaceAll('%7B','{').replaceAll('%7D','}')],encoding:'terrarium',tileSize:256,minzoom:5,maxzoom:10,bounds:[44.4,42.35,46.75,44.2],attribution:'AWS Terrain Tiles'};
  const style=createAtlasStyle(terrainSource);
- const map=new Map({container:'map',style,center:[45.8,43.05],zoom:7.3,pitch:initialPitch(),bearing:-17,minZoom:0,maxZoom:12.3,maxPitch:60,attributionControl:false,renderWorldCopies:false,canvasContextAttributes:{antialias:true}});
+ const modestGPU=navigator.deviceMemory<=4 || navigator.connection?.saveData===true;
+ const map=new Map({pixelRatio:Math.min(devicePixelRatio,modestGPU?1.5:2),container:'map',style,center:[45.8,43.05],zoom:7.3,pitch:initialPitch(),bearing:-17,minZoom:0,maxZoom:12.3,maxPitch:60,attributionControl:false,renderWorldCopies:false,canvasContextAttributes:{antialias:!modestGPU}});
  map.setCenterClampedToGround(false);
  const zoomBy=createAtlasZoom(map,{reducedMotion:()=>reduce.matches});
  const terrainConfig=()=>({source:'terrain-dem',exaggeration:1.8});
@@ -153,7 +154,6 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   if(map.getLayer('fallback-hillshade'))map.setLayoutProperty('fallback-hillshade','visibility','visible');
   addFallbackBoundary();
   if(terrainEnabled)map.setTerrain(terrainConfig());
-  map.on('render',projectFallbackMarkers);
   report('degraded',reason);
  }
  function projectFallbackMarkers(){
@@ -245,7 +245,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
 
  map.once('load',()=>{loadMap().catch(error=>{console.error('Atlas map setup failed',error);activateFallback();finishSetup('degraded','Облегчённый рельеф · каталог работает');});});
  map.on('error',event=>{
-  const message=event.error?.message??'';mapErrors.push(message||'Неизвестная ошибка MapLibre');
+  const message=event.error?.message??'';if(mapErrors.length>=32)mapErrors.shift();mapErrors.push(message||'Неизвестная ошибка MapLibre');
   if(/WebGL|context lost/i.test(message))report('unavailable','Карта недоступна · каталог работает');
   else if(mapStatus==='loading'||mapStatus==='ready')report('degraded','Рельеф доступен частично');
  });

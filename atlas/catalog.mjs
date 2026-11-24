@@ -24,11 +24,11 @@ export const groups=[
 
 // Positions are approximate settlement-level locations for visual evaluation, not a travel guide.
 export const sites=[
- {id:'sharoi-complex',name:'Шарой',fullName:'Шаройский башенный комплекс',area:'Шаройский район',center:[45.826,42.674],kind:'Башенный комплекс',source:'https://argmz.ru/',group:'sharoi',description:'Каменная архитектура горной Чечни. Карточка показывает, как будут собраны история места, фотографии, источники и связанные родословные.'},
- {id:'khoi-complex',name:'Хой',fullName:'Хойский историко-архитектурный комплекс',area:'Веденский район',center:[46.147,42.771],kind:'Историческое селение',source:'https://argmz.ru/',group:'cheber',description:'Место, в котором история возвращает себе голос. В будущем здесь появятся проверенные сведения о комплексе и ссылки на материалы хранителей.'},
- {id:'ushkaloi',name:'Ушкалой',fullName:'Ушкалойские башни',area:'Итум-Калинский район',center:[45.566,42.87],kind:'Башенный комплекс',source:'https://argmz.ru/',group:'shatoi',description:'Карточка архитектурного памятника: источник, сохранность, уточнённая география и история исследований. Координаты в концепте приблизительные.'},
- {id:'nikaroi',name:'Никарой',fullName:'Никаройский башенный комплекс',area:'Итум-Калинский район',center:[45.53,42.755],kind:'Башенный комплекс',source:'https://argmz.ru/',group:null,description:'Образец карточки места. Принадлежность к роду или тейпу появится только после проверки источников.'},
- {id:'phakoch',name:'Пхакоч',fullName:'Историко-архитектурный комплекс «Пхакоч»',area:'Итум-Калинский район',center:[45.577,42.731],kind:'Крепостной комплекс',source:'https://argmz.ru/',group:null,description:'Образец того, как музейные и архивные материалы могут быть связаны с географией. Точка предназначена для оценки интерфейса.'}
+ {id:'sharoi-complex',name:'Шарой',fullName:'Шаройский башенный комплекс',area:'Шаройский район',center:[45.826,42.674],kind:'Башенный комплекс',source:'https://argmz.ru/',group:'sharoi'},
+ {id:'khoi-complex',name:'Хой',fullName:'Хойский историко-архитектурный комплекс',area:'Веденский район',center:[46.147,42.771],kind:'Историческое селение',source:'https://argmz.ru/',group:'cheber'},
+ {id:'ushkaloi',name:'Ушкалой',fullName:'Ушкалойские башни',area:'Итум-Калинский район',center:[45.566,42.87],kind:'Башенный комплекс',source:'https://argmz.ru/',group:'shatoi'},
+ {id:'nikaroi',name:'Никарой',fullName:'Никаройский башенный комплекс',area:'Итум-Калинский район',center:[45.53,42.755],kind:'Башенный комплекс',source:'https://argmz.ru/',group:null},
+ {id:'phakoch',name:'Пхакоч',fullName:'Историко-архитектурный комплекс «Пхакоч»',area:'Итум-Калинский район',center:[45.577,42.731],kind:'Крепостной комплекс',source:'https://argmz.ru/',group:null}
 ].map(s=>({...s,coordinateAccuracy:'approximate',catalogStatus:'draft-demo'}));
 export function searchCatalog(query){
  const q=query.trim().toLocaleLowerCase('ru');

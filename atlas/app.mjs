@@ -1,5 +1,4 @@
 import {groups,sites,searchCatalog} from './catalog.mjs';
-import {createAtlas} from './map.mjs';
 import {getPlaceMedia,imageFor} from './media.mjs';
 import {createInitialState,transition,restoreEntry,contextPanel} from './atlas-state.mjs?v=f3463c6';
 import {settlements} from './settlements.mjs';
@@ -14,6 +13,7 @@ const shell=$('#atlas-shell');
 const state=createInitialState();
 const runtime={mapStatus:'loading'};
 let atlas=null;
+let publicSummary=null;
 let sheetController=null;
 let currentEntry=null;
 let previousState=null;
@@ -202,68 +202,43 @@ function breadcrumb(label,action){
 function currentGroup(){return groups.find(group=>group.id===state.groupId)??null;}
 function currentTeip(){return currentGroup()?.teips.find(teip=>teip.id===state.teipId)??null;}
 
-function aggregateMetric(label,value,note){
- const card=document.createElement('article');card.className='aggregate-metric';
- const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
- const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
- const detail=document.createElement('span');detail.className='aggregate-metric-note';detail.textContent=note;
- card.append(name,amount,detail);
- return card;
-}
-
-function renderAggregateDashboard({group=null,teip=null}={}){
- const panel=$('#aggregate-dashboard');
+function renderAggregateDashboard({group=null,teip=null,settlement=null,panel=$('#aggregate-dashboard')}={}){
  panel.replaceChildren();
- panel.hidden=false;
-
- const teipCount=groups.reduce((total,item)=>total+item.teips.length,0);
- const placeCount=group?sites.filter(site=>site.group===group.id).length:0;
- const heading=document.createElement('div');heading.className='aggregate-heading';
- const kicker=document.createElement('span');kicker.className='aggregate-kicker';kicker.textContent='ПУБЛИЧНАЯ СВОДКА · ДЕМО';
- const title=document.createElement('h3');title.textContent=teip?`Тейп ${teip.name}`:group?`Тухум ${group.name}`:'Атлас Чечни';
- const intro=document.createElement('p');intro.textContent='Только общие числа — без имён и карточек людей.';
- heading.append(kicker,title,intro);
-
- const grid=document.createElement('div');grid.className='aggregate-grid';
- let metrics;
+ const metrics=[];
  if(teip){
-  metrics=[
-   ['Открытых родословных','—','публичные данные не подключены'],
-   ['Людей в открытых деревьях','—','без имён и профилей'],
-   ['Поколений с источниками','—','подтверждённая сводка появится позже'],
-   ['Мест в демо-атласе',String(placeCount),'приблизительные связи']
-  ];
+  const linked=sites.filter(site=>site.group===group.id && site.teipId===teip.id);
+  if(linked.length)metrics.push(['Исторические места',linked.length]);
+ }else if(settlement){
+  const linked=sites.filter(site=>site.settlementId===settlement.id);
+  if(linked.length)metrics.push(['Исторические объекты',linked.length]);
  }else if(group){
-  metrics=[
-   ['Тейпов в демо-каталоге',String(group.teips.length),'выборка для прототипа'],
-   ['Открытых родословных','—','публичные данные не подключены'],
-   ['Людей в открытых деревьях','—','без имён и профилей'],
-   ['Поколений с источниками','—','подтверждённая сводка появится позже']
-  ];
+  metrics.push(['Тейпы в каталоге',group.teips.length]);
+  const places=sites.filter(site=>site.group===group.id);
+  if(places.length)metrics.push(['Места в каталоге тухума',places.length]);
  }else{
-  metrics=[
-   ['Тухумов в демо-каталоге',String(groups.length),'выборка для прототипа'],
-   ['Тейпов в демо-каталоге',String(teipCount),'выборка для прототипа'],
-   ['Открытых родословных','—','публичные данные не подключены'],
-   ['Людей в открытых деревьях','—','без имён и профилей']
-  ];
+  metrics.push(['Тухумы',groups.length],['Записи о тейпах',groups.reduce((n,g)=>n+g.teips.length,0)],['Исторические места',sites.length]);
  }
- metrics.forEach(([label,value,note])=>grid.append(aggregateMetric(label,value,note)));
-
- const depth=document.createElement('section');depth.className='aggregate-depth';
- const depthHeading=document.createElement('div');depthHeading.className='aggregate-depth-heading';
- const depthTitle=document.createElement('h4');depthTitle.textContent='Глубина поколений';
- const depthValue=document.createElement('span');depthValue.textContent='—';
- depthHeading.append(depthTitle,depthValue);
- const scale=document.createElement('div');scale.className='aggregate-depth-scale';scale.setAttribute('aria-hidden','true');
- ['I','II','III','IV','V','VI','VII+'].forEach(label=>{const step=document.createElement('span');step.textContent=label;scale.append(step);});
- const depthNote=document.createElement('p');depthNote.textContent='Показатель появится после публикации проверенных и разрешённых к показу данных.';
- depth.append(depthHeading,scale,depthNote);
-
- const privacy=document.createElement('p');privacy.className='aggregate-privacy';
- privacy.textContent='Родословные и имена открываются отдельно — с учётом настроек доступа семьи.';
- panel.append(heading,grid,depth,privacy);
-
+ const scope=teip?`teip/${group.id}/${teip.id}`:group?`group/${group.id}`:settlement?`city/${settlement.id}`:'project';
+ const published=publicSummary?.scopes?.[scope];
+ if(published){
+  for(const [key,label] of Object.entries({trees:'Родословные с согласием семьи',people:'Записи о людях',teips:'Представленные тейпы',settlements:'Родовые селения'})){
+   if(published[key])metrics.push([label,published[key]]);
+  }
+  for(const [depth,count] of Object.entries(published.depth??{}))metrics.push([`Древ с глубиной ${depth} поколений`,count]);
+ }
+ if(settlement && !metrics.length){panel.hidden=true;return;}
+ const grid=document.createElement('div');
+ grid.className='aggregate-grid';
+ for(const [label,value] of metrics){
+  const card=document.createElement('article');card.className='aggregate-metric';
+  const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
+  const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
+  card.append(name,amount);grid.append(card);
+ }
+ const note=document.createElement('p');note.className='aggregate-privacy';
+ note.textContent=published?`Сводка на ${publicSummary.date}. Размеры выборок показаны интервалами.`:teip?'В каталоге пока нет подтверждённых связей этого тейпа с родовыми селениями.':'Принадлежность тейпов и привязки мест уточняются.';
+ panel.append(grid,note);
+ panel.hidden=false;
 }
 
 function makePlacePicture(media,{className='',sizes='(min-width: 900px) 340px, 100vw',loading='lazy'}={}){
@@ -403,11 +378,11 @@ function renderPlace(){
  const content=document.createElement('div');content.className='detail-content';
  const area=document.createElement('span');area.className='micro';area.textContent=place.area;
  const title=document.createElement('h2');title.textContent=place.fullName;
- const description=document.createElement('p');description.className='detail-description';description.textContent=place.description;
  const meta=document.createElement('div');meta.className='detail-meta';meta.innerHTML=`${icon('tower')}<span></span>`;meta.querySelector('span').textContent=place.kind;
- const note=document.createElement('p');note.className='detail-note';note.textContent='Точка на карте приблизительная.';
+ const note=document.createElement('p');note.className='detail-note';note.textContent='Точка на карте приблизительная. Иллюстрация создана ИИ. ';
+ const source=document.createElement('a');source.href=place.source;source.textContent='Сайт музея-заповедника';source.rel='noreferrer';source.target='_blank';note.append(source);
  const showMap=document.createElement('button');showMap.type='button';showMap.className='detail-map-action';showMap.id='show-place-map';showMap.innerHTML=`<span>Показать на карте</span>${icon('arrow')}`;showMap.addEventListener('click',()=>{setSheet('peek');atlas?.focusSite(place.id,{focus:true,padding:lastViewport?.padding});scheduleViewport();});
- content.append(area,title,description,meta,note,showMap);
+ content.append(area,title,meta,note,showMap);
  detail.append(toolbar,figure,content);
  detail.scrollTop=0;
  detail.hidden=false;
@@ -460,12 +435,16 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const content=document.createElement('div');content.className='detail-content city-content';
  const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'РЕКИ ЧЕЧНИ':'ГОРОДА ЧЕЧНИ';
  const title=document.createElement('h2');title.textContent=city.name;
- const intro=document.createElement('p');intro.className='detail-description';intro.textContent=isRiver?'Река на карте родных мест. Рассмотрите её русло, долины и близлежащие населённые пункты.':'Город на карте родных мест. Отсюда можно перейти к выбору происхождения и подготовить своё родовое древо.';
  const coordinates=city.coordinates??city.center;
  const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
  const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Место на OpenStreetMap ↗';
  const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>document.querySelector('#create-tree').click());
- content.append(kicker,title,intro,location,source,create);detail.append(toolbar,content);detail.scrollTop=0;
+ content.append(kicker,title,location,source,create);if(!isRiver){
+  const panel=document.createElement('section');
+  renderAggregateDashboard({settlement:city,panel});
+  content.append(panel);
+ }
+ detail.append(toolbar,content);detail.scrollTop=0;
 }
 
 function focusTarget(id){
@@ -534,7 +513,7 @@ function openPhoto(){
  image.alt=media.alt;
  image.width=media.width??1536;
  image.height=media.height??1024;
- $('#photo-view-caption').textContent=place.fullName;
+ $('#photo-view-caption').textContent=place.fullName+' · Иллюстрация, созданная ИИ';
  $('#photo-dialog').dataset.placeId=place.id;
  $('#photo-dialog').showModal();
  $('#photo-close').focus();
@@ -635,6 +614,20 @@ function setAtmosphere(next){
  $('#motion-toggle').setAttribute('aria-pressed',String(atmosphereEnabled));
 }
 
+async function showFamilyMap(){
+ try {
+  const {openFamilyView}=await import('./family-view.mjs');
+  await openFamilyView({dialog:$('#family-map'),
+   showPlace:place=>{if(place.coordinates)openCity(place.id);else openSite(place.id);},
+   showTeip:(group,teip)=>route({type:'SELECT_TEIP',groupId:group.id,id:teip.id,sheet:'half'})
+  });
+ }catch{toast('Семейная карта сейчас недоступна');}
+}
+$('#family-view').addEventListener('click',()=>{
+ $('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');
+ void showFamilyMap();
+});
+const familyEntry=location.hash==='#/family';
 $('#brand-home').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#return-chechnya').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#world-view').addEventListener('click',()=>{if(currentEntry)currentEntry.manuallyMoved=true;$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();requestAnimationFrame(()=>atlas?.goWorld());});
@@ -717,7 +710,7 @@ $('#map-only').addEventListener('click',()=>{
  $('#view-menu').hidden=false;$('#view-toggle').setAttribute('aria-expanded','true');scheduleViewport();
 });
 $('#about').addEventListener('click',()=>{
- $('#dialog-content').innerHTML='<div class="eyebrow">ДРЕВО · АТЛАС ПРОИСХОЖДЕНИЯ</div><h2>Земля хранит<br>общую память.</h2><p>Карта помогает исследовать тухумы, тейпы и места памяти. Публичная сводка показывает только общие числа, без имён и карточек людей.</p><p>Каждая родословная открывается отдельно — с учётом настроек доступа семьи. Этот локальный экран использует демонстрационный каталог, а не полный проверенный реестр.</p><div class="dialog-list"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer">Высоты местности<small>Локальная ограниченная копия Terrain Tiles</small></a><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Граница региона<small>© OpenStreetMap contributors</small></a></div>';
+ $('#dialog-content').innerHTML='<h2>О Древе</h2><p>Семьи собирают родословные в редакторе. В атласе можно найти тейп, увидеть рельеф и открыть карточку исторического места. Каталог неполный, классификация тейпов предварительная.</p><div class="dialog-list"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer">Высоты местности<small>Локальная ограниченная копия Terrain Tiles</small></a><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Граница региона<small>© OpenStreetMap contributors</small></a></div>';
  $('#info-dialog').showModal();
 });
 $('#info-dialog .dialog-close').addEventListener('click',()=>$('#info-dialog').close());
@@ -752,11 +745,23 @@ motionPreference.addEventListener('change',event=>{setAtmosphere(!event.matches)
 
 Object.assign(state,routeState(location.hash));
 currentEntry=makeEntry(state,0,null);
+if(familyEntry)void showFamilyMap();
 history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
 render();
 scheduleViewport();
 
+fetch('./data/public-summary.json',{cache:'no-cache'}).then(response=>{
+ if(!response.ok)throw new Error('summary unavailable');
+ return response.json();
+}).then(summary=>{
+ if(summary.version!==1 || !summary.scopes)return;
+ publicSummary=summary;
+ if(state.view==='city')renderCity();
+ if(['overview','explore','group','teip'].includes(state.view))renderAggregateDashboard({group:currentGroup(),teip:currentTeip()});
+}).catch(()=>{});
+
 try{
+ const {createAtlas}=await import('./map.mjs');
  atlas=await createAtlas({
   onHome:()=>route({type:'GO_HOME'},{replace:true}),
   onGroup:id=>openGroup(id),
@@ -791,7 +796,7 @@ try{
 }catch(error){
  console.error('Atlas initialization failed',error);
  setMapStatus('unavailable');
- $('#map').style.background='url(./assets/relief-overview.png) center/cover';
+ $('#map').style.background='url(./assets/relief-overview.webp) center/cover';
  toast('Карта сейчас недоступна. Каталог и карточки работают.');
 }
 
