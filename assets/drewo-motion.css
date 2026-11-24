@@ -1,0 +1,126 @@
+/* Shared motion system for Atlas, Drewo and the family cabinet.
+   Keep camera transforms, sheet dragging and native dialog semantics intact. */
+:root {
+  --motion-fast: 140ms;
+  --motion-standard: 220ms;
+  --motion-panel: 300ms;
+  --motion-ease: cubic-bezier(.2,.75,.25,1);
+}
+@keyframes drewo-motion-enter {
+  from { opacity: 0; translate: 0 7px; }
+  to { opacity: 1; translate: 0 0; }
+}
+@keyframes drewo-motion-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes drewo-motion-dialog {
+  from { opacity: 0; scale: .985; }
+  to { opacity: 1; scale: 1; }
+}
+/* No changes to layout, pointer capture or the camera transforms. */
+:where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
+        .app-shell,.login-shell,.create-dialog,.tree-list,.stage) 
+:where(button,a.btn,.demo-tree-link,.login-link):not(:disabled) {
+  -webkit-tap-highlight-color: transparent;
+  transition-property: background-color,border-color,color,opacity,box-shadow,scale;
+  transition-duration: var(--motion-fast);
+  transition-timing-function: var(--motion-ease);
+}
+:where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
+        .app-shell,.login-shell,.create-dialog,.tree-list,.stage)
+:where(button,a.btn,.demo-tree-link,.login-link):not(:disabled):active {
+  scale: .98;
+}
+:where(button,a,input,select,textarea):focus-visible {
+  outline: 2px solid var(--gold,#c6ad7b);
+  outline-offset: 3px;
+}
+:where(input,textarea,select) {
+  transition: border-color var(--motion-fast) ease, background-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+/* Default entry animations also work on browsers without discrete transitions. */
+:where(.popover,#view-menu,#place-detail,#search-results,#aggregate-dashboard,
+        #catalog-empty,#searchResults,#statsGrid,#login-panel):not([hidden]) {
+  animation: drewo-motion-enter var(--motion-standard) var(--motion-ease) both;
+}
+dialog[open]:is(.info-dialog,.photo-dialog,.ctw-dialog,.create-dialog,
+ .person-sheet-dialog,.photo-crop-dialog,.photo-lightbox-dialog,
+ .account-admin-password-dialog,.pwa-push-dialog) {
+  animation: drewo-motion-dialog var(--motion-panel) var(--motion-ease) both;
+}
+dialog[open]::backdrop { animation: drewo-motion-fade var(--motion-standard) ease both; }
+:where(#catalog-list,#search-results,#searchResults,#statsGrid,#aggregate-dashboard)
+ > :nth-child(-n+8) {
+  animation: drewo-motion-fade var(--motion-standard) var(--motion-ease) both;
+}
+/* Fade out without deferring hidden or close() in application JS.
+   Browsers without allow-discrete keep their normal instant close. */
+@supports (transition-behavior: allow-discrete) {
+  :is(.popover,#view-menu,#place-detail,#search-results,#aggregate-dashboard,
+      #catalog-empty,#searchResults,#statsGrid,#login-panel,.backdrop) {
+    animation: none;
+    opacity: 1;
+    transition: opacity var(--motion-standard) var(--motion-ease),
+      display var(--motion-standard) allow-discrete;
+  }
+  :is(.popover,#view-menu,#place-detail,#search-results,#aggregate-dashboard,
+      #catalog-empty,#searchResults,#statsGrid,#login-panel,.backdrop)[hidden] {
+    opacity: 0;
+    pointer-events: none;
+  }
+  @starting-style {
+    :is(.popover,#view-menu,#place-detail,#search-results,#aggregate-dashboard,
+        #catalog-empty,#searchResults,#statsGrid,#login-panel,.backdrop):not([hidden]) {
+      opacity: 0;
+    }
+  }
+  dialog:is(.info-dialog,.photo-dialog,.ctw-dialog,.create-dialog,
+    .person-sheet-dialog,.photo-crop-dialog,.photo-lightbox-dialog,
+    .account-admin-password-dialog,.pwa-push-dialog) {
+    animation: none;
+    opacity: 0;
+    scale: .985;
+    transition: opacity var(--motion-panel) var(--motion-ease),
+      scale var(--motion-panel) var(--motion-ease),
+      display var(--motion-panel) allow-discrete,
+      overlay var(--motion-panel) allow-discrete;
+  }
+  dialog[open]:is(.info-dialog,.photo-dialog,.ctw-dialog,.create-dialog,
+    .person-sheet-dialog,.photo-crop-dialog,.photo-lightbox-dialog,
+    .account-admin-password-dialog,.pwa-push-dialog) {
+    animation: none;
+    opacity: 1;
+    scale: 1;
+  }
+  @starting-style {
+    dialog[open]:is(.info-dialog,.photo-dialog,.ctw-dialog,.create-dialog,
+      .person-sheet-dialog,.photo-crop-dialog,.photo-lightbox-dialog,
+      .account-admin-password-dialog,.pwa-push-dialog) { opacity: 0; scale: .985; }
+  }
+}
+@media (max-width: 700px) {
+  .app-shell.profile-open .profile-panel {
+    animation: drewo-motion-enter var(--motion-panel) var(--motion-ease) both;
+  }
+}
+@media (pointer: coarse) {
+  /* Prevent iOS focus zoom; do not disable pinch zoom or change viewport scale. */
+  :is(input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=hidden]),
+      textarea,select) { font-size: max(16px, 1em); }
+}
+@media (prefers-reduced-motion: reduce) {
+  :where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
+    .app-shell,.login-shell,.create-dialog,.tree-list,.stage) :where(button,a.btn),
+  :is(.popover,#view-menu,#place-detail,#search-results,#aggregate-dashboard,#catalog-empty,
+    #searchResults,#statsGrid,#login-panel,.backdrop,.profile-panel),
+  :where(#catalog-list,#search-results,#searchResults,#statsGrid,#aggregate-dashboard) > *,
+  dialog, dialog::backdrop, :where(input,textarea,select) {
+    animation: none !important;
+    transition: none !important;
+  }
+  :where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
+    .app-shell,.login-shell,.create-dialog,.tree-list,.stage) :where(button,a.btn):active {
+    scale: 1;
+  }
+}
