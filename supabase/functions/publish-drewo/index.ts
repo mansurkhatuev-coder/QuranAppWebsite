@@ -12,6 +12,7 @@ import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydean
 import { familyPublishGuardError } from './family-publish-guard.ts';
 import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
 import { hubTreeMetrics } from './hub-tree-metrics.ts';
+import { photoFileCandidates, photoMediaType, decodeGithubPhoto, MAX_PHOTO_BYTES } from './private-photo.mjs';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -1755,6 +1756,11 @@ Deno.serve(async (request) => {
       ? 'super'
       : sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
 
+    // Photo reads always require a verified tree session or the account-admin gate.
+    if (action === 'photo-load' && !role) {
+      return jsonResponse({ ok: false, error: 'Требуется действующий вход в древо.' }, 401);
+    }
+
     if (!role) {
       const attemptState = getAuthAttempt(attemptKey);
       if (attemptState.lockedUntil > Date.now()) {
@@ -1834,6 +1840,39 @@ Deno.serve(async (request) => {
         locked: lock.locked,
         lockedReason: lock.lockedReason,
       });
+    }
+
+    if (action === 'photo-load') {
+      if (treeDir === DEMO_TREE_DIR) return jsonResponse({ ok: false, error: 'В демо нет семейных фотографий.' }, 404);
+      const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
+      const variant = body.variant;
+      const candidates = photoFileCandidates(personId, variant);
+      if (!candidates.length) return jsonResponse({ ok: false, error: 'Некорректный запрос фотографии.' }, 400);
+      const reply = (image: { contentType: string; contentBase64: string }) =>
+        jsonResponse({ ok: true, treeDir, personId, variant, ...image });
+
+      for (const file of candidates) {
+        const result = await githubJson(githubToken, `https://api.github.com/repos/${githubRepo}/contents/${treeDir}/photos/${encodeURIComponent(file)}`);
+        if (result.status === 404) continue;
+        if (!result.ok) return jsonResponse({ ok: false, error: 'Не удалось загрузить фотографию.' }, 502);
+        const image = decodeGithubPhoto(result.json);
+        if (!image) return jsonResponse({ ok: false, error: 'Файл фотографии не прошёл проверку.' }, 422);
+        return reply(image);
+      }
+
+      // Compatibility with older photos stored in the existing Supabase bucket.
+      // Download server-side only, never expose a public URL or a service key.
+      const bucket = supabaseService().storage.from('drewo-photos');
+      for (const file of candidates) {
+        const { data, error } = await bucket.download(`${treeDir}/${file}`);
+        if (error || !data) continue;
+        if (data.size > MAX_PHOTO_BYTES) return jsonResponse({ ok: false, error: 'Файл фотографии слишком большой.' }, 422);
+        const bytes = new Uint8Array(await data.arrayBuffer());
+        const contentType = photoMediaType(bytes);
+        if (!contentType) return jsonResponse({ ok: false, error: 'Файл фотографии не прошёл проверку.' }, 422);
+        return reply({ contentType, contentBase64: bytesToBase64(bytes) });
+      }
+      return jsonResponse({ ok: false, error: 'Фотография не найдена.' }, 404);
     }
 
     if (action === 'upload-photo') {
