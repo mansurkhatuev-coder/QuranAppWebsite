@@ -14,8 +14,10 @@ export function isPrivateArtifact(path) {
   const parts = segments(path);
   const name = parts.at(-1) || '';
   if (parts.some(part => excludedDirectories.has(part))) return true;
+  if (['supabase', 'scripts'].includes(parts[0])) return true;
+  if (name === '.gitignore' || name === 'start-waydean-local.cmd' || /\.test\.[cm]?[jt]s$/i.test(name)) return true;
   if (parts.includes('photos') && parts.some(part => /^drewo(?:-|$)/.test(part))) return true;
-  if (excludedFiles.has(name) || parts.join('/') === 'trees/registry.json' || parts.join('/') === 'scripts/legacy-transitions.json') return true;
+  if (excludedFiles.has(name) || parts.join('/') === 'trees/registry.json') return true;
   return /^\.env(?:\.|$)/i.test(name) || /\.(?:sqlite|sqlite3|db|pem|key)$/i.test(name);
 }
 
