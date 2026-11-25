@@ -84,3 +84,66 @@ test('path rules are case-insensitive and distinguish non-family public photos',
   assert.equal(isPrivateArtifact('other/photos/person.jpg'),false);
   assert.equal(isPrivateArtifact('atlas/data/public-summary.json'),false);
 });
+
+
+test('all eight legacy reader templates compile after private data removal', async () => {
+  const { secureLegacyReader } = await import('./secure-legacy-reader.mjs');
+  const { stripEmbeddedFamilyData } = await import('./prepare-pages-artifact.mjs');
+  const paths = ['drewo/legacy.html','drewo-adam/legacy.html','drewo-dada-yurt/legacy.html',
+    'drewo-eldarovy/legacy.html','drewo-guzat/legacy.html','drewo-reklama/legacy.html',
+    'drewo-covza/index.html','drewo-shahiid-nek/index.html'];
+  for (const path of paths) {
+    const source = await readFile(new URL('../' + path, import.meta.url), 'utf8');
+    const sanitized = secureLegacyReader(stripEmbeddedFamilyData(source));
+    assert.match(sanitized, /action: 'family-load', treeDir: TREE_DIR, sessionToken: token/);
+    assert.match(sanitized, /if \(!nekSessionActive\) \{/);
+    assert.doesNotMatch(sanitized, /fetch\('(?:family-tree|access)\.json|PHOTO_(?:PUBLIC|FALLBACK)_BASE|photo(?:Thumb|Full)(?:Fallback)?Url\(/);
+    for (const match of sanitized.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {
+      if (/\btype\s*=\s*["'](?:application\/json|module)["']/i.test(match[1]) || /\bsrc\s*=/i.test(match[1])) continue;
+      if (match[2].trim()) assert.doesNotThrow(() => new Function(match[2]), path);
+    }
+    assert.throws(() => secureLegacyReader(stripEmbeddedFamilyData(source).replace(
+      'var tree = TreeModel.markAllowAdd(JSON.parse(dataEl.textContent), NUTSU_ID);',
+      'var tree = null;')), /Legacy reader anchor/);
+  }
+});
+
+test('legacy access requires verified session and successful tree load before unlock', async () => {
+  const { secureLegacyReader } = await import('./secure-legacy-reader.mjs');
+  const { stripEmbeddedFamilyData } = await import('./prepare-pages-artifact.mjs');
+  const source = await readFile(new URL('../drewo/legacy.html', import.meta.url),'utf8');
+  const out = secureLegacyReader(stripEmbeddedFamilyData(source));
+  function section(start, end) {
+    const i = out.indexOf(start), j = out.indexOf(end,i+start.length);
+    assert.ok(i >= 0 && j > i);
+    return out.slice(i,j);
+  }
+  const authCode = section('      function applyNekSession() {','      /**\n       * Вход семьи:');
+  const loadCode = section('      function fetchRemoteTree() {','      function applyRemoteTreeData(');
+  async function trial({token='original',auth={ok:true,treeDir:'drewo',sessionToken:'refreshed',role:'editor'},
+    remote={ok:true,treeDir:'drewo',treeJson:'{"id":"synthetic","sons":[]}',fingerprint:'synthetic'},failure=''} = {}) {
+    const calls=[], events=[], locks=[];
+    let loaded = false;
+    const run = new Function('readNekToken','storeNekToken','clearNekToken','setViewLocked','setGateBusy',
+      'callPublishApi','rememberSession','applyRemoteTreeData','rememberFingerprintFromTree','TREE_DIR',
+      'var nekSessionActive=false;\n' + authCode + loadCode + '\nreturn async()=>({ok:await applyNekSession(),active:nekSessionActive});')(
+        ()=>token, v=>{token=v;}, ()=>{token='';},
+        v=>{locks.push(v);events.push(v?'lock':'unlock');}, ()=>{},
+        async payload=>{calls.push(payload.action);if(failure===payload.action)throw Error('network');return payload.action==='auth'?auth:remote;},
+        ()=>{}, ()=>{loaded=true;events.push('loaded');},async()=>{events.push('fingerprinted');return 'synthetic';},'drewo');
+    return {...await run(), calls, events, locks, loaded};
+  }
+  const noToken = await trial({token:''});
+  assert.equal(noToken.ok,false); assert.deepEqual(noToken.calls,[]);
+  const invalid = await trial({auth:{ok:false}});
+  assert.equal(invalid.ok,false); assert.deepEqual(invalid.calls,['auth']); assert.equal(invalid.loaded,false);
+  const wrong = await trial({remote:{ok:true,treeDir:'other',treeJson:'{"id":"synthetic"}',fingerprint:'synthetic'}});
+  assert.equal(wrong.ok,false); assert.equal(wrong.loaded,false); assert.equal(wrong.locks.at(-1),true);
+  const network = await trial({failure:'family-load'});
+  assert.equal(network.ok,false); assert.equal(network.loaded,false); assert.equal(network.locks.at(-1),true);
+  const malformed = await trial({remote:{ok:true,treeDir:'drewo',treeJson:'{}',fingerprint:'synthetic'}});
+  assert.equal(malformed.ok,false); assert.equal(malformed.loaded,false);
+  const valid = await trial();
+  assert.equal(valid.ok,true); assert.equal(valid.active,true);
+  assert.ok(valid.events.indexOf('loaded') < valid.events.indexOf('unlock'));
+});
