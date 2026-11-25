@@ -30,7 +30,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=atlas-family-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-shell-1';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -2417,10 +2417,10 @@ function renderPwaStatus(state = pwaController?.getState()) {
   offlineStatus.textContent = !state.localPreview
     ? 'Подключим вместе с выпуском Waydean'
     : state.offlineReady
-      ? 'Готово после первой загрузки'
+      ? 'Демо доступно офлайн'
       : state.serviceWorkerError
-        ? 'Не удалось включить кеш'
-        : 'Кешируется при первом открытии';
+        ? 'Не удалось включить кеш интерфейса'
+        : 'Для семейных данных нужен вход и интернет';
   networkStatus.textContent = state.online ? 'В сети' : 'Нет сети';
   $('#pwaOfflineNote').hidden = !state.localPreview;
 
