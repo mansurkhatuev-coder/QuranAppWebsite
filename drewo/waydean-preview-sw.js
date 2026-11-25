@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v73';
+const CACHE_NAME = 'waydean-preview-shell-v75';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -8,7 +8,6 @@ const PRECACHE = [
   '/assets/drewo-motion.css?v=20261124-2',
   './waydean-preview.html',
   './waydean-preview.webmanifest',
-  './family-tree.json',
   './bg-day-2.jpg',
   './icon-192.png',
   './icon-512.png',
@@ -73,19 +72,17 @@ function isPreviewResource(url) {
     || url.pathname === '/assets/drewo-motion.css'
     || url.pathname.startsWith('/drewo/waydean-preview-')
     || url.pathname === '/drewo/waydean-color-scheme.css'
-    || url.pathname === '/drewo/family-tree.json'
     || url.pathname === '/drewo/waydean-preview.webmanifest'
     || url.pathname === '/drewo/icon-192.png'
     || url.pathname === '/drewo/icon-512.png'
     || url.pathname === '/drewo/apple-touch-icon.png'
-    || url.pathname.startsWith('/drewo/photos/')
     || url.pathname.startsWith('/docs/design/waydean/assets/')
     || url.pathname.startsWith('/docs/design/waydean/fixtures/')
   );
 }
 
 async function cacheResponse(request, response) {
-  if (!response || !response.ok || response.type === 'opaque') return response;
+  if (!response || !response.ok || response.type === 'opaque' || response.redirected || /no-store|private/i.test(response.headers.get('Cache-Control') || '')) return response;
   const cache = await caches.open(CACHE_NAME);
   await cache.put(request, response.clone());
   return response;
@@ -105,7 +102,7 @@ async function notifyClients() {
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
-    const required = ['./waydean-preview.html', './family-tree.json'];
+    const required = ['./waydean-preview.html'];
     for (const resource of required) await precacheOne(resource);
     await Promise.allSettled(PRECACHE.filter(resource => !required.includes(resource)).map(precacheOne));
     await self.skipWaiting();
@@ -137,16 +134,6 @@ self.addEventListener('fetch', event => {
         return await cacheResponse(request, await fetch(request));
       } catch {
         return cached || new Response('Waydean сохранён для офлайн-просмотра после первого открытия.', {
-          status: 503,
-          headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-        });
-      }
-    }
-    if (url.pathname === '/drewo/family-tree.json') {
-      try {
-        return await cacheResponse(request, await fetch(request));
-      } catch {
-        return cached || new Response('Снимок древа ещё не сохранён для офлайн-просмотра.', {
           status: 503,
           headers: { 'Content-Type': 'text/plain; charset=utf-8' }
         });
