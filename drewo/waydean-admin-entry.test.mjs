@@ -14,11 +14,13 @@ test('legacy tree offers an optional new interface using its existing family ses
   assert.ok(!/if \(sessionRole !== 'super'\) return;\s*setNavMenuOpen\(false\);\s*window\.location\.assign/.test(treePage), 'the entry must not require the family super-role');
 });
 
-test('a remembered legacy viewer can open the published tree snapshot without enabling server actions', () => {
-  assert.ok(/readLegacyTreeViewSession\(window\.localStorage, Date\.now\(\), activeTreeDir\)/.test(previewScript), 'the preview must detect the remembered person from the old tree');
-  assert.ok(/resolveFamilyPreviewAccess\([\s\S]*?legacyViewSession/.test(previewScript), 'the preview must allow the remembered identity fallback when its signed token is unavailable');
-  assert.ok(/else if \(familyPreview && !familyLegacyReadOnly\)/.test(previewScript), 'only an authenticated family session may load the server snapshot');
-  assert.ok(/allowServerPush: accountPreview \|\| \(familyPreview && !familyLegacyReadOnly\)/.test(previewScript), 'the fallback must not enable server push actions');
+test('remembered identity cannot open family snapshots without server authorization', () => {
+  assert.doesNotMatch(previewScript, /readLegacyTreeViewSession|familyLegacyReadOnly|familyLegacyViewPersonId/);
+  const gate = previewScript.indexOf('if (familyPreview && !(await requireFamilyPreviewSession');
+  const load = previewScript.indexOf("initialFamilySnapshot = await callFamilyTreeAction('family-load'");
+  assert.ok(gate >= 0 && load > gate, 'family session must precede server snapshot');
+  assert.match(previewScript, /else if \(familyPreview\) \{\s*const serverSnapshot = initialFamilySnapshot/);
+  assert.match(previewScript, /if \(!syntheticFixture && !isLoopbackHost\(location\.hostname\)\) \{[\s\S]*?throw error;\s*\}\s*const response = await fetch\(dataUrl, \{ cache: 'no-store' \}\)/);
 });
 
 test('account preview reuses the admin Supabase client and contains an email/password form', () => {
@@ -28,8 +30,9 @@ test('account preview reuses the admin Supabase client and contains an email/pas
   assert.ok(/id="waydeanAdminEmail"[^>]*type="email"/.test(previewPage), 'the form must accept an email');
   assert.ok(/id="waydeanAdminPassword"[^>]*type="password"/.test(previewPage), 'the form must accept a password');
   assert.ok(
-    previewScript.indexOf("if (accountPreview) await requireWaydeanAdminAccess('drewo')")
-      < previewScript.indexOf('const response = await fetch(dataUrl'),
+    previewScript.indexOf("accountAdminAccess = await requireWaydeanAdminAccess('drewo')") >= 0 &&
+    previewScript.indexOf("accountAdminAccess = await requireWaydeanAdminAccess('drewo')")
+      < previewScript.indexOf("const serverSnapshot = await callWaydeanAdminAction('waydean-admin-load'"),
     'the account gate must resolve before the family tree request'
   );
 });
