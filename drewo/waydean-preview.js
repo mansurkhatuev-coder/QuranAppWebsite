@@ -30,7 +30,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-shell-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-shell-3';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -149,6 +149,11 @@ const pendingAvatarPhotos = new WeakMap();
 const privatePhotoObserver = typeof IntersectionObserver === 'function'
   ? new IntersectionObserver(entries => {
       for (const entry of entries) {
+        if (!entry.target.isConnected) {
+          privatePhotoObserver.unobserve(entry.target);
+          pendingAvatarPhotos.delete(entry.target);
+          continue;
+        }
         if (!entry.isIntersecting) continue;
         privatePhotoObserver.unobserve(entry.target);
         const load = pendingAvatarPhotos.get(entry.target);
