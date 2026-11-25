@@ -155,3 +155,16 @@ dialog[open]::backdrop { animation: drewo-motion-fade var(--motion-standard) eas
     body[data-atlas-entrance="revealed"] .atlas-opening { transition: none; }
   }
 }
+
+.drewo-icon {
+ width: 19px; height: 19px; display: inline-block;
+ vertical-align: middle; flex: none; pointer-events: none;
+}
+:where(.graph-viewport,.maplibregl-canvas,.sheet-handle) {
+ user-select: none; -webkit-user-select: none;
+}
+:where(.profile-panel,.create-dialog,.access-dialog) { overflow-wrap: anywhere; }
+:where(.create-dialog,.access-dialog) { overscroll-behavior: contain; }
+@media (prefers-reduced-motion: no-preference) {
+ .profile-body, .mode-label:not(:empty) { animation: drewo-motion-fade var(--motion-standard) ease-out; }
+}

@@ -21,6 +21,7 @@ import {
   buildManifest,
   buildReadme,
   buildRootTreeJson,
+  injectScriptJson as injectOrInsertScript,
   customizeTemplateHtml,
   invitePathForCode,
   isValidTreeCode,
@@ -81,6 +82,7 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     headers: {
       ...corsHeaders,
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
     },
   });
 }
@@ -101,36 +103,6 @@ async function fingerprintText(text: string): Promise<string> {
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
-}
-
-/** Replace or insert a JSON <script id="..."> block. */
-function injectOrInsertScript(html: string, scriptId: string, jsonText: string): string {
-  const normalized = String(jsonText ?? '').trim();
-  if (!normalized) return html;
-
-  const patterns = [
-    new RegExp(
-      `(<script\\b[^>]*\\bid\\s*=\\s*["']${scriptId}["'][^>]*>)([\\s\\S]*?)(<\\/script>)`,
-      'i'
-    ),
-    new RegExp(
-      `(<script\\b[^>]*\\bid\\s*=\\s*${scriptId}(?=[\\s>])[^>]*>)([\\s\\S]*?)(<\\/script>)`,
-      'i'
-    ),
-  ];
-
-  for (const re of patterns) {
-    const next = html.replace(re, (_m, open: string, _body: string, close: string) => {
-      return `${open}\n${normalized}\n${close}`;
-    });
-    if (next !== html) return next;
-  }
-
-  const tag = `\n<script type="application/json" id="${scriptId}">\n${normalized}\n</script>\n`;
-  if (/<\/body>/i.test(html)) {
-    return html.replace(/<\/body>/i, `${tag}</body>`);
-  }
-  return html + tag;
 }
 
 function extractScriptJson(html: string, scriptId: string): string | null {
@@ -400,11 +372,26 @@ function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unkno
   return out;
 }
 
+async function readBranchHead(token: string, repo: string, branch: string) {
+  const refRes = await githubJson(
+    token,
+    `https://api.github.com/repos/${repo}/git/ref/heads/${branch}`
+  );
+  if (!refRes.ok) {
+    throw new Error(String(refRes.json.message || `Cannot read ref ${branch}`));
+  }
+  const headSha = String((refRes.json.object as { sha?: string } | undefined)?.sha || '');
+  if (!headSha) throw new Error('Empty branch SHA');
+
+  return headSha;
+}
+
 /** One atomic commit for multiple file writes/deletes (much faster than Contents API). */
 async function githubCommitChanges(options: {
   token: string;
   repo: string;
   message: string;
+  expectedHead?: string;
   branch?: string;
   changes: TreeChange[];
 }) {
@@ -418,15 +405,10 @@ async function githubCommitChanges(options: {
     return { skipped: true as const, commitSha: null as string | null };
   }
 
-  const refRes = await githubJson(
-    options.token,
-    `https://api.github.com/repos/${options.repo}/git/ref/heads/${branch}`
-  );
-  if (!refRes.ok) {
-    throw new Error(String(refRes.json.message || `Cannot read ref ${branch}`));
+  const headSha = await readBranchHead(options.token, options.repo, branch);
+  if (options.expectedHead && options.expectedHead !== headSha) {
+    throw httpError('Реестр обновился. Повторите создание древа.', 409);
   }
-  const headSha = String((refRes.json.object as { sha?: string } | undefined)?.sha || '');
-  if (!headSha) throw new Error('Empty branch SHA');
 
   const commitRes = await githubJson(
     options.token,
@@ -1167,6 +1149,12 @@ Deno.serve(async (request) => {
       return jsonResponse({ error: 'GITHUB_TOKEN secret is missing' }, 500);
     }
 
+    let creationHead: string | undefined;
+    if (action === 'create-tree') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
+      creationHead = await readBranchHead(githubToken, githubRepo, 'main');
+    }
     const registry = await loadRegistry(githubToken, githubRepo);
     const allowedDirs = knownTreeDirs(registry);
 
@@ -1256,8 +1244,10 @@ Deno.serve(async (request) => {
       });
     }
 
-    /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
+    /** Management metadata is only used by the signed-in Trees hub. */
     if (action === 'hub-overview') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
       const trees = await Promise.all(
         allowedDirs.map(async (dir) => {
           const meta = registryEntryFor(registry, dir) || {
@@ -1323,9 +1313,6 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'create-tree') {
-      const denied = await hubUserGuard(request);
-      if (denied) return denied;
-
       const code = normalizeTreeCode(
         typeof body.login === 'string' && body.login.trim() ? body.login : body.code
       );
@@ -1403,6 +1390,10 @@ Deno.serve(async (request) => {
         treeJson,
       });
       const passwordHash = await hashPassword(password);
+      const sessionToken = await signNekSession({
+        treeDir, role: 'editor', exp: Date.now() + NEK_SESSION_TTL_MS,
+        pwdFp: passwordFingerprint(passwordHash),
+      }, sessionSecret());
       const access: AccessState = {
         ...emptyAccess(),
         passwordHash,
@@ -1438,6 +1429,7 @@ Deno.serve(async (request) => {
       await githubCommitChanges({
         token: githubToken,
         repo: githubRepo,
+        expectedHead: creationHead,
         message: `Create family tree ${treeDir} (${title})`,
         changes: [
           ...assetCopies,
@@ -1471,6 +1463,7 @@ Deno.serve(async (request) => {
         invitePath: invitePathForCode(code),
         inviteUrl: `https://waydean.ru${invitePathForCode(code)}`,
         createdAt: entry.createdAt,
+        sessionToken,
         vaultSaved: vaultChanges.length > 0,
         billing: publicBillingView(access.billing),
       });
@@ -2759,6 +2752,7 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
-    return jsonResponse({ error: message }, 500);
+    const status = (error as {status?: number})?.status;
+    return jsonResponse({ error: message }, status === 409 ? 409 : 500);
   }
 });

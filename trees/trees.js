@@ -122,46 +122,22 @@
     return rtf.format(-Math.round(diffSec / 86400), 'day');
   }
 
-  function walkNodes(root) {
-    const out = [];
-    function visit(node) {
-      if (!node || typeof node !== 'object') return;
-      out.push(node);
-      const sons = Array.isArray(node.sons) ? node.sons : [];
-      sons.forEach(visit);
+  function analyzeTreeJson(root) {
+    const stats = {people:0, photos:0, withYears:0, withBio:0, maxDepth:0};
+    const stack = [[root,1]];
+    while (stack.length) {
+      const [node,depth] = stack.pop();
+      if (!node || typeof node !== 'object') continue;
+      stats.people++;
+      if (node.photo) stats.photos++;
+      if (node.born || node.died) stats.withYears++;
+      if (node.bio || node.note) stats.withBio++;
+      stats.maxDepth = Math.max(stats.maxDepth,depth);
+      if (Array.isArray(node.sons)) {
+        for (const child of node.sons) stack.push([child,depth + 1]);
+      }
     }
-    visit(root);
-    return out;
-  }
-
-  function analyzeTreeJson(data) {
-    const nodes = walkNodes(data);
-    let photos = 0;
-    let withYears = 0;
-    let withBio = 0;
-    let maxDepth = 0;
-
-    function depthWalk(node, depth) {
-      if (!node) return;
-      maxDepth = Math.max(maxDepth, depth);
-      const sons = Array.isArray(node.sons) ? node.sons : [];
-      sons.forEach((child) => depthWalk(child, depth + 1));
-    }
-    depthWalk(data, 1);
-
-    nodes.forEach((node) => {
-      if (node.photo) photos += 1;
-      if (node.born || node.died) withYears += 1;
-      if (node.bio || node.note) withBio += 1;
-    });
-
-    return {
-      people: nodes.length,
-      photos,
-      withYears,
-      withBio,
-      maxDepth,
-    };
+    return stats;
   }
 
   function analyzeManifest(manifest) {
@@ -438,7 +414,7 @@
       bits.push(`<span class="badge badge-quiet">Заказчик</span>`);
     }
     if (billing?.status === 'trial') {
-      bits.push(`<span class="badge badge-trial">Trial</span>`);
+      bits.push(`<span class="badge badge-trial">Пробный период</span>`);
     } else if (billing?.status === 'active') {
       bits.push(`<span class="badge badge-ok">Оплачено</span>`);
     } else if (billing?.status === 'expired') {
@@ -563,7 +539,7 @@
       .map((row, index) => {
         const addedHint =
           row.addedSincePrevious != null && row.addedSincePrevious > 0
-            ? `+${formatNumber(row.addedSincePrevious)} с прошлого бэкапа`
+            ? `+${formatNumber(row.addedSincePrevious)} с прошлой копии`
             : 'с первого учёта';
         const photoText =
           row.photos != null ? `${formatNumber(row.photos)} с фото` : 'фото —';
@@ -596,7 +572,7 @@
                   <span class="m-hint">${addedHint}</span>
                 </div>
                 <div class="metric">
-                  <span class="m-label">Бэкапы</span>
+                  <span class="m-label">Резервные копии</span>
                   <span class="m-value">${formatNumber(row.backupCount)}</span>
                 </div>
                 <div class="metric">
@@ -1107,7 +1083,7 @@
   function suggestLoginFromTitle() {
     const loginInput = $('#create-login');
     if (!loginInput || loginInput.value.trim()) return;
-    const suggested = slugifyTreeCode($('#create-title')?.value);
+    const suggested = slugifyTreeCode($('#create-title')?.value || $('#create-root')?.value);
     if (suggested.length < 2) return;
     loginInput.value = suggested;
     updateCodePreview();
@@ -1131,7 +1107,7 @@
       action === 'extend'
         ? 'Продлеваю…'
         : action === 'activate_trial'
-          ? 'Включаю trial…'
+          ? 'Включаю пробный период…'
           : action === 'set_exempt'
             ? 'Снимаю оплату…'
             : 'Отключаю…'
@@ -1293,7 +1269,7 @@
     }
 
     const payload = {
-      title: $('#create-title')?.value.trim() || '',
+      title: $('#create-title')?.value.trim() || `Семья · ${$('#create-root').value.trim()}`.slice(0,80),
       login,
       code: login,
       password: $('#create-password')?.value || '',
@@ -1306,6 +1282,9 @@
     showBoot('Создаю древо…');
     try {
       const created = await callCreateTree(payload);
+      if (created.sessionToken && created.treeDir === 'drewo-' + login) {
+        try { sessionStorage.setItem('nek-session:' + created.treeDir, created.sessionToken); } catch {}
+      }
       closeCreateDialog();
       const form = $('#create-tree-form');
       if (form) form.reset();
@@ -1351,6 +1330,7 @@
     $('#create-tree-cancel')?.addEventListener('click', () => closeCreateDialog());
     $('#create-login')?.addEventListener('input', updateCodePreview);
     $('#create-title')?.addEventListener('blur', suggestLoginFromTitle);
+    $('#create-root')?.addEventListener('blur', suggestLoginFromTitle);
     $('#create-tree-form')?.addEventListener('submit', (event) => {
       void handleCreateTree(event);
     });

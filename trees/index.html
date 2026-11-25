@@ -8,11 +8,11 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Trees" />
+    <meta name="apple-mobile-web-app-title" content="Древо" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
-    <title>Trees — пульт древ</title>
+    <title>Древо — кабинет управляющего</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,7 +20,7 @@
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700&display=swap"
     />
     <link rel="stylesheet" href="./trees.css?v=11" />
-    <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261124-1">
+    <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261124-2">
 </head>
   <body>
     <div class="bg-stage" aria-hidden="true">
@@ -117,7 +117,7 @@
           <p class="muted" id="updated-at">Обновление…</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn btn-ghost" href="/nek/" title="Публичный вход Некъ">Некъ</a>
+          <a class="btn btn-ghost" href="/atlas/" title="Открыть атлас">Атлас</a>
           <button type="button" class="btn btn-primary" id="create-tree-btn">Создать древо</button>
           <button type="button" class="icon-btn" id="refresh-btn" title="Обновить" aria-label="Обновить">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -132,7 +132,6 @@
       <section class="hero-strip" aria-label="Сводка">
         <div class="hero-strip-copy">
           <h1 class="hero-strip-title">Ваши древа</h1>
-          <p class="muted">Состав, trial и продление в одном месте. WhatsApp сейчас, СБП позже.</p>
         </div>
         <div class="summary" aria-label="Числа">
           <div class="summary-stat">
@@ -176,8 +175,12 @@
           Сайт опубликует страницу семьи. Пароль защищает редактирование. Данные родословной хранятся в открытом репозитории.
         </p>
         <label>
-          Название
-          <input id="create-title" name="title" type="text" maxlength="80" required placeholder="Род Ахмада" />
+          Имя первого родственника
+          <input id="create-root" name="rootName" type="text" maxlength="80" required placeholder="Ахмад" />
+        </label>
+        <label>
+          Название (по желанию)
+          <input id="create-title" name="title" type="text" maxlength="80" minlength="2" placeholder="Семейное древо" />
         </label>
         <label>
           Логин семьи
@@ -196,25 +199,21 @@
             spellcheck="false"
           />
         </label>
-        <p class="field-hint">Латиницей, как <code>hoti</code>. Короткая ссылка <code id="create-path-preview">/t/…</code> (старый путь /drewo-…/ тоже останется)</p>
+        <p class="field-hint">Адрес для приглашений <code id="create-path-preview">/t/…</code></p>
         <label>
           Пароль семьи
           <input id="create-password" name="password" type="password" maxlength="64" required minlength="2" autocomplete="new-password" inputmode="text" />
         </label>
         <label>
-          Имя первого родственника
-          <input id="create-root" name="rootName" type="text" maxlength="80" required placeholder="Ахмад" />
-        </label>
-        <label>
           Чей род
           <select id="create-ownership" name="ownership">
-            <option value="customer" selected>Заказчик (trial 30 дн.)</option>
+            <option value="customer" selected>Для заказчика · 30 пробных дней</option>
             <option value="mine">Моё / без оплаты</option>
           </select>
         </label>
         <label>
-          Заметка (только вам)
-          <input id="create-note" name="note" type="text" maxlength="200" placeholder="Имя заказчика, откуда заказ" />
+          Заметка для реестра (по желанию)
+          <input id="create-note" name="note" type="text" maxlength="200" placeholder="Без личных сведений" />
         </label>
         <p id="create-tree-error" class="error" hidden></p>
         <div class="create-dialog-actions">
@@ -229,6 +228,6 @@
     <script src="./billing-config.js?v=1"></script>
     <script src="../assets/drewo-billing.js?v=1"></script>
     <script src="./supabase-config.js?v=2"></script>
-    <script src="./trees.js?v=10"></script>
+    <script src="./trees.js?v=11"></script>
   </body>
 </html>

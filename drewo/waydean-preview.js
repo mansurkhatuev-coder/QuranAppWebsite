@@ -13,7 +13,7 @@ import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } fr
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
 import {
   clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
-} from './waydean-preview-whoami.mjs?v=identity-storage-explicit-per-tree-20261119-1';
+} from './waydean-preview-whoami.mjs?v=atlas-family-1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -23,19 +23,19 @@ import {
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
-} from './waydean-preview-route.mjs?v=family-route-10-initial-full-tree';
+} from './waydean-preview-route.mjs?v=atlas-family-1';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-scope-20261119-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=atlas-family-1';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-3';
+import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=atlas-family-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
@@ -666,7 +666,8 @@ function syncWhoAmIButton() {
   const hasSelf = Boolean(myPersonId && byId.has(myPersonId));
   const showingPath = mode === 'path' && hasSelf;
   if (button) {
-    button.textContent = showingPath ? '◎ Всё древо' : hasSelf ? '◎ Мой путь' : '◎ Кто я?';
+    const label = button.querySelector('.who-label') || button;
+    label.textContent = showingPath ? 'Всё древо' : hasSelf ? 'Мой путь' : 'Кто я?';
     button.setAttribute('aria-label', showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь');
     button.title = showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь';
   }
@@ -1059,6 +1060,30 @@ function renderProfile(tab = 'info') {
     selfNote.className = 'self-person-note';
     selfNote.textContent = isSelf ? 'Теперь «Мой путь» ведёт от предков к этой карточке.' : 'Отметка хранится в этом браузере отдельно для каждого древа.';
     body.append(facts, bio, branch);
+    if (person.teip) {
+      const button = document.createElement('button');
+      button.className = 'branch-button';
+      button.textContent = 'Найти тейп в атласе';
+      button.addEventListener('click', async () => {
+        try {
+          const {groups} = await import('../atlas/catalog.mjs');
+          const matches = groups.flatMap(group => group.teips
+            .filter(teip => teip.name.localeCompare(person.teip, 'ru', {sensitivity:'base'}) === 0)
+            .map(teip => ({group, teip})));
+          if (!matches.length) { announce('Этого тейпа пока нет в каталоге'); return; }
+          const links = matches.map(({group,teip}) => {
+            const link = document.createElement('a');
+            link.className = 'branch-button';
+            link.href = '/atlas/#/teip/' + group.id + '/' + teip.id;
+            link.textContent = teip.name + ' · ' + group.name;
+            return link;
+          });
+          button.replaceWith(...links);
+          links[0].focus();
+        } catch { announce('Не удалось загрузить каталог тейпов'); }
+      });
+      body.append(button);
+    }
     body.append(selfAction, selfNote);
     if (canEditDraft()) body.append(buildEditControls(person));
   } else if (tab === 'relatives') {
@@ -3050,8 +3075,23 @@ function updateStats() {
     const caption = document.createElement('small'); caption.textContent = label;
     card.append(number, caption); $('#statsGrid').append(card);
   }
+  if (familyPreview && familySessionTokenMemory && !familyLegacyReadOnly && !demoMode) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'branch-button';
+    button.textContent = 'Мой род в атласе';
+    button.onclick = async () => {
+      try {
+        const {prepareFamilyView} = await import('../atlas/family-view.mjs');
+        prepareFamilyView(activeTreeDir,records);
+        location.assign('/atlas/#/family');
+      } catch { announce('Не удалось открыть семейную карту в этой вкладке'); }
+    };
+    $('#statsGrid').append(button);
+  }
   const visibleCount = ui.nodes.querySelectorAll('.person-node').length;
-  $('#statsNote').textContent = `В кадре сейчас ${russianCount(visibleCount, 'человек', 'человека', 'человек')}.`;
+  const earliest = records.reduce((first, person) => person.born > 0 && (!first || person.born < first.born) ? person : first, null);
+  const dateNote = earliest ? ` Самая ранняя известная дата рождения — ${earliest.born}, ${earliest.name}.` : '';
+  $('#statsNote').textContent = `На схеме сейчас ${russianCount(visibleCount, 'человек', 'человека', 'человек')}.` + dateNote;
 }
 
 function updateMiniViewport() {
@@ -3874,6 +3914,7 @@ function bindWaydeanFamilyLogin() {
       familySessionRole = '';
       familySessionLocked = false;
       familySessionLockReason = '';
+      familySessionStorage()?.removeItem('drewo-atlas:family-view');
       storeFamilySession(familySessionStorage(), activeTreeDir, '');
       if (!demoMode) {
         try {
@@ -3907,7 +3948,7 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
   }
   let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
   let legacyViewSession = null;
-  try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
+  try { legacyViewSession = readLegacyTreeViewSession(window.localStorage, Date.now(), activeTreeDir); } catch { /* Legacy view memory is optional. */ }
   setLoadingText('Проверяем семейный доступ');
   if (token) {
     familySessionTokenMemory = token;
@@ -4020,7 +4061,7 @@ async function initialize() {
     let initialFamilySnapshot = null;
     if (familyPreview && !familyLegacyReadOnly) {
       let legacyViewSession = null;
-      try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
+      try { legacyViewSession = readLegacyTreeViewSession(window.localStorage, Date.now(), activeTreeDir); } catch { /* Legacy view memory is optional. */ }
       setLoadingText('Загружаем данные древа');
       try {
         initialFamilySnapshot = await callFamilyTreeAction('family-load', {}, {

@@ -72,9 +72,9 @@ export function storeFamilySession(storage, treeDir = DEFAULT_TREE_DIR, token = 
   }
 }
 
-export function readLegacyTreeViewSession(storage, now = Date.now()) {
+export function readLegacyTreeViewSession(storage, now = Date.now(), treeDir = DEFAULT_TREE_DIR) {
   try {
-    const value = JSON.parse(String(storage?.getItem('drewo-view-session') || ''));
+    const value = JSON.parse(String(storage?.getItem(normalizeTreeDir(treeDir) + '-view-session') || ''));
     const personId = String(value?.personId || '').trim();
     const savedAt = Number(value?.at || 0);
     if (!personId || !Number.isFinite(savedAt) || savedAt <= 0 || now - savedAt > 30 * 24 * 60 * 60 * 1000) {

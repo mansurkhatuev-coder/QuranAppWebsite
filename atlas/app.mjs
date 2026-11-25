@@ -25,7 +25,7 @@ let lastMapSize=null;
 const icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeRoute=value=>encodeURIComponent(value??'');
 const teipCountLabel=count=>`${count} ${count%10===1&&count%100!==11?'тейп':count%10>=2&&count%10<=4&&(count%100<12||count%100>14)?'тейпа':'тейпов'}`;
-const statusLabel={loading:'Собираем рельеф',ready:'Атлас готов',degraded:'Облегчённый рельеф',unavailable:'Карта недоступна · каталог работает'};
+const statusLabel={loading:'Загрузка рельефа',ready:'Атлас готов',degraded:'Облегчённый рельеф',unavailable:'Карта недоступна · каталог работает'};
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 let atmosphereEnabled=!motionPreference.matches;
 const windAmbience=createWindAmbience();
@@ -65,7 +65,7 @@ function currentRoute(value=state){
 }
 
 function routeState(hash){
- const parts=(hash||'').replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
+ const parts=(hash||'').replace(/^#\/?/,'').split('/').filter(Boolean);
  const next=createInitialState();
  if(computeLayoutMode({width:innerWidth,height:innerHeight}).panel==='bottom'){
   if(['roots','places'].includes(parts[0]))next.sheet='half';
@@ -105,6 +105,7 @@ function saveViewState(){
 }
 
 function route(event,{returnFocusId=null,afterRender=null,replace=false}={}){
+ if(event.type==='GO_HOME'||event.type==='EXIT_MAP_ONLY'||event.type==='SET_LAYER')clearFamilyMarkers();
  previousState=restoreEntry(state);
  const next=transition(state,event);
  const resetPanelScroll=['GO_HOME','SELECT_GROUP','SELECT_TEIP','SELECT_PLACE','GO_TO_GROUP','SET_LAYER','DISMISS_INTRO'].includes(event.type);
@@ -342,7 +343,7 @@ function renderRows(){
   else{
    list.hidden=true;
    empty.hidden=false;
-   empty.querySelector('p').textContent='Тейпы в демо-каталоге пока не добавлены.';
+   empty.querySelector('p').textContent='В каталоге пока нет тейпов этого тухума.';
   }
  }else{
   count=`${groups.length} тухумов`;
@@ -373,7 +374,7 @@ function renderPlace(){
   image.className='detail-photo-image';image.style.objectPosition=media.focalPoint;
   image.addEventListener('error',()=>{figure.replaceChildren();figure.classList.add('photo-missing');const missing=document.createElement('span');missing.textContent='Изображение недоступно';figure.append(missing);});
   figure.append(picture);
-  const expand=document.createElement('button');expand.type='button';expand.className='detail-photo-button';expand.setAttribute('aria-label','Открыть фотографию крупно');expand.innerHTML=icon('search');expand.addEventListener('click',openPhoto);figure.append(expand);
+  const expand=document.createElement('button');expand.type='button';expand.className='detail-photo-button';expand.setAttribute('aria-label','Увеличить иллюстрацию');expand.innerHTML=icon('search');expand.addEventListener('click',openPhoto);figure.append(expand);
  }else{figure.classList.add('photo-missing');const missing=document.createElement('span');missing.textContent='Изображение недоступно';figure.append(missing);}
  const content=document.createElement('div');content.className='detail-content';
  const area=document.createElement('span');area.className='micro';area.textContent=place.area;
@@ -618,6 +619,15 @@ async function showFamilyMap(){
  try {
   const {openFamilyView}=await import('./family-view.mjs');
   await openFamilyView({dialog:$('#family-map'),
+   showMarkers:ids=>{
+    if(!atlas){toast('Карта пока недоступна');return;}
+    route({type:'ENTER_MAP_ONLY'},{replace:true});
+    atlas.setFamilyPlaces(ids);
+    $('#exit-family-map').hidden=false;
+    const first=ids[0];
+    if(settlements.some(place=>place.id===first))atlas.focusCity(first);
+    else atlas.focusSite(first);
+   },
    showPlace:place=>{if(place.coordinates)openCity(place.id);else openSite(place.id);},
    showTeip:(group,teip)=>route({type:'SELECT_TEIP',groupId:group.id,id:teip.id,sheet:'half'})
   });
@@ -626,6 +636,16 @@ async function showFamilyMap(){
 $('#family-view').addEventListener('click',()=>{
  $('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');
  void showFamilyMap();
+});
+function clearFamilyMarkers(){
+ if($('#exit-family-map').hidden)return;
+ atlas?.setFamilyPlaces(null);$('#exit-family-map').hidden=true;
+}
+$('#exit-family-map').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
+window.addEventListener('pagehide',()=>{
+ clearFamilyMarkers();
+ if($('#family-map').open)$('#family-map').close();
+ $('#family-map .family-places').replaceChildren();
 });
 const familyEntry=location.hash==='#/family';
 $('#brand-home').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));

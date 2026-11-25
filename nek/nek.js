@@ -5,8 +5,6 @@
     (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.publishDrewoUrl) ||
     'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
 
-  const stage = document.querySelector('.stage');
-  const loginOpen = document.getElementById('login-open');
   const loginPanel = document.getElementById('login-panel');
   const loginInput = document.getElementById('login-input');
   const passwordInput = document.getElementById('password-input');
@@ -14,18 +12,9 @@
   const rememberInput = document.getElementById('login-remember');
   const loginSubmit = document.getElementById('login-submit');
   const loginError = document.getElementById('login-error');
-  const loginCancel = document.getElementById('login-cancel');
-  const lead = document.getElementById('lead');
   const recent = document.getElementById('recent');
   const recentLink = document.getElementById('recent-link');
-  const pwaBanner = document.getElementById('pwa-banner');
-  const pwaInstall = document.getElementById('pwa-install');
-  const pwaDismiss = document.getElementById('pwa-dismiss');
 
-  const leadDefault =
-    'Родственники входят по логину и паролю семьи. Без регистрации.';
-  const leadLogin =
-    'Логин и пароль семьи — те, что прислал родственник. Доступ откроется сразу.';
   const submitLabel = 'Войти';
 
   let busy = false;
@@ -94,17 +83,6 @@
     loginPanel?.classList.toggle('is-busy', on);
   }
 
-  function showLoginMode(on) {
-    if (!stage || !loginPanel) return;
-    stage.classList.toggle('is-login', on);
-    loginPanel.hidden = !on;
-    if (lead) lead.textContent = on ? leadLogin : leadDefault;
-    clearError();
-    if (!on) return;
-    const target = loginInput?.value.trim() ? passwordInput : loginInput;
-    target?.focus();
-  }
-
   function readRemembered() {
     try {
       const raw = localStorage.getItem(REMEMBER_KEY);
@@ -150,13 +128,17 @@
       window.NekRemember(path, String(data.title || ''));
     }
 
-    const target = path + '?nek=' + encodeURIComponent(token);
+    let target = path;
+    try {
+      sessionStorage.setItem('nek-session:' + path.split('/')[1], token);
+    } catch {
+      target += '?nek=' + encodeURIComponent(token);
+    }
     if (reducedMotion()) {
       window.location.assign(target);
       return true;
     }
     loginPanel?.classList.add('is-done');
-    stage?.classList.add('is-done');
     window.setTimeout(() => window.location.assign(target), 400);
     return true;
   }
@@ -211,9 +193,6 @@
     }
   }
 
-  loginOpen?.addEventListener('click', () => showLoginMode(true));
-  loginCancel?.addEventListener('click', () => showLoginMode(false));
-
   loginPanel?.addEventListener('submit', (event) => {
     event.preventDefault();
     void login();
@@ -245,9 +224,6 @@
     loginInput.value = invited;
   }
 
-  if (params.get('login') === '1' || invited) {
-    showLoginMode(true);
-  }
 
   try {
     const raw = localStorage.getItem(RECENT_KEY);

@@ -783,7 +783,7 @@ body.years-hijri .node-years-layer.is-hijri { opacity: 1; }
   .tree-controls #zoomValue { display: none; }
   .tree-controls button { width: 32px; min-width: 32px; height: 32px; padding: 0; }
   .tree-controls #whoAmI { font-size: 0; }
-  .tree-controls #whoAmI::before { content: "◎"; font-size: 17px; }
+
 }
 
 /* waydean-preview-desktop-controls.css */
@@ -1174,7 +1174,7 @@ body.years-hijri .node-years-layer.is-hijri { opacity: 1; }
 @media (max-width: 340px) {
   .topbar .premium { display: none; }
   .tree-controls #whoAmI { min-width: 38px; width: 38px; padding: 0; font-size: 0; }
-  .tree-controls #whoAmI::before { content: "◎"; font-size: 19px; }
+
 }
 
 /* waydean-preview-layout.css */

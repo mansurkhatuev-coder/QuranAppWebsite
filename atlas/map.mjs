@@ -187,11 +187,12 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   const loadedManifest=await manifestResponse.json();
   // Keep one shared depth for the wall, underside, camera and marker projection.
   reliefManifest={...loadedManifest,baseElevationMeters:Math.max(-1000,loadedManifest.baseElevationMeters??-1800)};
-  const heightsResponse=await fetch('./data/relief/heights.f32');
+  const [heightsResponse,cellsResponse]=await Promise.all([
+   fetch('./data/relief/heights.f32'),fetch('./data/relief/cells.u8')
+  ]);
   if(!heightsResponse.ok)throw new Error(`Relief grid returned HTTP ${heightsResponse.status}`);
   const buffer=await heightsResponse.arrayBuffer();
   if(buffer.byteLength!==reliefManifest.size*reliefManifest.size*4)throw new Error('Relief height grid has an unexpected byte length');
-  const cellsResponse=await fetch('./data/relief/cells.u8');
   if(!cellsResponse.ok)throw new Error(`Relief clipping cells returned HTTP ${cellsResponse.status}`);
   const cellBuffer=await cellsResponse.arrayBuffer();
   if(cellBuffer.byteLength!==(reliefManifest.size-1)**2)throw new Error('Relief clipping cells have an unexpected byte length');
@@ -308,6 +309,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   home(padding=currentPadding){if(padding)setPadding(padding);const action=()=>fitOverview({animate:true});if(ready)action();else pendingCameraAction=action;},
   zoom(amount){if(!ready)return;zoomBy(amount,{duration:300,reducedMotion:reduce.matches});},
   setLayer(next){activeLayer=['all','groups','sites'].includes(next)?next:'all';updateMarkers();diagnostic?.refresh();},
+  setFamilyPlaces:ids=>markers.setFamilyPlaces(ids),
   setSelection:selection=>markers.setSelection(selection),
   setGroupPreview:(id,origin)=>markers.setPreview(id?{type:'group',id,origin}:null),
   setLabelOcclusion:rects=>markers.setOcclusionRects(rects),

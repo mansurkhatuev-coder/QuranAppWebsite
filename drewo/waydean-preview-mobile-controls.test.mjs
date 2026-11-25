@@ -71,9 +71,9 @@ test('small mobile PWA keeps a dedicated navigation row without safe-area overha
 test('installed PWA receives the updated mobile layout stylesheet', () => {
   const html = readFileSync(new URL('waydean-preview.html', here), 'utf8');
   const worker = readFileSync(new URL('waydean-preview-sw.js', here), 'utf8');
-  assert.match(html, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
-  assert.match(worker, /waydean-preview-shell-v\d+/);
-  assert.match(worker, /waydean-preview-layout\.css\?v=pwa-fixed-app-shell-3/);
+  const bundle = html.match(/href="(waydean-preview-bundle\.css\?[^"]+)"/)?.[1];
+  assert.ok(bundle && worker.includes("'./"+bundle+"'"));
+  assert.ok(readFileSync(new URL(bundle.split('?')[0],here),'utf8').includes('.graph-viewport'));
 });
 
 test('mobile tree gesture blocks iOS native touch scrolling before camera panning', () => {

@@ -39,6 +39,7 @@ const RESERVED_DIRS = new Set([
 ]);
 
 const TEMPLATE_ASSET_NAMES = [
+  'sw.js',
   'apple-touch-icon.png',
   'bg.jpg',
   'bg-night.jpg',
@@ -203,7 +204,7 @@ export function customizeTemplateHtml(options: {
 
   html = html.split(TEMPLATE_DIR).join(options.treeDir);
 
-  html = html.replace(/<title>[^<]*<\/title>/i, `<title>${escapeHtml(title)}</title>`);
+  html = html.replace(/<title>[^<]*<\/title>/i, () => `<title>${escapeHtml(title)}</title>`);
   html = html.replace(
     /content="Некъ \(демо\)"/g,
     `content="${escapeAttr(title)}"`
@@ -356,8 +357,8 @@ function escapeAttr(value: string) {
   return escapeHtml(value).replace(/'/g, '&#39;');
 }
 
-function injectScriptJson(html: string, scriptId: string, jsonText: string): string {
-  const normalized = String(jsonText ?? '').trim();
+export function injectScriptJson(html: string, scriptId: string, jsonText: string): string {
+  const normalized = String(jsonText ?? '').trim().replace(/</g, '\\u003c');
   if (!normalized) return html;
 
   const patterns = [
@@ -372,15 +373,15 @@ function injectScriptJson(html: string, scriptId: string, jsonText: string): str
   ];
 
   for (const re of patterns) {
-    const next = html.replace(re, (_m, open: string, _body: string, close: string) => {
+    if (!re.test(html)) continue;
+    return html.replace(re, (_m, open: string, _body: string, close: string) => {
       return `${open}\n${normalized}\n${close}`;
     });
-    if (next !== html) return next;
   }
 
   const tag = `\n<script type="application/json" id="${scriptId}">\n${normalized}\n</script>\n`;
   if (/<\/body>/i.test(html)) {
-    return html.replace(/<\/body>/i, `${tag}</body>`);
+    return html.replace(/<\/body>/i, () => `${tag}</body>`);
   }
   return html + tag;
 }

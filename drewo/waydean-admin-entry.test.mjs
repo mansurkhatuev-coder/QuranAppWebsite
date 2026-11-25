@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 
-const treePage = await readFile(new URL('./index.html', import.meta.url), 'utf8');
+const treePage = await readFile(new URL('./legacy.html', import.meta.url), 'utf8');
 const previewPage = await readFile(new URL('./waydean-preview.html', import.meta.url), 'utf8');
 const previewScript = await readFile(new URL('./waydean-preview.js', import.meta.url), 'utf8');
 
@@ -15,7 +15,7 @@ test('legacy tree offers an optional new interface using its existing family ses
 });
 
 test('a remembered legacy viewer can open the published tree snapshot without enabling server actions', () => {
-  assert.ok(/readLegacyTreeViewSession\(window\.localStorage\)/.test(previewScript), 'the preview must detect the remembered person from the old tree');
+  assert.ok(/readLegacyTreeViewSession\(window\.localStorage, Date\.now\(\), activeTreeDir\)/.test(previewScript), 'the preview must detect the remembered person from the old tree');
   assert.ok(/resolveFamilyPreviewAccess\([\s\S]*?legacyViewSession/.test(previewScript), 'the preview must allow the remembered identity fallback when its signed token is unavailable');
   assert.ok(/else if \(familyPreview && !familyLegacyReadOnly\)/.test(previewScript), 'only an authenticated family session may load the server snapshot');
   assert.ok(/allowServerPush: accountPreview \|\| \(familyPreview && !familyLegacyReadOnly\)/.test(previewScript), 'the fallback must not enable server push actions');

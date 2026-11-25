@@ -1,5 +1,5 @@
 /* Trees PWA — network-first shell cache for offline reopen. */
-const CACHE = 'waydean-trees-v6';
+const CACHE = 'waydean-trees-v7';
 const PRECACHE = [
   './',
   './index.html',
@@ -24,7 +24,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((key) => key !== CACHE).map((key) => caches.delete(key)))
+        Promise.all(keys.filter((key) => key.startsWith('waydean-trees-') && key !== CACHE).map((key) => caches.delete(key)))
       )
       .then(() => self.clients.claim())
   );
@@ -48,6 +48,6 @@ self.addEventListener('fetch', (event) => {
         }
         return response;
       })
-      .catch(() => caches.match(request).then((cached) => cached || caches.match('./index.html')))
+      .catch(() => caches.open(CACHE).then(async cache => await cache.match(request) || (request.mode === 'navigate' && await cache.match('./index.html')) || Response.error()))
   );
 });

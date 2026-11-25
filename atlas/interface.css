@@ -397,3 +397,36 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
  display: flex; justify-content: center; align-items: center; min-height: 44px;
  padding: 8px 14px; border-radius: 8px; background: #e2c68b; color: #182c23; text-decoration: none;
 }
+
+.info-dialog.access-dialog {
+ color: #f3f1e8; background: #163328;
+ top: calc(var(--access-top, 0px) + var(--access-height, 100dvh) / 2);
+ max-height: calc(var(--access-height, 100dvh) - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+}
+.access-dialog p, .access-dialog .dialog-close { color: #cad6ca; }
+.access-dialog .password-field button { color: #eddaad; padding-inline: 6px; }
+.access-dialog #login-error { color: #ffcec2; }
+.family-place-form:not([hidden]), .family-places { display: grid; gap: 8px; }
+.family-place-form select { width: 100%; min-height: 44px; }
+.family-places button { color: inherit; text-align: start; min-height: 44px; }
+.family-places > div { display: flex; justify-content: space-between; gap: 8px; }
+#exit-family-map:not([hidden]) {
+ position: absolute; z-index: 18; left: max(16px, env(safe-area-inset-left));
+ bottom: calc(32px + env(safe-area-inset-bottom)); padding: 10px 18px;
+ min-height: 44px; border-radius: 8px; background: #15342e; color: #f3eedc;
+}
+
+html[data-color-scheme=light] :is(.opening-dock,.view-menu,.info-dialog.access-dialog) {
+ color-scheme: light; color: #243a31; background: #f0f1e8; border-color: #aeb9a9;
+}
+html[data-color-scheme=light] .opening-dock .opening-link,
+html[data-color-scheme=light] .access-dialog input:not([type=checkbox]) {
+ background: #fcfcf5; color: #243a31; border-color: #b6c2b3;
+}
+html[data-color-scheme=light] :is(.access-dialog p,.access-dialog a:not(.access-primary),.access-dialog .dialog-close,
+ .access-dialog .password-field button,.opening-dock .opening-create,.opening-link > svg,.opening-create > svg,
+ .view-menu button,.view-menu input,.view-menu output,.view-menu-heading span,.pitch-control span) { color: #344f40; }
+html[data-color-scheme=light] .access-dialog #login-error { color: #8b2922; }
+@media (prefers-reduced-motion: no-preference) {
+ .opening-dock, .view-menu, .access-dialog { transition: background-color 180ms ease, color 180ms ease; }
+}

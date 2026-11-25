@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
 
 const html=await readFile(new URL('./waydean-preview.html',import.meta.url),'utf8');
-const css=await readFile(new URL('./waydean-preview-demo.css',import.meta.url),'utf8');
+const css=await readFile(new URL('./waydean-preview-bundle.css',import.meta.url),'utf8');
 const sw=await readFile(new URL('./waydean-preview-sw.js',import.meta.url),'utf8');
 
 test('the production demo tree links back to the public atlas without obscuring its demo notice',()=>{
@@ -14,7 +14,8 @@ test('the production demo tree links back to the public atlas without obscuring 
 });
 
 test('demo atlas backlink uses a fresh stylesheet and worker cache version',()=>{
- assert.match(html,/waydean-preview-demo\.css\?v=demo-interface-2/);
- assert.match(sw,/waydean-preview-shell-v67/);
- assert.match(sw,/waydean-preview-demo\.css\?v=demo-interface-2/);
+ const bundle = html.match(/href="(waydean-preview-bundle\.css\?[^"]+)"/)?.[1];
+ assert.ok(bundle);
+ assert.ok(sw.includes("'./"+bundle+"'"));
+ assert.match(css,/\.demo-mode-atlas-link/);
 });

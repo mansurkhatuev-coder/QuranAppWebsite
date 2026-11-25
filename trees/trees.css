@@ -1837,3 +1837,12 @@ html.is-bg-paused .leaf,
 html.is-bg-paused .hero-light {
   animation-play-state: paused;
 }
+
+.create-dialog {
+ max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+ overflow-y: auto; overscroll-behavior: contain;
+}
+.create-dialog-actions {
+ position: sticky; bottom: 0; padding-block: 8px;
+ background: var(--surface);
+}

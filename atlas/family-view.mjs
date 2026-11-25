@@ -3,7 +3,7 @@ import {readFamilySession,verifyFamilySession} from '../drewo/waydean-preview-fa
 
 // The handoff contains only catalog identifiers. Names, dates and coordinates of people stay in the editor.
 const key = 'drewo-atlas:family-view';
-export async function openFamilyView({dialog,showPlace,showTeip}) {
+export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
  const list = dialog.querySelector('.family-places');
  const status = dialog.querySelector('[role=status]');
  const form = dialog.querySelector('.family-place-form');
@@ -45,7 +45,13 @@ export async function openFamilyView({dialog,showPlace,showTeip}) {
     };
     row.append(button,remove);list.append(row);
    }
-   status.textContent = list.childElementCount ? 'Тейпы из родословной и ваши отметки в этой вкладке.' : 'Добавьте знакомое место. Отметки видны только в этой вкладке.';
+   if (data.places?.length) {
+    const show = document.createElement('button');
+    show.type = 'button'; show.className = 'access-primary'; show.textContent = 'Показать мои места на карте';
+    show.onclick = () => { dialog.close(); showMarkers(data.places.map(mark=>mark.id)); };
+    list.append(show);
+   }
+   status.textContent = list.childElementCount ? 'Совпадения по названию тейпа и ваши отметки в этой вкладке.' : 'Добавьте знакомое место. Отметки видны только в этой вкладке.';
   }
   select.replaceChildren(...Array.from(settlementsIndex.values(),place => new Option(place.name,place.id)));
   form.onsubmit = event => {

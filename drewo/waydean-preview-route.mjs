@@ -1,6 +1,15 @@
 const TREE_MODES = new Set(['path', 'branch', 'all-tree']);
 const FAMILY_TREE_DIRS = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
 
+// Generated family pages live at the canonical directory created by publish-drewo.
+// The shared preview still accepts only its historical query-string aliases.
+export function familyDirectoryForUrl(url) {
+  const canonical = url.pathname.match(/^\/(drewo(?:-[a-z][a-z0-9-]{1,24})?)\/(?:index\.html)?$/);
+  if (canonical) return canonical[1];
+  const requested = String(url.searchParams.get('tree') || '').trim().toLowerCase();
+  return FAMILY_TREE_DIRS.has(requested) ? requested : 'drewo';
+}
+
 export function initialPreviewView(state, { mobile = false } = {}) {
   const mode = state === 'all' || ['filtersEmpty', 'search', 'stats'].includes(state)
     ? 'all'
@@ -48,8 +57,8 @@ export function resolveFamilyPreviewRoute(href, hostname) {
   const maySelectTree = !isAccountRoute && (requestedFamily || loopback);
   let treeDir = 'drewo';
 
-  if (maySelectTree && FAMILY_TREE_DIRS.has(requestedTreeDir)) treeDir = requestedTreeDir;
-  else url.searchParams.delete('tree');
+  if (maySelectTree) treeDir = familyDirectoryForUrl(url);
+  if (!maySelectTree || requestedTreeDir !== treeDir) url.searchParams.delete('tree');
 
   if (!isProductionHost) {
     url.searchParams.delete('nek');

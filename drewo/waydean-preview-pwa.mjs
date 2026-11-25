@@ -1,4 +1,5 @@
-const CACHE_NAME = 'waydean-preview-shell-v64';
+import {familyDirectoryForUrl} from './waydean-preview-route.mjs?v=atlas-family-1';
+const CACHE_NAME = 'waydean-preview-shell-v73';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');
@@ -10,12 +11,7 @@ function isInstalled() {
 }
 
 function activeTreeDir() {
-  const dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
-  const params = new URLSearchParams(location.search);
-  const requested = String(params.get('tree') || '').trim().toLowerCase();
-  if (dirs.has(requested)) return requested;
-  const match = location.pathname.match(/^\/(drewo(?:-[a-z0-9-]+)?)(?:\/|$)/i);
-  return match && dirs.has(match[1].toLowerCase()) ? match[1].toLowerCase() : 'drewo';
+  return familyDirectoryForUrl(new URL(location.href));
 }
 
 function familyAppUrl() {

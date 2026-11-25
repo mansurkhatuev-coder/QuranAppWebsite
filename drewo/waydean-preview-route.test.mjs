@@ -190,8 +190,6 @@ test('the local offline cache precaches the current preview entry modules', () =
   for (const module of versionedModules) {
     assert.ok(worker.includes(`'./${module}'`), `offline cache should precache the current module URL: ${module}`);
   }
-  assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-6'"));
-  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-3'"));
   assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v\d+'/);
 });
 
@@ -225,7 +223,7 @@ test('the ordinary family route remains HOTI and rejects arbitrary tree ids', ()
   assert.equal(hoti.demoMode, false);
 
   const unknown = resolveFamilyPreviewRoute(
-    'https://waydean.ru/drewo/waydean-preview.html?source=family&tree=drewo-guzat',
+    'https://waydean.ru/drewo/waydean-preview.html?source=family&tree=drewo-unregistered',
     'waydean.ru'
   );
   assert.equal(unknown.treeDir, 'drewo');
@@ -259,11 +257,11 @@ test('the public demo entry opens the shared Waydean interface and its PWA start
   const entry = readFileSync(new URL('../drewo-reklama/index.html', import.meta.url), 'utf8');
   const workshop = readFileSync(new URL('../docs/design/waydean/export/workshop.mjs', import.meta.url), 'utf8');
   const manifest = JSON.parse(readFileSync(new URL('../drewo-reklama/manifest.webmanifest', import.meta.url), 'utf8'));
-  assert.match(entry, /\.\.\/drewo\/waydean-preview\.html\?source=family&amp;tree=drewo-reklama&amp;state=all-tree/);
-  assert.match(entry, /window\.location\.replace/);
+  assert.match(entry, /import\('\.\.\/drewo\/waydean-preview\.js\?/);
+  assert.ok(entry.includes("params.set('tree', 'drewo-reklama')"));
   assert.equal(manifest.start_url, '/drewo/waydean-preview.html?source=family&tree=drewo-reklama&state=all-tree');
   assert.equal(manifest.scope, '/drewo/');
-  assert.match(workshop, /treeId === "drewo-reklama"\) url\.searchParams\.set\("tree", "drewo-reklama"\)/);
+  assert.match(workshop, /url\.searchParams\.set\("tree", value\.treeId\)/);
 });
 
 test('shared preview keeps demo identity and the demo limitations explicit', () => {
@@ -272,16 +270,13 @@ test('shared preview keeps demo identity and the demo limitations explicit', () 
   const stylesheet = readFileSync(new URL('./waydean-preview-demo.css', import.meta.url), 'utf8');
   const worker = readFileSync(new URL('./waydean-preview-sw.js', import.meta.url), 'utf8');
   assert.match(html, /id="demoModeNotice"/);
-  assert.match(html, /waydean-preview-demo\.css\?v=demo-interface-1/);
+  assert.match(html, /waydean-preview-bundle\.css\?v=/);
   assert.match(script, /activeTreeDir = familyRoute\.treeDir/);
   assert.match(script, /activeTreeId = syntheticFixture \? 'demo' : activeTreeDir === 'drewo' \? 'hoti' : activeTreeDir/);
   assert.match(script, /treeDir: activeTreeDir/);
   assert.match(script, /if \(demoMode\) return null/);
   assert.match(stylesheet, /Демо, не ваше древо|demo-mode-notice/);
-  assert.ok(worker.includes("'./waydean-preview-demo.css?v=demo-interface-1'"));
-  assert.ok(worker.includes("'./waydean-preview-route.mjs?v=family-route-6'"));
-  assert.ok(worker.includes("'./waydean-preview-family-auth.mjs?v=family-auth-3'"));
-  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v64'/);
+  assert.match(worker, /CACHE_NAME = 'waydean-preview-shell-v\d+'/);
 });
 
 test('demo share URL is public and has no family session data', () => {
@@ -295,4 +290,12 @@ test('demo share URL is public and has no family session data', () => {
   assert.equal(payload.url.includes('nek='), false);
   assert.equal(payload.url.includes('invite='), false);
   assert.equal(payload.url.includes('refresh='), false);
+});
+
+test('generated family page uses its own directory even with a stale query', () => {
+  const href = 'https://waydean.ru/drewo-test-family/?source=family&tree=drewo';
+  const result = resolveFamilyPreviewRoute(href,'waydean.ru');
+  assert.equal(result.treeDir,'drewo-test-family');
+  assert.equal(result.enabled,true);
+  assert.equal(new URL(result.href).searchParams.has('tree'),false);
 });

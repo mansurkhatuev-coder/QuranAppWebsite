@@ -4,6 +4,9 @@
  <meta charset="utf-8">
  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
  <meta name="theme-color" content="#102b29">
+ <link rel="manifest" href="./manifest.webmanifest">
+ <link rel="apple-touch-icon" href="/nek/apple-touch-icon.png">
+ <script>try { document.documentElement.dataset.colorScheme = localStorage.getItem('drewo-color-scheme-v2') === 'light' ? 'light' : 'dark'; } catch {}</script>
  <title>Древо — атлас происхождения</title>
  <meta name="description" content="Семейные родословные и интерактивная карта Чечни.">
  <link rel="stylesheet" href="./assets/cormorant.css">
@@ -11,9 +14,8 @@
  <link rel="stylesheet" href="./vendor/maplibre-gl.css">
  <link rel="stylesheet" href="./style.css?v=f3463c6">
  <link rel="stylesheet" href="./opening.css?v=f3463c6">
- <link rel="stylesheet" href="./journey.css">
  <link rel="stylesheet" href="./interface.css">
-  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261124-1">
+  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261124-2">
 </head>
 <body data-atlas-entrance="pending">
  <svg class="svg-defs" aria-hidden="true"><defs>
@@ -32,6 +34,7 @@
 
  <main class="atlas-shell" id="atlas-shell" data-layout="side" data-sheet="peek">
   <button id="return-chechnya" class="return-chechnya" type="button">↗ Вернуться в Чечню</button>
+  <button type="button" id="exit-family-map" hidden>Все места атласа</button>
   <div id="map" class="map" role="region" aria-label="Карта рельефа Чечни"></div>
   <div class="map-vignette" aria-hidden="true"></div>
 
@@ -111,6 +114,7 @@
   <section class="view-menu" id="view-menu" hidden aria-label="Вид и слои карты">
    <div class="view-menu-heading"><span>ВИД КАРТЫ</span><button class="icon-button" id="view-close" type="button" aria-label="Закрыть настройки вида"><svg><use href="#i-close"/></svg></button></div>
    <div class="view-actions">
+    <button class="view-action" id="family-view" type="button"><svg><use href="#i-branch"/></svg>Мой род</button>
     <button class="view-action" id="home-view" type="button"><svg><use href="#i-compass"/></svg><span>Общий вид</span></button>
     <button class="view-action" id="world-view" type="button">Земля <span>↗</span></button>
     <button class="view-action" id="rotate-left" type="button" aria-label="Повернуть влево на 15 градусов">Повернуть влево <span>↶</span></button>
@@ -118,6 +122,7 @@
    </div>
    <label class="pitch-control" for="pitch-slider"><span>Наклон</span><output id="pitch-value">44°</output><input id="pitch-slider" type="range" min="0" max="60" value="44"></label>
    <div class="view-footer">
+    <button class="mode-switch" id="theme-toggle" aria-pressed="false" type="button"><span>Светлый интерфейс</span><span class="switch-track"><i></i></span></button>
     <button class="mode-switch" id="terrain-toggle" type="button" aria-pressed="true"><span>Объёмный рельеф</span><span class="switch-track"><i></i></span></button>
     <button class="view-action" id="motion-toggle" type="button" aria-pressed="true"><span>Движение облаков</span><span class="motion-dot"></span></button>
     <button class="view-action" id="sound-toggle" type="button" aria-pressed="false"><span>Звуки ветра</span><span class="motion-dot"></span></button>
@@ -154,6 +159,17 @@
   <p id="recent" hidden><a id="recent-link"></a></p>
   <a href="/trees/">Кабинет управляющего</a>
  </dialog>
+ <dialog id="family-map" class="info-dialog access-dialog" aria-labelledby="family-map-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="family-map-heading">Мой род</h2>
+  <p role="status"></p>
+  <div class="family-places"></div>
+  <form class="family-place-form" hidden>
+   <label>Место в атласе<select name="place"></select></label>
+   <label>Связь с семьёй<select name="kind"><option>Родное место</option><option>Место рождения</option><option>Переселение</option></select></label>
+   <button class="access-primary">Добавить отметку</button>
+  </form>
+ </dialog>
  <dialog id="create-access" class="info-dialog access-dialog" aria-labelledby="create-heading">
   <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
   <h2 id="create-heading">Новое древо</h2>
@@ -162,7 +178,7 @@
   <a href="/trees/#create">Создать через кабинет управляющего</a>
  </dialog>
  <dialog id="info-dialog" class="info-dialog"><button class="icon-button dialog-close" type="button" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button><div id="dialog-content"></div></dialog>
- <dialog id="photo-dialog" class="photo-dialog" aria-label="Фотография места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть фотографию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
+ <dialog id="photo-dialog" class="photo-dialog" aria-label="Иллюстрация места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть иллюстрацию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>
  <script defer src="/trees/supabase-config.js"></script>
  <script defer src="/nek/nek.js?v=10"></script>
