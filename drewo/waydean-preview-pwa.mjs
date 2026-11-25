@@ -1,5 +1,5 @@
 import {familyDirectoryForUrl} from './waydean-preview-route.mjs?v=atlas-family-1';
-const CACHE_NAME = 'waydean-preview-shell-v73';
+const CACHE_NAME = 'waydean-preview-shell-v75';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');
@@ -78,8 +78,9 @@ export function createWaydeanPwaController(onChange = () => {}, {
     try {
       const cache = await caches.open(CACHE_NAME);
       const page = familyAppUrl();
-      const tree = new URL(`../${activeTreeDir()}/family-tree.json`, location.href).href;
-      state.offlineReady = Boolean(await cache.match(page, { ignoreSearch: true }) && await cache.match(tree, { ignoreSearch: true }));
+      // The private family snapshot is not cached. Only the synthetic fixture can be read offline.
+      const fixture = new URL('../docs/design/waydean/fixtures/master-tree.json', location.href).href;
+      state.offlineReady = params.get('fixture') === 'master' && Boolean(await cache.match(page, { ignoreSearch: true }) && await cache.match(fixture));
     } catch {
       state.offlineReady = false;
     }
