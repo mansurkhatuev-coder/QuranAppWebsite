@@ -201,7 +201,9 @@
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `hub-overview ${response.status}`);
+      const error = new Error(err.error || `hub-overview ${response.status}`);
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   }
@@ -347,17 +349,13 @@
   }
 
   async function loadAll() {
-    let overviewTrees = [];
-    let overviewByDir = new Map();
-    try {
-      const overview = await callHubOverview();
-      if (overview?.ok && Array.isArray(overview.trees)) {
-        overviewTrees = overview.trees;
-        overview.trees.forEach((row) => overviewByDir.set(row.treeDir, row));
-      }
-    } catch {
-      overviewByDir = new Map();
+    // Never fall back to static family data if operator access cannot be verified.
+    const overview = await callHubOverview();
+    if (!overview?.ok || !Array.isArray(overview.trees)) {
+      throw new Error('Не удалось подтвердить доступ к кабинету.');
     }
+    const overviewTrees = overview.trees;
+    const overviewByDir = new Map(overviewTrees.map(row => [row.treeDir, row]));
 
     const metas = mergeTreeMetas(overviewTrees);
     const locals = await Promise.all(metas.map((meta) => loadLocalStats(meta)));
@@ -616,6 +614,13 @@
       $('#updated-at').textContent = `Обновлено в ${stamp}`;
       if (status) status.textContent = 'Данные с сайта и live-статуса. Старые ссылки /drewo/ не менялись.';
     } catch (error) {
+      // Previously rendered data must not remain visible after a denied or failed verification.
+      $('#tree-list')?.replaceChildren();
+      $('#sum-people').textContent = '—';
+      $('#sum-added').textContent = '—';
+      $('#updated-at').textContent = 'Нет подтверждённых данных';
+      credentials = [];
+      renderCredentials();
       if (status) {
         status.textContent =
           error instanceof Error ? error.message : 'Не удалось обновить данные';
