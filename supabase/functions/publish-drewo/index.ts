@@ -11,6 +11,7 @@ import {
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 import { familyPublishGuardError } from './family-publish-guard.ts';
 import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
+import { hubTreeMetrics } from './hub-tree-metrics.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -1233,10 +1234,12 @@ Deno.serve(async (request) => {
             note: '',
             createdAt: '',
           };
-          const [accessFile, manifestFile] = await Promise.all([
+          const [accessFile, manifestFile, treeFile] = await Promise.all([
             githubGetFile(githubToken, githubRepo, accessPath(dir)),
             githubGetFile(githubToken, githubRepo, manifestPath(dir)),
+            githubGetFile(githubToken, githubRepo, `${dir}/family-tree.json`),
           ]);
+          const metrics = hubTreeMetrics(treeFile?.content);
           const access = parseAccess(accessFile?.content);
           const lock = lockPresentation(access);
           const manifest = parseManifest(manifestFile?.content);
@@ -1248,13 +1251,13 @@ Deno.serve(async (request) => {
             ) ?? null;
           const baseline =
             [...manifest].reverse().find((item) => item.personCount > 0) ?? null;
-          const personCount = latestWithPeople?.personCount ?? 0;
+          const personCount = metrics?.people ?? latestWithPeople?.personCount ?? null;
           const addedSinceBaseline =
-            baseline && personCount >= baseline.personCount
+            baseline && personCount != null && personCount >= baseline.personCount
               ? personCount - baseline.personCount
               : null;
           const addedSincePrevious =
-            previousWithPeople && personCount >= previousWithPeople.personCount
+            previousWithPeople && personCount != null && personCount >= previousWithPeople.personCount
               ? personCount - previousWithPeople.personCount
               : null;
 
@@ -1272,6 +1275,10 @@ Deno.serve(async (request) => {
             deletedAt: lock.deletedAt,
             superConfigured: Boolean(superPasswordValue(dir)),
             personCount,
+            photos: metrics?.photos ?? null,
+            withYears: metrics?.withYears ?? null,
+            withBio: metrics?.withBio ?? null,
+            maxDepth: metrics?.maxDepth ?? null,
             backupCount: manifest.length,
             lastSavedAt: latestWithPeople?.savedAt ?? null,
             addedSinceBaseline,
