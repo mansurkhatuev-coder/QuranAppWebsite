@@ -10,6 +10,7 @@ import {
 } from './waydean-admin-actions.ts';
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 import { familyPublishGuardError } from './family-publish-guard.ts';
+import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -194,10 +195,7 @@ function httpError(message: string, status: number) {
   return error;
 }
 
-/**
- * Trees / hub actions: same gate as before — signed-in Supabase user
- * (the existing admin account). Keep Email signup disabled in Supabase Auth.
- */
+/** Verify the Supabase caller; action-specific authorization follows separately. */
 async function requireHubUser(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -589,11 +587,12 @@ function sessionSecret(): string {
   return Deno.env.get('DREWO_SESSION_SECRET') || Deno.env.get('GITHUB_TOKEN') || '';
 }
 
-/** 401/403 Response when the caller is not a signed-in Trees hub user, else null. */
+/** Fail closed unless the verified account is a configured Trees operator. */
 async function hubUserGuard(request: Request): Promise<Response | null> {
   try {
-    await requireHubUser(request);
-    return null;
+    const user = await requireHubUser(request);
+    const denied = hubOperatorDenial(user, Deno.env.get('DREWO_HUB_USER_IDS'));
+    return denied ? jsonResponse({ error: denied.error }, denied.status) : null;
   } catch (err) {
     const status = (err as Error & { status?: number }).status || 401;
     return jsonResponse({ error: err instanceof Error ? err.message : 'Войдите в Trees' }, status);
@@ -1538,15 +1537,8 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'set-billing' || action === 'soft-delete-tree') {
-      try {
-        await requireHubUser(request);
-      } catch (err) {
-        const status = (err as Error & { status?: number }).status || 401;
-        return jsonResponse(
-          { error: err instanceof Error ? err.message : 'Войдите в Trees' },
-          status
-        );
-      }
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
 
       const targetDir = resolveTreeDir(body.treeDir, registry);
       if (!targetDir) {
@@ -1724,7 +1716,7 @@ Deno.serve(async (request) => {
 
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
-      githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
+      action === 'status' ? Promise.resolve(null) : githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
     ]);
     const access = parseAccess(accessFile?.content);
     const manifest = parseManifest(manifestFile?.content);
@@ -1732,16 +1724,7 @@ Deno.serve(async (request) => {
     const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
-      const lock = lockPresentation(access);
-      return jsonResponse({
-        ok: true,
-        treeDir,
-        locked: lock.locked,
-        lockedReason: lock.lockedReason,
-        billing: lock.billing,
-        deletedAt: lock.deletedAt,
-        superConfigured,
-      });
+      return jsonResponse(publicTreeStatus(treeDir, lockPresentation(access)));
     }
 
     if (action === 'record-visit' || action === 'presence-heartbeat' || action === 'presence-leave') {
