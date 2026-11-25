@@ -6,7 +6,7 @@ import {
   panViewportByPointer, pointerPanThreshold, preventNativeTouchScroll
 } from './waydean-preview-camera.mjs?v=camera-pan-20261116-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
-import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
+import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=private-photo-1';
 import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
 import { accountPublishButtonState, buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
@@ -36,11 +36,11 @@ import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
 import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=verified-family-1';
-import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
+import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=private-photo-1';
+import { createPrivatePhotoCache, photoResponseBlob } from './waydean-preview-private-photo.mjs?v=1';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
-const PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
 const FIXTURE_PHOTOS = new Map([
   ['demo-01', '../docs/design/waydean/assets/demo/waydean-demo-elder-portrait.jpg'],
   ['demo-03', '../docs/design/waydean/assets/demo/waydean-demo-middle-aged-portrait.jpg']
@@ -131,6 +131,57 @@ let pwaController = null;
 let pwaPushAction = 'subscribe';
 const localPhotoUrls = new Map();
 const localPhotoFullUrls = new Map();
+const privatePhotoCache = createPrivatePhotoCache({
+  request: async ({ personId, variant, treeDir, token, admin }) => {
+    const payload = { personId, variant };
+    const result = admin
+      ? await callWaydeanAdminAction('waydean-admin-photo-load', payload, admin)
+      : await callFamilyTreeAction('photo-load', payload, {
+          endpoint: familyEndpoint(), treeDir, sessionToken: token
+        });
+    return photoResponseBlob(result, payload);
+  },
+  makeUrl: blob => URL.createObjectURL(blob),
+  revokeUrl: url => URL.revokeObjectURL(url)
+});
+let photoLightboxRequest = 0;
+const pendingAvatarPhotos = new WeakMap();
+const privatePhotoObserver = typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        privatePhotoObserver.unobserve(entry.target);
+        const load = pendingAvatarPhotos.get(entry.target);
+        pendingAvatarPhotos.delete(entry.target);
+        load?.();
+      }
+    }, { rootMargin: '180px' })
+  : null;
+function privatePhotoContext(person) {
+  if (demoMode || syntheticFixture || !person?.hasPhoto ||
+      (localTreeDraft && String(person.photoKey ?? '').startsWith('local-'))) return null;
+  if (familyPreview && familySessionTokenMemory) return { treeDir: activeTreeDir, token: familySessionTokenMemory };
+  if (accountPreview && accountAdminAccess) return { treeDir: 'drewo', admin: accountAdminAccess };
+  return null;
+}
+function privatePhotoKey(person, variant, context) {
+  return JSON.stringify([context.treeDir, person.id, person.photoKey || '1', variant]);
+}
+function getPrivatePhoto(person, variant) {
+  const context = privatePhotoContext(person);
+  return context ? privatePhotoCache.get(privatePhotoKey(person, variant, context)) : null;
+}
+function loadPrivatePhoto(person, variant) {
+  const context = privatePhotoContext(person);
+  if (!context) return Promise.resolve(null);
+  return privatePhotoCache.load(privatePhotoKey(person, variant, context),
+    { ...context, personId: String(person.id), variant });
+}
+function clearPrivatePhotos() {
+  photoLightboxRequest++;
+  privatePhotoObserver?.disconnect();
+  privatePhotoCache.clear();
+}
 const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
@@ -314,21 +365,18 @@ function preparePreviewRecords(root) {
 function photoSource(person) {
   if (demoMode) return null;
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
-  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
-    return localPhotoUrls.get(person.id) || null;
-  }
-  return person.hasPhoto
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) return localPhotoUrls.get(person.id) || null;
+  if (privatePhotoContext(person)) return getPrivatePhoto(person, 'thumbnail');
+  return isLoopbackHost(location.hostname) && person.hasPhoto
     ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(String(person.photoKey || '1'))}`
     : null;
 }
-
 function fullPhotoSource(person) {
   if (demoMode) return null;
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
-  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
-    return localPhotoFullUrls.get(person.id) || null;
-  }
-  return person.hasPhoto
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) return localPhotoFullUrls.get(person.id) || null;
+  if (privatePhotoContext(person)) return getPrivatePhoto(person, 'full');
+  return isLoopbackHost(location.hostname) && person.hasPhoto
     ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`
     : null;
 }
@@ -354,36 +402,42 @@ async function restoreLocalPhotoUrls() {
 }
 
 function hasDisplayPhoto(person) {
-  return Boolean(photoSource(person));
+  return Boolean(photoSource(person) || privatePhotoContext(person));
 }
 
-function openPhotoLightbox(person) {
+async function openPhotoLightbox(person) {
   if (!person || !ui.photoLightbox || !ui.photoLightboxImage) return;
-  const source = fullPhotoSource(person);
-  if (!source) return;
+  if (!hasDisplayPhoto(person)) return;
+  const request = ++photoLightboxRequest;
+  const image = ui.photoLightboxImage;
+  image.removeAttribute('src');
   ui.photoLightboxTitle.textContent = person.name || 'Фото';
-  ui.photoLightboxImage.alt = `Полное фото: ${person.name || 'человек'}`;
-  ui.photoLightboxStatus.textContent = '';
-  ui.photoLightboxImage.dataset.photoFallback = '';
-  ui.photoLightboxImage.onerror = () => {
-    if (ui.photoLightboxImage.dataset.photoFallback === 'remote'
-      || source.startsWith('blob:') || syntheticFixture) {
-      ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
-      return;
-    }
-    ui.photoLightboxImage.dataset.photoFallback = 'remote';
-    ui.photoLightboxImage.src = `${PHOTO_FALLBACK_BASE}/${encodeURIComponent(activeTreeDir)}/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`;
+  image.alt = `Полное фото: ${person.name || 'человек'}`;
+  ui.photoLightboxStatus.textContent = 'Загружаем фотографию…';
+  image.onerror = () => {
+    if (request === photoLightboxRequest) ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
   };
-  ui.photoLightboxImage.src = source;
+  image.onload = () => {
+    if (request === photoLightboxRequest) ui.photoLightboxStatus.textContent = '';
+  };
   if (!ui.photoLightbox.open) ui.photoLightbox.showModal();
+  const source = fullPhotoSource(person) || await loadPrivatePhoto(person, 'full');
+  if (request !== photoLightboxRequest || !ui.photoLightbox.open) return;
+  if (!source) {
+    ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
+    return;
+  }
+  image.src = source;
 }
 
 function closePhotoLightbox() {
+  photoLightboxRequest++;
   resetCameraGestureState();
   if (ui.photoLightboxImage) {
     ui.photoLightboxImage.removeAttribute('src');
     ui.photoLightboxImage.alt = '';
     ui.photoLightboxImage.onerror = null;
+    ui.photoLightboxImage.onload = null;
   }
   if (ui.photoLightbox?.open) ui.photoLightbox.close();
 }
@@ -710,31 +764,48 @@ function clearSelfPerson() {
 }
 
 function createAvatar(person, className = 'avatar') {
-  const src = photoSource(person);
-  const fallbackSrc = jpegFallbackSource(src);
   const wrapper = document.createElement('span');
-  wrapper.className = `${className} ${src ? 'has-photo' : 'is-empty'}`;
+  wrapper.className = `${className} is-empty`;
   wrapper.setAttribute('aria-hidden', 'true');
-  if (src) {
+  const showPlaceholder = () => {
+    wrapper.classList.remove('has-photo');
+    wrapper.classList.add('is-empty');
+    wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
+  };
+  const showPhoto = src => {
+    if (!src) return;
+    const fallbackSrc = jpegFallbackSource(src);
     const image = document.createElement('img');
     image.alt = '';
     image.loading = 'lazy';
     image.decoding = 'async';
-    image.src = src;
     image.addEventListener('error', () => {
       if (fallbackSrc && image.dataset.photoFallback !== 'jpeg') {
         image.dataset.photoFallback = 'jpeg';
         image.src = fallbackSrc;
         return;
       }
-      image.remove();
-      wrapper.classList.remove('has-photo');
-      wrapper.classList.add('is-empty');
-      wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
+      showPlaceholder();
     });
-    wrapper.append(image);
-  } else {
-    wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
+    wrapper.replaceChildren(image);
+    wrapper.classList.remove('is-empty');
+    wrapper.classList.add('has-photo');
+    image.src = src;
+  };
+  const src = photoSource(person);
+  if (src) showPhoto(src);
+  else {
+    showPlaceholder();
+    if (privatePhotoContext(person)) {
+      const load = async () => {
+        const photo = await loadPrivatePhoto(person, 'thumbnail');
+        if (wrapper.isConnected && photo) showPhoto(photo);
+      };
+      if (privatePhotoObserver) {
+        pendingAvatarPhotos.set(wrapper, load);
+        privatePhotoObserver.observe(wrapper);
+      } else queueMicrotask(load);
+    }
   }
   return wrapper;
 }
@@ -3911,6 +3982,7 @@ function bindWaydeanFamilyLogin() {
   if (logout && logout.dataset.bound !== 'true') {
     logout.dataset.bound = 'true';
     logout.addEventListener('click', () => {
+      clearPrivatePhotos();
       familySessionTokenMemory = '';
       familySessionRole = '';
       familySessionLocked = false;
