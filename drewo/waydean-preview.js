@@ -35,7 +35,7 @@ import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWork
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=atlas-family-1';
+import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=verified-family-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
@@ -87,8 +87,6 @@ let familyPreview = false;
 let activeTreeDir = 'drewo';
 let activeTreeId = 'hoti';
 let demoMode = false;
-let familyLegacyReadOnly = false;
-let familyLegacyViewPersonId = '';
 let familySessionTokenMemory = '';
 let familySessionRole = '';
 let familySessionLocked = false;
@@ -3078,7 +3076,7 @@ function updateStats() {
     const caption = document.createElement('small'); caption.textContent = label;
     card.append(number, caption); $('#statsGrid').append(card);
   }
-  if (familyPreview && familySessionTokenMemory && !familyLegacyReadOnly && !demoMode) {
+  if (familyPreview && familySessionTokenMemory && !demoMode) {
     const button = document.createElement('button');
     button.type = 'button'; button.className = 'branch-button';
     button.textContent = 'Мой род в атласе';
@@ -3949,9 +3947,7 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
     familySessionTokenMemory = fromUrl.token;
     storeFamilySession(familySessionStorage(), activeTreeDir, fromUrl.token);
   }
-  let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
-  let legacyViewSession = null;
-  try { legacyViewSession = readLegacyTreeViewSession(window.localStorage, Date.now(), activeTreeDir); } catch { /* Legacy view memory is optional. */ }
+  const token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
   setLoadingText('Проверяем семейный доступ');
   if (token) {
     familySessionTokenMemory = token;
@@ -3961,15 +3957,7 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
   try {
     const access = await resolveFamilyPreviewAccess({
     endpoint: familyEndpoint(), treeDir: activeTreeDir, token: '',
-    legacyViewSession, allowLegacyReadOnly: !demoMode
     });
-    if (access.legacyReadOnly) {
-      familyLegacyReadOnly = true;
-      familyLegacyViewPersonId = legacyViewSession.personId;
-      familySessionTokenMemory = '';
-      familySessionRole = '';
-      return true;
-    }
     const session = access.session;
     familySessionTokenMemory = session.sessionToken;
     familySessionRole = String(session.role || '').trim();
@@ -4023,8 +4011,6 @@ async function initialize() {
       $('.load-error-actions a').hidden = true;
     }
     familySessionLocked = familyPreview;
-    familyLegacyReadOnly = false;
-    familyLegacyViewPersonId = '';
     familySessionLockReason = '';
     $('#familyLogout').hidden = true;
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
@@ -4062,9 +4048,7 @@ async function initialize() {
     $('#moreTreesCabinet').hidden = !accountAdminAccess;
     if (familyPreview && !(await requireFamilyPreviewSession(params, setLoadingText))) return;
     let initialFamilySnapshot = null;
-    if (familyPreview && !familyLegacyReadOnly) {
-      let legacyViewSession = null;
-      try { legacyViewSession = readLegacyTreeViewSession(window.localStorage, Date.now(), activeTreeDir); } catch { /* Legacy view memory is optional. */ }
+    if (familyPreview) {
       setLoadingText('Загружаем данные древа');
       try {
         initialFamilySnapshot = await callFamilyTreeAction('family-load', {}, {
@@ -4077,25 +4061,12 @@ async function initialize() {
         familySessionLocked = initialFamilySnapshot.locked !== false;
         familySessionLockReason = typeof initialFamilySnapshot.lockedReason === 'string' ? initialFamilySnapshot.lockedReason : '';
       } catch (error) {
-        const canUseLegacyReadOnly = !demoMode && Boolean(String(legacyViewSession?.personId || '').trim());
-        const mayFallBackToLegacy = canUseLegacyReadOnly
-          && ['WAYDEAN_FAMILY_AUTH_REQUIRED', 'WAYDEAN_FAMILY_AUTH_UNAVAILABLE'].includes(error?.code);
-        if (mayFallBackToLegacy) {
-          familyLegacyReadOnly = true;
-          familyLegacyViewPersonId = String(legacyViewSession.personId);
+        if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED' || error?.code === 'WAYDEAN_FAMILY_ACCESS_DENIED') {
           familySessionTokenMemory = '';
-          familySessionRole = '';
-          familySessionLocked = true;
-          familySessionLockReason = '';
           storeFamilySession(familySessionStorage(), activeTreeDir, '');
-        } else {
-          if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED') {
-            familySessionTokenMemory = '';
-            storeFamilySession(familySessionStorage(), activeTreeDir, '');
-            familySessionRole = '';
-          }
-          throw error;
+          familySessionRole = '';
         }
+        throw error;
       }
     }
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname)
@@ -4119,9 +4090,9 @@ async function initialize() {
     $('#localBackupHeading').textContent = remoteEditor ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
     $('#createLocalBackup').textContent = remoteEditor ? 'Создать снимок черновика' : 'Создать снимок сейчас';
     document.body.classList.toggle('local-tree-draft', localTreeDraft);
-    $('#familyLogout').hidden = !familyPreview || familyLegacyReadOnly;
+    $('#familyLogout').hidden = !familyPreview;
     pwaController = createWaydeanPwaController(renderPwaStatus, {
-      allowServerPush: accountPreview || (familyPreview && !familyLegacyReadOnly),
+      allowServerPush: accountPreview || familyPreview,
       accountAdminAction: accountPreview && accountAdminAccess
         ? (action, payload) => callWaydeanAdminAction(action, payload, accountAdminAccess)
         : null,
@@ -4164,7 +4135,7 @@ async function initialize() {
       accountBaseTree = cloneTree(root);
       accountBaseFingerprint = accountServerFingerprint;
       accountBaseActivityJson = accountServerActivityJson;
-    } else if (familyPreview && !familyLegacyReadOnly) {
+    } else if (familyPreview) {
       const serverSnapshot = initialFamilySnapshot;
       accountServerTreeJson = serverSnapshot.treeJson;
       accountServerActivityJson = serverSnapshot.activityJson || '[]';
@@ -4190,7 +4161,13 @@ async function initialize() {
         accountBaseActivityJson = accountServerActivityJson;
       }
     } else {
-      const response = await fetch(dataUrl, { cache: 'no-cache' });
+      // Only loopback development or a synthetic fixture may load static data.
+      if (!syntheticFixture && !isLoopbackHost(location.hostname)) {
+        const error = new Error('Для семейного древа требуется действующий вход.');
+        error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
+        throw error;
+      }
+      const response = await fetch(dataUrl, { cache: 'no-store' });
       if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
       root = await response.json();
     }
@@ -4251,11 +4228,6 @@ async function initialize() {
       }
     }
     records = preparePreviewRecords(syntheticFixture || localTreeDraft ? fixtureRoot : root);
-    if (familyLegacyReadOnly && !records.some(person => String(person.id) === familyLegacyViewPersonId)) {
-      const error = new Error('Сохранённый профиль старого древа больше не найден.');
-      error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
-      throw error;
-    }
     $('#moreVideo').hidden = !(localTreeDraft || accountPreview || demoMode);
     fullDataDepth = Math.max(...records.map(person => person.generation));
     byId = new Map(records.map(person => [person.id, person]));
