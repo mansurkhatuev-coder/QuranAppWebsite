@@ -137,32 +137,15 @@ export async function verifyFamilySession({ endpoint, treeDir = DEFAULT_TREE_DIR
   return data;
 }
 
+// Remembered identity is a preference, never proof of family authorization.
 export async function resolveFamilyPreviewAccess({
   endpoint,
   treeDir = DEFAULT_TREE_DIR,
   token,
-  legacyViewSession = null,
-  allowLegacyReadOnly = true,
   fetcher = fetch
 }) {
-  const canUseLegacyReadOnly = allowLegacyReadOnly
-    && Boolean(String(legacyViewSession?.personId || '').trim());
-  if (!String(token || '').trim() && canUseLegacyReadOnly) {
-    return { authenticated: false, legacyReadOnly: true, session: null };
-  }
-
-  try {
-    const session = await verifyFamilySession({ endpoint, treeDir, token, fetcher });
-    return { authenticated: true, legacyReadOnly: false, session };
-  } catch (error) {
-    if (canUseLegacyReadOnly && (
-      error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED'
-      || error?.code === 'WAYDEAN_FAMILY_AUTH_UNAVAILABLE'
-    )) {
-      return { authenticated: false, legacyReadOnly: true, session: null };
-    }
-    throw error;
-  }
+  const session = await verifyFamilySession({ endpoint, treeDir, token, fetcher });
+  return { authenticated: true, legacyReadOnly: false, session };
 }
 
 export async function loginFamilySession({
