@@ -11,6 +11,7 @@ Deno.test('allows only the account-scoped Waydean actions', () => {
   const actions = [
     ['waydean-admin-auth', null],
     ['waydean-admin-load', null],
+    ['waydean-admin-photo-load', 'photo-load'],
     ['waydean-admin-publish', 'publish'],
     ['waydean-admin-backups', 'list-backups'],
     ['waydean-admin-snapshot', 'snapshot'],
