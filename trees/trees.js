@@ -286,8 +286,10 @@
   }
 
   function renderSummary(rows) {
-    const people = rows.reduce((sum, row) => sum + (Number(row.people) || 0), 0);
-    const added = rows.reduce((sum, row) => sum + (Number(row.addedSinceBaseline) || 0), 0);
+    const completeSum = key => rows.every(row => row[key] != null && Number.isFinite(Number(row[key])))
+      ? rows.reduce((sum, row) => sum + Number(row[key]), 0) : null;
+    const people = completeSum('people');
+    const added = completeSum('addedSinceBaseline');
 
     $('#sum-people').textContent = formatNumber(people);
     $('#sum-added').textContent = formatNumber(added);
@@ -426,9 +428,9 @@
         const addedHint =
           row.addedSincePrevious != null && row.addedSincePrevious > 0
             ? `+${formatNumber(row.addedSincePrevious)} с прошлой копии`
-            : 'с первого учёта';
+            : row.addedSinceBaseline == null ? 'Нет данных' : 'С первого учёта';
         const photoText =
-          row.photos != null ? `${formatNumber(row.photos)} с фото` : 'фото —';
+          row.photos != null ? `${formatNumber(row.photos)} с фото` : 'Нет данных о фото';
         const yearsText =
           row.withYears != null ? `${formatNumber(row.withYears)} с годами` : '';
         const depthText = row.maxDepth != null ? `глубина ${formatNumber(row.maxDepth)}` : '';
@@ -462,7 +464,7 @@
                   <span class="m-value">${formatNumber(row.backupCount)}</span>
                 </div>
                 <div class="metric">
-                  <span class="m-label">Состав</span>
+                  <span class="m-label">Биографии</span>
                   <span class="m-value">${formatNumber(row.withBio)}</span>
                   <span class="m-hint">${[yearsText, depthText].filter(Boolean).join(' · ') || 'био / заметки'}</span>
                 </div>
@@ -500,7 +502,7 @@
         minute: '2-digit',
       });
       $('#updated-at').textContent = `Обновлено в ${stamp}`;
-      if (status) status.textContent = 'Данные с сайта и live-статуса. Старые ссылки /drewo/ не менялись.';
+      if (status) status.textContent = 'Данные получены из защищённого API.';
     } catch (error) {
       // Previously rendered data must not remain visible after a denied or failed verification.
       $('#tree-list')?.replaceChildren();
