@@ -105,6 +105,17 @@ test("public demo can use the shared print and video workshop without changing i
   assert.equal(readExportWorkshopHandoff(storage).print.tree, "drewo-reklama");
 });
 
+test("a newly created family can open, store, and resume its own export", () => {
+  const storage = createStorage();
+  const treeId = "drewo-sample-test";
+  const handoff = createExportWorkshopHandoff(people, { treeId, selectedPersonId: "self" });
+  writeExportWorkshopHandoff(storage, handoff);
+  const resumed = readExportWorkshopHandoff(storage);
+  assert.equal(resumed.treeId, treeId);
+  assert.equal(resumed.print.tree, treeId);
+  assert.equal(resumed.video.tree.people.length, people.length);
+});
+
 test("malformed or untrusted handoff is ignored", () => {
   const storage = createStorage();
   storage.setItem(EXPORT_WORKSHOP_HANDOFF_KEY, JSON.stringify({

@@ -18,6 +18,7 @@
   const submitLabel = 'Войти';
 
   let busy = false;
+  let pendingLogin = null;
 
   function reducedMotion() {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -30,7 +31,7 @@
       if (/^https?:\/\//i.test(value) || value.includes('waydean.ru') || value.includes('/t/')) {
         const withProto = value.startsWith('/') ? new URL(value, window.location.origin).href : /^https?:\/\//i.test(value) ? value : 'https://' + value.replace(/^\/+/, '');
         const url = new URL(withProto, window.location.origin);
-        const fromQuery = url.searchParams.get('c') || url.searchParams.get('code');
+        const fromQuery = url.searchParams.get('u') || url.searchParams.get('c') || url.searchParams.get('code');
         if (fromQuery) value = fromQuery;
         else {
           const parts = url.pathname.split('/').filter(Boolean);
@@ -132,14 +133,10 @@
     try {
       sessionStorage.setItem('nek-session:' + path.split('/')[1], token);
     } catch {
-      target += '?nek=' + encodeURIComponent(token);
+      target += '#nek=' + encodeURIComponent(token);
     }
-    if (reducedMotion()) {
-      window.location.assign(target);
-      return true;
-    }
-    loginPanel?.classList.add('is-done');
-    window.setTimeout(() => window.location.assign(target), 400);
+    passwordInput.value = '';
+    window.location.assign(target);
     return true;
   }
 
@@ -157,6 +154,8 @@
 
     clearError();
     setBusy(true);
+    const request = new AbortController();
+    pendingLogin = request;
 
     let session = null;
     let failure = '';
@@ -164,6 +163,7 @@
     try {
       const response = await fetch(PUBLISH_URL, {
         method: 'POST',
+        signal: request.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'login-tree', login: loginValue, password }),
       });
@@ -174,8 +174,8 @@
         // Wait time is decided by the server; show its text as is.
         failure = apiError || 'Попробуйте позже';
       } else if (!response.ok || !data.ok) {
-        failure = apiError || 'Неверный логин или пароль';
-        wrongCredentials = true;
+        wrongCredentials = response.status === 401;
+        failure = apiError || (wrongCredentials ? 'Неверный логин или пароль' : 'Сервер не ответил. Повторите попытку.');
       } else {
         session = data;
       }
@@ -183,6 +183,8 @@
       failure = 'Нет связи с сервером. Проверьте интернет и попробуйте снова.';
     }
 
+    if (request.signal.aborted) return;
+    pendingLogin = null;
     if (session && enterTree(session)) return;
 
     setBusy(false);
@@ -192,6 +194,17 @@
       passwordInput.focus();
     }
   }
+
+  loginPanel?.closest('dialog')?.addEventListener('close', () => {
+    pendingLogin?.abort();
+    pendingLogin = null;
+    passwordInput.value = '';
+    passwordInput.type = 'password';
+    passwordToggle.textContent = 'Показать';
+    passwordToggle.setAttribute('aria-pressed','false');
+    setBusy(false);
+    clearError();
+  });
 
   loginPanel?.addEventListener('submit', (event) => {
     event.preventDefault();

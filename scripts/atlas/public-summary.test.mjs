@@ -18,3 +18,11 @@ test('only catalog relations with sufficiently large groups are released',async(
  assert.ok(!scopes['teip/shatoi/varand']);
  assert.ok(!JSON.stringify(scopes).includes('drewo-'));
 });
+
+test('a village monument is linked to its village without implying a teip',async()=>{
+ const {sites,searchCatalog}=await import('../../atlas/catalog.mjs');
+ const place=sites.find(site=>site.id==='khoi-complex');
+ assert.equal(place.settlementId,'khoi-village');
+ assert.equal(place.teipId,undefined);
+ assert.ok(searchCatalog('Хой').some(hit=>hit.id==='khoi-village'&&hit.type==='Селение'));
+});

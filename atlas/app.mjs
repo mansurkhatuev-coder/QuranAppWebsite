@@ -216,6 +216,8 @@ function renderAggregateDashboard({group=null,teip=null,settlement=null,panel=$(
   metrics.push(['Тейпы в каталоге',group.teips.length]);
   const places=sites.filter(site=>site.group===group.id);
   if(places.length)metrics.push(['Места в каталоге тухума',places.length]);
+  const villages=new Set(places.map(place=>place.settlementId).filter(Boolean));
+  if(villages.size)metrics.push(['Селения с объектами каталога',villages.size]);
  }else{
   metrics.push(['Тухумы',groups.length],['Записи о тейпах',groups.reduce((n,g)=>n+g.teips.length,0)],['Исторические места',sites.length]);
  }
@@ -315,7 +317,7 @@ function renderRows(){
    button.append(label,type);
    button.addEventListener('click',()=>{
     if(match.type==='Река')route({type:'SELECT_RIVER',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet});
-    else if(match.type==='Город')openCity(match.id);
+    else if(match.type==='Город'||match.type==='Селение')openCity(match.id);
     else if(match.type==='Место')route({type:'SELECT_PLACE',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'full':state.sheet},{returnFocusId:button.id});
     else if(match.type==='Тейп')route({type:'SELECT_TEIP',groupId:match.group,id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet},{returnFocusId:button.id});
     else openGroup(match.id,{focusTargetId:button.id});
@@ -381,7 +383,7 @@ function renderPlace(){
  const title=document.createElement('h2');title.textContent=place.fullName;
  const meta=document.createElement('div');meta.className='detail-meta';meta.innerHTML=`${icon('tower')}<span></span>`;meta.querySelector('span').textContent=place.kind;
  const note=document.createElement('p');note.className='detail-note';note.textContent='Точка на карте приблизительная. Иллюстрация создана ИИ. ';
- const source=document.createElement('a');source.href=place.source;source.textContent='Сайт музея-заповедника';source.rel='noreferrer';source.target='_blank';note.append(source);
+ const source=document.createElement('a');source.href=place.source;source.textContent='Сведения об объекте';source.rel='noreferrer';source.target='_blank';note.append(source);
  const showMap=document.createElement('button');showMap.type='button';showMap.className='detail-map-action';showMap.id='show-place-map';showMap.innerHTML=`<span>Показать на карте</span>${icon('arrow')}`;showMap.addEventListener('click',()=>{setSheet('peek');atlas?.focusSite(place.id,{focus:true,padding:lastViewport?.padding});scheduleViewport();});
  content.append(area,title,meta,note,showMap);
  detail.append(toolbar,figure,content);
@@ -434,11 +436,11 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const back=document.createElement('button');back.type='button';back.className='detail-back';back.textContent='← Назад';back.addEventListener('click',goBack);
  const close=document.createElement('button');close.type='button';close.className='detail-close';close.textContent='Закрыть';close.addEventListener('click',goBack);toolbar.append(back,close);
  const content=document.createElement('div');content.className='detail-content city-content';
- const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'РЕКИ ЧЕЧНИ':'ГОРОДА ЧЕЧНИ';
+ const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'Река':city.settlementType==='village'?'Селение':'Город';
  const title=document.createElement('h2');title.textContent=city.name;
  const coordinates=city.coordinates??city.center;
  const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
- const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Место на OpenStreetMap ↗';
+ const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Источник координат';
  const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>document.querySelector('#create-tree').click());
  content.append(kicker,title,location,source,create);if(!isRiver){
   const panel=document.createElement('section');
@@ -817,7 +819,6 @@ try{
  console.error('Atlas initialization failed',error);
  setMapStatus('unavailable');
  $('#map').style.background='url(./assets/relief-overview.webp) center/cover';
- toast('Карта сейчас недоступна. Каталог и карточки работают.');
 }
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)saveViewState();});

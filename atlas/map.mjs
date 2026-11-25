@@ -208,7 +208,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
    framePoints.push(pointAt(west+(east-west)*column/(reliefManifest.size-1),north+(south-north)*row/(reliefManifest.size-1),reliefGrid.data[row*reliefManifest.size+column]*reliefManifest.heightExaggeration));
   }
   markers.setRelief(reliefManifest,reliefGrid);
-  const landmarks=[...cities.filter(city=>city.kind==='city'),...sites.map(site=>({...site,kind:'tower'}))];
+  const landmarks=[...cities.filter(city=>city.settlementType!=='village'),...sites.map(site=>({...site,kind:'tower'}))];
   reliefLayer=createTerrainSceneLayer({
    manifest:reliefManifest,grid:reliefGrid,
    maskUrl:new URL('./data/relief/boundary-mask.png',import.meta.url).href,

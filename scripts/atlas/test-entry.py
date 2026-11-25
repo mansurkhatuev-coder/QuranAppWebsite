@@ -9,6 +9,12 @@ from playwright.sync_api import sync_playwright
 
 
 class QuietHandler(SimpleHTTPRequestHandler):
+    def copyfile(self, source, output):
+        try:
+            super().copyfile(source, output)
+        except (BrokenPipeError, ConnectionResetError):
+            pass  # A new page can cancel tiles requested by the old map.
+
     def log_message(self, *args):
         pass
 
@@ -30,7 +36,7 @@ def check(browser, base, width, height):
 
     context.route("**/*", intercept)
     try:
-        page.goto(base + "/nek/?login=1&u=sample")
+        page.goto(base + ("/t/?c=sample" if width == 320 else "/nek/?login=1&u=sample"))
         page.locator("#family-access[open]").wait_for()
         assert page.locator("#login-input").input_value() == "sample"
         if width < 1000:
@@ -64,7 +70,9 @@ if __name__ == "__main__":
         thread.start()
         try:
             with sync_playwright() as playwright:
-                browser = getattr(playwright, args.browser).launch(executable_path=args.executable)
+                # Entry routes must remain usable even without a GPU. Test 3D separately.
+                flags = ["--disable-webgl"] if args.browser == "chromium" else []
+                browser = getattr(playwright, args.browser).launch(executable_path=args.executable, args=flags)
                 for width, height in [(320, 568), (390, 844), (844, 390), (768, 1024), (1280, 800)]:
                     check(browser, f"http://127.0.0.1:{server.server_port}", width, height)
                 browser.close()

@@ -245,3 +245,10 @@ test('resolves invitation codes through the existing public invitation endpoint'
   assert.equal(invite.treeDir, 'drewo');
   assert.equal(invite.invitePath, '/t/hoti');
 });
+
+test('storage-restricted family handoff consumes the fragment and keeps the family route',async()=>{
+  const {consumeFamilyTokenFromUrl}=await import('./waydean-preview-family-auth.mjs');
+  assert.deepEqual(consumeFamilyTokenFromUrl('https://example.test/drewo-sample/?source=family#nek=example'),{
+    token:'example',cleanUrl:'/drewo-sample/?source=family'
+  });
+});

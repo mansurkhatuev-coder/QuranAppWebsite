@@ -89,7 +89,9 @@ export function readLegacyTreeViewSession(storage, now = Date.now(), treeDir = D
 export function consumeFamilyTokenFromUrl(href) {
   try {
     const url = new URL(href);
-    const token = String(url.searchParams.get('nek') || '').trim();
+    const fragmentToken = url.hash.startsWith('#nek=') ? new URLSearchParams(url.hash.slice(1)).get('nek') : '';
+    const token = String(fragmentToken || url.searchParams.get('nek') || '').trim();
+    if (fragmentToken) url.hash = '';
     url.searchParams.delete('nek');
     return {
       token,

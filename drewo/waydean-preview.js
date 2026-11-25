@@ -1208,7 +1208,7 @@ function buildAddChildForm(person) {
       pendingChildUndo = { tree: before, parentId: person.id, childId: child.id, name: child.name, womenVisibleBefore };
       addChildFormOpenForPerson = null;
       if (child.gender === 'female') setWomenVisibility(true);
-      markRelationshipDirty({ preserveChildUndo: true });
+      markRelationshipDirty({ preserveChildUndo: true, focusId: child.id });
       announce(`«${child.name}» добавлен(а) в черновик. Публикация остаётся отдельным шагом.`);
     } catch (error) {
       status.textContent = error?.message || 'Не удалось добавить запись.';
@@ -1894,7 +1894,7 @@ function buildRelationshipControls(person) {
   const dragNote = document.createElement('p'); dragNote.className = 'reparent-mode-note';
   dragNote.textContent = relationshipDragEnabled
     ? 'Карточки можно переносить только после проверки новой связи. Корень переносить нельзя; самого человека и его потомка нельзя назначить новым отцом.'
-    : 'Перетаскивание включается отдельно, чтобы случайно не изменить связь при перемещении древа.';
+    : 'Включите перенос, чтобы изменить родителя.';
   content.append(dragToggle, dragNote);
   const candidates = records.filter(item => item.id !== person.id);
   const moveForm = document.createElement('form'); moveForm.className = 'mock-edit-form';
@@ -1930,12 +1930,12 @@ function buildRelationshipControls(person) {
   });
   content.append(moveForm);
   const deleteForm = document.createElement('form'); deleteForm.className = 'mock-edit-form';
-  const target = addSelect('deleteId', 'Листовой человек для удаления', 'Листового человека для удаления'); deleteForm.append(target);
-  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Удалить листового человека';
+  const target = addSelect('deleteId', 'Листовой человек для удаления', 'Человека без потомков для удаления'); deleteForm.append(target);
+  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Удалить человека без потомков';
   remove.dataset.profileFocus = 'action:delete';
   remove.addEventListener('click', () => {
     if (!target.value) { announce('Сначала выберите человека.'); return; }
-    if (!window.confirm(`Удалить выбранного листового человека из ${draftSubject()}?`)) return;
+    if (!window.confirm(`Удалить выбранного человека без потомков из ${draftSubject()}?`)) return;
     try {
       const removedPerson = byId.get(target.value);
       deleteLeaf(editableDraftRoot(), target.value);
@@ -1957,9 +1957,12 @@ function buildRelationshipControls(person) {
   return section;
 }
 
-function markRelationshipDirty({ preserveChildUndo = false } = {}) {
+function markRelationshipDirty({ preserveChildUndo = false, focusId = selectedId } = {}) {
   if (!preserveChildUndo) pendingChildUndo = null;
   editStatus = 'dirty'; refreshEditableModel(); renderProfile('relatives');
+  animateTreeLayer(ui.lines, 0.5, 220);
+  const changed = focusId && ui.nodes.querySelector(`[data-person-id="${CSS.escape(focusId)}"]`);
+  if (changed) animateTreeLayer(changed, 0.35, 240);
   announce(hasRemoteTreeWriteAccess() ? 'Черновик изменён. Сохраните его, затем опубликуйте кнопкой «Опубликовать в древо».' : 'Черновик изменён. Сохраните его через вкладку «Информация».');
 }
 
@@ -1981,7 +1984,7 @@ function refreshEditableModel() {
     syncModeButtons(mode);
   }
   syncWhoAmIButton();
-  drawTree(); updateStats();
+  drawTree();
 }
 
 function blobToDataUrl(blob) {

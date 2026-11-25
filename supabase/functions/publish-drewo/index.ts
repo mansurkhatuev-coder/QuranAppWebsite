@@ -570,14 +570,16 @@ async function loadVault(token: string, repo: string): Promise<VaultState> {
     githubGetFile(token, repo, LEGACY_VAULT_PATH),
   ]);
   const legacyPresent = Boolean(legacyFile);
-  const parsed = parseVaultFile(file?.content) ?? parseVaultFile(legacyFile?.content);
-  if (!parsed) return { map: emptyVaultMap(), available: true, legacyPresent };
-  try {
-    return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true, legacyPresent };
-  } catch {
-    // Rotated key or corrupted file: start over rather than locking out writes.
-    return { map: emptyVaultMap(), available: true, legacyPresent };
+  if (!file && !legacyFile) return { map: emptyVaultMap(), available: true, legacyPresent };
+  const parsed = parseVaultFile((file ?? legacyFile)?.content);
+  if (parsed) {
+    try {
+      return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true, legacyPresent };
+    } catch {
+      // Preserve the existing vault if its key has changed.
+    }
   }
+  throw httpError('Не удалось прочитать хранилище семейных паролей. Проверьте ключ и резервную копию.', 503);
 }
 
 /** Writes the vault to `_private/` and removes any copy left in the published tree. */
@@ -2753,6 +2755,6 @@ Deno.serve(async (request) => {
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
     const status = (error as {status?: number})?.status;
-    return jsonResponse({ error: message }, status === 409 ? 409 : 500);
+    return jsonResponse({ error: message }, status === 409 || status === 503 ? status : 500);
   }
 });

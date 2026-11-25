@@ -24,14 +24,28 @@ export const groups=[
 
 // Positions are approximate settlement-level locations for visual evaluation, not a travel guide.
 export const sites=[
- {id:'sharoi-complex',name:'Шарой',fullName:'Шаройский башенный комплекс',area:'Шаройский район',center:[45.826,42.674],kind:'Башенный комплекс',source:'https://argmz.ru/sharoiskii-istoriko-arhitektyrnyi-kompleks/',group:'sharoi'},
- {id:'khoi-complex',name:'Хой',fullName:'Хойский историко-архитектурный комплекс',area:'Веденский район',center:[46.147,42.771],kind:'Историческое селение',source:'https://argmz.ru/',group:'cheber'},
+ {id:'sharoi-complex',settlementId:'sharoi-village',name:'Шарой',fullName:'Шаройский башенный комплекс',area:'Шаройский район',center:[45.826,42.674],kind:'Башенный комплекс',source:'https://argmz.ru/sharoiskii-istoriko-arhitektyrnyi-kompleks/',group:'sharoi'},
+ {id:'khoi-complex',settlementId:'khoi-village',name:'Хой',fullName:'Хойский историко-архитектурный комплекс',area:'Веденский район',center:[46.147,42.771],kind:'Историческое селение',source:'https://vedenochr.ru/hoj-nasledie-gornogo-kavkaza/',group:'cheber'},
  {id:'ushkaloi',name:'Ушкалой',fullName:'Ушкалойские башни',area:'Итум-Калинский район',center:[45.566,42.87],kind:'Башенный комплекс',source:'https://argmz.ru/ушкалойские-башни-2/',group:'shatoi'},
  {id:'nikaroi',name:'Никарой',fullName:'Никаройский башенный комплекс',area:'Итум-Калинский район',center:[45.53,42.755],kind:'Башенный комплекс',source:'https://argmz.ru/',group:null},
  {id:'phakoch',name:'Пхакоч',fullName:'Историко-архитектурный комплекс «Пхакоч»',area:'Итум-Калинский район',center:[45.577,42.731],kind:'Крепостной комплекс',source:'https://argmz.ru/',group:null}
 ].map(s=>({...s,coordinateAccuracy:'approximate',catalogStatus:'draft-demo'}));
-export function searchCatalog(query){
+const searchEntries = [
+ ...groups.map(g => ({type:'Тухум', id:g.id, label:g.name, group:g.id})),
+ ...groups.flatMap(g => g.teips.map(t => ({type:'Тейп', id:t.id, label:t.name, group:g.id}))),
+ ...sites.map(s => ({type:'Место', id:s.id, label:s.fullName})),
+ ...settlements.map(s => ({type:s.settlementType==='village'?'Селение':'Город', id:s.id, label:s.name})),
+ ...rivers.map(r => ({type:'Река', id:r.id, label:r.name}))
+].map(entry => ({entry,name:entry.label.toLocaleLowerCase('ru')}));
+
+export function searchCatalog(query) {
  const q=query.trim().toLocaleLowerCase('ru');
- if(!q)return [];
- return [...groups.map(g=>({type:'Тухум',id:g.id,label:g.name,group:g.id})),...groups.flatMap(g=>g.teips.map(t=>({type:'Тейп',id:t.id,label:t.name,group:g.id}))),...sites.map(s=>({type:'Место',id:s.id,label:s.fullName})),...settlements.map(s=>({type:'Город',id:s.id,label:s.name})),...rivers.map(r=>({type:'Река',id:r.id,label:r.name}))].filter(x=>x.label.toLocaleLowerCase('ru').includes(q)).slice(0,8);
+ if (!q) return [];
+ const exact=[],prefix=[],partial=[];
+ for (const {entry,name} of searchEntries) {
+  if (name===q) exact.push(entry);
+  else if (name.startsWith(q)) prefix.push(entry);
+  else if (name.includes(q)) partial.push(entry);
+ }
+ return [...exact,...prefix,...partial].slice(0,8);
 }

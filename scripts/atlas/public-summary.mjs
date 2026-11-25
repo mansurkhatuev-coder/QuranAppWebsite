@@ -35,7 +35,7 @@ function by(rows, key) {
  return buckets;
 }
 
-function metrics(rows, project) {
+function metrics(rows, scope) {
  const value = {trees:band(rows.length, minimum)};
  const people = rows.reduce((n, row) => n + row.people, 0);
  // Omit the total if one family contributes the majority of records.
@@ -44,8 +44,10 @@ function metrics(rows, project) {
  if ([...depths.values()].every(bucket => bucket.length >= minimum)) {
   value.depth = Object.fromEntries([...depths].map(([key,bucket]) => [key,band(bucket.length,minimum)]));
  }
- if (project) {
-  for (const [key,label] of [['teip','teips'],['city','settlements']]) {
+ if (scope) {
+  const dimensions = scope === 'project' ? [['teip','teips'],['city','settlements']]
+   : scope === 'city' ? [['teip','teips']] : [['city','settlements']];
+  for (const [key,label] of dimensions) {
    const counts = by(rows,key);
    counts.delete('');
    if (counts.size && [...counts.values()].every(bucket => bucket.length >= minimum)) value[label] = counts.size;
@@ -70,12 +72,15 @@ export async function buildSummary(manifest, loadTree) {
  }
  const scopes = {};
  if (rows.length >= minimum) {
-  scopes.project = metrics(rows,true);
+  scopes.project = metrics(rows,'project');
   // Suppress a whole partition if subtraction could identify a small remainder.
+  const intersections = by(rows.map(row => ({pair:JSON.stringify([row.group,row.teip,row.city])})), 'pair');
+  const allowCityBreakdown = [...intersections.values()].every(bucket => bucket.length >= minimum);
   for (const key of ['group','teip','city']) {
+   if (key === 'city' && !allowCityBreakdown) continue;
    const buckets = by(rows,key);
    if ([...buckets.values()].some(bucket => bucket.length < minimum)) continue;
-   for (const [id,bucket] of buckets) if (id) scopes[`${key}/${id}`] = metrics(bucket,false);
+   for (const [id,bucket] of buckets) if (id) scopes[`${key}/${id}`] = metrics(bucket,key);
   }
  }
  return {version:1,date:new Date().toISOString().slice(0,10),scopes};

@@ -1,5 +1,5 @@
 import {
-  FAMILY_TREE_IDS,
+  isFamilyTreeId,
   PRINT_HANDOFF_KEY,
   VIDEO_HANDOFF_KEY,
   readExportWorkshopHandoff,
@@ -22,7 +22,8 @@ function treeReturnHref(value) {
     url.searchParams.set("source", value.returnContext);
   }
   if (value?.treeId === "demo") url.searchParams.set("fixture", "master");
-  if (FAMILY_TREE_IDS.includes(value?.treeId) && value.treeId !== "hoti") {
+  if (isFamilyTreeId(value?.treeId) && value.treeId !== "hoti") {
+    url.pathname = `/${value.treeId}/`;
     url.searchParams.set("tree", value.treeId);
   }
   url.searchParams.set("state", value?.returnView || "all-tree");

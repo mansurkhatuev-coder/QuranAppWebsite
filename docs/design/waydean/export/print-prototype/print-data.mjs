@@ -86,14 +86,15 @@ function loadWorkshopPeople() {
   try {
     const handoff = readExportWorkshopHandoff(window.sessionStorage);
     if (!handoff) return null;
+    const photoDirectory = handoff.treeId === 'hoti' ? 'drewo' : handoff.treeId;
     return {
       treeId: handoff.treeId,
       people: handoff.printPeople.map(person => ({
         ...person,
         parent: person.parentId ?? null,
         photo: person.hasPhoto,
-        photoUrl: person.hasPhoto
-          ? new URL(`../../../../../drewo/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(person.photoKey || "1")}`, import.meta.url).href
+        photoUrl: person.hasPhoto && isFamilyTreeId(handoff.treeId)
+          ? new URL(`../../../../../${photoDirectory}/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(person.photoKey || "1")}`, import.meta.url).href
           : null
       }))
     };

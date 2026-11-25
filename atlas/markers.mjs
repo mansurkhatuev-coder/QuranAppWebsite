@@ -39,7 +39,7 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
   const hit=documentRef.createElement('button');
   hit.type='button';hit.className='atlas-marker-hit';
   {
-   hit.setAttribute('aria-label',`${type==='river'?'Открыть реку':type==='city'?'Открыть город':type==='site'?'Открыть место':'Открыть тухум'}: ${item.name}`);
+   hit.setAttribute('aria-label',`${type==='river'?'Открыть реку':type==='city'?(item.settlementType==='village'?'Открыть селение':'Открыть город'):type==='site'?'Открыть место':'Открыть тухум'}: ${item.name}`);
    hit.setAttribute('aria-pressed','false');
   }
 
