@@ -1,6 +1,7 @@
 const ALLOWED_ACTIONS = new Set([
   'waydean-admin-auth',
   'waydean-admin-load',
+  'waydean-admin-photo-load',
   'waydean-admin-publish',
   'waydean-admin-backups',
   'waydean-admin-snapshot',
