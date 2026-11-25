@@ -22,7 +22,6 @@ import {
   assertCreatableTreeDir,
   buildInviteStubHtml,
   buildManifest,
-  buildReadme,
   buildRootTreeJson,
   injectScriptJson as injectOrInsertScript,
   customizeTemplateHtml,
@@ -1424,7 +1423,6 @@ Deno.serve(async (request) => {
             content: serializeManifest([]),
           },
           { path: `${treeDir}/manifest.webmanifest`, content: buildManifest(title) },
-          { path: `${treeDir}/README.md`, content: buildReadme(title, treeDir, code) },
           {
             path: `t/${code}/index.html`,
             content: buildInviteStubHtml({ title, code }),
