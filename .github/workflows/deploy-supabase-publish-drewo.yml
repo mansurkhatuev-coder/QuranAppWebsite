@@ -43,16 +43,16 @@ jobs:
             echo "Missing WEBSITE_PUBLISH_TOKEN repository secret"
             exit 1
           fi
-          PASSWORD_VALUE="${DREWO_PASSWORD:-гуно}"
-          DADA_PASSWORD_VALUE="${DREWO_DADA_YURT_PASSWORD:-баташ}"
-          REKLAMA_PASSWORD_VALUE="${DREWO_REKLAMA_PASSWORD:-демо}"
           SECRET_ARGS=(
             GITHUB_TOKEN="$WEBSITE_PUBLISH_TOKEN"
             GITHUB_REPO=mansurkhatuev-coder/QuranAppWebsite
-            DREWO_PASSWORD="$PASSWORD_VALUE"
-            DREWO_DADA_YURT_PASSWORD="$DADA_PASSWORD_VALUE"
-            DREWO_REKLAMA_PASSWORD="$REKLAMA_PASSWORD_VALUE"
           )
+          # Omitted GitHub secrets leave the values already configured in Supabase intact.
+          for family_secret in DREWO_PASSWORD DREWO_DADA_YURT_PASSWORD DREWO_REKLAMA_PASSWORD; do
+            if [[ -n "${!family_secret}" ]]; then
+              SECRET_ARGS+=("$family_secret=${!family_secret}")
+            fi
+          done
           if [ -n "$DREWO_SUPER_PASSWORD" ]; then
             SECRET_ARGS+=(DREWO_SUPER_PASSWORD="$DREWO_SUPER_PASSWORD")
           else
