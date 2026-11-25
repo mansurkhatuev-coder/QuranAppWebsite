@@ -17,7 +17,7 @@ const missing = file => assert.rejects(access(file), { code: 'ENOENT' });
 
 test('private snapshots, credentials, registry, photos and backups are omitted, including unregistered trees', async t => {
   const {root,put,out} = await fixture(t);
-  const paths = ['_private/vault.json','trees/registry.json','trees/credentials.vault.json','drewo/family-tree.json','drewo-covza/photos/a.jpg','drewo-shahiid-nek/backups/a.html','drewo-reklama/access.json','drewo-reklama/family-tree.json','drewo-adam/push-subscriptions.json','drewo-guzat/activity-log.json','nested/DREWO-X/PHOTOS/a.webp','scripts/legacy-transitions.json','.env.local','db.sqlite3'];
+  const paths = ['_private/vault.json','trees/registry.json','trees/credentials.vault.json','drewo/family-tree.json','drewo-covza/photos/a.jpg','drewo-shahiid-nek/backups/a.html','drewo-reklama/access.json','drewo-reklama/family-tree.json','drewo-adam/push-subscriptions.json','drewo-guzat/activity-log.json','nested/DREWO-X/PHOTOS/a.webp','scripts/legacy-transitions.json','scripts/deploy-private.sh','supabase/functions/private/index.ts','drewo/security.test.mjs','Start-Waydean-Local.cmd','.gitignore','.env.local','db.sqlite3'];
   for (const path of paths) await put(path);
   await preparePagesArtifact(root);
   for (const path of paths) { await missing(join(out,path)); assert.equal(await readFile(join(root,path),'utf8'),'SYNTHETIC_PRIVATE'); }
