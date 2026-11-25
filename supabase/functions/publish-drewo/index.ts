@@ -1,3 +1,4 @@
+import { backupListLabel, backupTimestamp, isSafeBackupName } from './backup-files.ts';
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
 import { authorizeWaydeanAdmin } from './waydean-admin-access.ts';
 import {
@@ -124,14 +125,6 @@ function extractScriptJson(html: string, scriptId: string): string | null {
     }
   }
   return null;
-}
-
-function stampNow() {
-  return new Date()
-    .toISOString()
-    .replace(/[:.]/g, '-')
-    .replace('T', '_')
-    .slice(0, 19);
 }
 
 function githubHeaders(token: string, json = false): HeadersInit {
@@ -962,25 +955,6 @@ function guessSavedAt(name: string) {
   return `${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`;
 }
 
-function backupListLabel(name: string, treeDir: TreeDir) {
-  const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return name
-    .replace(new RegExp(`^${prefix}-`), '')
-    .replace(/\.(html|json)$/, '')
-    .replace(/_/g, ' ');
-}
-
-function backupNamePrefix(treeDir: TreeDir) {
-  return treeDir;
-}
-
-function isSafeBackupName(name: string, treeDir: TreeDir) {
-  const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^${prefix}-\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.(html|json)$`).test(
-    name
-  );
-}
-
 async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
   const { ok, status, json } = await githubJson(
     token,
@@ -1713,7 +1687,6 @@ Deno.serve(async (request) => {
     const indexPath = `${treeDir}/index.html`;
     const jsonPath = `${treeDir}/family-tree.json`;
     const backupsDir = `${treeDir}/backups`;
-    const backupPrefix = backupNamePrefix(treeDir);
 
     if (isWaydeanAdminRequest && treeDir !== waydeanAdminTreeDir) {
       return jsonResponse({ ok: false, error: 'Waydean account access is limited to drewo' }, 403);
@@ -2235,8 +2208,8 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'Нет дерева для снимка' }, 400);
       }
       const activityJson = extractScriptJson(current?.content || '', 'activity-log') || '[]';
-      const stamp = stampNow();
-      const backupName = `${backupPrefix}-${stamp}.json`;
+      const stamp = backupTimestamp();
+      const backupName = `${treeDir}-${stamp}.json`;
       const label =
         typeof body.label === 'string' ? body.label.trim().slice(0, 80) : 'Ручной снимок';
       const record = makeSnapshotRecord(treeJson, activityJson, { label, kind: 'snapshot' });
@@ -2305,7 +2278,7 @@ Deno.serve(async (request) => {
       if (!parsed) {
         return jsonResponse({ error: 'В бэкапе нет дерева' }, 400);
       }
-      const stamp = stampNow();
+      const stamp = backupTimestamp();
       const [current, currentJsonFile, existingBackups] = await Promise.all([
         githubGetFile(githubToken, githubRepo, indexPath),
         githubGetFile(githubToken, githubRepo, jsonPath),
@@ -2349,7 +2322,7 @@ Deno.serve(async (request) => {
       let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', parsed.treeJson);
       htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', parsed.activityJson);
       const jsonBody = parsed.treeJson.endsWith('\n') ? parsed.treeJson : `${parsed.treeJson}\n`;
-      const newBackupName = `${backupPrefix}-${stamp}.json`;
+      const newBackupName = `${treeDir}-${stamp}.json`;
       const safetySnapshot = waydeanAdminRestoreSafetySnapshot({
         currentTreeJson,
         currentActivityJson,
@@ -2535,7 +2508,7 @@ Deno.serve(async (request) => {
       }
     }
 
-    const stamp = stampNow();
+    const stamp = backupTimestamp();
     const message =
       typeof body.message === 'string' && body.message.trim()
         ? body.message.trim()
@@ -2612,7 +2585,7 @@ Deno.serve(async (request) => {
     }
 
     const treeFilesChange = indexWillChange || jsonWillChange;
-    const backupName = `${backupPrefix}-${stamp}.json`;
+    const backupName = `${treeDir}-${stamp}.json`;
     const record = makeSnapshotRecord(publishTreeJson, publishActivityJson, {
       kind: 'auto',
       merged,

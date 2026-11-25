@@ -27,15 +27,11 @@ Deno.test('expired session rejected', async () => {
 });
 
 Deno.test('bad signature returns null', async () => {
-  const secret = 'test-secret';
   const token = await signNekSession(
     { treeDir: 'drewo', role: 'editor', exp: Date.now() + 60_000, pwdFp: FP_A },
-    secret
+    'different-test-signing-key'
   );
-  const [body, sig] = token.split('.');
-  const last = sig[sig.length - 1] === 'A' ? 'B' : 'A';
-  const tampered = `${body}.${sig.slice(0, -1)}${last}`;
-  assertEquals(await verifyNekSession(tampered, secret, FP_A), null);
+  assertEquals(await verifyNekSession(token, 'test-secret', FP_A), null);
 });
 
 Deno.test('malformed token returns null', async () => {
