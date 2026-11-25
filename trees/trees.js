@@ -122,57 +122,6 @@
     return rtf.format(-Math.round(diffSec / 86400), 'day');
   }
 
-  function analyzeTreeJson(root) {
-    const stats = {people:0, photos:0, withYears:0, withBio:0, maxDepth:0};
-    const stack = [[root,1]];
-    while (stack.length) {
-      const [node,depth] = stack.pop();
-      if (!node || typeof node !== 'object') continue;
-      stats.people++;
-      if (node.photo) stats.photos++;
-      if (node.born || node.died) stats.withYears++;
-      if (node.bio || node.note) stats.withBio++;
-      stats.maxDepth = Math.max(stats.maxDepth,depth);
-      if (Array.isArray(node.sons)) {
-        for (const child of node.sons) stack.push([child,depth + 1]);
-      }
-    }
-    return stats;
-  }
-
-  function analyzeManifest(manifest) {
-    const items = Array.isArray(manifest?.items) ? manifest.items : [];
-    const withPeople = items.filter((item) => Number(item.personCount) > 0);
-    const latest = withPeople[0] || items[0] || null;
-    const previousDifferent = withPeople.find(
-      (item, index) => index > 0 && Number(item.personCount) !== Number(latest?.personCount)
-    );
-    const baseline = [...withPeople].reverse()[0] || null;
-    const personCount = Number(latest?.personCount) || 0;
-    const addedSinceBaseline =
-      baseline && personCount >= Number(baseline.personCount)
-        ? personCount - Number(baseline.personCount)
-        : null;
-    const addedSincePrevious =
-      previousDifferent && personCount >= Number(previousDifferent.personCount)
-        ? personCount - Number(previousDifferent.personCount)
-        : 0;
-
-    return {
-      backupCount: items.length,
-      lastSavedAt: latest?.savedAt || null,
-      manifestPeople: personCount,
-      addedSinceBaseline,
-      addedSincePrevious,
-    };
-  }
-
-  async function fetchJson(url) {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
-    return response.json();
-  }
-
   async function authHeaders() {
     const headers = {
       'Content-Type': 'application/json',
@@ -204,19 +153,6 @@
       const error = new Error(err.error || `hub-overview ${response.status}`);
       error.status = response.status;
       throw error;
-    }
-    return response.json();
-  }
-
-  async function callStatus(treeDir) {
-    const response = await fetch(publishUrl(), {
-      method: 'POST',
-      headers: await authHeaders(),
-      body: JSON.stringify({ action: 'status', treeDir }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `status ${response.status}`);
     }
     return response.json();
   }
@@ -319,82 +255,34 @@
     return Array.from(byDir.values());
   }
 
-  async function loadLocalStats(meta) {
-    const base = meta.path;
-    const [treeResult, manifestResult] = await Promise.allSettled([
-      fetchJson(`${base}family-tree.json`),
-      fetchJson(`${base}backups/manifest.json`),
-    ]);
-
-    const treeStats =
-      treeResult.status === 'fulfilled' ? analyzeTreeJson(treeResult.value) : null;
-    const manifestStats =
-      manifestResult.status === 'fulfilled' ? analyzeManifest(manifestResult.value) : null;
-
-    const people = treeStats?.people ?? manifestStats?.manifestPeople ?? null;
-
-    return {
-      meta,
-      people,
-      photos: treeStats?.photos ?? null,
-      withYears: treeStats?.withYears ?? null,
-      withBio: treeStats?.withBio ?? null,
-      maxDepth: treeStats?.maxDepth ?? null,
-      backupCount: manifestStats?.backupCount ?? null,
-      lastSavedAt: manifestStats?.lastSavedAt ?? null,
-      addedSinceBaseline: manifestStats?.addedSinceBaseline ?? null,
-      addedSincePrevious: manifestStats?.addedSincePrevious ?? null,
-      treeOk: treeResult.status === 'fulfilled',
-    };
-  }
-
   async function loadAll() {
-    // Never fall back to static family data if operator access cannot be verified.
+    // Only authorized API data reaches the cabinet; no public tree JSON reads.
     const overview = await callHubOverview();
     if (!overview?.ok || !Array.isArray(overview.trees)) {
       throw new Error('Не удалось подтвердить доступ к кабинету.');
     }
-    const overviewTrees = overview.trees;
-    const overviewByDir = new Map(overviewTrees.map(row => [row.treeDir, row]));
-
-    const metas = mergeTreeMetas(overviewTrees);
-    const locals = await Promise.all(metas.map((meta) => loadLocalStats(meta)));
-
-    return Promise.all(
-      locals.map(async (local) => {
-        let remote = overviewByDir.get(local.meta.dir) || null;
-        let liveOk = Boolean(remote);
-        if (!remote) {
-          try {
-            remote = await callStatus(local.meta.dir);
-            liveOk = true;
-          } catch {
-            remote = null;
-            liveOk = false;
-          }
-        }
-
-        return {
-          ...local,
-          locked: Boolean(remote?.locked),
-          lockedReason: remote?.lockedReason || '',
-          billing: remote?.billing || null,
-          deletedAt: remote?.deletedAt || null,
-          lastSavedAt: remote?.lastSavedAt || local.lastSavedAt,
-          backupCount: remote?.backupCount ?? local.backupCount,
-          addedSinceBaseline:
-            remote?.addedSinceBaseline != null
-              ? remote.addedSinceBaseline
-              : local.addedSinceBaseline,
-          addedSincePrevious:
-            remote?.addedSincePrevious != null
-              ? remote.addedSincePrevious
-              : local.addedSincePrevious,
-          people: local.people ?? remote?.personCount ?? null,
-          liveOk,
-        };
-      })
-    );
+    const byDir = new Map(overview.trees.map(row => [row.treeDir, row]));
+    return mergeTreeMetas(overview.trees).filter(meta => byDir.has(meta.dir)).map(meta => {
+      const remote = byDir.get(meta.dir);
+      return {
+        meta,
+        people: remote.personCount ?? null,
+        photos: remote.photos ?? null,
+        withYears: remote.withYears ?? null,
+        withBio: remote.withBio ?? null,
+        maxDepth: remote.maxDepth ?? null,
+        backupCount: remote.backupCount ?? null,
+        lastSavedAt: remote.lastSavedAt ?? null,
+        addedSinceBaseline: remote.addedSinceBaseline ?? null,
+        addedSincePrevious: remote.addedSincePrevious ?? null,
+        locked: Boolean(remote.locked),
+        lockedReason: remote.lockedReason || '',
+        billing: remote.billing || null,
+        deletedAt: remote.deletedAt || null,
+        treeOk: remote.personCount != null,
+        liveOk: true,
+      };
+    });
   }
 
   function renderSummary(rows) {
