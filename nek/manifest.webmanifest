@@ -1,35 +1,36 @@
 {
-  "name": "Некъ — семейное древо",
-  "short_name": "Некъ",
-  "description": "Семейное древо: демо, личный вход и заказ своего рода",
-  "start_url": "./",
-  "scope": "./",
+  "id": "/nek/",
+  "name": "Древо — семейные родословные",
+  "short_name": "Древо",
+  "description": "Семейные родословные и карта Чечни",
+  "start_url": "/atlas/",
+  "scope": "/atlas/",
   "display": "standalone",
   "orientation": "any",
-  "background_color": "#121a14",
-  "theme_color": "#121a14",
+  "background_color": "#102b29",
+  "theme_color": "#102b29",
   "lang": "ru",
   "icons": [
     {
-      "src": "icon-192.png",
+      "src": "/nek/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-512.png",
+      "src": "/nek/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "icon-192.png",
+      "src": "/nek/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "maskable"
     },
     {
-      "src": "icon-512.png",
+      "src": "/nek/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"

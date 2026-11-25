@@ -1,54 +1,38 @@
-/* Некъ PWA — network-first shell for offline reopen. */
-const CACHE = 'waydean-nek-v7';
-const PRECACHE = [
-  './',
-  './index.html',
-  './manifest.webmanifest',
-  './nek.css?v=8',
-  './nek.js?v=9',
-  './icon-192.png',
-  './icon-512.png',
-  './apple-touch-icon.png',
-];
+// Existing installations may still start at /nek/ when opened offline.
+const CACHE = 'waydean-nek-v8';
+const REDIRECT_PAGE = new URL('./index.html', self.location.href).href;
+const ENTRY_PATH = new URL('./', self.location.href).pathname;
 
-self.addEventListener('install', (event) => {
-  event.waitUntil(
-    caches
-      .open(CACHE)
-      .then((cache) => cache.addAll(PRECACHE))
-      .then(() => self.skipWaiting())
-  );
+self.addEventListener('install', event => {
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    await cache.add(new Request(REDIRECT_PAGE, { cache: 'reload' }));
+    await self.skipWaiting();
+  })());
 });
 
-self.addEventListener('activate', (event) => {
-  event.waitUntil(
-    caches
-      .keys()
-      .then((keys) =>
-        Promise.all(keys.filter((key) => key.startsWith('waydean-nek-') && key !== CACHE).map((key) => caches.delete(key)))
-      )
-      .then(() => self.clients.claim())
-  );
+self.addEventListener('activate', event => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys
+      .filter(key => key.startsWith('waydean-nek-') && key !== CACHE)
+      .map(key => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
 
-self.addEventListener('fetch', (event) => {
-  const request = event.request;
-  if (request.method !== 'GET') return;
-
+self.addEventListener('fetch', event => {
+  const { request } = event;
+  if (request.method !== 'GET' || request.mode !== 'navigate') return;
   const url = new URL(request.url);
-  if (url.origin !== self.location.origin) return;
-  if (url.pathname.includes('/rest/v1/') || url.pathname.includes('/auth/v1/')) return;
-  if (url.pathname.includes('/functions/v1/')) return;
-
-  event.respondWith(
-    fetch(request)
-      .then((response) => {
-        if (response.ok && url.pathname.includes('/nek/')) {
-          const copy = response.clone();
-          void caches.open(CACHE).then((cache) => cache.put(request, copy));
-        }
-        return response;
-      })
-      .catch(() => caches.open(CACHE).then(async cache => await cache.match(request) || (request.mode === 'navigate' && await cache.match('./index.html')) || Response.error()))
-  );
+  if (url.origin !== self.location.origin ||
+      (url.pathname !== ENTRY_PATH && url.pathname !== ENTRY_PATH + 'index.html')) return;
+  event.respondWith((async () => {
+    try {
+      return await fetch(request);
+    } catch {
+      const cache = await caches.open(CACHE);
+      return await cache.match(REDIRECT_PAGE) || Response.error();
+    }
+  })());
 });
