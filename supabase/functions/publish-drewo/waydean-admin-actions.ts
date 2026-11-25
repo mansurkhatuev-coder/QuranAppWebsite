@@ -1,6 +1,7 @@
 const WAYDEAN_ADMIN_ACTION_TARGETS: Readonly<Record<string, string | null>> = Object.freeze({
   'waydean-admin-auth': null,
   'waydean-admin-load': null,
+  'waydean-admin-photo-load': 'photo-load',
   'waydean-admin-publish': 'publish',
   'waydean-admin-backups': 'list-backups',
   'waydean-admin-snapshot': 'snapshot',
