@@ -1,6 +1,7 @@
 import { lstat, mkdir, readFile, readdir, realpath, rm, writeFile, copyFile } from 'node:fs/promises';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { secureLegacyReader } from './secure-legacy-reader.mjs';
 
 const excludedDirectories = new Set(['.git', '.github', '_private', 'backups', 'node_modules', 'dist']);
 const excludedFiles = new Set(['access.json', 'credentials.vault.json', 'push-subscriptions.json', 'activity-log.json', 'family-tree.json', 'tree-data.json']);
@@ -51,7 +52,8 @@ async function copyPublicTree(source, destination, base = '') {
       await copyPublicTree(from, to, path);
     } else if (info.isFile()) {
       if (/\.html?$/i.test(entry.name)) {
-        const clean = stripEmbeddedFamilyData(await readFile(from, 'utf8'));
+        let clean = stripEmbeddedFamilyData(await readFile(from, 'utf8'));
+        if (/^drewo(?:-|$)/.test(segments(path)[0] || '')) clean = secureLegacyReader(clean);
         verifyHtml(clean, path);
         await writeFile(to, clean, 'utf8');
       } else await copyFile(from, to);
