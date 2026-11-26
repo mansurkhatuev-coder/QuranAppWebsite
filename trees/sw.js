@@ -1,8 +1,8 @@
 /* Trees PWA — cache only the public application shell. */
-const CACHE = 'waydean-trees-v9';
+const CACHE = 'waydean-trees-v10';
 const PRECACHE = [
   './', './index.html', './manifest.webmanifest',
-  './trees.css?v=11', './trees.js?v=13',
+  './trees.css?v=11', './trees.js?v=14',
   './icon-192.png', './icon-512.png',
   '../assets/drewo-motion.css?v=20261124-2',
   '../assets/auth-lock.js?v=1', './billing-config.js?v=1',

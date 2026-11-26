@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="robots" content="noindex,nofollow">
+  <meta name="referrer" content="no-referrer">
   <meta name="waydean-local-build" content="release-candidate-2026-11-18-family-route-2">
   <meta name="waydean-publish-api" content="https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo">
   <meta name="theme-color" content="#081116">
@@ -26,6 +27,10 @@
   <script>
     (function () {
       var params = new URLSearchParams(window.location.search);
+      if (params.get('source') === 'family' && params.has('familyPath')) {
+        document.querySelector('link[rel="manifest"]')?.remove();
+        return;
+      }
       var dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
       var treeDir = String(params.get('tree') || '').trim().toLowerCase();
       if (dirs.has(treeDir) && (params.get('source') === 'family' || params.has('nek') || params.has('invite'))) {
@@ -401,7 +406,7 @@
   <script src="../assets/drewo-billing-banner.js?v=2"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2&family-export=20261119-1&whoami-restore=20261119-2&initial-tree=20261123-1&atlas=1&motion=20261124-1&private-shell=1&verified-family=1&private-photo=1');
+          import('./waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2&family-export=20261119-1&whoami-restore=20261119-2&initial-tree=20261123-1&atlas=1&motion=20261124-1&private-shell=1&verified-family=1&private-photo=1&shared-route=1');
     }
   </script>
 </body>

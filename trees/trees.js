@@ -1112,37 +1112,6 @@
     }
   }
 
-  async function waitUntilPageReady(path, options) {
-    const href = openHref(path);
-    const maxMs = options?.maxMs ?? 90000;
-    const started = Date.now();
-    let attempt = 0;
-    while (Date.now() - started < maxMs) {
-      attempt += 1;
-      const elapsedSec = Math.round((Date.now() - started) / 1000);
-      showBoot(
-        attempt === 1
-          ? 'Публикую страницу на сайте…'
-          : `Жду появления страницы… ${elapsedSec} с`
-      );
-      try {
-        const response = await fetch(href, {
-          method: 'GET',
-          cache: 'no-store',
-          redirect: 'follow',
-        });
-        if (response.ok) return href;
-      } catch {
-        // CDN/Pages may still be rolling out.
-      }
-      const delay = Math.min(2500, 700 + attempt * 350);
-      await new Promise((resolve) => window.setTimeout(resolve, delay));
-    }
-    throw new Error(
-      'Древо создано, но страница ещё не успела появиться на сайте. Обновите список через минуту и откройте вручную.'
-    );
-  }
-
   async function handleCreateTree(event) {
     event.preventDefault();
     const err = $('#create-tree-error');
@@ -1177,21 +1146,23 @@
     showBoot('Создаю древо…');
     try {
       const created = await callCreateTree(payload);
-      if (created.sessionToken && created.treeDir === 'drewo-' + login) {
-        try { sessionStorage.setItem('nek-session:' + created.treeDir, created.sessionToken); } catch {}
-      }
       closeCreateDialog();
       const form = $('#create-tree-form');
       if (form) form.reset();
+      if (created.treeDir === 'drewo-' + login) {
+        const entry = new URL(`/${created.treeDir}/`, window.location.origin);
+        if (created.sessionToken) {
+          try { sessionStorage.setItem('nek-session:' + created.treeDir, created.sessionToken); }
+          catch { entry.hash = 'nek=' + encodeURIComponent(created.sessionToken); }
+        }
+        window.location.assign(entry.pathname + entry.hash);
+        return;
+      }
       await refresh();
       void loadCredentials();
       const status = $('#status-line');
       if (status) {
         status.textContent = `Создано: ${created.inviteUrl || created.invitePath || created.path || ''} · логин ${created.login || created.code || ''}. Откройте и добавьте людей.`;
-      }
-      if (created.path) {
-        const readyHref = await waitUntilPageReady(created.path);
-        window.location.href = readyHref;
       }
     } catch (error) {
       if (err) {

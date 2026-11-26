@@ -64,6 +64,31 @@ test('family login is explicit or comes from a signed session/invite without rep
   assert.equal(isFamilyPreviewRoute('?state=all-tree'), false);
 });
 
+test('a canonical family link can open the shared editor without a public tree page', () => {
+  const target = previewRoute.familyEditorRedirect('https://waydean.ru/drewo-new-family/?nek=synthetic.token&state=path&source=account&fixture=master');
+  const url = new URL(target, 'https://waydean.ru');
+  assert.equal(url.pathname, '/drewo/waydean-preview.html');
+  assert.deepEqual(Object.fromEntries(url.searchParams), { source: 'family', familyPath: '/drewo-new-family/', state: 'path' });
+  assert.equal(url.hash, '#nek=synthetic.token');
+  assert.equal(resolveFamilyPreviewRoute(url.href).treeDir, 'drewo-new-family');
+  assert.equal(resolveFamilyPreviewRoute(url.href).enabled, true);
+  const shared = previewRoute.buildTreeSharePayload({ href: url.href, treeDir: 'drewo-new-family' });
+  assert.equal(shared.url, 'https://waydean.ru/drewo-new-family/');
+});
+
+test('generated routes accept only canonical tree paths and never forward live tokens to previews', () => {
+  for (const path of ['/notes/', '/drewo-a/', '/drewo-alpha/photos/a.jpg', '/x/drewo-alpha/', '/drewo-alpha/%2F']) {
+    assert.equal(previewRoute.familyEditorRedirect('https://waydean.ru' + path), null);
+  }
+  const preview = resolveFamilyPreviewRoute('https://preview.example/drewo/waydean-preview.html?source=family&familyPath=%2Fdrewo-new-family%2F#nek=synthetic');
+  assert.equal(preview.href, 'https://preview.example/drewo/waydean-preview.html');
+  assert.equal(preview.enabled, false);
+  assert.equal(preview.treeDir, 'drewo');
+  const invalid = resolveFamilyPreviewRoute('https://waydean.ru/drewo/waydean-preview.html?source=family&familyPath=https%3A%2F%2Fexample.test%2Fdrewo-new-family%2F');
+  assert.equal(invalid.treeDir, 'drewo');
+  assert.equal(new URL(invalid.href).searchParams.has('familyPath'), false);
+});
+
 test('local family URLs fall back to the local tree and strip live credentials from the address', () => {
   assert.deepEqual(resolveFamilyPreviewRoute(
     'http://127.0.0.1:8784/drewo/waydean-preview.html?state=all-tree&source=family&nek=secret&invite=private',

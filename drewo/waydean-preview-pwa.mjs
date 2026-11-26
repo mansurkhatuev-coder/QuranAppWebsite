@@ -1,5 +1,5 @@
-import {familyDirectoryForUrl} from './waydean-preview-route.mjs?v=atlas-family-1';
-const CACHE_NAME = 'waydean-preview-shell-v77';
+import {familyDirectoryForUrl} from './waydean-preview-route.mjs?v=shared-family-1';
+const CACHE_NAME = 'waydean-preview-shell-v78';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');

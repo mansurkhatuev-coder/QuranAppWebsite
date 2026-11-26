@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="robots" content="noindex, nofollow" />
+    <meta name="referrer" content="no-referrer" />
     <title>Страница не найдена</title>
     <script>
       (function () {
@@ -15,6 +16,11 @@
           }
         } catch (err) {}
       })();
+    </script>
+    <script type="module">
+      import { familyEditorRedirect } from '/drewo/waydean-preview-route.mjs?v=shared-family-1';
+      const editor = familyEditorRedirect(location.href);
+      if (editor) location.replace(editor);
     </script>
     <style>
       body {

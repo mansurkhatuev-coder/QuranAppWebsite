@@ -23,14 +23,14 @@ import {
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
-} from './waydean-preview-route.mjs?v=atlas-family-1';
+} from './waydean-preview-route.mjs?v=shared-family-1';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-shell-3';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-shell-4';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -4069,7 +4069,14 @@ async function initialize() {
     accountPreview = params.get('source') === 'account';
     familyPreview = familyRoute.enabled;
     activeTreeDir = familyRoute.treeDir;
-    $('#openCurrentTree').hidden = !familyPreview;
+    const sharedFamilyPage = familyPreview && params.has('familyPath');
+    $('#openCurrentTree').hidden = !familyPreview || sharedFamilyPage;
+    if (sharedFamilyPage) {
+      const home = new URL(familyRoute.href);
+      home.search = new URLSearchParams({ source: 'family', familyPath: params.get('familyPath'), state: 'all-tree' });
+      home.hash = '';
+      $('.brand').href = home.href;
+    }
     activeTreeId = syntheticFixture ? 'demo' : activeTreeDir === 'drewo' ? 'hoti' : activeTreeDir;
     demoMode = !syntheticFixture && familyRoute.demoMode;
     if (demoMode && params.has('invite')) {
