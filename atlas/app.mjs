@@ -499,6 +499,7 @@ function stateTransitionFromHash(){
 }
 
 window.addEventListener('popstate',event=>{
+ clearFamilyMarkers();
  const outgoing=currentEntry;
  const entry=event.state?.atlasEntry;
  const backwards=entry&&outgoing&&entry.index<outgoing.index;
@@ -597,12 +598,14 @@ function openGroup(id,{focusTargetId=null}={}){
 
 function openSite(id,{focusTargetId=null}={}){
  if(!sites.some(site=>site.id===id))return;
+ if(!$('#exit-family-map').hidden)route({type:'EXIT_MAP_ONLY'},{replace:true});
  const sheet=lastViewport?.mode?.panel==='bottom'?'full':state.sheet;
  route({type:'SELECT_PLACE',id,sheet},{returnFocusId:focusTargetId??`catalog-row-${id}`});
 }
 
 function openCity(id){
  if(!settlements.some(city=>city.id===id))return;
+ if(!$('#exit-family-map').hidden)route({type:'EXIT_MAP_ONLY'},{replace:true});
  route({type:'SELECT_CITY',id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet});
 }
 
@@ -618,15 +621,16 @@ function setAtmosphere(next){
 }
 
 async function showFamilyMap(){
+ clearFamilyMarkers();
  try {
-  const {openFamilyView}=await import('./family-view.mjs?v=2');
+  const {openFamilyView}=await import('./family-view.mjs?v=3');
   await openFamilyView({dialog:$('#family-map'),
-   showMarkers:ids=>{
+   showMarkers:marks=>{
     if(!atlas){toast('Карта пока недоступна');return;}
     route({type:'ENTER_MAP_ONLY'},{replace:true});
-    atlas.setFamilyPlaces(ids);
+    atlas.setFamilyPlaces(marks);
     $('#exit-family-map').hidden=false;
-    const first=ids[0];
+    const first=marks[0].id;
     if(settlements.some(place=>place.id===first))atlas.focusCity(first);
     else atlas.focusSite(first);
    },
@@ -783,7 +787,7 @@ fetch('./data/public-summary.json',{cache:'no-cache'}).then(response=>{
 }).catch(()=>{});
 
 try{
- const {createAtlas}=await import('./map.mjs');
+ const {createAtlas}=await import('./map.mjs?v=family-2');
  atlas=await createAtlas({
   onHome:()=>route({type:'GO_HOME'},{replace:true}),
   onGroup:id=>openGroup(id),

@@ -410,6 +410,10 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
 .family-place-form select { width: 100%; min-height: 44px; }
 .family-places button { color: inherit; text-align: start; min-height: 44px; }
 .family-places > div { display: flex; justify-content: space-between; gap: 8px; }
+body .atlas-marker-layer .is-family-marker .atlas-marker-label {
+ opacity: 1; background: #163328; color: #f3f1e8; border-radius: 4px;
+ font: 600 12px/1.25 var(--atlas-body); max-width: 185px; padding: 3px 6px;
+}
 #exit-family-map:not([hidden]) {
  position: absolute; z-index: 18; left: max(16px, env(safe-area-inset-left));
  bottom: calc(32px + env(safe-area-inset-bottom)); padding: 10px 18px;

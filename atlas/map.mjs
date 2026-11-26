@@ -1,7 +1,7 @@
 import {Map,setWorkerUrl} from './vendor/maplibre-gl.mjs';
 import {groups,sites} from './catalog.mjs';
 import {createCameraController,focusCenterAtAltitude} from './camera.mjs';
-import {createAtlasMarkers} from './markers.mjs';
+import {createAtlasMarkers} from './markers.mjs?v=family-2';
 import {computeLayoutMode,computeOverviewCamera} from './viewport.mjs';
 import {createTerrainSceneLayer} from './terrain-scene.mjs';
 import {mercatorPosition,computeProjectedFit,sampleReliefElevation} from './relief.mjs';
@@ -309,7 +309,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   home(padding=currentPadding){if(padding)setPadding(padding);const action=()=>fitOverview({animate:true});if(ready)action();else pendingCameraAction=action;},
   zoom(amount){if(!ready)return;zoomBy(amount,{duration:300,reducedMotion:reduce.matches});},
   setLayer(next){activeLayer=['all','groups','sites'].includes(next)?next:'all';updateMarkers();diagnostic?.refresh();},
-  setFamilyPlaces:ids=>markers.setFamilyPlaces(ids),
+  setFamilyPlaces:marks=>markers.setFamilyPlaces(marks),
   setSelection:selection=>markers.setSelection(selection),
   setGroupPreview:(id,origin)=>markers.setPreview(id?{type:'group',id,origin}:null),
   setLabelOcclusion:rects=>markers.setOcclusionRects(rects),

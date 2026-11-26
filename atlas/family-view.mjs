@@ -24,6 +24,9 @@ export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
   if (!token) throw new Error('Для просмотра войдите в семейное древо.');
   await verifyFamilySession({endpoint:window.SUPABASE_CONFIG.publishDrewoUrl,treeDir:data.dir,token});
   if (!isCurrent()) return;
+  const kinds = new Set(Array.from(form.elements.kind.options, option => option.value));
+  data.places = (Array.isArray(data.places) ? data.places : [])
+   .filter(mark => settlementsIndex.has(mark?.id) && kinds.has(mark.kind));
   function render() {
    list.replaceChildren();
    for (const group of groups) {
@@ -34,26 +37,25 @@ export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
      list.append(button);
     }
    }
-   for (const mark of data.places || []) {
+   for (const mark of data.places) {
     const place = settlementsIndex.get(mark.id);
-    if (!place) continue;
     const row = document.createElement('div');
     const button = document.createElement('button');
     button.textContent = place.name+' · '+mark.kind;
     button.onclick = () => { dialog.close(); showPlace(place); };
     const remove = document.createElement('button');
     remove.textContent = 'Убрать';
-    remove.setAttribute('aria-label','Убрать отметку '+place.name);
+    remove.setAttribute('aria-label',`Убрать отметку ${place.name} · ${mark.kind}`);
     remove.onclick = () => {
      data.places = data.places.filter(item => item !== mark);
      sessionStorage.setItem(key,JSON.stringify(data)); render();
     };
     row.append(button,remove);list.append(row);
    }
-   if (data.places?.length) {
+   if (data.places.length) {
     const show = document.createElement('button');
     show.type = 'button'; show.className = 'access-primary'; show.textContent = 'Показать мои места на карте';
-    show.onclick = () => { dialog.close(); showMarkers(data.places.map(mark=>mark.id)); };
+    show.onclick = () => { dialog.close(); showMarkers(data.places); };
     list.append(show);
    }
    status.textContent = list.childElementCount ? 'Совпадения по названию тейпа и ваши отметки в этой вкладке.' : 'Добавьте знакомое место. Отметки видны только в этой вкладке.';
@@ -62,7 +64,6 @@ export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
   form.onsubmit = event => {
    event.preventDefault();
    const id = select.value, kind = form.elements.kind.value;
-   data.places ||= [];
    if (!data.places.some(mark => mark.id===id && mark.kind===kind)) data.places.push({id,kind});
    sessionStorage.setItem(key,JSON.stringify(data));render();
   };
