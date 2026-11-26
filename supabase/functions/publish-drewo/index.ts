@@ -12,6 +12,7 @@ import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydean
 import { familyPublishGuardError } from './family-publish-guard.ts';
 import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
 import { hubTreeMetrics } from './hub-tree-metrics.ts';
+import { familyAppManifestResponse } from './family-app-manifest.ts';
 import { photoFileCandidates, photoMediaType, photoPersonIdPattern, decodeGithubPhoto, MAX_PHOTO_BYTES } from './private-photo.mjs';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
@@ -76,7 +77,7 @@ import {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -1051,6 +1052,10 @@ function parseBackupPayload(raw: string): { treeJson: string; activityJson: stri
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
+  }
+  if (request.method === 'GET') {
+    const url = new URL(request.url);
+    if (url.searchParams.get('action') === 'family-manifest') return familyAppManifestResponse(url);
   }
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405);

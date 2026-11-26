@@ -1,5 +1,5 @@
 import {familyDirectoryForUrl} from './waydean-preview-route.mjs?v=shared-family-1';
-const CACHE_NAME = 'waydean-preview-shell-v78';
+const CACHE_NAME = 'waydean-preview-shell-v79';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');
@@ -26,15 +26,15 @@ function familyAppUrl() {
   return url.href;
 }
 
-function installInstructions() {
+function installInstructions(appName) {
   const ua = navigator.userAgent || '';
   if (/iphone|ipad|ipod/i.test(ua)) {
-    return 'На iPhone или iPad откройте Waydean в Safari, нажмите «Поделиться» → «На экран Домой» → «Добавить».';
+    return `В Safari откройте «${appName}», нажмите «Поделиться» → «На экран Домой» → «Добавить».`;
   }
   if (/android/i.test(ua)) {
     return 'На Android откройте меню Chrome и выберите «Установить приложение» или «Добавить на главный экран».';
   }
-  return 'В Chrome или Edge нажмите значок установки в адресной строке либо откройте меню браузера и выберите «Установить Waydean».';
+  return `В Chrome или Edge нажмите значок установки в адресной строке или выберите «Установить ${appName}» в меню браузера.`;
 }
 
 export function createWaydeanPwaController(onChange = () => {}, {
@@ -42,14 +42,17 @@ export function createWaydeanPwaController(onChange = () => {}, {
   accountAdminAction = null,
   familySessionAction = null
 } = {}) {
+  const params = new URLSearchParams(location.search);
+  const sharedFamilyApp = params.get('source') === 'family' && params.has('familyPath');
   const state = {
     localPreview: isLoopbackHost(location.hostname),
+    sharedFamilyApp,
     serverPushAvailable: Boolean(allowServerPush && !isLoopbackHost(location.hostname)
       && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window),
     online: navigator.onLine !== false,
     installed: isInstalled(),
     installPromptAvailable: false,
-    installInstructions: installInstructions(),
+    installInstructions: installInstructions(sharedFamilyApp ? 'Древо' : 'Waydean'),
     serviceWorkerReady: false,
     serviceWorkerError: false,
     offlineReady: false,
@@ -62,7 +65,6 @@ export function createWaydeanPwaController(onChange = () => {}, {
   let deferredInstallPrompt = null;
   let registration = null;
   let registrationPromise = Promise.resolve(null);
-  const params = new URLSearchParams(location.search);
   const familyApp = params.get('source') === 'family' || params.has('nek') || params.has('invite');
   if (!state.localPreview && !familyApp) document.querySelector('link[rel="manifest"]')?.remove();
 

@@ -30,7 +30,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=private-shell-4';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-install-1';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -2472,21 +2472,23 @@ function renderPwaStatus(state = pwaController?.getState()) {
   const notificationStatus = $('#pwaNotificationStatus');
   const notificationEnable = $('#pwaNotificationEnable');
   const notificationTest = $('#pwaNotificationTest');
+  const canInstall = state.localPreview || state.sharedFamilyApp;
+  const appName = state.sharedFamilyApp ? 'Древо' : 'Waydean';
 
   installStatus.textContent = state.installed
     ? 'Приложение уже установлено'
-    : state.localPreview ? 'Waydean готов к установке' : 'Установка доступна в локальном preview';
+    : canInstall ? 'Можно добавить на главный экран' : 'Установка доступна в локальном preview';
   installHelp.textContent = state.installed
-    ? 'Откройте Waydean с главного экрана или из списка приложений.'
-    : !state.localPreview
+    ? `Откройте «${appName}» с главного экрана или из списка приложений.`
+    : !canInstall
       ? 'Установка отдельного приложения появится после выпуска Waydean.'
       : state.installPromptAvailable
-        ? 'Браузер предлагает установить Waydean отдельным приложением.'
+        ? `Браузер предлагает установить «${appName}» отдельным приложением.`
         : state.installInstructions;
   installButton.textContent = state.installed
-    ? 'Waydean установлено'
-    : state.installPromptAvailable ? 'Установить Waydean' : 'Как установить Waydean';
-  installButton.disabled = state.installed || !state.localPreview;
+    ? 'Приложение установлено'
+    : state.installPromptAvailable ? `Установить ${appName}` : 'Как установить';
+  installButton.disabled = state.installed || !canInstall;
 
   offlineStatus.textContent = !state.localPreview
     ? 'Подключим вместе с выпуском Waydean'
