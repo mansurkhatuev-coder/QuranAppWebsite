@@ -120,8 +120,9 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--browser", choices=["chromium", "webkit"], default="chromium")
     parser.add_argument("--executable")
+    parser.add_argument("--root", type=Path, default=Path(__file__).resolve().parents[2])
     args = parser.parse_args()
-    root = Path(__file__).resolve().parents[2]
+    root = args.root.resolve(strict=True)
     with ThreadingHTTPServer(("127.0.0.1", 0), partial(QuietHandler, directory=root)) as server:
         thread = Thread(target=server.serve_forever, daemon=True)
         thread.start()

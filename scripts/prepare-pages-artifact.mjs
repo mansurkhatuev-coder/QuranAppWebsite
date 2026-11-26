@@ -40,7 +40,7 @@ function verifyHtml(html, path) {
   }
 }
 
-async function copyPublicTree(source, destination, base = '') {
+async function copyPublicTree(source, destination, legacyAccess, base = '') {
   for (const entry of await readdir(source, { withFileTypes: true })) {
     const path = base ? join(base, entry.name) : entry.name;
     if (isPrivateArtifact(path)) continue;
@@ -49,11 +49,18 @@ async function copyPublicTree(source, destination, base = '') {
     if (info.isSymbolicLink()) throw new Error(`Refusing symlink in Pages source: ${path}`);
     if (info.isDirectory()) {
       await mkdir(to, { recursive: true });
-      await copyPublicTree(from, to, path);
+      await copyPublicTree(from, to, legacyAccess, path);
     } else if (info.isFile()) {
       if (/\.html?$/i.test(entry.name)) {
         let clean = stripEmbeddedFamilyData(await readFile(from, 'utf8'));
-        if (/^drewo(?:-|$)/.test(segments(path)[0] || '')) clean = secureLegacyReader(clean);
+        const treeDir = path.split(sep)[0];
+        if (/^drewo(?:-|$)/i.test(treeDir)) {
+          const protectedHtml = secureLegacyReader(clean);
+          if (legacyAccess && protectedHtml !== clean && !legacyAccess.allowed.has(treeDir)) {
+            legacyAccess.missing.add(treeDir);
+          }
+          clean = protectedHtml;
+        }
         verifyHtml(clean, path);
         await writeFile(to, clean, 'utf8');
       } else await copyFile(from, to);
@@ -74,7 +81,7 @@ export async function verifyPublicTree(destination, base = '') {
   }
 }
 
-export async function preparePagesArtifact(sourceRoot, destinationRoot = join(sourceRoot, 'dist/pages')) {
+export async function preparePagesArtifact(sourceRoot, destinationRoot = join(sourceRoot, 'dist/pages'), { release = false } = {}) {
   const source = resolve(sourceRoot), destination = resolve(destinationRoot);
   const buildRoot = join(source, 'dist');
   if (destination !== join(buildRoot, 'pages')) throw new Error('Pages output must be <checkout>/dist/pages');
@@ -89,7 +96,17 @@ export async function preparePagesArtifact(sourceRoot, destinationRoot = join(so
   await rm(destination, { recursive: true, force: true });
   await mkdir(destination);
   try {
-    await copyPublicTree(source, destination);
+    let legacyAccess;
+    if (release) {
+      const { knownTreeDirs, parseRegistry, REGISTRY_PATH } = await import('../supabase/functions/publish-drewo/create-tree.ts');
+      const registry = parseRegistry(await readFile(join(source, REGISTRY_PATH), 'utf8'));
+      legacyAccess = { allowed: new Set(knownTreeDirs(registry)), missing: new Set() };
+    }
+    await copyPublicTree(source, destination, legacyAccess);
+    if (legacyAccess?.missing.size) {
+      const routes = [...legacyAccess.missing].sort().map(dir => `/${dir}/`).join(', ');
+      throw new Error(`Pages release blocked: legacy family routes unsupported by the API: ${routes}`);
+    }
     await verifyPublicTree(destination);
     return destination;
   } catch (error) {
@@ -100,6 +117,7 @@ export async function preparePagesArtifact(sourceRoot, destinationRoot = join(so
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
-  preparePagesArtifact(root).then(() => console.log('Filtered Pages artifact ready in dist/pages'))
+  const release = process.argv.includes('--release');
+  preparePagesArtifact(root, undefined, { release }).then(() => console.log('Filtered Pages artifact ready in dist/pages'))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }

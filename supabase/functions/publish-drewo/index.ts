@@ -28,6 +28,7 @@ import {
   customizeTemplateHtml,
   invitePathForCode,
   isValidTreeCode,
+  knownTreeDirs,
   normalizeTreeCode,
   parseRegistry,
   serializeRegistry,
@@ -522,12 +523,6 @@ type TreeDir = string;
 async function loadRegistry(token: string, repo: string): Promise<RegistryFile> {
   const file = await githubGetFile(token, repo, REGISTRY_PATH);
   return parseRegistry(file?.content);
-}
-
-function knownTreeDirs(registry: RegistryFile): string[] {
-  const dirs = new Set<string>(LEGACY_TREE_DIRS);
-  for (const item of registry.trees) dirs.add(item.treeDir);
-  return Array.from(dirs);
 }
 
 function resolveTreeDir(raw: unknown, registry?: RegistryFile): TreeDir | null {

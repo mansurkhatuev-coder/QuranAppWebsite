@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { mkdtemp, mkdir, writeFile, readFile, rm, symlink, access } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, dirname } from 'node:path';
-import { preparePagesArtifact, verifyPublicTree, isPrivateArtifact } from './prepare-pages-artifact.mjs';
+import { preparePagesArtifact, verifyPublicTree, isPrivateArtifact, stripEmbeddedFamilyData } from './prepare-pages-artifact.mjs';
 
 async function fixture(t) {
   const root = await mkdtemp(join(tmpdir(), 'drewo-pages-'));
@@ -29,6 +29,26 @@ test('public atlas, demos, fixture assets and other project files remain availab
   for (const path of paths) await put(path,'PUBLIC');
   await preparePagesArtifact(root);
   for (const path of paths) assert.equal(await readFile(join(out,path),'utf8'),'PUBLIC');
+});
+
+test('the release build rejects legacy routes the family API does not recognize', async t => {
+  const {root, put, out} = await fixture(t);
+  const source = await readFile(new URL('../drewo/legacy.html', import.meta.url), 'utf8');
+  const reader = stripEmbeddedFamilyData(source);
+  const family = { treeDir: 'drewo-example', login: 'example', title: 'Example family' };
+  await put('trees/registry.json', JSON.stringify({ trees: [] }));
+  await put('drewo/legacy.html', reader);
+  await put('drewo-example/index.html', reader.replace("var TREE_DIR = 'drewo';", "var TREE_DIR = 'drewo-example';"));
+
+  await preparePagesArtifact(root);
+  assert.match(await readFile(join(out, 'drewo-example/index.html'), 'utf8'), /action: 'family-load'/);
+  await assert.rejects(preparePagesArtifact(root, out, { release: true }), /unsupported by the API: \/drewo-example\//);
+  await missing(out);
+
+  await put('trees/registry.json', JSON.stringify({ trees: [family] }));
+  await preparePagesArtifact(root, out, { release: true });
+  await access(join(out, 'drewo-example/index.html'));
+  await missing(join(out, 'trees/registry.json'));
 });
 
 test('embedded private script blocks are emptied without changing ordinary scripts', async t => {

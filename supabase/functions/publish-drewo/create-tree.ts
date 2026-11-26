@@ -23,6 +23,10 @@ export const TEMPLATE_DIR = 'drewo-reklama';
 
 export const LEGACY_TREE_DIRS = ['drewo', 'drewo-dada-yurt', 'drewo-reklama'] as const;
 
+export function knownTreeDirs(registry: RegistryFile): string[] {
+  return Array.from(new Set([...LEGACY_TREE_DIRS, ...registry.trees.map(tree => tree.treeDir)]));
+}
+
 const RESERVED_DIRS = new Set([
   'drewo',
   'drewo-dada-yurt',
