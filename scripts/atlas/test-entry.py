@@ -59,6 +59,63 @@ def check(browser, base, width, height):
         context.close()
 
 
+def check_family_map(browser, base):
+    context = browser.new_context(viewport={"width": 390, "height": 844}, service_workers="block")
+    page = context.new_page()
+    page.set_default_timeout(10000)
+    context.route("**/*", lambda route: route.continue_() if route.request.url.startswith(base + "/") else route.abort())
+    page.add_init_script("""(() => {
+      sessionStorage.setItem('drewo-atlas:family-view', JSON.stringify({
+        dir: 'drewo-synthetic', teips: ['shatoi/varand'], places: []
+      }));
+      sessionStorage.setItem('nek-session:drewo-synthetic', 'synthetic-session');
+      const originalFetch = window.fetch;
+      const requests = window.familyAuthRequests = [];
+      window.fetch = (input, init) => {
+        if (JSON.parse(init?.body || '{}').action !== 'auth') return originalFetch(input, init);
+        return new Promise(resolve => requests.push(accepted => resolve({
+          ok: accepted,
+          status: accepted ? 200 : 401,
+          json: async () => accepted
+            ? {ok: true, treeDir: 'drewo-synthetic', role: 'viewer', sessionToken: 'synthetic-session'}
+            : {error: 'Семейный вход отклонён'}
+        })));
+      };
+    })()""")
+    try:
+        page.goto(base + "/atlas/#/family")
+        dialog = page.locator("#family-map")
+        form = dialog.locator(".family-place-form")
+        status = dialog.get_by_role("status")
+        page.wait_for_function("familyAuthRequests.length === 1")
+        assert form.is_hidden()
+        page.evaluate("familyAuthRequests[0](false)")
+        status.get_by_text("Семейный вход отклонён").wait_for()
+        assert form.is_hidden()
+
+        dialog.get_by_role("button", name="Закрыть").click()
+        page.evaluate("document.querySelector('#family-view').click()")
+        page.wait_for_function("familyAuthRequests.length === 2")
+        dialog.get_by_role("button", name="Закрыть").click()
+        page.evaluate("document.querySelector('#family-view').click()")
+        page.wait_for_function("familyAuthRequests.length === 3")
+        page.evaluate("familyAuthRequests[2](true)")
+        form.wait_for()
+        assert dialog.locator(".family-places button").count() == 1
+        page.evaluate("""async () => {
+          familyAuthRequests[1](false);
+          await new Promise(resolve => setTimeout(resolve, 0));
+        }""")
+        assert "отклонён" not in status.inner_text()
+        form.get_by_role("button", name="Добавить отметку").click()
+        dialog.get_by_role("button", name="Показать мои места на карте").wait_for()
+        dialog.get_by_role("button", name="Убрать отметку").click()
+        assert dialog.get_by_role("button", name="Показать мои места на карте").is_hidden()
+        print("Family map: denied access, reopened dialog and session-only marks OK", flush=True)
+    finally:
+        context.close()
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--browser", choices=["chromium", "webkit"], default="chromium")
@@ -73,8 +130,10 @@ if __name__ == "__main__":
                 # Entry routes must remain usable even without a GPU. Test 3D separately.
                 flags = ["--disable-webgl"] if args.browser == "chromium" else []
                 browser = getattr(playwright, args.browser).launch(executable_path=args.executable, args=flags)
+                base = f"http://127.0.0.1:{server.server_port}"
                 for width, height in [(320, 568), (390, 844), (844, 390), (768, 1024), (1280, 800)]:
-                    check(browser, f"http://127.0.0.1:{server.server_port}", width, height)
+                    check(browser, base, width, height)
+                check_family_map(browser, base)
                 browser.close()
         finally:
             server.shutdown()

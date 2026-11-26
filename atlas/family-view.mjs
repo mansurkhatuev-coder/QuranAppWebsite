@@ -1,15 +1,20 @@
 import {groups,settlementsIndex,matchingTeips} from './family-geography.mjs';
-import {readFamilySession,verifyFamilySession} from '../drewo/waydean-preview-family-auth.mjs?v=atlas-family-1';
+import {readFamilySession,verifyFamilySession} from '../drewo/waydean-preview-family-auth.mjs?v=verified-family-1';
 
 // The handoff contains only catalog identifiers. Names, dates and coordinates of people stay in the editor.
 const key = 'drewo-atlas:family-view';
+const pendingChecks = new WeakMap();
 export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
+ const check = {};
+ pendingChecks.set(dialog,check);
+ const isCurrent = () => dialog.open && pendingChecks.get(dialog) === check;
  const list = dialog.querySelector('.family-places');
  const status = dialog.querySelector('[role=status]');
  const form = dialog.querySelector('.family-place-form');
  const select = form.elements.place;
  list.replaceChildren();
  form.hidden = true;
+ form.onsubmit = null;
  status.textContent = 'Проверяем семейный вход…';
  if (!dialog.open) dialog.showModal();
  try {
@@ -18,7 +23,7 @@ export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
   const token = readFamilySession(sessionStorage,data.dir);
   if (!token) throw new Error('Для просмотра войдите в семейное древо.');
   await verifyFamilySession({endpoint:window.SUPABASE_CONFIG.publishDrewoUrl,treeDir:data.dir,token});
-  if (!dialog.open) return;
+  if (!isCurrent()) return;
   function render() {
    list.replaceChildren();
    for (const group of groups) {
@@ -62,7 +67,11 @@ export async function openFamilyView({dialog,showPlace,showTeip,showMarkers}) {
    sessionStorage.setItem(key,JSON.stringify(data));render();
   };
   form.hidden=false;render();
- } catch(error) {status.textContent=error.message || 'Не удалось открыть семейную карту.';}
+ } catch(error) {
+  if (isCurrent()) status.textContent=error.message || 'Не удалось открыть семейную карту.';
+ } finally {
+  if (pendingChecks.get(dialog) === check) pendingChecks.delete(dialog);
+ }
 }
 
 export function prepareFamilyView(dir, records) {

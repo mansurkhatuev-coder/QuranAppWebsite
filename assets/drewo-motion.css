@@ -20,7 +20,7 @@
 }
 /* No changes to layout, pointer capture or the camera transforms. */
 :where(.opening-dock,.atlas-header,.explorer,.nek-preview,.ctw-dialog,
-        .app-shell,.login-shell,.create-dialog,.tree-list,.stage) 
+        .app-shell,.login-shell,.create-dialog,.tree-list,.stage)
 :where(button,a.btn,.demo-tree-link,.login-link):not(:disabled) {
   -webkit-tap-highlight-color: transparent;
   transition-property: background-color,border-color,color,opacity,box-shadow,scale;

@@ -1,10 +1,10 @@
 // Only the public catalog shell is available offline. Invitations retain their query in the page.
-const cacheName = 'drewo-atlas-shell-v2';
+const cacheName = 'drewo-atlas-shell-v3';
 const shell = [
  './', '/nek/manifest.webmanifest', '/nek/icon-192.png', '/nek/icon-512.png', './style.css?v=f3463c6', './opening.css?v=f3463c6',
  './interface.css', './vendor/maplibre-gl.css',
  './assets/cormorant.css', './assets/source-sans.css', './assets/relief-overview.webp',
- './access.js', './app.mjs?v=20261124-2', './atlas-state.mjs?v=f3463c6',
+ './access.js', './app.mjs?v=20261126-1', './atlas-state.mjs?v=f3463c6',
  './viewport.mjs?v=f3463c6', './catalog.mjs', './media.mjs', './rivers.mjs',
  './settlements.mjs', './sheet.mjs', './entry-motion.mjs', './ambient-audio.mjs',
  '/nek/nek.js?v=10', '/assets/drewo-motion.css?v=20261124-2', '/trees/supabase-config.js'

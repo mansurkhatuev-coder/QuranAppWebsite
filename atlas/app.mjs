@@ -619,7 +619,7 @@ function setAtmosphere(next){
 
 async function showFamilyMap(){
  try {
-  const {openFamilyView}=await import('./family-view.mjs');
+  const {openFamilyView}=await import('./family-view.mjs?v=2');
   await openFamilyView({dialog:$('#family-map'),
    showMarkers:ids=>{
     if(!atlas){toast('Карта пока недоступна');return;}
