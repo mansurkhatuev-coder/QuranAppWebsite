@@ -12,7 +12,7 @@ import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydean
 import { familyPublishGuardError } from './family-publish-guard.ts';
 import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
 import { hubTreeMetrics } from './hub-tree-metrics.ts';
-import { photoFileCandidates, photoMediaType, decodeGithubPhoto, MAX_PHOTO_BYTES } from './private-photo.mjs';
+import { photoFileCandidates, photoMediaType, photoPersonIdPattern, decodeGithubPhoto, MAX_PHOTO_BYTES } from './private-photo.mjs';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -158,7 +158,8 @@ async function githubJson(
 async function githubGetFile(
   token: string,
   repo: string,
-  path: string
+  path: string,
+  { readContent = true }: { readContent?: boolean } = {}
 ): Promise<{ sha?: string; content?: string } | null> {
   const { ok, status, json } = await githubJson(
     token,
@@ -169,7 +170,7 @@ async function githubGetFile(
     throw new Error(String(json.message || `GitHub read failed ${status}`));
   }
   const content =
-    typeof json.content === 'string'
+    readContent && typeof json.content === 'string'
       ? decodeURIComponent(escape(atob(String(json.content).replace(/\n/g, ''))))
       : undefined;
   return {
@@ -302,8 +303,6 @@ async function githubListDir(
     .filter((item) => item.name && item.path && item.sha);
 }
 
-const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
-
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const chunk = 0x2000;
@@ -335,7 +334,7 @@ function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unkno
     if (!item || typeof item !== 'object') continue;
     const rec = item as Record<string, unknown>;
     const personId = typeof rec.personId === 'string' ? rec.personId.trim() : '';
-    if (!PHOTO_ID_RE.test(personId)) {
+    if (!photoPersonIdPattern.test(personId)) {
       throw new Error('Некорректный id человека для фото');
     }
     const full = decodeDataUrl(rec.full);
@@ -357,7 +356,7 @@ function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unkno
   const del = Array.isArray(deletes) ? deletes : [];
   for (const raw of del) {
     const personId = String(raw || '').trim();
-    if (!PHOTO_ID_RE.test(personId)) continue;
+    if (!photoPersonIdPattern.test(personId)) continue;
     out.push({ path: `${treeDir}/photos/${personId}.jpg`, delete: true });
     out.push({ path: `${treeDir}/photos/${personId}-thumb.jpg`, delete: true });
   }
@@ -1939,7 +1938,7 @@ Deno.serve(async (request) => {
         );
       }
       const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
-      if (!PHOTO_ID_RE.test(personId)) {
+      if (!photoPersonIdPattern.test(personId)) {
         return jsonResponse({ error: 'Некорректный id человека' }, 400);
       }
       const candidates = [
@@ -1947,7 +1946,9 @@ Deno.serve(async (request) => {
         `${treeDir}/photos/${personId}-thumb.jpg`,
       ];
       const existing = await Promise.all(
-        candidates.map(async (path) => ((await githubGetFile(githubToken, githubRepo, path)) ? path : null))
+        candidates.map(async (path) =>
+          (await githubGetFile(githubToken, githubRepo, path, { readContent: false })) ? path : null
+        )
       );
       const deletes = existing
         .filter((path): path is string => Boolean(path))
@@ -2574,7 +2575,7 @@ Deno.serve(async (request) => {
       new Set(
         (Array.isArray(body.photoDeletes) ? body.photoDeletes : [])
           .map((value: unknown) => String(value || '').trim())
-          .filter((id: string) => PHOTO_ID_RE.test(id))
+          .filter((id: string) => photoPersonIdPattern.test(id))
       )
     );
     const photoDeleteCandidates = photoDeleteIds.flatMap((id) => [
@@ -2583,7 +2584,7 @@ Deno.serve(async (request) => {
     ]);
     const photoDeleteExisting = await Promise.all(
       photoDeleteCandidates.map(async (path) =>
-        (await githubGetFile(githubToken, githubRepo, path)) ? path : null
+        (await githubGetFile(githubToken, githubRepo, path, { readContent: false })) ? path : null
       )
     );
     const photoDeletes: TreeChange[] = photoDeleteExisting

@@ -1,4 +1,6 @@
 // Transform legacy readers only in the generated public artifact.
+import { photoPersonIdPattern } from '../supabase/functions/publish-drewo/private-photo.mjs';
+
 function once(source, anchor, replacement, label) {
   const first = source.indexOf(anchor);
   if (first < 0 || source.indexOf(anchor, first + anchor.length) >= 0) throw new Error('Legacy reader anchor: ' + label);
@@ -91,7 +93,7 @@ export function secureLegacyReader(html) {
       }
       function loadLegacyPhoto(personId, version, variant) {
         var id = String(personId), token = readNekToken();
-        if (!nekSessionActive || !token || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/.test(id)) return Promise.resolve(null);
+        if (!nekSessionActive || !token || !/${photoPersonIdPattern.source}/.test(id)) return Promise.resolve(null);
         var pending = pendingPhotoUrls[id];
         if (pending) {
           var local = variant === 'thumbnail' ? pending.thumb : pending.full;

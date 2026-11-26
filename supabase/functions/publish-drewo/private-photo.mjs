@@ -1,7 +1,9 @@
 // Only bounded, tree-scoped image objects may be returned by the authenticated photo endpoint.
 export const MAX_PHOTO_BYTES = 900_000;
+// The tree creation wizard can assign a Cyrillic ID to the first person.
+export const photoPersonIdPattern = /^[A-Za-z0-9А-Яа-яЁё][A-Za-z0-9А-Яа-яЁё._-]{0,80}$/;
 export function photoFileCandidates(personId, variant) {
-  if (typeof personId !== 'string' || !/^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/.test(personId)) return [];
+  if (typeof personId !== 'string' || !photoPersonIdPattern.test(personId)) return [];
   if (variant === 'thumbnail') return [personId + '-thumb.jpg', personId + '-thumb.webp', personId + '.jpg'];
   if (variant === 'full') return [personId + '.jpg'];
   return [];
