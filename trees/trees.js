@@ -1,5 +1,6 @@
+import { ACCOUNT_EMAIL_KEY, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
+
 (function initTreesHub() {
-  const EMAIL_KEY = 'waydean_trees_email_v1';
   const PWA_DISMISS_KEY = 'waydean_trees_pwa_dismiss_v1';
   const POLL_MS = 30000;
 
@@ -40,9 +41,10 @@
   const config = window.SUPABASE_CONFIG || {};
   let client = null;
   let pollTimer = null;
-  let refreshInFlight = false;
+  let accountVersion = 0;
+  let refreshInFlight = null;
   let credentials = [];
-  let credentialsInFlight = false;
+  let credentialsInFlight = null;
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -85,6 +87,7 @@
   }
 
   function showLogin() {
+    accountVersion += 1;
     $('#login-screen').hidden = false;
     $('#app-screen').hidden = true;
     stopPolling();
@@ -96,6 +99,7 @@
   }
 
   function showApp() {
+    accountVersion += 1;
     $('#login-screen').hidden = true;
     $('#app-screen').hidden = false;
     if (location.hash === '#create') {
@@ -486,8 +490,9 @@
   }
 
   async function refresh(opts = {}) {
-    if (refreshInFlight) return;
-    refreshInFlight = true;
+    const version = accountVersion;
+    if (refreshInFlight === version) return;
+    refreshInFlight = version;
     const btn = $('#refresh-btn');
     if (btn) btn.classList.add('is-spinning');
     if (opts.boot) showBoot('Считываю древа…');
@@ -495,6 +500,7 @@
     const status = $('#status-line');
     try {
       const rows = await loadAll();
+      if (version !== accountVersion) return;
       renderSummary(rows);
       renderCards(rows);
       const stamp = new Date().toLocaleTimeString('ru-RU', {
@@ -504,6 +510,7 @@
       $('#updated-at').textContent = `Обновлено в ${stamp}`;
       if (status) status.textContent = 'Данные получены из защищённого API.';
     } catch (error) {
+      if (version !== accountVersion) return;
       // Previously rendered data must not remain visible after a denied or failed verification.
       $('#tree-list')?.replaceChildren();
       $('#sum-people').textContent = '—';
@@ -516,11 +523,11 @@
           error instanceof Error ? error.message : 'Не удалось обновить данные';
       }
     } finally {
-      refreshInFlight = false;
-      if (btn) {
-        window.setTimeout(() => btn.classList.remove('is-spinning'), 700);
+      if (refreshInFlight === version) {
+        refreshInFlight = null;
+        if (btn) window.setTimeout(() => btn.classList.remove('is-spinning'), 700);
+        if (opts.boot && version === accountVersion) hideBoot();
       }
-      if (opts.boot) hideBoot();
     }
   }
 
@@ -616,11 +623,8 @@
       const { error } = await sb.auth.signInWithPassword({ email, password });
       if (error) throw error;
       if (lock) lock.clear(AUTH_LOCK_SCOPE);
-      try {
-        localStorage.setItem(EMAIL_KEY, email);
-      } catch {
-        // ignore
-      }
+      rememberIdentifier(ACCOUNT_EMAIL_KEY, email, $('#login-remember-account')?.checked);
+      $('#login-password').value = '';
       showApp();
       await refresh({ boot: true });
       void loadCredentials();
@@ -642,17 +646,31 @@
     }
   }
 
-  async function handleLogout() {
+  async function handleLogout(switchAccount = false) {
     const sb = getClient();
     stopPolling();
     showBoot('Выход…');
     try {
-      if (sb) await sb.auth.signOut();
+      if (sb) {
+        const { error } = await sb.auth.signOut();
+        if (error) throw error;
+      }
     } catch {
-      // ignore
+      hideBoot();
+      const status = $('#status-line');
+      if (status) status.textContent = 'Не удалось выйти. Проверьте подключение и повторите попытку.';
+      startPolling();
+      return;
+    }
+    $('#tree-list')?.replaceChildren();
+    $('#login-password').value = '';
+    if (switchAccount) {
+      $('#login-email').value = '';
+      $('#login-remember-account').checked = false;
     }
     hideBoot();
     showLogin();
+    $('#login-email').focus();
   }
 
   async function restoreSession() {
@@ -833,12 +851,14 @@
   }
 
   async function loadCredentials() {
-    if (credentialsInFlight) return;
-    credentialsInFlight = true;
+    const version = accountVersion;
+    if (credentialsInFlight === version) return;
+    credentialsInFlight = version;
     const btn = $('#credentials-refresh');
     if (btn) btn.disabled = true;
     try {
       const data = await callHubCredentials();
+      if (version !== accountVersion) return;
       credentials = Array.isArray(data?.trees) ? data.trees : [];
       vaultConfigured = data?.vaultConfigured !== false;
       renderCredentials();
@@ -850,14 +870,17 @@
         credentialNote('');
       }
     } catch (error) {
+      if (version !== accountVersion) return;
       credentials = [];
       renderCredentials();
       credentialNote(
         error instanceof Error ? error.message : 'Не удалось загрузить доступы древ'
       );
     } finally {
-      credentialsInFlight = false;
-      if (btn) btn.disabled = false;
+      if (credentialsInFlight === version) {
+        credentialsInFlight = null;
+        if (btn) btn.disabled = false;
+      }
     }
   }
 
@@ -1186,6 +1209,7 @@
     $('#logout-btn')?.addEventListener('click', () => {
       void handleLogout();
     });
+    $('#switch-account-btn')?.addEventListener('click', () => void handleLogout(true));
     $('#refresh-btn')?.addEventListener('click', () => {
       void refresh();
     });
@@ -1214,12 +1238,7 @@
       void saveCredentialPassword(form);
     });
 
-    try {
-      const saved = localStorage.getItem(EMAIL_KEY);
-      if (saved && $('#login-email')) $('#login-email').value = saved;
-    } catch {
-      // ignore
-    }
+    restoreRememberedIdentifier($('#login-email'), $('#login-remember-account'), ACCOUNT_EMAIL_KEY);
 
     if (!isAuthReady()) {
       const notice = $('#login-setup-notice');

@@ -1,13 +1,13 @@
 // Only the public catalog shell is available offline. Invitations retain their query in the page.
-const cacheName = 'drewo-atlas-shell-v4';
+const cacheName = 'drewo-atlas-shell-v5';
 const shell = [
  './', '/nek/manifest.webmanifest', '/nek/icon-192.png', '/nek/icon-512.png', './style.css?v=f3463c6', './opening.css?v=f3463c6',
  './interface.css?v=20261126-2', './vendor/maplibre-gl.css',
  './assets/cormorant.css', './assets/source-sans.css', './assets/relief-overview.webp',
- './access.js', './app.mjs?v=20261126-2', './atlas-state.mjs?v=f3463c6',
+ './access.js?v=account-1', './app.mjs?v=20261126-2', './atlas-state.mjs?v=f3463c6',
  './viewport.mjs?v=f3463c6', './catalog.mjs', './media.mjs', './rivers.mjs',
  './settlements.mjs', './sheet.mjs', './entry-motion.mjs', './ambient-audio.mjs',
- '/nek/nek.js?v=10', '/assets/drewo-motion.css?v=20261124-2', '/trees/supabase-config.js'
+ '/nek/nek.js?v=11', '/assets/drewo-motion.css?v=20261126-3', '/trees/supabase-config.js', '/assets/drewo-auth-preferences.mjs', '/assets/drewo-icons.svg'
 ];
 const allowed = new Set(shell.map(path => new URL(path,self.location.href).href));
 self.addEventListener('install', event => event.waitUntil((async () => {

@@ -15,7 +15,7 @@
  <link rel="stylesheet" href="./style.css?v=f3463c6">
  <link rel="stylesheet" href="./opening.css?v=f3463c6">
   <link rel="stylesheet" href="./interface.css?v=20261126-2">
-  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261124-2">
+  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261126-3">
 </head>
 <body data-atlas-entrance="pending">
  <svg class="svg-defs" aria-hidden="true"><defs>
@@ -152,12 +152,20 @@
    <input id="login-input" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
    <label for="password-input">Пароль семьи</label>
    <div class="password-field"><input id="password-input" name="password" type="password" autocomplete="current-password" required><button id="password-toggle" aria-pressed="false" type="button">Показать</button></div>
-   <label class="remember"><input type="checkbox" id="login-remember"> Запомнить логин</label>
+   <label class="remember"><input type="checkbox" id="login-remember"> Запомнить меня (только логин)</label>
    <p role="alert" id="login-error" hidden></p>
    <button id="login-submit" class="access-primary" type="submit">Войти</button>
   </form>
   <p id="recent" hidden><a id="recent-link"></a></p>
   <a href="/trees/">Кабинет управляющего</a>
+ </dialog>
+ <dialog id="atlas-account" class="info-dialog access-dialog" aria-labelledby="atlas-account-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="atlas-account-heading">Аккаунт</h2>
+  <div class="dialog-list">
+   <button class="access-primary" type="button" id="atlas-switch-account">Сменить аккаунт</button>
+   <button class="access-primary" type="button" id="atlas-sign-out">Выйти</button>
+  </div>
  </dialog>
  <dialog id="family-map" class="info-dialog access-dialog" aria-labelledby="family-map-heading">
   <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
@@ -181,8 +189,8 @@
  <dialog id="photo-dialog" class="photo-dialog" aria-label="Иллюстрация места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть иллюстрацию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>
  <script defer src="/trees/supabase-config.js"></script>
- <script defer src="/nek/nek.js?v=10"></script>
- <script defer src="./access.js"></script>
+ <script defer src="/nek/nek.js?v=11"></script>
+ <script type="module" src="./access.js?v=account-1"></script>
  <script type="module" src="./app.mjs?v=20261126-2"></script>
 </body>
 </html>

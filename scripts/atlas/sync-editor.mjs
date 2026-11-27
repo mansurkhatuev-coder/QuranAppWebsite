@@ -7,7 +7,10 @@ const sections = [
  /<nav class="main-nav"[^>]*>[\s\S]*?<\/nav>/,
  /<aside class="rail" id="treeActions"[^>]*>[\s\S]*?<\/aside>/,
  /<div class="tree-controls"[^>]*>[^\n]*?<\/div>/,
- /<nav class="mobile-nav"[^>]*>[\s\S]*?<\/nav>/
+ /<nav class="mobile-nav"[^>]*>[\s\S]*?<\/nav>/,
+ /<button[^>]*id="familyLogout"[^>]*>[^\n]*?<\/button>(?:\s*<button[^>]*id="switchAccount"[^>]*>[^\n]*?<\/button>)?/,
+ /<input id="waydeanAdminPassword"[^>]*>(?:\s*<label class="auth-remember"[^>]*>[^\n]*?<\/label>)?/,
+ /<input id="waydeanFamilyPassword"[^>]*>(?:\s*<label class="auth-remember"[^>]*>[^\n]*?<\/label>)?/,
 ];
 for (const {treeDir} of registry.trees) {
  if (!/^drewo(?:-[a-z0-9-]+)?$/.test(treeDir)) throw new Error('Некорректный путь древа');

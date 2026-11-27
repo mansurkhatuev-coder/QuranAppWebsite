@@ -1,3 +1,5 @@
+import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
+
 (() => {
   const login = document.querySelector('#family-access');
   const create = document.querySelector('#create-access');
@@ -52,9 +54,22 @@
     enterButton.textContent = familyPath ? 'Моё древо' : 'Мои древа';
     const switcher = document.createElement('button');
     switcher.className = 'top-action';
-    switcher.textContent = 'Другой вход';
-    switcher.addEventListener('click',openLogin);
+    const accountLabel = familyPath ? 'Аккаунт' : 'Кабинет';
+    switcher.innerHTML = '<svg aria-hidden="true"><use href="/assets/drewo-icons.svg#people"/></svg><span></span>';
+    switcher.querySelector('span').textContent = accountLabel;
+    switcher.setAttribute('aria-label', accountLabel);
+    switcher.addEventListener('click', () => {
+      if (familyPath) document.querySelector('#atlas-account').showModal();
+      else location.assign('/trees/');
+    });
     document.querySelector('.top-actions').append(switcher);
+  }
+  for (const [id, switchAccount] of [['atlas-sign-out', false], ['atlas-switch-account', true]]) {
+    document.querySelector('#' + id).addEventListener('click', () => {
+      if (!familyPath) return;
+      clearFamilyAccess(familyPath.split('/')[1]);
+      location.replace(switchAccount ? '/atlas/?login=1&switch=1' : '/atlas/');
+    });
   }
   enterButton.addEventListener('click', () => {
     if (familyPath || managerSession) location.assign(familyPath || '/trees/');

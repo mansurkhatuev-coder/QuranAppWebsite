@@ -11,6 +11,7 @@ import { accountLockPresentation, validateFamilyPasswordChange } from './waydean
 import { accountPublishButtonState, buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
+import { ACCOUNT_EMAIL_KEY, FAMILY_LOGIN_KEY, clearFamilyAccess, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
 import {
   clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
 } from './waydean-preview-whoami.mjs?v=atlas-family-1';
@@ -30,7 +31,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=family-install-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-1';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -2336,6 +2337,12 @@ async function resetFixture() {
 window.addEventListener('beforeunload', event => {
   if (!allowUnsavedExit && canEditDraft() && (rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))) { event.preventDefault(); event.returnValue = ''; }
 });
+window.addEventListener('pagehide', event => {
+  if (event.persisted && (familySessionTokenMemory || accountAdminAccess)) $('.app-shell').style.visibility = 'hidden';
+});
+window.addEventListener('pageshow', event => {
+  if (event.persisted && (familySessionTokenMemory || accountAdminAccess)) location.reload();
+});
 
 function centerPerson(id) {
   const card = ui.nodes.querySelector('[data-person-id="' + CSS.escape(id) + '"]');
@@ -3266,6 +3273,8 @@ function bindControls() {
   $('#moreStats').addEventListener('click', () => openPopover(ui.stats));
   $('#moreOpen').addEventListener('click', () => openPopover(ui.more));
   $('#mobileMore').addEventListener('click', () => openPopover(ui.more));
+  $('#familyLogout').addEventListener('click', () => void leaveEditorAccount(false));
+  $('#switchAccount').addEventListener('click', () => void leaveEditorAccount(true));
   $('#morePwa').addEventListener('click', () => { openPopover(ui.pwa); renderPwaStatus(); });
   $('#pwaInstall').addEventListener('click', async () => {
     try {
@@ -3889,8 +3898,10 @@ function bindWaydeanAdminLogin() {
 
   const emailInput = $('#waydeanAdminEmail');
   const passwordInput = $('#waydeanAdminPassword');
+  const rememberInput = $('#waydeanAdminRemember');
   const errorMessage = $('#waydeanAdminLoginError');
   const submitButton = $('#waydeanAdminLoginSubmit');
+  restoreRememberedIdentifier(emailInput, rememberInput, ACCOUNT_EMAIL_KEY);
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -3904,6 +3915,7 @@ function bindWaydeanAdminLogin() {
       await window.ensureWaydeanAdminSupabase?.();
       if (!window.AdminSupabase?.isEnabled?.()) throw new Error('Supabase auth is unavailable');
       await window.AdminSupabase.signIn(emailInput.value.trim(), passwordInput.value);
+      rememberIdentifier(ACCOUNT_EMAIL_KEY, emailInput.value, rememberInput?.checked);
       passwordInput.value = '';
       window.location.reload();
     } catch {
@@ -3938,8 +3950,10 @@ function bindWaydeanFamilyLogin() {
     form.dataset.bound = 'true';
     const loginInput = $('#waydeanFamilyLogin');
     const passwordInput = $('#waydeanFamilyPassword');
+    const rememberInput = $('#waydeanFamilyRemember');
     const errorMessage = $('#waydeanFamilyLoginError');
     const submitButton = $('#waydeanFamilyLoginSubmit');
+    restoreRememberedIdentifier(loginInput, rememberInput, FAMILY_LOGIN_KEY);
     form.addEventListener('submit', async event => {
       event.preventDefault();
       if (errorMessage) errorMessage.hidden = true;
@@ -3957,6 +3971,7 @@ function bindWaydeanFamilyLogin() {
           origin: window.location.origin,
           storage: familySessionStorage()
         });
+        if (!demoMode) rememberIdentifier(FAMILY_LOGIN_KEY, loginInput.value, rememberInput?.checked);
         passwordInput.value = '';
         if (result.redirect) {
           window.location.assign(result.redirectUrl);
@@ -3985,30 +4000,44 @@ function bindWaydeanFamilyLogin() {
     });
   }
 
-  const logout = $('#familyLogout');
-  if (logout && logout.dataset.bound !== 'true') {
-    logout.dataset.bound = 'true';
-    logout.addEventListener('click', () => {
-      clearPrivatePhotos();
-      familySessionTokenMemory = '';
-      familySessionRole = '';
-      familySessionLocked = false;
-      familySessionLockReason = '';
-      familySessionStorage()?.removeItem('drewo-atlas:family-view');
-      storeFamilySession(familySessionStorage(), activeTreeDir, '');
-      if (!demoMode) {
-        try {
-          localStorage.removeItem('drewo-view-session');
-        } catch { /* Session logout must still complete if local preferences are unavailable. */ }
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.set('source', 'family');
-      url.searchParams.set('state', 'all-tree');
-      url.searchParams.delete('nek');
-      url.searchParams.delete('invite');
-      window.location.assign(`${url.pathname}${url.search}`);
-    });
+}
+
+async function leaveEditorAccount(switchAccount) {
+  if (editStatus === 'saving') {
+    announce('Дождитесь окончания сохранения.');
+    return;
   }
+  if (hasUncommittedDraft() && !window.confirm('На сайте есть несохранённые правки. Выйти из древа?')) return;
+
+  const url = new URL(location.href);
+  url.hash = '';
+  for (const key of ['nek', 'invite', 'person', 'switch']) url.searchParams.delete(key);
+  url.searchParams.set('state', 'all-tree');
+  if (familyPreview) {
+    clearFamilyAccess(activeTreeDir);
+    familySessionTokenMemory = '';
+    url.searchParams.set('source', 'family');
+  } else if (accountAdminAccess) {
+    try {
+      await window.AdminSupabase.signOut();
+    } catch {
+      announce('Не удалось выйти. Проверьте подключение и повторите попытку.');
+      return;
+    }
+    accountAdminAccess = null;
+    url.searchParams.set('source', 'account');
+  } else {
+    return;
+  }
+  clearPrivatePhotos();
+  allowUnsavedExit = true;
+  $('.app-shell').style.visibility = 'hidden';
+  if (switchAccount && familyPreview) {
+    location.replace('/atlas/?login=1&switch=1');
+    return;
+  }
+  if (switchAccount) url.searchParams.set('switch', '1');
+  location.replace(url.href);
 }
 
 async function requireFamilyPreviewSession(params, setLoadingText) {
@@ -4091,6 +4120,7 @@ async function initialize() {
     $('#demoModeNotice').hidden = !demoMode;
     $('#demoLoginHint').hidden = !demoMode;
     if (demoMode) {
+      $('#waydeanFamilyRemember').closest('label').hidden = true;
       $('#waydeanFamilyLogin').value = 'demo';
       $('#waydeanFamilyPassword').value = 'демо';
       $('#waydeanFamilyLoginSubmit').textContent = 'Войти в демо';
@@ -4176,7 +4206,9 @@ async function initialize() {
     $('#localBackupHeading').textContent = remoteEditor ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
     $('#createLocalBackup').textContent = remoteEditor ? 'Создать снимок черновика' : 'Создать снимок сейчас';
     document.body.classList.toggle('local-tree-draft', localTreeDraft);
-    $('#familyLogout').hidden = !familyPreview;
+    const hasAccount = Boolean(accountAdminAccess || (familyPreview && familySessionTokenMemory));
+    $('#familyLogout').hidden = !hasAccount;
+    $('#switchAccount').hidden = !hasAccount;
     pwaController = createWaydeanPwaController(renderPwaStatus, {
       allowServerPush: accountPreview || familyPreview,
       accountAdminAction: accountPreview && accountAdminAccess

@@ -13,6 +13,7 @@ import { familyPublishGuardError } from './family-publish-guard.ts';
 import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
 import { hubTreeMetrics } from './hub-tree-metrics.ts';
 import { familyAppManifestResponse } from './family-app-manifest.ts';
+import { passwordBudgetKeys, passwordClientAddress } from './password-budget.ts';
 import { photoFileCandidates, photoMediaType, photoPersonIdPattern, decodeGithubPhoto, MAX_PHOTO_BYTES } from './private-photo.mjs';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
@@ -653,13 +654,12 @@ type ManifestItem = {
 };
 
 function fallbackEditorPassword(treeDir: TreeDir) {
-  if (treeDir === 'drewo-dada-yurt') {
-    return normalizePassword(Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ');
-  }
   if (treeDir === 'drewo-reklama') {
     return normalizePassword(Deno.env.get('DREWO_REKLAMA_PASSWORD') ?? 'демо');
   }
-  return normalizePassword(Deno.env.get('DREWO_PASSWORD') ?? 'гуно');
+  if (treeDir === 'drewo-dada-yurt') return normalizePassword(Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? '');
+  if (treeDir === 'drewo') return normalizePassword(Deno.env.get('DREWO_PASSWORD') ?? '');
+  return '';
 }
 
 function superPasswordSecretName(treeDir: TreeDir) {
@@ -809,89 +809,41 @@ async function resolveRole(
   return given === fallbackEditorPassword(treeDir) ? 'editor' : null;
 }
 
-/** Brute-force guard for password checks (per tree + client IP, in-memory). */
-type AuthAttemptState = {
-  fails: number;
-  windowStart: number;
-  lockedUntil: number;
-};
-
-const AUTH_ATTEMPTS = new Map<string, AuthAttemptState>();
-const AUTH_FAIL_WINDOW_MS = 15 * 60 * 1000;
-const AUTH_MAX_FAILS = 5;
-const AUTH_LOCK_MS = 15 * 60 * 1000;
-/** How many unpinned auto-backups to keep when pruning after publish. */
 const AUTO_BACKUP_KEEP = 30;
 
-function clientIp(request: Request): string {
-  const cf = request.headers.get('cf-connecting-ip');
-  if (cf?.trim()) return cf.trim();
-  const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
+async function reservePasswordAttempt(subject: string, request: Request) {
+  const keys = await passwordBudgetKeys(sessionSecret(), subject, passwordClientAddress(request.headers));
+  const db = supabaseService();
+  const { data, error } = await db.rpc('drewo_password_budget', keys);
+  const retryAfterSec = Number(data?.retry_after_sec);
+  if (error || !Number.isInteger(retryAfterSec) || retryAfterSec < 0
+      || (retryAfterSec === 0 && !Number.isSafeInteger(data?.bucket))) {
+    throw httpError('Семейный вход временно недоступен. Попробуйте позже.', 503);
   }
-  const real = request.headers.get('x-real-ip');
-  if (real?.trim()) return real.trim();
-  return 'unknown';
+  return {
+    retryAfterSec,
+    async refund() {
+      try {
+        await db.rpc('drewo_password_budget', { ...keys, p_refund_bucket: data.bucket });
+      } catch { /* A failed refund leaves the attempt counted until the window expires. */ }
+    },
+  };
 }
 
-function authAttemptKey(treeDir: TreeDir, request: Request) {
-  return `${treeDir}:${clientIp(request)}`;
-}
-
-function getAuthAttempt(key: string): AuthAttemptState {
-  const now = Date.now();
-  let state = AUTH_ATTEMPTS.get(key);
-  if (!state) {
-    state = { fails: 0, windowStart: now, lockedUntil: 0 };
-    AUTH_ATTEMPTS.set(key, state);
-    return state;
-  }
-  if (state.lockedUntil > now) return state;
-  if (now - state.windowStart > AUTH_FAIL_WINDOW_MS) {
-    state = { fails: 0, windowStart: now, lockedUntil: 0 };
-    AUTH_ATTEMPTS.set(key, state);
-  }
-  return state;
-}
-
-function authLockResponse(state: AuthAttemptState) {
-  const retryAfterSec = Math.max(1, Math.ceil((state.lockedUntil - Date.now()) / 1000));
-  const mins = Math.max(1, Math.ceil(retryAfterSec / 60));
-  return new Response(
-    JSON.stringify({
-      error: `Слишком много попыток. Подождите ${mins} мин.`,
-      retryAfterSec,
-      lockedUntil: state.lockedUntil,
-    }),
-    {
-      status: 429,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-        'Retry-After': String(retryAfterSec),
-      },
-    }
-  );
-}
-
-function recordAuthFailure(key: string): AuthAttemptState {
-  const now = Date.now();
-  let state = AUTH_ATTEMPTS.get(key);
-  if (!state || (state.lockedUntil <= now && now - state.windowStart > AUTH_FAIL_WINDOW_MS)) {
-    state = { fails: 0, windowStart: now, lockedUntil: 0 };
-  }
-  state.fails += 1;
-  if (state.fails >= AUTH_MAX_FAILS) {
-    state.lockedUntil = now + AUTH_LOCK_MS;
-  }
-  AUTH_ATTEMPTS.set(key, state);
-  return state;
-}
-
-function clearAuthFailures(key: string) {
-  AUTH_ATTEMPTS.delete(key);
+function authLockResponse(retryAfterSec: number) {
+  return new Response(JSON.stringify({
+    error: 'Слишком много попыток входа. Попробуйте позже.',
+    retryAfterSec,
+    lockedUntil: Date.now() + retryAfterSec * 1000,
+  }), {
+    status: 429,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      'Retry-After': String(retryAfterSec),
+    },
+  });
 }
 
 function countPeopleFromTreeJson(treeJson: string): number {
@@ -1166,14 +1118,13 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: loginFailed }, 401);
       }
 
-      const attemptKey = `login:${login}:${clientIp(request)}`;
-      const attemptState = getAuthAttempt(attemptKey);
-      if (attemptState.lockedUntil > Date.now()) {
-        return authLockResponse(attemptState);
+      if (typeof body.password !== 'string' || !body.password.trim() || body.password.length > 256) {
+        return jsonResponse({ error: loginFailed }, 401);
       }
+      const hit = registry.trees.find((item) => item.login === login || item.code === login) || null;
+      const budget = await reservePasswordAttempt(hit ? `tree:${hit.treeDir}` : `unknown:${login}`, request);
+      if (budget.retryAfterSec) return authLockResponse(budget.retryAfterSec);
 
-      const hit =
-        registry.trees.find((item) => item.login === login || item.code === login) || null;
       const access = hit
         ? parseAccess(
             (await githubGetFile(githubToken, githubRepo, accessPath(hit.treeDir)))?.content
@@ -1181,24 +1132,8 @@ Deno.serve(async (request) => {
         : null;
       const role = hit && access ? await resolveRole(body.password, hit.treeDir, access) : null;
 
-      if (!hit || !role) {
-        const failed = recordAuthFailure(attemptKey);
-        if (failed.lockedUntil > Date.now()) {
-          return authLockResponse(failed);
-        }
-        const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
-        return jsonResponse(
-          {
-            error:
-              attemptsLeft > 0
-                ? `${loginFailed}. Осталось попыток: ${attemptsLeft}`
-                : loginFailed,
-            attemptsLeft,
-          },
-          401
-        );
-      }
-      clearAuthFailures(attemptKey);
+      if (!hit || !role) return jsonResponse({ error: loginFailed }, 401);
+      await budget.refund();
 
       const sessionToken = await signNekSession(
         {
@@ -1736,8 +1671,6 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: true, treeDir, ignored: true });
     }
 
-    const attemptKey = authAttemptKey(treeDir, request);
-
     // A valid session token from `login-tree` replaces the password for this tree.
     // Anything else (missing, expired, wrong tree, password changed since) falls
     // back to the password check.
@@ -1761,29 +1694,14 @@ Deno.serve(async (request) => {
     }
 
     if (!role) {
-      const attemptState = getAuthAttempt(attemptKey);
-      if (attemptState.lockedUntil > Date.now()) {
-        return authLockResponse(attemptState);
+      if (typeof body.password !== 'string' || !body.password.trim() || body.password.length > 256) {
+        return jsonResponse({ error: 'Требуется действующий вход в древо.' }, 401);
       }
+      const budget = await reservePasswordAttempt(`tree:${treeDir}`, request);
+      if (budget.retryAfterSec) return authLockResponse(budget.retryAfterSec);
       role = await resolveRole(body.password, treeDir, access);
-      if (!role) {
-        const failed = recordAuthFailure(attemptKey);
-        if (failed.lockedUntil > Date.now()) {
-          return authLockResponse(failed);
-        }
-        const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
-        return jsonResponse(
-          {
-            error:
-              attemptsLeft > 0
-                ? `Неверный пароль. Осталось попыток: ${attemptsLeft}`
-                : 'Неверный пароль',
-            attemptsLeft,
-          },
-          401
-        );
-      }
-      clearAuthFailures(attemptKey);
+      if (!role) return jsonResponse({ error: 'Неверный пароль' }, 401);
+      await budget.refund();
     }
 
     if (action === 'auth') {

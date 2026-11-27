@@ -165,6 +165,9 @@ dialog[open]::backdrop { animation: drewo-motion-fade var(--motion-standard) eas
 }
 :where(.profile-panel,.create-dialog,.access-dialog) { overflow-wrap: anywhere; }
 :where(.create-dialog,.access-dialog) { overscroll-behavior: contain; }
+.auth-remember:not([hidden]) { display: flex; align-items: center; gap: 9px; min-height: 44px; }
+.auth-remember input[type=checkbox] { width: 1rem; min-height: 1rem; padding: 0; flex: none; }
+.auth-remember small { display: block; font-size: .875em; }
 @media (prefers-reduced-motion: no-preference) {
  .profile-body, .mode-label:not(:empty) { animation: drewo-motion-fade var(--motion-standard) ease-out; }
 }

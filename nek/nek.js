@@ -223,13 +223,12 @@
     passwordInput.focus();
   });
 
-  const remembered = readRemembered();
+  const params = new URLSearchParams(window.location.search);
+  const remembered = params.get('switch') === '1' ? '' : readRemembered();
   if (remembered && loginInput) {
     loginInput.value = remembered;
     if (rememberInput) rememberInput.checked = true;
   }
-
-  const params = new URLSearchParams(window.location.search);
 
   // Invite links (/t/<code>) land here as ?login=1&u=<code> to prefill the login.
   const invited = normalizeLogin(params.get('u') || params.get('c') || params.get('code'));
