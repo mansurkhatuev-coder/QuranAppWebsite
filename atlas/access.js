@@ -1,4 +1,5 @@
 import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
+import { hasDrewoManagerSession } from '../assets/drewo-manager-auth.mjs?v=1';
 import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean-preview-family-auth.mjs?v=family-logout-1';
 
 (() => {
@@ -50,8 +51,7 @@ import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean
       familyToken = sessionStorage.getItem('nek-session:' + dir) || '';
       if (familyToken) familyPath = recent.path;
     }
-    const session = JSON.parse(localStorage.getItem('waydean-trees-auth') || 'null');
-    managerSession = Number(session?.expires_at) > Date.now() / 1000;
+    managerSession = hasDrewoManagerSession();
   } catch {}
   if (familyPath || managerSession) {
     enterButton.textContent = familyPath ? 'Моё древо' : 'Мои древа';

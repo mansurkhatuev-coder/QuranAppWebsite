@@ -26,6 +26,10 @@ test('only the chosen login or email is remembered, and switching starts with a 
   restoreRememberedIdentifier(input, choice, FAMILY_LOGIN_KEY);
   assert.equal(input.value, 'synthetic');
   assert.equal(choice.checked, true);
+  const managerEmail = { value: '' }, rememberSession = { checked: false };
+  restoreRememberedIdentifier(managerEmail, rememberSession, ACCOUNT_EMAIL_KEY, { checkChoice: false });
+  assert.equal(managerEmail.value, 'fixture@example.test');
+  assert.equal(rememberSession.checked, false);
   location.search = '?switch=1';
   const empty = { value: '' };
   restoreRememberedIdentifier(empty, { checked: false }, ACCOUNT_EMAIL_KEY);

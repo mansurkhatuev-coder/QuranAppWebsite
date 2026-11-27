@@ -1,4 +1,5 @@
 import { ACCOUNT_EMAIL_KEY, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
+import { createDrewoManagerAuth } from '../assets/drewo-manager-auth.mjs?v=1';
 import {
   FAMILY_PASSWORD_MAX_LENGTH, familyPasswordLength, newFamilyPasswordError, normalizeFamilyPassword
 } from '../assets/drewo-family-password.mjs?v=1';
@@ -42,7 +43,7 @@ import {
   };
 
   const config = window.SUPABASE_CONFIG || {};
-  let client = null;
+  const managerAuth = createDrewoManagerAuth({ legacyAuth: () => window.AdminSupabase });
   let pollTimer = null;
   let accountVersion = 0;
   let refreshInFlight = null;
@@ -58,23 +59,8 @@ import {
     );
   }
 
-  function isAuthReady() {
-    return Boolean(config.url && config.anonKey && window.supabase?.createClient);
-  }
-
   function getClient() {
-    if (!isAuthReady()) return null;
-    if (!client) {
-      client = window.supabase.createClient(config.url, config.anonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          storageKey: 'waydean-trees-auth',
-        },
-      });
-    }
-    return client;
+    return managerAuth.getClient();
   }
 
   function showBoot(text) {
@@ -135,16 +121,15 @@ import {
       Authorization: `Bearer ${config.anonKey || ''}`,
       apikey: config.anonKey || '',
     };
-    const sb = getClient();
-    if (sb) {
-      try {
+    try {
+      const sb = getClient();
+      if (sb) {
         const { data } = await sb.auth.getSession();
         if (data?.session?.access_token) {
           headers.Authorization = `Bearer ${data.session.access_token}`;
         }
-      } catch {
-        // keep anon
       }
+    } catch { /* keep anon */
     }
     return headers;
   }
@@ -572,7 +557,7 @@ import {
       if (submit) submit.disabled = true;
       return;
     }
-    if (submit && isAuthReady()) submit.disabled = false;
+    if (submit && managerAuth.isEnabled()) submit.disabled = false;
   }
 
   function startAuthLockTicker() {
@@ -603,8 +588,7 @@ import {
     const email = $('#login-email').value.trim();
     const password = $('#login-password').value;
 
-    const sb = getClient();
-    if (!sb) {
+    if (!managerAuth.isEnabled()) {
       setLoginError('Supabase не настроен');
       return;
     }
@@ -623,8 +607,7 @@ import {
 
     showBoot('Вход…');
     try {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      await managerAuth.signIn(email, password, $('#login-remember-account')?.checked);
       if (lock) lock.clear(AUTH_LOCK_SCOPE);
       rememberIdentifier(ACCOUNT_EMAIL_KEY, email, $('#login-remember-account')?.checked);
       $('#login-password').value = '';
@@ -650,14 +633,10 @@ import {
   }
 
   async function handleLogout(switchAccount = false) {
-    const sb = getClient();
     stopPolling();
     showBoot('Выход…');
     try {
-      if (sb) {
-        const { error } = await sb.auth.signOut();
-        if (error) throw error;
-      }
+      await managerAuth.signOut();
     } catch {
       hideBoot();
       const status = $('#status-line');
@@ -677,8 +656,7 @@ import {
   }
 
   async function restoreSession() {
-    const sb = getClient();
-    if (!sb) {
+    if (!managerAuth.isEnabled()) {
       $('#login-setup-notice').hidden = false;
       $('#login-submit').disabled = true;
       hideBoot();
@@ -687,8 +665,8 @@ import {
 
     showBoot('Проверка сессии…');
     try {
-      const { data } = await sb.auth.getSession();
-      if (!data?.session) {
+      const session = await managerAuth.getSession();
+      if (!session) {
         hideBoot();
         return;
       }
@@ -1251,9 +1229,9 @@ import {
       void saveCredentialPassword(form);
     });
 
-    restoreRememberedIdentifier($('#login-email'), $('#login-remember-account'), ACCOUNT_EMAIL_KEY);
+    restoreRememberedIdentifier($('#login-email'), $('#login-remember-account'), ACCOUNT_EMAIL_KEY, { checkChoice: false });
 
-    if (!isAuthReady()) {
+    if (!managerAuth.isEnabled()) {
       const notice = $('#login-setup-notice');
       const submit = $('#login-submit');
       if (notice) notice.hidden = false;

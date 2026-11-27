@@ -23,15 +23,15 @@ test('remembered identity cannot open family snapshots without server authorizat
   assert.match(previewScript, /if \(!syntheticFixture && !isLoopbackHost\(location\.hostname\)\) \{[\s\S]*?throw error;\s*\}\s*const response = await fetch\(dataUrl, \{ cache: 'no-store' \}\)/);
 });
 
-test('account preview reuses the admin Supabase client and contains an email/password form', () => {
+test('account preview shares manager auth while retaining the old Supabase session bridge', () => {
   assert.ok(/\.\.\/admin\/supabase-config\.js/.test(previewPage), 'the preview must load the existing public Supabase config');
   assert.ok(/\.\.\/admin\/admin-supabase\.js/.test(previewPage), 'the preview must reuse the admin auth client');
   assert.ok(/id="waydeanAdminLoginForm"/.test(previewPage), 'the account route must show an admin login form');
   assert.ok(/id="waydeanAdminEmail"[^>]*type="email"/.test(previewPage), 'the form must accept an email');
   assert.ok(/id="waydeanAdminPassword"[^>]*type="password"/.test(previewPage), 'the form must accept a password');
   assert.ok(
-    previewScript.indexOf("accountAdminAccess = await requireWaydeanAdminAccess('drewo')") >= 0 &&
-    previewScript.indexOf("accountAdminAccess = await requireWaydeanAdminAccess('drewo')")
+    previewScript.indexOf("accountAdminAccess = await requireWaydeanAdminAccess('drewo', drewoManagerAuth)") >= 0 &&
+    previewScript.indexOf("accountAdminAccess = await requireWaydeanAdminAccess('drewo', drewoManagerAuth)")
       < previewScript.indexOf("const serverSnapshot = await callWaydeanAdminAction('waydean-admin-load'"),
     'the account gate must resolve before the family tree request'
   );

@@ -103,7 +103,8 @@
               required
             />
           </label>
-          <label class="auth-remember"><input id="login-remember-account" type="checkbox"> <span>Запомнить меня <small>Сохранить email на этом устройстве</small></span></label>
+          <label class="auth-remember"><input id="login-remember-account" type="checkbox"> <span>Запомнить меня <small>Сохранить email и сессию на устройстве</small></span></label>
+          <p class="muted">Без галочки вход останется только в этой вкладке.</p>
           <p id="login-setup-notice" class="muted" hidden>Сервис не настроен.</p>
           <button type="submit" class="btn btn-primary btn-block" id="login-submit">Войти</button>
           <p id="login-error" class="error" hidden>Неверные данные для входа</p>
@@ -231,6 +232,7 @@
     <script src="./billing-config.js?v=1"></script>
     <script src="../assets/drewo-billing.js?v=1"></script>
     <script src="./supabase-config.js?v=2"></script>
-    <script type="module" src="./trees.js?v=16"></script>
+    <script src="../admin/admin-supabase.js?v=16"></script>
+    <script type="module" src="./trees.js?v=18"></script>
   </body>
 </html>

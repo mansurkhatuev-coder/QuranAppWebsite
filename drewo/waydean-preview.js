@@ -11,6 +11,7 @@ import { accountLockPresentation, validateFamilyPasswordChange } from './waydean
 import { accountPublishButtonState, buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
+import { createDrewoManagerAuth } from '../assets/drewo-manager-auth.mjs?v=1';
 import { ACCOUNT_EMAIL_KEY, FAMILY_LOGIN_KEY, clearFamilyAccess, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
 import {
   clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
@@ -31,7 +32,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-5';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-6';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -48,6 +49,7 @@ const FIXTURE_PHOTOS = new Map([
 ]);
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const drewoManagerAuth = createDrewoManagerAuth({ legacyAuth: () => window.AdminSupabase });
 const railPreferenceKey = 'waydean-preview:tree-actions:v2';
 const ui = {
   app: $('.app-shell'), mobileSelected: $('#mobileSelected'), mobileSearch: $('#mobileSearchTrigger'),
@@ -3843,7 +3845,7 @@ function showError(error) {
     accountHint.hidden = true;
     accountHint.textContent = '';
     if (accessDenied) {
-      void readWaydeanAdminEmail(window.AdminSupabase).then((email) => {
+      void readWaydeanAdminEmail(drewoManagerAuth).then((email) => {
         if (!email) return;
         accountHint.textContent = `В этой вкладке выполнен вход как ${email}.`;
         accountHint.hidden = false;
@@ -3901,7 +3903,7 @@ function bindWaydeanAdminLogin() {
   const rememberInput = $('#waydeanAdminRemember');
   const errorMessage = $('#waydeanAdminLoginError');
   const submitButton = $('#waydeanAdminLoginSubmit');
-  restoreRememberedIdentifier(emailInput, rememberInput, ACCOUNT_EMAIL_KEY);
+  restoreRememberedIdentifier(emailInput, rememberInput, ACCOUNT_EMAIL_KEY, { checkChoice: false });
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -3913,15 +3915,17 @@ function bindWaydeanAdminLogin() {
 
     try {
       await window.ensureWaydeanAdminSupabase?.();
-      if (!window.AdminSupabase?.isEnabled?.()) throw new Error('Supabase auth is unavailable');
-      await window.AdminSupabase.signIn(emailInput.value.trim(), passwordInput.value);
+      if (!drewoManagerAuth.isEnabled()) throw new Error('Supabase auth is unavailable');
+      await drewoManagerAuth.signIn(emailInput.value.trim(), passwordInput.value, rememberInput?.checked);
       rememberIdentifier(ACCOUNT_EMAIL_KEY, emailInput.value, rememberInput?.checked);
       passwordInput.value = '';
       window.location.reload();
-    } catch {
+    } catch (error) {
       passwordInput.value = '';
       if (errorMessage) {
-        errorMessage.textContent = 'Не удалось войти. Проверьте email и пароль от раздела управления.';
+        errorMessage.textContent = /хранилище/i.test(error?.message || '')
+          ? error.message
+          : 'Не удалось войти. Проверьте email и пароль от раздела управления.';
         errorMessage.hidden = false;
       }
       passwordInput.focus();
@@ -4029,7 +4033,7 @@ async function leaveEditorAccount(switchAccount) {
     url.searchParams.set('source', 'family');
   } else if (accountAdminAccess) {
     try {
-      await window.AdminSupabase.signOut();
+      await drewoManagerAuth.signOut();
     } catch {
       accountExitPending = false;
       announce('Не удалось выйти. Проверьте подключение и повторите попытку.');
@@ -4169,7 +4173,7 @@ async function initialize() {
     if (accountPreview) {
       setLoadingText('Проверяем доступ к данным');
       await window.ensureWaydeanAdminSupabase?.();
-      accountAdminAccess = await requireWaydeanAdminAccess('drewo');
+      accountAdminAccess = await requireWaydeanAdminAccess('drewo', drewoManagerAuth);
     }
     $('#moreTreesCabinet').hidden = !accountAdminAccess;
     if (familyPreview && !(await requireFamilyPreviewSession(params, setLoadingText))) return;

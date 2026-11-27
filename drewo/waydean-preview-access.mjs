@@ -4,7 +4,7 @@ function accessError(code, message) {
   return error;
 }
 
-export async function requireWaydeanAdminAccess(treeDir = 'drewo') {
+export async function requireWaydeanAdminAccess(treeDir = 'drewo', auth = window.AdminSupabase) {
   const configuredEndpoint = document.querySelector('meta[name="waydean-publish-api"]')?.content?.trim() || '';
   if (!configuredEndpoint) {
     throw accessError('WAYDEAN_AUTH_UNAVAILABLE', 'Проверка доступа Waydean не настроена.');
@@ -20,7 +20,6 @@ export async function requireWaydeanAdminAccess(treeDir = 'drewo') {
     throw accessError('WAYDEAN_AUTH_UNAVAILABLE', 'Проверка доступа Waydean требует защищённого соединения.');
   }
 
-  const auth = window.AdminSupabase;
   if (!auth?.isEnabled?.() || typeof auth.getSession !== 'function') {
     throw accessError('WAYDEAN_AUTH_UNAVAILABLE', 'Вход через администраторский аккаунт недоступен.');
   }

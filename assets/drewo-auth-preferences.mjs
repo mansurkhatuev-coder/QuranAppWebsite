@@ -1,14 +1,14 @@
 export const FAMILY_LOGIN_KEY = 'nek:remember';
 export const ACCOUNT_EMAIL_KEY = 'drewo:remember-email';
 
-export function restoreRememberedIdentifier(input, choice, key) {
-  if (!input || !choice || new URLSearchParams(location.search).get('switch') === '1') return;
+export function restoreRememberedIdentifier(input, choice, key, { checkChoice = true } = {}) {
+  if (!input || new URLSearchParams(location.search).get('switch') === '1') return;
   try {
     const saved = localStorage.getItem(key);
     const text = key === FAMILY_LOGIN_KEY ? JSON.parse(saved || 'null')?.login : saved;
     if (typeof text === 'string' && text.trim()) {
       input.value = text;
-      choice.checked = true;
+      if (checkChoice && choice) choice.checked = true;
     }
   } catch { /* Browser storage is optional. */ }
 }
