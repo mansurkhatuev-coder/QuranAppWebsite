@@ -21,7 +21,9 @@ jobs:
       - name: Configure Supabase secrets for Edge Function
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          WEBSITE_PUBLISH_TOKEN: ${{ secrets.WEBSITE_PUBLISH_TOKEN }}
+          DREWO_PRIVATE_REPO: ${{ secrets.DREWO_PRIVATE_REPO }}
+          DREWO_PRIVATE_REPO_TOKEN: ${{ secrets.DREWO_PRIVATE_REPO_TOKEN }}
+          DREWO_AGGREGATE_STATS_ENABLED: ${{ secrets.DREWO_AGGREGATE_STATS_ENABLED }}
           DREWO_PASSWORD: ${{ secrets.DREWO_PASSWORD }}
           DREWO_DADA_YURT_PASSWORD: ${{ secrets.DREWO_DADA_YURT_PASSWORD }}
           DREWO_REKLAMA_PASSWORD: ${{ secrets.DREWO_REKLAMA_PASSWORD }}
@@ -39,13 +41,36 @@ jobs:
             echo "Missing SUPABASE_ACCESS_TOKEN repository secret"
             exit 1
           fi
-          if [ -z "$WEBSITE_PUBLISH_TOKEN" ]; then
-            echo "Missing WEBSITE_PUBLISH_TOKEN repository secret"
+          if [ -z "$DREWO_PRIVATE_REPO" ]; then
+            echo "Missing DREWO_PRIVATE_REPO repository secret"
+            exit 1
+          fi
+          if [ -z "$DREWO_PRIVATE_REPO_TOKEN" ]; then
+            echo "Missing DREWO_PRIVATE_REPO_TOKEN repository secret"
+            exit 1
+          fi
+          if [[ ! "$DREWO_PRIVATE_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "DREWO_PRIVATE_REPO must have the form owner/repository"
+            exit 1
+          fi
+          if [[ -n "$DREWO_AGGREGATE_STATS_ENABLED" && "$DREWO_AGGREGATE_STATS_ENABLED" != "true" && "$DREWO_AGGREGATE_STATS_ENABLED" != "false" ]]; then
+            echo "DREWO_AGGREGATE_STATS_ENABLED must be true or false"
+            exit 1
+          fi
+          DREWO_AGGREGATE_STATS_ENABLED="${DREWO_AGGREGATE_STATS_ENABLED:-false}"
+          repo_metadata="$(curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H "Authorization: Bearer $DREWO_PRIVATE_REPO_TOKEN" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$DREWO_PRIVATE_REPO")"
+          if ! jq -e '.private == true' >/dev/null <<<"$repo_metadata"; then
+            echo "DREWO_PRIVATE_REPO is unavailable or is not private"
             exit 1
           fi
           SECRET_ARGS=(
-            GITHUB_TOKEN="$WEBSITE_PUBLISH_TOKEN"
-            GITHUB_REPO=mansurkhatuev-coder/QuranAppWebsite
+            DREWO_GITHUB_TOKEN="$DREWO_PRIVATE_REPO_TOKEN"
+            DREWO_PRIVATE_REPO="$DREWO_PRIVATE_REPO"
+            DREWO_AGGREGATE_STATS_ENABLED="$DREWO_AGGREGATE_STATS_ENABLED"
           )
           # Omitted GitHub secrets leave the values already configured in Supabase intact.
           for family_secret in DREWO_PASSWORD DREWO_DADA_YURT_PASSWORD DREWO_REKLAMA_PASSWORD; do

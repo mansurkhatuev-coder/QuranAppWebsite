@@ -14,7 +14,7 @@
  <link rel="stylesheet" href="./vendor/maplibre-gl.css">
  <link rel="stylesheet" href="./style.css?v=f3463c7">
  <link rel="stylesheet" href="./opening.css?v=f3463c8">
- <link rel="stylesheet" href="./interface.css?v=20261127-4">
+ <link rel="stylesheet" href="./interface.css?v=20261127-5">
   <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261127-4">
 </head>
 <body data-atlas-entrance="pending">
@@ -187,6 +187,17 @@
   <h2 id="family-map-heading">Мой род</h2>
   <p role="status"></p>
   <div class="family-places"></div>
+  <section class="family-consent" hidden aria-labelledby="family-consent-heading">
+   <h3 id="family-consent-heading">Публичная семейная сводка</h3>
+   <p>При достаточном числе согласившихся семей в Atlas могут появиться только интервалы количества родословных, записей о людях и глубины поколений. Имена, даты, места и идентификаторы семей не публикуются.</p>
+   <label class="family-consent-attestation"><input type="checkbox" id="family-consent-attestation">Я представляю семью и получил согласие родственников на включение этого древа в обезличенную публичную сводку.</label>
+   <div class="family-consent-actions">
+    <button class="access-primary" type="button" data-consent-grant>Дать согласие</button>
+    <button class="family-consent-revoke" type="button" data-consent-revoke hidden>Отозвать согласие</button>
+   </div>
+   <p class="family-consent-status" role="status" aria-live="polite"></p>
+   <p class="family-consent-limit">Семейный пароль не подтверждает личность представителя. Отзыв исключит древо из новых сводок в течение минуты; ранее сохранённые копии статистики удалить нельзя.</p>
+  </section>
   <form class="family-place-form" hidden>
    <label>Место в атласе<select name="place"></select></label>
    <label>Связь с семьёй<select name="kind"><option>Родное место</option><option>Место рождения</option><option>Переселение</option></select></label>
@@ -211,6 +222,6 @@
  <script defer src="/trees/supabase-config.js"></script>
  <script defer src="/nek/nek.js?v=11"></script>
   <script type="module" src="./access.js?v=owner-account-2"></script>
- <script type="module" src="./app.mjs?v=20261128-4"></script>
+ <script type="module" src="./app.mjs?v=20261127-5"></script>
 </body>
 </html>

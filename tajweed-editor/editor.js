@@ -565,7 +565,7 @@
         .join("");
       item.innerHTML = `
         <div class="snippet">${escapeHtml(snippet || "∅")}</div>
-        <button type="button" class="del" data-del="${index}" title="Удалить">✕</button>
+        <button type="button" class="del" data-del="${index}" title="Удалить" aria-label="Удалить отметку ${index + 1}"><svg aria-hidden="true"><use href="#taj-trash"/></svg></button>
         <div class="chips">${chips || `<span class="chip">пусто</span>`}</div>
         <div class="meta">[${m.start}, ${m.end})${m.note ? " · " + escapeHtml(m.note) : ""}</div>
       `;

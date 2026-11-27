@@ -60,6 +60,7 @@ migrations=(
   supabase/migrations/20261127_drewo_session_revocations.sql
   supabase/migrations/20261127120000_drewo_plus_one_tree_once.sql
   supabase/migrations/20261127183522_drewo_plus_person_places.sql
+  supabase/migrations/20261127202119_drewo_aggregate_consent.sql
   supabase/migrations/20261128_drewo_family_places.sql
 )
 for migration in "${migrations[@]}"; do
@@ -135,6 +136,9 @@ begin
   if not has_function_privilege('service_role', 'public.drewo_password_budget(text,text,text,bigint)', 'execute') then raise exception 'service role cannot call password budget'; end if;
   if has_function_privilege('authenticated', 'public.drewo_family_session(text,bigint)', 'execute') then raise exception 'authenticated can call family session store'; end if;
   if has_function_privilege('authenticated', 'public.drewo_family_places(text,text,text,boolean)', 'execute') then raise exception 'authenticated can call family places'; end if;
+  if has_function_privilege('anon', 'public.drewo_family_aggregate_consent(text,text,text,text,text)', 'execute') then raise exception 'anon can call family aggregate consent'; end if;
+  if has_function_privilege('authenticated', 'public.drewo_family_aggregate_consent(text,text,text,text,text)', 'execute') then raise exception 'authenticated can call family aggregate consent'; end if;
+  if not has_function_privilege('service_role', 'public.drewo_family_aggregate_consent(text,text,text,text,text)', 'execute') then raise exception 'service role cannot call family aggregate consent'; end if;
 end $$;
 
 set role service_role;
@@ -159,6 +163,20 @@ begin
   end loop;
   result := public.drewo_password_budget(repeat('a',64), repeat('b',64), repeat('c',64));
   if (result->>'retry_after_sec')::integer = 0 then raise exception 'password budget did not block after the configured attempts'; end if;
+  result := public.drewo_family_aggregate_consent(
+    'drewo-synthetic', 'grant', 'drewo-family-aggregate-v1', 'editor', repeat('e',64)
+  );
+  if result->>'consented' <> 'true' then raise exception 'family aggregate consent grant failed'; end if;
+  result := public.drewo_family_aggregate_consent('drewo-synthetic');
+  if result->>'consented' <> 'true' then raise exception 'family aggregate consent status failed'; end if;
+  result := public.drewo_family_aggregate_consent(null::text);
+  if not result @> '["drewo-synthetic"]'::jsonb then raise exception 'consented tree was missing from private aggregate list'; end if;
+  result := public.drewo_family_aggregate_consent(
+    'drewo-synthetic', 'revoke', 'drewo-family-aggregate-v1', 'editor', repeat('f',64)
+  );
+  if result->>'consented' <> 'false' then raise exception 'family aggregate consent revoke failed'; end if;
+  result := public.drewo_family_aggregate_consent(null::text);
+  if result @> '["drewo-synthetic"]'::jsonb then raise exception 'revoked tree remained in private aggregate list'; end if;
 end $$;
 reset role;
 SQL

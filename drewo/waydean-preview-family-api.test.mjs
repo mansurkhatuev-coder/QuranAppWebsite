@@ -106,6 +106,32 @@ test('allows family push actions only through the signed session and strips cred
   ]);
 });
 
+test('sends explicit consent through the signed family session and validates its response', async () => {
+  let body;
+  const result = await callFamilyTreeAction('family-aggregate-consent', {
+    decision: 'grant', authorityAttested: true, sessionToken: 'do-not-forward', password: 'do-not-forward'
+  }, {
+    ...common,
+    fetcher: async (_url, options) => {
+      body = JSON.parse(options.body);
+      return new Response(JSON.stringify({
+        ok: true, treeDir: 'drewo', canManage: true,
+        consent: { consented: true, policyVersion: 'drewo-family-aggregate-v1', updatedAt: null }
+      }));
+    }
+  });
+
+  assert.deepEqual(body, {
+    decision: 'grant', authorityAttested: true,
+    treeDir: 'drewo', sessionToken: common.sessionToken, action: 'family-aggregate-consent'
+  });
+  assert.equal(result.consent.consented, true);
+  await assert.rejects(callFamilyTreeAction('family-aggregate-consent', {}, {
+    ...common,
+    fetcher: async () => new Response(JSON.stringify({ok: true, treeDir: 'drewo'}))
+  }), error => error.code === 'WAYDEAN_FAMILY_REQUEST_FAILED');
+});
+
 test('rejects writes without a session and does not call the service', async () => {
   let requested = false;
   await assert.rejects(callFamilyTreeAction('publish', {}, {

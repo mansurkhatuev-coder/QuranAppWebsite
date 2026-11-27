@@ -98,9 +98,20 @@ def check_family_map(browser, base, *, with_3d=False):
       const requests = window.familyPlacesRequests = [];
       const reads = window.familyPlacesReadPayloads = [];
       const writes = window.familyPlacesWrites = [];
+      const consentRequests = window.familyAggregateConsentRequests = [];
+      let consented = false;
       const savedMarks = window.familyPlacesSaved = [{id: 'grozny', kind: 'Родное место'}];
       window.fetch = (input, init) => {
         const payload = JSON.parse(init?.body || '{}');
+        if (payload.action === 'family-aggregate-consent') {
+          consentRequests.push({...payload});
+          if (payload.decision === 'grant') consented = true;
+          if (payload.decision === 'revoke') consented = false;
+          return Promise.resolve({ok: true, status: 200, json: async () => ({
+            ok: true, treeDir: 'drewo-synthetic', canManage: true,
+            consent: {consented, policyVersion: 'drewo-family-aggregate-v1', updatedAt: null}
+          })});
+        }
         if (payload.action !== 'family-places') return originalFetch(input, init);
         if (Object.prototype.hasOwnProperty.call(payload, 'mark')) {
           if (!payload.mark || typeof payload.mark.id !== 'string' || typeof payload.mark.kind !== 'string' || typeof payload.mark.present !== 'boolean') {
@@ -112,7 +123,7 @@ def check_family_map(browser, base, *, with_3d=False):
           if (present && index < 0) savedMarks.push({id, kind});
           if (!present && index >= 0) savedMarks.splice(index, 1);
           return Promise.resolve({ok: true, status: 200, json: async () => ({
-            ok: true, treeDir: 'drewo-synthetic', places: savedMarks.map(mark => ({...mark})), canEdit: true
+            ok: true, treeDir: 'drewo-synthetic', places: savedMarks.map(mark => ({...mark})), canEdit: true, canManageConsent: true
           })});
         }
         reads.push({...payload});
@@ -120,7 +131,7 @@ def check_family_map(browser, base, *, with_3d=False):
           ok: accepted,
           status: accepted ? 200 : 401,
           json: async () => accepted
-            ? {ok: true, treeDir: 'drewo-synthetic', places: savedMarks.map(mark => ({...mark})), canEdit: true}
+            ? {ok: true, treeDir: 'drewo-synthetic', places: savedMarks.map(mark => ({...mark})), canEdit: true, canManageConsent: true}
             : {error: 'Семейный вход отклонён'}
         })));
       };
@@ -129,7 +140,7 @@ def check_family_map(browser, base, *, with_3d=False):
         page.goto(base + "/atlas/#/family")
         dialog = page.locator("#family-map")
         form = dialog.locator(".family-place-form")
-        status = dialog.get_by_role("status")
+        status = dialog.locator("p[role='status']").first
         page.wait_for_function("familyPlacesRequests.length === 1")
         assert form.is_hidden()
         page.evaluate("familyPlacesRequests[0](false)")
@@ -144,6 +155,23 @@ def check_family_map(browser, base, *, with_3d=False):
         page.wait_for_function("familyPlacesRequests.length === 3")
         page.evaluate("familyPlacesRequests[2](true)")
         form.wait_for()
+        consent = dialog.locator(".family-consent")
+        consent.wait_for()
+        attestation = consent.locator("#family-consent-attestation")
+        grant = consent.get_by_role("button", name="Дать согласие")
+        attestation_bounds = consent.locator(".family-consent-attestation").bounding_box()
+        grant_bounds = grant.bounding_box()
+        assert attestation_bounds and attestation_bounds["height"] >= 44
+        assert grant_bounds and grant_bounds["height"] >= 44
+        assert grant.is_disabled()
+        attestation.check()
+        assert not grant.is_disabled()
+        grant.click()
+        consent.get_by_role("status").get_by_text("Согласие записано").wait_for()
+        revoke = consent.get_by_role("button", name="Отозвать согласие")
+        revoke.click()
+        consent.get_by_role("status").get_by_text("Сейчас это древо не участвует").wait_for()
+        assert page.evaluate("familyAggregateConsentRequests.filter(payload => payload.decision).map(payload => [payload.decision, payload.authorityAttested ?? false])") == [["grant", True], ["revoke", False]]
         dialog.locator(".family-places").get_by_role("button", name="Грозный · Родное место", exact=True).wait_for()
         page.evaluate("""async () => {
           familyPlacesRequests[1](false);

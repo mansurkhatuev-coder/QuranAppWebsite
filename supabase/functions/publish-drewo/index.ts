@@ -63,6 +63,12 @@ import {
 } from './session.ts';
 import { createFamilyPasswordHash, passwordFingerprint, verifyFamilyPassword } from './password-hash.ts';
 import { isFamilyPlace } from '../../../atlas/family-geography.mjs';
+import { buildSummary } from '../../../atlas/public-summary-core.mjs';
+import {
+  authorizeFamilyAggregateConsent,
+  canPublishAggregateSummary,
+  FAMILY_AGGREGATE_POLICY_VERSION,
+} from './family-aggregate-consent.mjs';
 import {
   FAMILY_PASSWORD_MAX_LENGTH,
   familyPasswordLength,
@@ -526,6 +532,89 @@ type TreeDir = string;
 async function loadRegistry(token: string, repo: string): Promise<RegistryFile> {
   const file = await githubGetFile(token, repo, REGISTRY_PATH);
   return parseRegistry(file?.content);
+}
+
+type PublicFamilySummary = {
+  version: number;
+  date: string;
+  scopes: Record<string, unknown>;
+};
+
+let cachedPublicFamilySummary: {
+  repository: string;
+  expiresAt: number;
+  summary: PublicFamilySummary;
+} | null = null;
+
+function emptyPublicFamilySummary(): PublicFamilySummary {
+  return { version: 1, date: new Date().toISOString().slice(0, 10), scopes: {} };
+}
+
+async function loadPublicFamilySummary(token: string, repo: string): Promise<PublicFamilySummary> {
+  const enabled = Deno.env.get('DREWO_AGGREGATE_STATS_ENABLED');
+  const configuredRepo = Deno.env.get('DREWO_PRIVATE_REPO') ?? '';
+  if (!canPublishAggregateSummary({ enabled, configuredRepo, requestedRepo: repo, repoIsPrivate: true })) {
+    return emptyPublicFamilySummary();
+  }
+
+  const metadata = await githubJson(token, `https://api.github.com/repos/${repo}`);
+  if (!canPublishAggregateSummary({
+    enabled,
+    configuredRepo,
+    requestedRepo: repo,
+    repoIsPrivate: metadata.ok && metadata.json.private === true,
+  })) return emptyPublicFamilySummary();
+
+  const now = Date.now();
+  if (cachedPublicFamilySummary?.repository === repo && cachedPublicFamilySummary.expiresAt > now) {
+    return cachedPublicFamilySummary.summary;
+  }
+
+  const { data, error } = await supabaseService().rpc('drewo_family_aggregate_consent', {
+    p_tree_dir: null,
+  });
+  if (error || !Array.isArray(data)) throw httpError('Семейная сводка временно недоступна.', 503);
+  const consentedDirs = [...new Set(data.filter((value): value is string =>
+    typeof value === 'string' && /^drewo(?:-[a-z0-9-]{1,48})?$/.test(value) && value !== DEMO_TREE_DIR
+  ))];
+  if (consentedDirs.length > 200) throw httpError('Семейная сводка временно недоступна.', 503);
+
+  const registry = await loadRegistry(token, repo);
+  const allowedDirs = new Set(knownTreeDirs(registry));
+  const treeRoots = new Map<string, unknown>();
+  const entries = (await Promise.all(consentedDirs.map(async (treeDir) => {
+    if (!allowedDirs.has(treeDir)) return null;
+    const [accessFile, treeFile, indexFile] = await Promise.all([
+      githubGetFile(token, repo, accessPath(treeDir)),
+      githubGetFile(token, repo, `${treeDir}/family-tree.json`),
+      githubGetFile(token, repo, `${treeDir}/index.html`),
+    ]);
+    if (!accessFile?.content) return null;
+    let rawAccess: unknown;
+    try {
+      rawAccess = JSON.parse(accessFile.content);
+    } catch {
+      return null;
+    }
+    if (!rawAccess || typeof rawAccess !== 'object' || Array.isArray(rawAccess)) return null;
+    const access = parseAccess(accessFile.content);
+    if (access.deletedAt || access.locked || access.billing.status === 'disabled') return null;
+    const treeJson = treeFile?.content?.trim()
+      || extractScriptJson(indexFile?.content || '', 'tree-data')
+      || '';
+    if (!treeJson) return null;
+    const root = JSON.parse(treeJson);
+    treeRoots.set(treeDir, root);
+    return { treeDir, active: true, aggregateConsent: true };
+  }))).filter((entry): entry is {treeDir: string; active: true; aggregateConsent: true} => entry !== null);
+
+  const summary = await buildSummary(entries, async (entry) => {
+    const root = treeRoots.get(entry.treeDir);
+    if (!root) throw new Error('Consented tree snapshot missing');
+    return root;
+  }) as PublicFamilySummary;
+  cachedPublicFamilySummary = { repository: repo, expiresAt: now + 60_000, summary };
+  return summary;
 }
 
 function resolveTreeDir(raw: unknown, registry?: RegistryFile): TreeDir | null {
@@ -1078,10 +1167,19 @@ Deno.serve(async (request) => {
       if (adminActionTarget) action = adminActionTarget;
     }
 
-    const githubToken = Deno.env.get('GITHUB_TOKEN');
-    const githubRepo = Deno.env.get('GITHUB_REPO') ?? 'mansurkhatuev-coder/QuranAppWebsite';
+    // Drewo may use a private family-data repository without changing the
+    // shared GitHub settings used by the separate publish-content function.
+    const githubToken = Deno.env.get('DREWO_GITHUB_TOKEN') || Deno.env.get('GITHUB_TOKEN');
+    const githubRepo = Deno.env.get('DREWO_PRIVATE_REPO')
+      ?? Deno.env.get('GITHUB_REPO')
+      ?? 'mansurkhatuev-coder/QuranAppWebsite';
     if (!githubToken) {
-      return jsonResponse({ error: 'GITHUB_TOKEN secret is missing' }, 500);
+      return jsonResponse({ error: 'DREWO_GITHUB_TOKEN or GITHUB_TOKEN secret is missing' }, 500);
+    }
+
+    if (action === 'public-family-summary') {
+      const summary = await loadPublicFamilySummary(githubToken, githubRepo);
+      return jsonResponse({ ok: true, ...summary });
     }
 
     let creationHead: string | undefined;
@@ -1664,6 +1762,7 @@ Deno.serve(async (request) => {
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
       action === 'status' || action === 'logout-family' || action === 'family-places'
+        || action === 'family-aggregate-consent'
         ? Promise.resolve(null)
         : githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
     ]);
@@ -1716,7 +1815,50 @@ Deno.serve(async (request) => {
         ...(mark === undefined ? {} : { p_place_id: mark.id, p_kind: mark.kind, p_present: mark.present }),
       });
       if (error || !Array.isArray(data)) throw httpError('Семейные отметки временно недоступны.', 503);
-      return jsonResponse({ ok: true, treeDir, places: data, canEdit: !block.blocked });
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        places: data,
+        canEdit: !block.blocked,
+        canManageConsent: sessionPayload.role === 'editor',
+      });
+    }
+    if (action === 'family-aggregate-consent') {
+      if (!sessionPayload) return jsonResponse({ error: 'Требуется действующий вход в древо.' }, 401);
+      const decision = body.decision === undefined ? null : body.decision;
+      const authorization = authorizeFamilyAggregateConsent({
+        role: sessionPayload.role,
+        treeDir,
+        deleted: Boolean(access.deletedAt),
+        locked: lockPresentation(access).locked,
+        decision,
+        attested: body.authorityAttested === true,
+      });
+      if (!authorization.ok) return jsonResponse({ error: authorization.error }, authorization.status);
+
+      const rpcArgs: Record<string, unknown> = { p_tree_dir: treeDir };
+      if (authorization.operation !== 'read') {
+        rpcArgs.p_decision = authorization.operation;
+        rpcArgs.p_policy_version = FAMILY_AGGREGATE_POLICY_VERSION;
+        rpcArgs.p_actor_role = sessionPayload.role;
+        rpcArgs.p_session_fingerprint = sessionPayload.sessionKey;
+      }
+      const { data, error } = await supabaseService().rpc('drewo_family_aggregate_consent', rpcArgs);
+      if (error || !data || typeof data !== 'object' || Array.isArray(data)) {
+        throw httpError('Согласие временно недоступно.', 503);
+      }
+      if (authorization.operation !== 'read') cachedPublicFamilySummary = null;
+      const consent = data as Record<string, unknown>;
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        canManage: true,
+        consent: {
+          consented: consent.consented === true,
+          policyVersion: typeof consent.policyVersion === 'string' ? consent.policyVersion : null,
+          updatedAt: typeof consent.updatedAt === 'string' ? consent.updatedAt : null,
+        },
+      });
     }
     let role: AuthRole | null = isWaydeanAdminRequest && !waydeanAdminLoad
       ? 'super'

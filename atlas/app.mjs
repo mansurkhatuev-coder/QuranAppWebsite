@@ -634,7 +634,7 @@ function setAtmosphere(next){
 async function showFamilyMap(){
  clearFamilyMarkers();
  try {
-  const {openFamilyView}=await import('./family-view.mjs?v=4');
+  const {openFamilyView}=await import('./family-view.mjs?v=5');
   await openFamilyView({dialog:$('#family-map'),
    showMarkers:marks=>showPlacesOnMap(marks),
    showPlace:place=>{if(place.coordinates)openCity(place.id);else openSite(place.id);},
@@ -798,11 +798,12 @@ history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute(
 render();
 scheduleViewport();
 
-fetch('./data/public-summary.json',{cache:'no-cache'}).then(response=>{
+const summaryEndpoint=window.SUPABASE_CONFIG?.publishDrewoUrl;
+if(summaryEndpoint)fetch(summaryEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'public-family-summary'}),cache:'no-store'}).then(response=>{
  if(!response.ok)throw new Error('summary unavailable');
  return response.json();
 }).then(summary=>{
- if(summary.version!==1 || !summary.scopes)return;
+ if(summary.ok!==true || summary.version!==1 || !summary.scopes)return;
  publicSummary=summary;
  if(state.view==='city'){
   const panel=$('#settlement-summary');
