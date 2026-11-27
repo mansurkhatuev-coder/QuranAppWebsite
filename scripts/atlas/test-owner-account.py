@@ -43,6 +43,7 @@ MOCK_AUTH = r"""(() => {
           return { data: { user: state.user, session: state.session }, error: null };
         },
         signOut: async () => {
+          if (state.failSignOut) return { error: { message: 'synthetic network failure' } };
           state.session = null; state.user = null;
           storage?.removeItem(storageKey);
           return { error: null };
@@ -164,6 +165,19 @@ def main():
                 page.wait_for_function("!document.querySelector('#owner-account-dialog').open")
                 assert page.evaluate("!localStorage.getItem('drewo-owner-auth-v1') && !sessionStorage.getItem('drewo-owner-auth-v1')")
                 assert page.evaluate("!localStorage.getItem('waydean-trees-auth')")
+
+                page.locator("#create-tree").click()
+                page.locator("#owner-account-login").click()
+                dialog = page.locator("#owner-account-dialog[open]")
+                login_form = dialog.locator("form.owner-form")
+                assert login_form.locator('[name="email"]').input_value() == "synthetic@example.test"
+                login_form.locator('[name="password"]').fill("synthetic-secure-password-47")
+                login_form.locator('button[type="submit"]').click()
+                dialog.get_by_role("heading", name="Семья Хьоти").wait_for()
+                page.evaluate("ownerMock.failSignOut = true")
+                dialog.get_by_role("button", name="Сменить аккаунт").click()
+                dialog.get_by_role("status").get_by_text("Сеанс удалён с этого устройства").wait_for()
+                assert page.evaluate("!localStorage.getItem('drewo-owner-auth-v1') && !sessionStorage.getItem('drewo-owner-auth-v1')")
                 print("Personal signup, one-tree RPC, private editor, logout and storage separation OK", flush=True)
                 context.close()
 

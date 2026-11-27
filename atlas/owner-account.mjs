@@ -647,19 +647,31 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
   async function leaveAccount(switchAccount) {
     if (!activeClient || requestBusy) return;
     requestBusy = true;
+    let signOutError = null;
     try {
       const { error } = await activeClient.auth.signOut({ scope: 'local' });
-      if (error) throw error;
+      if (error) signOutError = error;
+    } catch (error) {
+      signOutError = error;
+    } finally {
       clearSavedOwnerSessions();
+      if (signOutError) activeClient.auth.stopAutoRefresh?.();
       activeClient = null; activeUser = null; ownedTree = null; people = [];
       removeOwnerAction();
-      if (switchAccount) ownerAuthForm('login');
-      else closeDialog();
-    } catch (error) {
-      const root = content;
-      status(root, ownerAccountErrorMessage(error), 'alert');
-    } finally {
       requestBusy = false;
+    }
+    if (switchAccount) {
+      ownerAuthForm('login', {
+        notice: signOutError
+          ? 'Сеанс удалён с этого устройства, но сервер не подтвердил его обновление. Проверьте соединение.'
+          : '',
+      });
+    } else if (signOutError) {
+      const root = shell({ title: 'Вы вышли на этом устройстве' });
+      status(root, 'Сеанс удалён с этого устройства, но сервер не подтвердил его обновление. Проверьте соединение.', 'alert');
+      root.append(action('Закрыть', 'owner-secondary', closeDialog));
+    } else {
+      closeDialog();
     }
   }
 
