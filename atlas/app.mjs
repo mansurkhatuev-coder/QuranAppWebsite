@@ -631,7 +631,7 @@ function setAtmosphere(next){
 async function showFamilyMap(){
  clearFamilyMarkers();
  try {
-  const {openFamilyView}=await import('./family-view.mjs?v=3');
+  const {openFamilyView}=await import('./family-view.mjs?v=4');
   await openFamilyView({dialog:$('#family-map'),
    showMarkers:marks=>{
     if(!atlas){toast('Карта пока недоступна');return;}

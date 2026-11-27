@@ -82,14 +82,32 @@ def check_family_map(browser, base, *, with_3d=False):
       }));
       sessionStorage.setItem('nek-session:drewo-synthetic', 'synthetic-session');
       const originalFetch = window.fetch;
-      const requests = window.familyAuthRequests = [];
+      const requests = window.familyPlacesRequests = [];
+      const reads = window.familyPlacesReadPayloads = [];
+      const writes = window.familyPlacesWrites = [];
+      const savedMarks = window.familyPlacesSaved = [{id: 'grozny', kind: 'Родное место'}];
       window.fetch = (input, init) => {
-        if (JSON.parse(init?.body || '{}').action !== 'auth') return originalFetch(input, init);
+        const payload = JSON.parse(init?.body || '{}');
+        if (payload.action !== 'family-places') return originalFetch(input, init);
+        if (Object.prototype.hasOwnProperty.call(payload, 'mark')) {
+          if (!payload.mark || typeof payload.mark.id !== 'string' || typeof payload.mark.kind !== 'string' || typeof payload.mark.present !== 'boolean') {
+            throw new Error('Unexpected synthetic family-place write payload');
+          }
+          const {id, kind, present} = payload.mark;
+          writes.push({id, kind, present});
+          const index = savedMarks.findIndex(mark => mark.id === id && mark.kind === kind);
+          if (present && index < 0) savedMarks.push({id, kind});
+          if (!present && index >= 0) savedMarks.splice(index, 1);
+          return Promise.resolve({ok: true, status: 200, json: async () => ({
+            ok: true, treeDir: 'drewo-synthetic', places: savedMarks.map(mark => ({...mark})), canEdit: true
+          })});
+        }
+        reads.push({...payload});
         return new Promise(resolve => requests.push(accepted => resolve({
           ok: accepted,
           status: accepted ? 200 : 401,
           json: async () => accepted
-            ? {ok: true, treeDir: 'drewo-synthetic', role: 'viewer', sessionToken: 'synthetic-session'}
+            ? {ok: true, treeDir: 'drewo-synthetic', places: savedMarks.map(mark => ({...mark})), canEdit: true}
             : {error: 'Семейный вход отклонён'}
         })));
       };
@@ -99,38 +117,40 @@ def check_family_map(browser, base, *, with_3d=False):
         dialog = page.locator("#family-map")
         form = dialog.locator(".family-place-form")
         status = dialog.get_by_role("status")
-        page.wait_for_function("familyAuthRequests.length === 1")
+        page.wait_for_function("familyPlacesRequests.length === 1")
         assert form.is_hidden()
-        page.evaluate("familyAuthRequests[0](false)")
+        page.evaluate("familyPlacesRequests[0](false)")
         status.get_by_text("Семейный вход отклонён").wait_for()
         assert form.is_hidden()
 
         dialog.get_by_role("button", name="Закрыть").click()
         page.evaluate("document.querySelector('#family-view').click()")
-        page.wait_for_function("familyAuthRequests.length === 2")
+        page.wait_for_function("familyPlacesRequests.length === 2")
         dialog.get_by_role("button", name="Закрыть").click()
         page.evaluate("document.querySelector('#family-view').click()")
-        page.wait_for_function("familyAuthRequests.length === 3")
-        page.evaluate("familyAuthRequests[2](true)")
+        page.wait_for_function("familyPlacesRequests.length === 3")
+        page.evaluate("familyPlacesRequests[2](true)")
         form.wait_for()
-        assert dialog.locator(".family-places button").count() == 1
+        dialog.locator(".family-places").get_by_role("button", name="Грозный · Родное место", exact=True).wait_for()
         page.evaluate("""async () => {
-          familyAuthRequests[1](false);
+          familyPlacesRequests[1](false);
           await new Promise(resolve => setTimeout(resolve, 0));
         }""")
         assert "отклонён" not in status.inner_text()
+        assert page.evaluate("familyPlacesReadPayloads.every(payload => !Object.prototype.hasOwnProperty.call(payload, 'mark'))")
         form.get_by_role("button", name="Добавить отметку").click()
         show_map = dialog.get_by_role("button", name="Показать мои места на карте")
         show_map.wait_for()
         form.locator('[name="kind"]').select_option(label="Место рождения")
         form.get_by_role("button", name="Добавить отметку").click()
         birth_mark = dialog.get_by_role("button", name="Убрать отметку Грозный · Место рождения")
-        assert birth_mark.is_visible()
+        birth_mark.wait_for()
+        assert page.evaluate("familyPlacesSaved.some(mark => mark.id === 'grozny' && mark.kind === 'Место рождения')")
         if with_3d:
             form.locator('[name="place"]').select_option("khoi-village")
             form.locator('[name="kind"]').select_option(label="Родное место")
             form.get_by_role("button", name="Добавить отметку").click()
-            assert dialog.get_by_role("button", name="Убрать отметку Хой · Родное место").is_visible()
+            dialog.get_by_role("button", name="Убрать отметку Хой · Родное место").wait_for()
             page.locator("#map-status").get_by_text(re.compile("Атлас готов|Облегчённый рельеф")).wait_for(timeout=45000)
             show_map.click()
             marker = page.locator('[data-marker-id="grozny"]')
@@ -145,14 +165,17 @@ def check_family_map(browser, base, *, with_3d=False):
                 page.set_viewport_size({"width": width, "height": height})
                 wait_for_family_markers(page, "grozny", "khoi-village")
             page.evaluate("document.querySelector('#family-view').click()")
-            page.wait_for_function("familyAuthRequests.length === 4")
+            page.wait_for_function("familyPlacesRequests.length === 4")
             assert label.text_content() == 'Грозный'
-            page.evaluate("familyAuthRequests[3](false)")
+            page.evaluate("familyPlacesRequests[3](false)")
             status.get_by_text("Семейный вход отклонён").wait_for()
             dialog.get_by_role("button", name="Закрыть").click()
             page.evaluate("document.querySelector('#family-view').click()")
-            page.wait_for_function("familyAuthRequests.length === 5")
-            page.evaluate("familyAuthRequests[4](true)")
+            page.wait_for_function("familyPlacesRequests.length === 5")
+            page.evaluate("familyPlacesRequests[4](true)")
+            dialog.locator(".family-places").get_by_role("button", name="Грозный · Родное место", exact=True).wait_for()
+            dialog.locator(".family-places").get_by_role("button", name="Грозный · Место рождения", exact=True).wait_for()
+            dialog.locator(".family-places").get_by_role("button", name="Хой · Родное место", exact=True).wait_for()
             show_map.click()
             wait_for_family_markers(page, "grozny", "khoi-village")
             button.click()
@@ -174,8 +197,10 @@ def check_family_map(browser, base, *, with_3d=False):
             birth_mark.click()
             assert show_map.is_visible()
             dialog.get_by_role("button", name="Убрать отметку Грозный · Родное место").click()
-            assert show_map.is_hidden()
-            print("Family map: denied access, reopened dialog and session-only marks OK", flush=True)
+            show_map.wait_for(state="hidden")
+            assert page.evaluate("familyPlacesWrites.filter(mark => mark.id === 'grozny').length >= 2")
+            assert page.evaluate("familyPlacesWrites.every(mark => typeof mark.id === 'string' && typeof mark.kind === 'string' && typeof mark.present === 'boolean')")
+            print("Family map: delayed reads, saved marks, and mobile controls OK", flush=True)
     finally:
         context.close()
 

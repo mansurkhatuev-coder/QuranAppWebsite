@@ -1,5 +1,5 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v83';
+const CACHE_NAME = 'waydean-preview-shell-v84';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
@@ -36,17 +36,17 @@ const PRECACHE = [
   './waydean-preview-appearance.css?v=dropdown-polish-20261106-1',
   './waydean-preview-demo.css?v=demo-interface-2',
   './waydean-color-scheme.css?v=dark-default-20261103-1',
-  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2&family-export=20261119-1&whoami-restore=20261119-2&initial-tree=20261123-1&atlas=1&motion=20261124-1&private-shell=1&verified-family=1&private-photo=1&shared-route=1&family-install=1&account=4',
+  './waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2&family-export=20261119-1&whoami-restore=20261119-2&initial-tree=20261123-1&atlas=1&motion=20261124-1&private-shell=1&verified-family=1&private-photo=1&shared-route=1&family-install=1&account=5',
   './waydean-preview-appearance.mjs?v=dark-default-20261103-1',
   './waydean-preview-family-auth.mjs?v=family-handoff-1',
-  './waydean-preview-family-api.mjs?v=private-photo-1',
+  './waydean-preview-family-api.mjs?v=family-places-1',
   './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1',
   './waydean-preview-admin-api.mjs?v=private-photo-1',
   './waydean-preview-admin-controls.mjs?v=account-admin-controls-2',
   './waydean-admin-identity.mjs?v=1',
   './waydean-preview-whoami.mjs?v=atlas-family-1',
   './waydean-preview-account-history.mjs?v=1',
-  './waydean-preview-pwa.mjs?v=account-4',
+  './waydean-preview-pwa.mjs?v=account-5',
   './waydean-preview-private-photo.mjs?v=1',
   './waydean-preview-video-handoff.mjs?v=browser-export-1',
   './waydean-preview-model.mjs?v=person-card-gender-20261108-1',

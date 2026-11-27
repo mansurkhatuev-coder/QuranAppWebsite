@@ -62,6 +62,7 @@ import {
   verifyNekSession,
 } from './session.ts';
 import { createFamilyPasswordHash, passwordFingerprint, verifyFamilyPassword } from './password-hash.ts';
+import { isFamilyPlace } from '../../../atlas/family-geography.mjs';
 import {
   FAMILY_PASSWORD_MAX_LENGTH,
   familyPasswordLength,
@@ -1662,7 +1663,7 @@ Deno.serve(async (request) => {
 
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
-      action === 'status' || action === 'logout-family'
+      action === 'status' || action === 'logout-family' || action === 'family-places'
         ? Promise.resolve(null)
         : githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
     ]);
@@ -1696,6 +1697,26 @@ Deno.serve(async (request) => {
     }
     if (sessionPayload && await familySessionRevoked(sessionPayload.sessionKey)) {
       return jsonResponse({ error: 'Семейная сессия завершена. Войдите снова.' }, 401);
+    }
+    if (action === 'family-places') {
+      if (!sessionPayload) return jsonResponse({ error: 'Требуется действующий вход в древо.' }, 401);
+      if (treeDir === DEMO_TREE_DIR || access.deletedAt) {
+        return jsonResponse({ error: 'Семейные отметки для этого древа недоступны.' }, 403);
+      }
+      const block = editsBlockedForRole(access, sessionPayload.role);
+      const mark = body.mark;
+      if (mark !== undefined) {
+        if (block.blocked) return jsonResponse({ error: 'Семейные отметки доступны только для просмотра.' }, 403);
+        if (!isFamilyPlace(mark) || typeof mark.present !== 'boolean') {
+          return jsonResponse({ error: 'Выберите место и тип отметки из каталога.' }, 400);
+        }
+      }
+      const { data, error } = await supabaseService().rpc('drewo_family_places', {
+        p_tree_dir: treeDir,
+        ...(mark === undefined ? {} : { p_place_id: mark.id, p_kind: mark.kind, p_present: mark.present }),
+      });
+      if (error || !Array.isArray(data)) throw httpError('Семейные отметки временно недоступны.', 503);
+      return jsonResponse({ ok: true, treeDir, places: data, canEdit: !block.blocked });
     }
     let role: AuthRole | null = isWaydeanAdminRequest && !waydeanAdminLoad
       ? 'super'

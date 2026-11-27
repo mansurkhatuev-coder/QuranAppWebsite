@@ -1,4 +1,4 @@
-const FAMILY_ACTIONS = new Set(['family-load', 'photo-load', 'publish', 'vapid-public', 'subscribe', 'unsubscribe']);
+const FAMILY_ACTIONS = new Set(['family-load', 'family-places', 'photo-load', 'publish', 'vapid-public', 'subscribe', 'unsubscribe']);
 
 export function canEditFamilyTreeRole(role) {
   return role === 'editor' || role === 'super';
