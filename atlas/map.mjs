@@ -1,4 +1,4 @@
-import {Map,setWorkerUrl} from './vendor/maplibre-gl.mjs';
+import {LngLatBounds,Map,setWorkerUrl} from './vendor/maplibre-gl.mjs';
 import {groups,sites} from './catalog.mjs';
 import {createCameraController,focusCenterAtAltitude} from './camera.mjs';
 import {createAtlasMarkers} from './markers.mjs?v=family-2';
@@ -85,6 +85,22 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
    camera.focus({center:target,zoom,padding,elevation:0});
   };
   if(ready)action();else pendingCameraAction=action;
+ }
+ function fitFamilyPlaces(marks){
+  if(!ready)return;
+  const ids=new Set(marks.map(mark=>mark.id));
+  const places=markers.getEntries().filter(entry=>ids.has(entry.item.id));
+  if(places.length===1){
+   const [place]=places;
+   focusCoordinate(place.item.center,place.type==='city'?9.5:10.2);
+  }else if(places.length>1){
+   const placeBounds=new LngLatBounds();
+   for(const place of places)placeBounds.extend(place.item.center);
+   const fitted=map.cameraForBounds(placeBounds,{bearing:map.getBearing(),padding:48,maxZoom:9.5});
+   if(!fitted)return;
+   homeFitRemaining=0;homeFitVersion++;
+   camera.focus({...fitted,elevation:0});
+  }
  }
  function fitOverview({animate=false}={}){
   homeFitVersion++;
@@ -309,7 +325,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   home(padding=currentPadding){if(padding)setPadding(padding);const action=()=>fitOverview({animate:true});if(ready)action();else pendingCameraAction=action;},
   zoom(amount){if(!ready)return;zoomBy(amount,{duration:300,reducedMotion:reduce.matches});},
   setLayer(next){activeLayer=['all','groups','sites'].includes(next)?next:'all';updateMarkers();diagnostic?.refresh();},
-  setFamilyPlaces:marks=>markers.setFamilyPlaces(marks),
+  setFamilyPlaces:marks=>markers.setFamilyPlaces(marks),fitFamilyPlaces,
   setSelection:selection=>markers.setSelection(selection),
   setGroupPreview:(id,origin)=>markers.setPreview(id?{type:'group',id,origin}:null),
   setLabelOcclusion:rects=>markers.setOcclusionRects(rects),

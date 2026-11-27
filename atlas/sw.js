@@ -1,10 +1,10 @@
 // Only the public catalog shell is available offline. Invitations retain their query in the page.
-const cacheName = 'drewo-atlas-shell-v7';
+const cacheName = 'drewo-atlas-shell-v8';
 const shell = [
  './', '/nek/manifest.webmanifest', '/nek/icon-192.png', '/nek/icon-512.png', './style.css?v=f3463c6', './opening.css?v=f3463c6',
- './interface.css?v=20261126-2', './vendor/maplibre-gl.css',
+ './interface.css?v=20261127-2', './vendor/maplibre-gl.css',
  './assets/cormorant.css', './assets/source-sans.css', './assets/relief-overview.webp',
- './access.js?v=account-2', './app.mjs?v=20261127-1', './atlas-state.mjs?v=f3463c6',
+ './access.js?v=account-2', './app.mjs?v=20261127-2', './atlas-state.mjs?v=f3463c6',
  './viewport.mjs?v=f3463c6', './catalog.mjs', './media.mjs', './rivers.mjs',
  './settlements.mjs', './sheet.mjs', './entry-motion.mjs', './ambient-audio.mjs',
  '/drewo/waydean-preview-family-auth.mjs?v=family-logout-1',

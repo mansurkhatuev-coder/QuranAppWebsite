@@ -13,6 +13,7 @@ const shell=$('#atlas-shell');
 const state=createInitialState();
 const runtime={mapStatus:'loading'};
 let atlas=null;
+let activeFamilyPlaces=null;
 let publicSummary=null;
 let sheetController=null;
 let currentEntry=null;
@@ -538,7 +539,7 @@ function updateLayout(){
  const mapResized=lastMapSize&&(Math.abs(mapSize.width-lastMapSize.width)>1||Math.abs(mapSize.height-lastMapSize.height)>1);
  lastMapSize=mapSize;
  const visual=window.visualViewport;
- const elements=[$('#topbar'),$('#intro'),$('#overview-group-dock'),$('#explorer'),$('#camera-rail'),$('#map-topline'),$('#featured-place'),$('#view-menu').hidden?null:$('#view-menu')].filter(element=>{
+ const elements=[$('#topbar'),$('#intro'),$('#overview-group-dock'),$('#explorer'),$('#camera-rail'),$('#map-topline'),$('#featured-place'),$('#view-menu'),$('#exit-family-map')].filter(element=>{
   if(!element||element.hidden)return false;
   if(element.id==='camera-rail'&&state.view==='overview'&&mode.panel==='bottom')return false;
   const style=getComputedStyle(element),rect=element.getBoundingClientRect();
@@ -564,7 +565,8 @@ function updateLayout(){
  if(atlas?.isReady?.()){
   atlas.resize();
   const viewportChanged=Boolean(mapResized||previousPanel&&previousPanel!==measured.mode.panel);
-  if(viewportChanged&&!currentEntry?.manuallyMoved){
+  if(viewportChanged&&activeFamilyPlaces)atlas.fitFamilyPlaces(activeFamilyPlaces);
+  else if(viewportChanged&&!currentEntry?.manuallyMoved){
    if(state.view==='overview')atlas.home(measured.padding);
    else if(state.view==='river'&&state.riverId&&measured.mode.panel==='side')atlas.focusRiver(state.riverId,{focus:true,padding:measured.padding});
    else if(state.view==='city'&&state.cityId&&measured.mode.panel==='side')atlas.focusCity(state.cityId,{focus:true,padding:measured.padding});
@@ -634,11 +636,12 @@ async function showFamilyMap(){
    showMarkers:marks=>{
     if(!atlas){toast('Карта пока недоступна');return;}
     route({type:'ENTER_MAP_ONLY'},{replace:true});
+    activeFamilyPlaces=marks;
     atlas.setFamilyPlaces(marks);
     $('#exit-family-map').hidden=false;
-    const first=marks[0].id;
-    if(settlements.some(place=>place.id===first))atlas.focusCity(first);
-    else atlas.focusSite(first);
+    requestAnimationFrame(()=>{
+     if(activeFamilyPlaces===marks)atlas.fitFamilyPlaces(marks);
+    });
    },
    showPlace:place=>{if(place.coordinates)openCity(place.id);else openSite(place.id);},
    showTeip:(group,teip)=>route({type:'SELECT_TEIP',groupId:group.id,id:teip.id,sheet:'half'})
@@ -650,7 +653,8 @@ $('#family-view').addEventListener('click',()=>{
  void showFamilyMap();
 });
 function clearFamilyMarkers(){
- if($('#exit-family-map').hidden)return;
+ if(!activeFamilyPlaces)return;
+ activeFamilyPlaces=null;
  atlas?.setFamilyPlaces(null);$('#exit-family-map').hidden=true;
 }
 $('#exit-family-map').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
@@ -797,7 +801,7 @@ fetch('./data/public-summary.json',{cache:'no-cache'}).then(response=>{
 }).catch(()=>{});
 
 try{
- const {createAtlas}=await import('./map.mjs?v=family-2');
+ const {createAtlas}=await import('./map.mjs?v=family-3');
  atlas=await createAtlas({
   onHome:()=>route({type:'GO_HOME'},{replace:true}),
   onGroup:id=>openGroup(id),
@@ -820,6 +824,7 @@ try{
   atlas.setLayer(state.layer);atlas.setSelection(state.selectedEntity);
   scheduleViewport();
   requestAnimationFrame(()=>{
+  if(activeFamilyPlaces){atlas.fitFamilyPlaces(activeFamilyPlaces);return;}
   if(state.view==='group'&&state.groupId)atlas.setGroup(state.groupId,{focus:true,padding:lastViewport?.padding});
   else if(state.view==='river'&&state.riverId)atlas.focusRiver(state.riverId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});
   else if(state.view==='city'&&state.cityId)atlas.focusCity(state.cityId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});

@@ -60,8 +60,18 @@ def check(browser, base, width, height):
         context.close()
 
 
+def wait_for_family_markers(page, *ids):
+    page.wait_for_function("""ids => ids.every(id => {
+      const button = document.querySelector(`.is-family-marker:not([hidden])[data-marker-id="${id}"] button`);
+      if (!button) return false;
+      const rect = button.getBoundingClientRect();
+      return rect.width > 0 && rect.height > 0 &&
+        rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight;
+    })""", arg=list(ids))
+
+
 def check_family_map(browser, base, *, with_3d=False):
-    viewport = {"width": 1280, "height": 800} if with_3d else {"width": 390, "height": 844}
+    viewport = {"width": 1280, "height": 800} if with_3d else {"width": 320, "height": 568}
     context = browser.new_context(viewport=viewport, service_workers="block", reduced_motion="reduce")
     page = context.new_page()
     page.set_default_timeout(30000 if with_3d else 10000)
@@ -117,6 +127,10 @@ def check_family_map(browser, base, *, with_3d=False):
         birth_mark = dialog.get_by_role("button", name="Убрать отметку Грозный · Место рождения")
         assert birth_mark.is_visible()
         if with_3d:
+            form.locator('[name="place"]').select_option("khoi-village")
+            form.locator('[name="kind"]').select_option(label="Родное место")
+            form.get_by_role("button", name="Добавить отметку").click()
+            assert dialog.get_by_role("button", name="Убрать отметку Хой · Родное место").is_visible()
             page.locator("#map-status").get_by_text(re.compile("Атлас готов|Облегчённый рельеф")).wait_for(timeout=45000)
             show_map.click()
             marker = page.locator('[data-marker-id="grozny"]')
@@ -125,7 +139,11 @@ def check_family_map(browser, base, *, with_3d=False):
             label = marker.locator('.atlas-marker-label')
             label.wait_for()
             assert label.inner_text() == 'Грозный · Родное место, Место рождения'
-            assert page.locator('.atlas-marker-anchor:not([hidden])').count() == 1
+            wait_for_family_markers(page, "grozny", "khoi-village")
+            assert page.locator('.atlas-marker-anchor:not([hidden])').count() == 2
+            for width, height in [(390, 844), (844, 390), (viewport["width"], viewport["height"])]:
+                page.set_viewport_size({"width": width, "height": height})
+                wait_for_family_markers(page, "grozny", "khoi-village")
             page.evaluate("document.querySelector('#family-view').click()")
             page.wait_for_function("familyAuthRequests.length === 4")
             assert label.text_content() == 'Грозный'
@@ -136,12 +154,23 @@ def check_family_map(browser, base, *, with_3d=False):
             page.wait_for_function("familyAuthRequests.length === 5")
             page.evaluate("familyAuthRequests[4](true)")
             show_map.click()
+            wait_for_family_markers(page, "grozny", "khoi-village")
             button.click()
             page.locator("#place-detail").get_by_role("heading", name="Грозный").wait_for()
             assert page.locator('#exit-family-map').is_hidden()
             assert label.text_content() == 'Грозный'
             print("3D family map: labels, reauthorization and place details OK", flush=True)
         else:
+            selects = form.locator("select")
+            assert selects.count() == 2
+            for select in selects.all():
+                assert select.evaluate("e => parseFloat(getComputedStyle(e).fontSize)") >= 16
+            submit = form.get_by_role("button", name="Добавить отметку")
+            for control in [*selects.all(), submit]:
+                bounds = control.bounding_box()
+                assert bounds and bounds["width"] >= 44 and bounds["height"] >= 44
+            submit.scroll_into_view_if_needed()
+            assert dialog.evaluate("e => { const r=e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth; }")
             birth_mark.click()
             assert show_map.is_visible()
             dialog.get_by_role("button", name="Убрать отметку Грозный · Родное место").click()

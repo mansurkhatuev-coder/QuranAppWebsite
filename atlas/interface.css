@@ -386,9 +386,9 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
 .access-dialog { color-scheme: dark; width: min(420px, 92vw); overflow-y: auto; overscroll-behavior: contain; }
 .access-dialog h2 { padding-inline-end: 35px; }
 .access-dialog #login-panel { display: grid; gap: 8px; }
-.access-dialog input:not([type=checkbox]) {
+.access-dialog :is(input:not([type=checkbox]),select) {
  width: 100%; min-width: 0; min-height: 44px; padding: 8px 12px; border-radius: 8px;
- border: 1px solid #788c7d; background: #122d26; color: ivory;
+ border: 1px solid #788c7d; background: #122d26; color: ivory; font-size: 16px;
 }
 .access-dialog .password-field { display: flex; gap: 6px; }
 .access-dialog .remember { display: flex; gap: 8px; align-items: center; min-height: 44px; }
@@ -407,7 +407,7 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
 .access-dialog .password-field button { color: #eddaad; padding-inline: 6px; }
 .access-dialog #login-error { color: #ffcec2; }
 .family-place-form:not([hidden]), .family-places { display: grid; gap: 8px; }
-.family-place-form select { width: 100%; min-height: 44px; }
+.family-place-form label { display: grid; gap: 4px; min-width: 0; }
 .family-places button { color: inherit; text-align: start; min-height: 44px; }
 .family-places > div { display: flex; justify-content: space-between; gap: 8px; }
 body .atlas-marker-layer .is-family-marker .atlas-marker-label {
@@ -424,7 +424,7 @@ html[data-color-scheme=light] :is(.opening-dock,.view-menu,.info-dialog.access-d
  color-scheme: light; color: #243a31; background: #f0f1e8; border-color: #aeb9a9;
 }
 html[data-color-scheme=light] .opening-dock .opening-link,
-html[data-color-scheme=light] .access-dialog input:not([type=checkbox]) {
+html[data-color-scheme=light] .access-dialog :is(input:not([type=checkbox]),select) {
  background: #fcfcf5; color: #243a31; border-color: #b6c2b3;
 }
 html[data-color-scheme=light] :is(.access-dialog p,.access-dialog a:not(.access-primary),.access-dialog .dialog-close,
