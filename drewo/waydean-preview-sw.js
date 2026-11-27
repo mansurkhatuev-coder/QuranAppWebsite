@@ -1,10 +1,11 @@
 /* Local-only PWA worker. Its scope is the preview HTML, not legacy /drewo/. */
-const CACHE_NAME = 'waydean-preview-shell-v85';
+const CACHE_NAME = 'waydean-preview-shell-v86';
 const PAGE_URL = new URL('./waydean-preview.html', self.location.href);
 const PAGE_PATH = PAGE_URL.pathname;
 const PRECACHE = [
   './waydean-preview-bundle.css?v=20261124-2',
   '/assets/drewo-icons.svg',
+  '/assets/auth-lock.js?v=1',
   '/assets/drewo-motion.css?v=20261126-3',
   './waydean-preview.html',
   './waydean-preview.webmanifest',

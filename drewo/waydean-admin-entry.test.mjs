@@ -36,3 +36,11 @@ test('account preview shares manager auth while retaining the old Supabase sessi
     'the account gate must resolve before the family tree request'
   );
 });
+
+test('manager login uses the same local throttle as the admin console', () => {
+  assert.ok(previewPage.includes('../assets/auth-lock.js?v=1'), 'the preview must load the shared login throttle');
+  assert.match(previewScript, /const authLockScope = 'admin'/);
+  assert.match(previewScript, /authLock\?\.assertAllowed\(authLockScope\)/);
+  assert.match(previewScript, /authLock\.recordFailure\(authLockScope\)/);
+  assert.match(previewScript, /authLock\?\.clear\(authLockScope\)/);
+});

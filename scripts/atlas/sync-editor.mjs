@@ -12,6 +12,7 @@ const sections = [
  /<input id="waydeanAdminPassword"[^>]*>(?:\s*<label class="auth-remember"[^>]*>[^\n]*?<\/label>)?/,
  /<input id="waydeanFamilyPassword"[^>]*>(?:\s*<label class="auth-remember"[^>]*>[^\n]*?<\/label>)?/,
 ];
+const authLockScript = '<script src="../assets/auth-lock.js?v=1"></script>';
 for (const {treeDir} of registry.trees) {
  if (!/^drewo(?:-[a-z0-9-]+)?$/.test(treeDir)) throw new Error('Некорректный путь древа');
  const page = new URL(treeDir+'/index.html',root);
@@ -21,6 +22,11 @@ for (const {treeDir} of registry.trees) {
   const source = shared.match(section)?.[0];
   if (!source || !section.test(next)) throw new Error('Не найден раздел навигации в '+treeDir);
   next = next.replace(section,() => source);
+ }
+ if (!next.includes(authLockScript)) {
+  const anchor = '<script src="../assets/drewo-billing-banner.js?v=2"></script>';
+  if (!next.includes(anchor)) throw new Error('Не найдена точка подключения защиты входа в '+treeDir);
+  next = next.replace(anchor,() => anchor+'\n    '+authLockScript);
  }
  if (next === original) continue;
  if (!process.argv.includes('--write')) throw new Error('Обновите навигацию в '+treeDir+' с помощью --write');

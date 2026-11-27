@@ -3903,11 +3903,54 @@ function bindWaydeanAdminLogin() {
   const rememberInput = $('#waydeanAdminRemember');
   const errorMessage = $('#waydeanAdminLoginError');
   const submitButton = $('#waydeanAdminLoginSubmit');
+  const authLock = window.AuthLock;
+  const authLockScope = 'admin';
+  let authLockTimer = 0;
+
+  function renderAuthLockState() {
+    if (!authLock) return;
+    const state = authLock.getState(authLockScope);
+    if (submitButton) submitButton.disabled = state.locked;
+    if (state.locked || state.fails > 0) {
+      if (errorMessage) {
+        errorMessage.textContent = state.locked
+          ? state.message
+          : `Неверные данные для входа. Осталось попыток: ${state.attemptsLeft}`;
+        errorMessage.hidden = false;
+      }
+    } else if (/Слишком много попыток|Осталось попыток|Неверные данные для входа/.test(errorMessage?.textContent || '')) {
+      errorMessage.hidden = true;
+    }
+    if (state.locked && !authLockTimer) {
+      authLockTimer = window.setInterval(() => {
+        const current = authLock.getState(authLockScope);
+        if (current.locked) {
+          if (errorMessage) errorMessage.textContent = current.message;
+          return;
+        }
+        window.clearInterval(authLockTimer);
+        authLockTimer = 0;
+        renderAuthLockState();
+      }, 1000);
+    }
+  }
+
   restoreRememberedIdentifier(emailInput, rememberInput, ACCOUNT_EMAIL_KEY, { checkChoice: false });
+  renderAuthLockState();
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (errorMessage) errorMessage.hidden = true;
+    try {
+      authLock?.assertAllowed(authLockScope);
+    } catch (error) {
+      if (errorMessage) {
+        errorMessage.textContent = error?.message || 'Слишком много попыток. Подождите и попробуйте снова.';
+        errorMessage.hidden = false;
+      }
+      renderAuthLockState();
+      return;
+    }
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.textContent = 'Проверяем вход…';
@@ -3917,23 +3960,32 @@ function bindWaydeanAdminLogin() {
       await window.ensureWaydeanAdminSupabase?.();
       if (!drewoManagerAuth.isEnabled()) throw new Error('Supabase auth is unavailable');
       await drewoManagerAuth.signIn(emailInput.value.trim(), passwordInput.value, rememberInput?.checked);
+      authLock?.clear(authLockScope);
       rememberIdentifier(ACCOUNT_EMAIL_KEY, emailInput.value, rememberInput?.checked);
       passwordInput.value = '';
       window.location.reload();
     } catch (error) {
       passwordInput.value = '';
       if (errorMessage) {
-        errorMessage.textContent = /хранилище/i.test(error?.message || '')
-          ? error.message
-          : 'Не удалось войти. Проверьте email и пароль от раздела управления.';
+        if (/хранилище/i.test(error?.message || '')) {
+          errorMessage.textContent = error.message;
+        } else if (authLock) {
+          const state = authLock.recordFailure(authLockScope);
+          errorMessage.textContent = state.locked
+            ? state.message
+            : `Не удалось войти. Проверьте email и пароль от раздела управления. Осталось попыток: ${state.attemptsLeft}`;
+        } else {
+          errorMessage.textContent = 'Не удалось войти. Проверьте email и пароль от раздела управления.';
+        }
         errorMessage.hidden = false;
       }
+      renderAuthLockState();
       passwordInput.focus();
     } finally {
       if (submitButton) {
-        submitButton.disabled = false;
         submitButton.textContent = 'Войти и открыть древо';
       }
+      renderAuthLockState();
     }
   });
 }

@@ -525,7 +525,7 @@ import {
     }
   }
 
-  const AUTH_LOCK_SCOPE = 'trees';
+  const AUTH_LOCK_SCOPE = 'admin';
   let authLockTimer = null;
 
   function authLockApi() {
