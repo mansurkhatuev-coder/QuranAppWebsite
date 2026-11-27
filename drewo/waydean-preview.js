@@ -32,7 +32,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-6';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-7';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
@@ -49,6 +49,15 @@ const FIXTURE_PHOTOS = new Map([
 ]);
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const editorIcon = name => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('drewo-icon');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `/assets/drewo-icons.svg?v=20261127-arrows#${name}`);
+  svg.append(use);
+  return svg;
+};
 const drewoManagerAuth = createDrewoManagerAuth({ legacyAuth: () => window.AdminSupabase });
 const railPreferenceKey = 'waydean-preview:tree-actions:v2';
 const ui = {
@@ -828,7 +837,9 @@ function drawTree() {
   const hasActiveFilters = filters.min > 1 || filters.max < fullDataDepth || filters.photosOnly;
   const treeBack = $('#showFullTree');
   treeBack.hidden = mode === 'all-tree' && !hasActiveFilters;
-  treeBack.textContent = mode === 'all-tree' ? 'Сбросить фильтры' : '← Назад к полному древу';
+  const treeBackLabel = document.createElement('span');
+  treeBackLabel.textContent = mode === 'all-tree' ? 'Сбросить фильтры' : 'Назад к полному древу';
+  treeBack.replaceChildren(...(mode === 'all-tree' ? [] : [editorIcon('arrow-left')]), treeBackLabel);
   treeBack.title = mode === 'all-tree' ? 'Показать всех людей без фильтров' : 'Вернуться к полному древу';
   treeBack.setAttribute('aria-label', treeBack.title);
   const metrics = nodeMetrics();
@@ -1066,7 +1077,7 @@ function renderProfile(tab = 'info') {
   const selectedArrow = document.createElement('span');
   selectedArrow.className = 'mobile-selected-arrow';
   selectedArrow.setAttribute('aria-hidden', 'true');
-  selectedArrow.textContent = '›';
+  selectedArrow.append(editorIcon('chevron-right'));
   ui.mobileSelected.append(selectedCopy, selectedArrow);
   ui.mobileSelected.setAttribute('aria-label', `Открыть профиль: ${person.name}`);
   const parent = person.parentId ? byId.get(person.parentId) : null;
@@ -1123,7 +1134,9 @@ function renderProfile(tab = 'info') {
     bio.className = `person-sheet-bio${String(person.bio || '').trim() ? '' : ' is-empty'}`;
     bio.textContent = String(person.bio || '').trim() || 'Краткой биографии пока нет.';
     const branch = document.createElement('button');
-    branch.type = 'button'; branch.className = 'branch-button'; branch.textContent = 'Показать ветвь　›';
+    branch.type = 'button'; branch.className = 'branch-button';
+    const branchLabel = document.createElement('span'); branchLabel.textContent = 'Показать ветвь';
+    branch.append(branchLabel, editorIcon('chevron-right'));
     branch.addEventListener('click', () => setMode('branch'));
     const selfAction = document.createElement('button');
     selfAction.type = 'button';
@@ -3138,7 +3151,7 @@ function updateSearch(value) {
       teipLabel.title = teipLabel.textContent;
       copy.append(teipLabel);
     }
-    const arrow = document.createElement('span'); arrow.className = 'result-arrow'; arrow.textContent = '›'; button.append(arrow);
+    const arrow = document.createElement('span'); arrow.className = 'result-arrow'; arrow.append(editorIcon('chevron-right')); button.append(arrow);
     button.addEventListener('click', () => selectPerson(person.id));
     list.append(button);
   }

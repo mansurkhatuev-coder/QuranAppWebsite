@@ -160,6 +160,13 @@ dialog[open]::backdrop { animation: drewo-motion-fade var(--motion-standard) eas
  width: 19px; height: 19px; display: inline-block;
  vertical-align: middle; flex: none; pointer-events: none;
 }
+.show-full-tree { display: flex; align-items: center; gap: 8px; }
+.mobile-selected-arrow { display: flex; align-items: center; }
+.mobile-selected-arrow .drewo-icon,
+.result-arrow .drewo-icon,
+.branch-button > .drewo-icon { width: 17px; height: 17px; }
+.branch-button { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.result-arrow { display: flex; align-items: center; color: var(--gold); }
 :where(.graph-viewport,.maplibregl-canvas,.sheet-handle) {
  user-select: none; -webkit-user-select: none;
 }

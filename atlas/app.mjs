@@ -439,7 +439,7 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const detail=$('#place-detail');detail.replaceChildren();detail.hidden=false;
  $('#explorer').classList.add('has-place');shell.classList.add('has-place');document.body.classList.add('has-place');
  const toolbar=document.createElement('div');toolbar.className='detail-toolbar';
- const back=document.createElement('button');back.type='button';back.className='detail-back';back.textContent='← Назад';back.addEventListener('click',goBack);
+ const back=document.createElement('button');back.type='button';back.className='detail-back';back.append(icon('back'),document.createTextNode('Назад'));back.addEventListener('click',goBack);
  const close=document.createElement('button');close.type='button';close.className='detail-close';close.textContent='Закрыть';close.addEventListener('click',goBack);toolbar.append(back,close);
  const content=document.createElement('div');content.className='detail-content city-content';
  const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'Река':city.settlementType==='village'?'Селение':'Город';
@@ -448,7 +448,7 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
  const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла':'Источник координат';
  const sourceArrow=document.createElementNS('http://www.w3.org/2000/svg','svg');sourceArrow.setAttribute('aria-hidden','true');const sourceArrowUse=document.createElementNS('http://www.w3.org/2000/svg','use');sourceArrowUse.setAttribute('href','#i-arrow');sourceArrow.append(sourceArrowUse);source.append(sourceArrow);
- const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>document.querySelector('#create-tree').click());
+ const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.append(document.createTextNode('Создать родовое древо'),icon('arrow'));create.addEventListener('click',()=>document.querySelector('#create-tree').click());
  content.append(kicker,title,location,source,create);if(!isRiver){
   const panel=document.createElement('section');
   panel.id='settlement-summary';

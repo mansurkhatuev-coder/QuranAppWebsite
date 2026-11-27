@@ -43,7 +43,7 @@
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="./apple-touch-icon.png">
   <link rel="stylesheet" href="../drewo/waydean-preview-bundle.css?v=20261124-2">
-  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261126-3">
+  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261127-4">
 </head>
 <body class="waydean-preview">
   <main class="app-shell">
@@ -89,7 +89,7 @@
         <aside class="demo-mode-notice" id="demoModeNotice" hidden aria-label="Демонстрационный режим">
           <strong>Демо, не ваше древо</strong>
           <span>Вымышленные имена · без фото · до 90 человек · пароль не меняется</span>
-          <a class="demo-mode-atlas-link" href="/atlas/" target="_blank" rel="noopener">Открыть атлас происхождения <span aria-hidden="true">↗</span></a>
+          <a class="demo-mode-atlas-link" href="/atlas/" target="_blank" rel="noopener">Открыть атлас происхождения <svg class="drewo-icon" aria-hidden="true"><use href="/assets/drewo-icons.svg?v=20261127-arrows#arrow-up-right"/></svg></a>
         </aside>
         <div class="tree-loading-overlay" id="treeLoading" role="status" aria-live="polite">
           <div class="tree-loading-card">
@@ -113,7 +113,7 @@
           </div>
         </div>
         <div class="mode-label" id="modeLabel" aria-live="polite"></div>
-        <button class="show-full-tree" id="showFullTree" type="button" title="Вернуться к полному древу">← Назад к полному древу</button>
+        <button class="show-full-tree" id="showFullTree" type="button" title="Вернуться к полному древу"><svg class="drewo-icon" aria-hidden="true"><use href="/assets/drewo-icons.svg?v=20261127-arrows#arrow-left"/></svg><span>Назад к полному древу</span></button>
         <div class="graph-viewport" id="graphViewport" tabindex="0" title="Колесо мыши — масштаб; перетаскивание — перемещение" aria-label="Полотно древа. Колесо мыши меняет масштаб, перетаскивание перемещает древо; на телефоне масштаб меняется щипком.">
           <div class="graph-extent" id="graphExtent">
             <div class="graph" id="graph">
@@ -135,7 +135,7 @@
 
       <button class="mobile-selected" id="mobileSelected" type="button" aria-label="Открыть профиль выбранного человека"></button>
       <aside class="profile-panel" id="profilePanel" aria-label="Профиль выбранного человека"></aside>
-      <button class="profile-reopen" id="profileReopen" type="button" hidden aria-controls="profilePanel" aria-expanded="false" aria-label="Показать профиль выбранного человека" title="Показать профиль выбранного человека"><span aria-hidden="true">‹</span> Профиль</button>
+      <button class="profile-reopen" id="profileReopen" type="button" hidden aria-controls="profilePanel" aria-expanded="false" aria-label="Показать профиль выбранного человека" title="Показать профиль выбранного человека"><svg class="drewo-icon" aria-hidden="true"><use href="/assets/drewo-icons.svg?v=20261127-arrows#chevron-left"/></svg> Профиль</button>
     </section>
 
     <nav class="mobile-nav" aria-label="Мобильная навигация">
@@ -412,7 +412,7 @@
     <script src="../assets/auth-lock.js?v=1"></script>
   <script type="module">
     if (!['video-export', 'export-workshop'].includes(new URLSearchParams(window.location.search).get('view'))) {
-          import('../drewo/waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2&family-export=20261119-1&whoami-restore=20261119-2&initial-tree=20261123-1&atlas=1&motion=20261124-1&private-shell=1&verified-family=1&private-photo=1&shared-route=1&family-install=1&account=6');
+          import('../drewo/waydean-preview.js?v=lineage-whoami-retention-20261030-1&person-sheet=editor-actions-20261102-1&appearance=dark-default-20261103-1&header-badge-removed=20261102-1&export-workshop=20261103-1&family-auth=legacy-view-20261104-1&trees-cabinet-admin-only=20261105-1&person-actions=20261108-1&demo-interface=1&camera-pan=20261116-2&tree-pwa=20261119-2&fast-start=20261119-2&family-export=20261119-1&whoami-restore=20261119-2&initial-tree=20261123-1&atlas=1&motion=20261124-1&private-shell=1&verified-family=1&private-photo=1&shared-route=1&family-install=1&account=7');
     }
   </script>
 </body>
