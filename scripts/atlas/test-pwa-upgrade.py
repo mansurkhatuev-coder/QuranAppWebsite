@@ -118,11 +118,16 @@ def run(context, server):
       return true;
     }""")
     app.keyboard.press("Escape")
+    app.locator("#create-tree").click()
+    app.locator("#owner-account-register").click()
+    app.locator("#owner-account-dialog[open]").wait_for()
+    assert app.locator("#owner-account-dialog form.owner-form [name=email]").is_visible()
+    app.keyboard.press("Escape")
     app.locator("#opening-roots").click()
     app.locator("#catalog-row-shatoi").click()
     app.locator("#catalog-row-varand").click()
     assert urlsplit(app.url).fragment == "/teip/shatoi/varand"
-    print("Installed PWA identity, old shortcut, offline invitation and catalog, same-tab storage: OK")
+    print("Installed PWA identity, old shortcut, offline invitation, catalog and personal signup shell: OK")
 
 
 if __name__ == "__main__":

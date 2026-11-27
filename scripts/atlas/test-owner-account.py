@@ -150,6 +150,7 @@ def main():
                 assert page.evaluate("ownerMock.calls.find(call => call.name === 'drewo_plus_create_tree').args.p_atlas_group_id") is None
                 assert page.evaluate("ownerMock.calls.find(call => call.name === 'drewo_plus_create_tree').args.p_atlas_teip_id") is None
                 assert dialog.locator(".owner-tree-stats dd").nth(0).inner_text() == "1"
+                assert dialog.locator(".owner-tree-stats dd").count() == 3
 
                 dialog.get_by_role("button", name="Добавить родственника").click()
                 person_form = dialog.locator("form.owner-form")
@@ -159,6 +160,8 @@ def main():
                 person_form.get_by_role("button", name="Добавить").click()
                 dialog.locator(".owner-tree-stats dd").nth(0).get_by_text("2").wait_for()
                 assert dialog.locator(".owner-tree-stats dd").nth(1).inner_text() == "2"
+                assert dialog.locator(".owner-tree-stats dd").nth(2).inner_text() == "1"
+                assert dialog.locator(".owner-tree-stats dd").nth(3).inner_text() == "Зелим · 1980 г."
                 assert dialog.get_by_text("Зелим", exact=True).count() == 1
 
                 dialog.get_by_role("button", name="Выйти").click()

@@ -442,9 +442,9 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
  border: 0; color: #e7d5ab; background: transparent; text-align: center;
 }
 .owner-tree-stats { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 8px; margin: 0; }
-.owner-tree-stats > div { padding: 10px 12px; border: 1px solid #71887a66; border-radius: 8px; }
+.owner-tree-stats > div { min-width: 0; padding: 10px 12px; border: 1px solid #71887a66; border-radius: 8px; }
 .owner-tree-stats dt { color: #cad6ca; font-size: 12px; }
-.owner-tree-stats dd { margin: 2px 0 0; color: #f3e4bb; font: 500 24px/1.1 var(--atlas-serif); }
+.owner-tree-stats dd { margin: 2px 0 0; color: #f3e4bb; font: 500 24px/1.1 var(--atlas-serif); overflow-wrap: anywhere; }
 .owner-section-title { margin: 8px 0 0; font: 500 22px/1.15 var(--atlas-serif); }
 .owner-tree-list { display: grid; gap: 8px; margin: 0; padding-inline-start: 14px; list-style: none; }
 .owner-tree-list .owner-tree-list { margin-block: 8px 0; border-inline-start: 1px solid #cbb47a66; }

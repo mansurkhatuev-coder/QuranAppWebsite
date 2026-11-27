@@ -77,6 +77,25 @@ export function maxOwnerTreeDepth(people = []) {
   return maxDepth;
 }
 
+export function countOwnerTreeBranches(people = []) {
+  const byId = new Map(people.map(person => [String(person.id), person]));
+  const roots = people.filter(person => !person.parent_id || !byId.has(String(person.parent_id)));
+  return roots.reduce((count, root) => {
+    const directBranches = people.filter(person => String(person.parent_id) === String(root.id)).length;
+    return count + directBranches;
+  }, 0);
+}
+
+export function earliestKnownOwnerAncestor(people = []) {
+  let earliest = null;
+  for (const person of people) {
+    const born = Number(person.born);
+    if (!Number.isInteger(born) || born < 1 || born > 9999) continue;
+    if (!earliest || born < earliest.born) earliest = { id: person.id, name: person.name, born };
+  }
+  return earliest;
+}
+
 const make = (doc, tag, className, text) => {
   const node = doc.createElement(tag);
   if (className) node.className = className;
@@ -579,9 +598,18 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
     const origin = [groupName, teipName].filter(Boolean).join(' · ');
     const root = shell({ title: ownedTree.title, description: origin || 'Происхождение не указано — его можно добавить позже.' });
     const stats = make(documentRef, 'dl', 'owner-tree-stats');
-    const count = make(documentRef, 'div'); count.append(make(documentRef, 'dt', '', 'Людей'), make(documentRef, 'dd', '', new Intl.NumberFormat('ru-RU').format(people.length)));
-    const depth = make(documentRef, 'div'); depth.append(make(documentRef, 'dt', '', 'Поколений'), make(documentRef, 'dd', '', new Intl.NumberFormat('ru-RU').format(maxOwnerTreeDepth(people))));
-    stats.append(count, depth); root.append(stats);
+    const addStat = (label, value) => {
+      const item = make(documentRef, 'div');
+      item.append(make(documentRef, 'dt', '', label), make(documentRef, 'dd', '', value));
+      stats.append(item);
+    };
+    const numberFormat = new Intl.NumberFormat('ru-RU');
+    addStat('Людей', numberFormat.format(people.length));
+    addStat('Поколений', numberFormat.format(maxOwnerTreeDepth(people)));
+    addStat('Семейных ветвей', numberFormat.format(countOwnerTreeBranches(people)));
+    const earliestAncestor = earliestKnownOwnerAncestor(people);
+    if (earliestAncestor) addStat('Самый ранний предок', `${earliestAncestor.name} · ${earliestAncestor.born} г.`);
+    root.append(stats);
     root.append(make(documentRef, 'h3', 'owner-section-title', 'Родословная'));
     root.append(people.length ? buildPeopleTree() : make(documentRef, 'p', 'owner-private-note', 'Добавьте первого родственника, чтобы начать.'));
     const footer = make(documentRef, 'div', 'owner-account-actions');
@@ -678,6 +706,10 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
   async function open(mode = 'home') {
     openDialog();
     shell({ title: 'Загрузка аккаунта', description: 'Проверяю вход.' });
+    if (mode === 'register' && !activeUser) {
+      ownerAuthForm('register');
+      return;
+    }
     try {
       if (!activeUser) await resolveSession();
       if (activeUser) {

@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildOwnerTreeRequest,
+  countOwnerTreeBranches,
   createOwnerTree,
+  earliestKnownOwnerAncestor,
   maxOwnerTreeDepth,
   normalizeOwnerTreeInput,
   ownerAccountErrorMessage,
@@ -52,4 +54,17 @@ test('personal generation depth follows parent links and safely breaks malformed
     { id: 'a', parent_id: null }, { id: 'b', parent_id: 'a' }, { id: 'c', parent_id: 'b' }, { id: 'd', parent_id: null },
   ]), 3);
   assert.equal(maxOwnerTreeDepth([{ id: 'x', parent_id: 'y' }, { id: 'y', parent_id: 'x' }]), 2);
+});
+
+test('personal branch count and earliest known ancestor use only recorded parent and birth data', () => {
+  const people = [
+    { id: 'root', parent_id: null, name: 'Адам', born: null },
+    { id: 'branch-a', parent_id: 'root', name: 'Муса', born: 1820 },
+    { id: 'branch-b', parent_id: 'root', name: 'Иса', born: 1800 },
+    { id: 'unknown', parent_id: 'branch-a', name: 'Саид', born: null },
+  ];
+  assert.equal(countOwnerTreeBranches(people), 2);
+  assert.deepEqual(earliestKnownOwnerAncestor(people), { id: 'branch-b', name: 'Иса', born: 1800 });
+  assert.equal(countOwnerTreeBranches([{ id: 'only-person', parent_id: null }]), 0);
+  assert.equal(earliestKnownOwnerAncestor([{ id: 'root', name: 'Адам', born: null }]), null);
 });
