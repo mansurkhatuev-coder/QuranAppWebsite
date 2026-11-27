@@ -115,7 +115,10 @@ test('all eight legacy reader templates compile after private data removal', asy
   for (const path of paths) {
     const source = await readFile(new URL('../' + path, import.meta.url), 'utf8');
     const sanitized = secureLegacyReader(stripEmbeddedFamilyData(source));
+    assert.match(sanitized, /<head>\s*<meta name="referrer" content="no-referrer">/);
     assert.match(sanitized, /action: 'family-load', treeDir: TREE_DIR, sessionToken: token/);
+    assert.match(sanitized, /module\.familySessionRedirect\(/);
+    assert.doesNotMatch(sanitized, /\?nek=['"]\s*\+/);
     assert.match(sanitized, /if \(!nekSessionActive\) \{/);
     assert.doesNotMatch(sanitized, /fetch\('(?:family-tree|access)\.json|PHOTO_(?:PUBLIC|FALLBACK)_BASE|photo(?:Thumb|Full)(?:Fallback)?Url\(/);
     for (const match of sanitized.matchAll(/<script\b([^>]*)>([\s\S]*?)<\/script\s*>/gi)) {

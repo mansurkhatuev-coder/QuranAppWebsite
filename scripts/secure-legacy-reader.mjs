@@ -13,7 +13,8 @@ function range(source, start, end, replacement, label) {
 }
 export function secureLegacyReader(html) {
   if (!html.includes('function fetchRemoteTree()')) return html;
-  let s = once(html, 'var tree = TreeModel.markAllowAdd(JSON.parse(dataEl.textContent), NUTSU_ID);',
+  let s = once(html, '<head>', '<head>\n  <meta name="referrer" content="no-referrer">', 'referrer policy');
+  s = once(s, 'var tree = TreeModel.markAllowAdd(JSON.parse(dataEl.textContent), NUTSU_ID);',
     "var tree = TreeModel.markAllowAdd({ id: '__locked_placeholder__', name: '', sons: [] }, NUTSU_ID);", 'placeholder');
   s = range(s, '      function fetchAccessFile() {', '      function verifyLocalEditor(', `      function fetchAccessFile() {
         return callPublishApi({ action: 'status', treeDir: TREE_DIR })
@@ -67,6 +68,28 @@ export function secureLegacyReader(html) {
       }
 
 `, 'verified session');
+  s = once(s, "          var token = String(url.searchParams.get('nek') || '').trim();\n          if (!token) return '';\n          url.searchParams.delete('nek');\n          history.replaceState(null, '', url.pathname + url.search + url.hash);",
+    `          var hasFragmentToken = url.hash.startsWith('#nek=');
+          var fragmentToken = hasFragmentToken ? new URLSearchParams(url.hash.slice(1)).get('nek') : '';
+          var token = String(fragmentToken || url.searchParams.get('nek') || '').trim();
+          if (!hasFragmentToken && !url.searchParams.has('nek')) return '';
+          if (hasFragmentToken) url.hash = '';
+          url.searchParams.delete('nek');
+          history.replaceState(history.state, '', url.pathname + url.search + url.hash);`, 'session URL');
+  s = range(s, "          var token = String((data && data.sessionToken) || '');", '          storeNekToken(token);',
+    `          var token = String((data && data.sessionToken) || '').trim();
+          var treeDir = String((data && data.treeDir) || '');
+          if (!data || data.ok !== true || !token || !treeDir) throw new Error('Сервер не подтвердил семейный вход.');
+          if (treeDir !== TREE_DIR) {
+            return import('/drewo/waydean-preview-family-auth.mjs?v=family-handoff-1').then(function (module) {
+              var storage;
+              try { storage = window.sessionStorage; } catch (err) {}
+              var target = module.familySessionRedirect({ treeDir: treeDir, path: data.path, token: token, storage: storage });
+              window.location.assign(target);
+              return 'redirect';
+            });
+          }
+`, 'family login route');
   s = once(s, 'if (!session && !nekSessionActive) {', 'if (!nekSessionActive) {', 'local identity');
   s = range(s, "      setGateBusy('Загружаем древо…');\n      Promise.all([fetchRemoteTree(), fetchAccessFile()])", '    })();', `      setGateBusy('Проверяем доступ…');
       fetchAccessFile()
@@ -162,7 +185,7 @@ export function secureLegacyReader(html) {
         if (!nekSessionActive) return;
         var logoutToken = readNekToken();`, 'logout token');
   s = once(s, "        showToast('Вы вышли', 'success');", `        setGateBusy('Выходим…');
-        import('/drewo/waydean-preview-family-auth.mjs?v=family-logout-1').then(function (module) {
+        import('/drewo/waydean-preview-family-auth.mjs?v=family-handoff-1').then(function (module) {
           return module.revokeFamilySession({ endpoint: PUBLISH_URL, treeDir: TREE_DIR, token: logoutToken })
             .then(function (revoked) {
               if (!revoked) window.alert(module.FAMILY_LOGOUT_UNCONFIRMED);

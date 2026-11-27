@@ -91,6 +91,13 @@ export function storeFamilySession(storage, treeDir = DEFAULT_TREE_DIR, token = 
   }
 }
 
+export function familySessionRedirect({ treeDir, path, token, storage }) {
+  const target = safeTreePath(treeDir, path);
+  return storeFamilySession(storage, treeDir, token)
+    ? target
+    : `${target}#nek=${encodeURIComponent(token)}`;
+}
+
 export function readLegacyTreeViewSession(storage, now = Date.now(), treeDir = DEFAULT_TREE_DIR) {
   try {
     const value = JSON.parse(String(storage?.getItem(normalizeTreeDir(treeDir) + '-view-session') || ''));
@@ -173,7 +180,6 @@ export async function loginFamilySession({
   password,
   treeDir = DEFAULT_TREE_DIR,
   allowTreeRedirect = true,
-  origin = globalThis.location?.origin || 'https://waydean.ru',
   storage,
   fetcher = fetch
 }) {
@@ -199,11 +205,9 @@ export async function loginFamilySession({
       error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
       throw error;
     }
-    const targetPath = safeTreePath(targetTree, loginData.path);
-    const targetUrl = new URL(targetPath, origin);
-    targetUrl.searchParams.set('nek', token);
+    const redirectUrl = familySessionRedirect({ treeDir: targetTree, path: loginData.path, token, storage });
     storeFamilySession(storage, expectedTree, '');
-    return { redirect: true, redirectUrl: `${targetUrl.pathname}${targetUrl.search}` };
+    return { redirect: true, redirectUrl };
   }
 
   const session = await verifyFamilySession({ endpoint, treeDir: expectedTree, token, fetcher });

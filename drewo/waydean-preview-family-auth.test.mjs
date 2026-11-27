@@ -158,23 +158,30 @@ test('does not store a token when family credentials are rejected', async () => 
   assert.equal(readFamilySession(storage, 'drewo'), '');
 });
 
-test('redirects credentials for a different tree only to the server-resolved same-origin path', async () => {
-  const result = await loginFamilySession({
+test('hands off another family session via tab storage or a URL fragment', async () => {
+  const options = {
     endpoint: 'https://example.test/functions/publish-drewo',
     login: 'other',
     password: 'family-password',
     treeDir: 'drewo',
-    origin: 'https://waydean.ru',
     fetcher: async () => jsonResponse({
       ok: true,
       treeDir: 'other-tree',
       path: '/other-tree/',
       sessionToken: 'signed token'
     })
-  });
-  assert.deepEqual(result, {
+  };
+  const storage = memoryStorage();
+  storeFamilySession(storage, 'drewo', 'previous-token');
+  assert.deepEqual(await loginFamilySession({ ...options, storage }), {
     redirect: true,
-    redirectUrl: '/other-tree/?nek=signed+token'
+    redirectUrl: '/other-tree/'
+  });
+  assert.equal(readFamilySession(storage, 'other-tree'), 'signed token');
+  assert.equal(readFamilySession(storage, 'drewo'), '');
+  assert.deepEqual(await loginFamilySession(options), {
+    redirect: true,
+    redirectUrl: '/other-tree/#nek=signed%20token'
   });
 });
 
@@ -203,7 +210,6 @@ test('rejects a redirected family path that could leave the current site', async
     login: 'other',
     password: 'family-password',
     treeDir: 'drewo',
-    origin: 'https://waydean.ru',
     fetcher: async () => jsonResponse({
       ok: true,
       treeDir: 'other-tree',

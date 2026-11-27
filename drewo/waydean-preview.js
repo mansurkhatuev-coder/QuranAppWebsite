@@ -31,12 +31,12 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-3';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { FAMILY_LOGOUT_UNCONFIRMED, consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, revokeFamilySession, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-logout-1';
+import { FAMILY_LOGOUT_UNCONFIRMED, consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, revokeFamilySession, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-handoff-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=private-photo-1';
 import { createPrivatePhotoCache, photoResponseBlob } from './waydean-preview-private-photo.mjs?v=1';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
@@ -3968,7 +3968,6 @@ function bindWaydeanFamilyLogin() {
           password: passwordInput.value,
           treeDir: activeTreeDir,
           allowTreeRedirect: !demoMode,
-          origin: window.location.origin,
           storage: familySessionStorage()
         });
         if (!demoMode) rememberIdentifier(FAMILY_LOGIN_KEY, loginInput.value, rememberInput?.checked);
@@ -3979,8 +3978,11 @@ function bindWaydeanFamilyLogin() {
         }
         if (!result.stored) {
           const handoff = new URL(window.location.href);
-          handoff.searchParams.set('nek', result.sessionToken);
-          window.location.replace(`${handoff.pathname}${handoff.search}${handoff.hash}`);
+          handoff.searchParams.delete('nek');
+          handoff.searchParams.set('source', 'family');
+          handoff.hash = `nek=${encodeURIComponent(result.sessionToken)}`;
+          window.history.replaceState(window.history.state, '', handoff);
+          window.location.reload();
           return;
         }
         window.location.reload();
