@@ -219,7 +219,7 @@ function renderAggregateDashboard({group=null,teip=null,settlement=null,panel=$(
   const villages=new Set(places.map(place=>place.settlementId).filter(Boolean));
   if(villages.size)metrics.push(['Селения с объектами каталога',villages.size]);
  }else{
-  metrics.push(['Тухумы',groups.length],['Записи о тейпах',groups.reduce((n,g)=>n+g.teips.length,0)],['Исторические места',sites.length]);
+  metrics.push(['Тухумы в каталоге',groups.length],['Тейпы в каталоге',groups.reduce((n,g)=>n+g.teips.length,0)],['Исторические места',sites.length]);
  }
  const scope=teip?`teip/${group.id}/${teip.id}`:group?`group/${group.id}`:settlement?`city/${settlement.id}`:'project';
  const published=publicSummary?.scopes?.[scope];
@@ -229,18 +229,21 @@ function renderAggregateDashboard({group=null,teip=null,settlement=null,panel=$(
   }
   for(const [depth,count] of Object.entries(published.depth??{}))metrics.push([`Древ с глубиной ${depth} поколений`,count]);
  }
- if(settlement && !metrics.length){panel.hidden=true;return;}
- const grid=document.createElement('div');
- grid.className='aggregate-grid';
- for(const [label,value] of metrics){
-  const card=document.createElement('article');card.className='aggregate-metric';
-  const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
-  const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
-  card.append(name,amount);grid.append(card);
+ if(metrics.length){
+  const grid=document.createElement('div');grid.className='aggregate-grid';
+  for(const [label,value] of metrics){
+   const card=document.createElement('article');card.className='aggregate-metric';
+   const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
+   const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
+   card.append(name,amount);grid.append(card);
+  }
+  panel.append(grid);
  }
  const note=document.createElement('p');note.className='aggregate-privacy';
- note.textContent=published?`Сводка на ${publicSummary.date}. Размеры выборок показаны интервалами.`:teip?'В каталоге пока нет подтверждённых связей этого тейпа с родовыми селениями.':'Принадлежность тейпов и привязки мест уточняются.';
- panel.append(grid,note);
+ note.textContent=published
+  ?`Семейная сводка на ${publicSummary.date}. Количество древ и записей показано интервалами.`
+  :'Семейная сводка пока недоступна для этого раздела. Для публикации нужны согласие семей и достаточное число родословных.';
+ panel.append(note);
  panel.hidden=false;
 }
 
@@ -444,6 +447,9 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>document.querySelector('#create-tree').click());
  content.append(kicker,title,location,source,create);if(!isRiver){
   const panel=document.createElement('section');
+  panel.id='settlement-summary';
+  panel.className='aggregate-dashboard';
+  panel.setAttribute('aria-label',`Публичная сводка о населённом пункте ${city.name}`);
   renderAggregateDashboard({settlement:city,panel});
   content.append(panel);
  }
@@ -782,7 +788,11 @@ fetch('./data/public-summary.json',{cache:'no-cache'}).then(response=>{
 }).then(summary=>{
  if(summary.version!==1 || !summary.scopes)return;
  publicSummary=summary;
- if(state.view==='city')renderCity();
+ if(state.view==='city'){
+  const panel=$('#settlement-summary');
+  const settlement=settlements.find(item=>item.id===state.cityId);
+  if(panel&&settlement)renderAggregateDashboard({settlement,panel});
+ }
  if(['overview','explore','group','teip'].includes(state.view))renderAggregateDashboard({group:currentGroup(),teip:currentTeip()});
 }).catch(()=>{});
 
