@@ -1,4 +1,7 @@
 import { ACCOUNT_EMAIL_KEY, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
+import {
+  FAMILY_PASSWORD_MAX_LENGTH, familyPasswordLength, newFamilyPasswordError, normalizeFamilyPassword
+} from '../assets/drewo-family-password.mjs?v=1';
 
 (function initTreesHub() {
   const PWA_DISMISS_KEY = 'waydean_trees_pwa_dismiss_v1';
@@ -914,7 +917,7 @@ import { ACCOUNT_EMAIL_KEY, rememberIdentifier, restoreRememberedIdentifier } fr
     const treeDir = form.getAttribute('data-set-form') || '';
     const input = form.querySelector('.cred-set-input');
     const password = String(input?.value || '');
-    if (password.length < 2 || password.length > 64) {
+    if (password.length < 2 || familyPasswordLength(password) > FAMILY_PASSWORD_MAX_LENGTH) {
       credentialNote('Пароль семьи: от 2 до 64 символов');
       input?.focus();
       return;
@@ -1155,11 +1158,21 @@ import { ACCOUNT_EMAIL_KEY, rememberIdentifier, restoreRememberedIdentifier } fr
       return;
     }
 
+    const passwordInput = $('#create-password');
+    const password = normalizeFamilyPassword(passwordInput.value);
+    const passwordError = newFamilyPasswordError(password);
+    if (passwordError) {
+      err.hidden = false;
+      err.textContent = passwordError;
+      passwordInput.focus();
+      return;
+    }
+
     const payload = {
       title: $('#create-title')?.value.trim() || `Семья · ${$('#create-root').value.trim()}`.slice(0,80),
       login,
       code: login,
-      password: $('#create-password')?.value || '',
+      password,
       rootName: $('#create-root')?.value.trim() || '',
       ownership: $('#create-ownership')?.value || 'mine',
       note: $('#create-note')?.value.trim() || '',

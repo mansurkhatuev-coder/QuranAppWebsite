@@ -62,6 +62,12 @@ import {
   verifyNekSession,
 } from './session.ts';
 import { createFamilyPasswordHash, passwordFingerprint, verifyFamilyPassword } from './password-hash.ts';
+import {
+  FAMILY_PASSWORD_MAX_LENGTH,
+  familyPasswordLength,
+  newFamilyPasswordError,
+  normalizeFamilyPassword as normalizePassword,
+} from '../../../assets/drewo-family-password.mjs';
 
 import {
   LEGACY_VAULT_PATH,
@@ -91,12 +97,6 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
       'Cache-Control': 'no-store',
     },
   });
-}
-
-function normalizePassword(value: unknown) {
-  return String(value ?? '')
-    .trim()
-    .toLocaleLowerCase('ru-RU');
 }
 
 function normalizeTreeJson(raw: string): string {
@@ -1260,9 +1260,8 @@ Deno.serve(async (request) => {
       if (rootName.length < 1) {
         return jsonResponse({ error: 'Укажите имя корня' }, 400);
       }
-      if (password.length < 2 || password.length > 64) {
-        return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
-      }
+      const passwordError = newFamilyPasswordError(password);
+      if (passwordError) return jsonResponse({ error: passwordError }, 400);
 
       const treeDir = treeDirFromCode(code);
       try {
@@ -1420,7 +1419,7 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'Нет такого древа в реестре' }, 404);
       }
       const password = normalizePassword(body.password);
-      if (password.length < 2 || password.length > 64) {
+      if (password.length < 2 || familyPasswordLength(password) > FAMILY_PASSWORD_MAX_LENGTH) {
         return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
       }
 
@@ -2038,12 +2037,8 @@ Deno.serve(async (request) => {
       const denied = requireSuper('set-password');
       if (denied) return denied;
       const nextPassword = normalizePassword(body.newPassword);
-      if (nextPassword.length < 2) {
-        return jsonResponse({ error: 'Новый пароль слишком короткий' }, 400);
-      }
-      if (nextPassword.length > 64) {
-        return jsonResponse({ error: 'Новый пароль слишком длинный' }, 400);
-      }
+      const passwordError = newFamilyPasswordError(nextPassword);
+      if (passwordError) return jsonResponse({ error: passwordError }, 400);
       const next: AccessState = {
         ...access,
         passwordHash: await createFamilyPasswordHash(nextPassword),

@@ -1,5 +1,6 @@
 // Transform legacy readers only in the generated public artifact.
 import { photoPersonIdPattern } from '../supabase/functions/publish-drewo/private-photo.mjs';
+import { FAMILY_PASSWORD_MAX_LENGTH, FAMILY_PASSWORD_MIN_LENGTH } from '../assets/drewo-family-password.mjs';
 
 function once(source, anchor, replacement, label) {
   const first = source.indexOf(anchor);
@@ -193,6 +194,16 @@ export function secureLegacyReader(html) {
         }).catch(function () {
           window.alert('Вы вышли в этом браузере. Сервер не подтвердил завершение сессии.');
         }).finally(function () { window.location.reload(); });`, 'logout memory');
+  const passwordBounds = `minlength="${FAMILY_PASSWORD_MIN_LENGTH}" maxlength="${FAMILY_PASSWORD_MAX_LENGTH * 2}"`;
+  s = once(s, 'Новый обычный пароль\n          <input id="admin-new-password" type="password" autocomplete="new-password" required="">',
+    `Новый пароль семьи (${FAMILY_PASSWORD_MIN_LENGTH}–${FAMILY_PASSWORD_MAX_LENGTH} символа)
+          <input id="admin-new-password" type="password" autocomplete="new-password" ${passwordBounds} required>`, 'password length');
+  s = once(s, 'id="admin-new-password2" type="password" autocomplete="new-password" required=""',
+    `id="admin-new-password2" type="password" autocomplete="new-password" ${passwordBounds} required`, 'password repeat length');
+  s = once(s, ".then(function () {\n              showToast('Обычный пароль изменён', 'success');",
+    `.then(function (data) {
+              if (data && data.treeDir === TREE_DIR && data.sessionToken) storeNekToken(data.sessionToken);
+              showToast('Пароль семьи изменён', 'success');`, 'password replacement session');
   s = s.replace(/^\s*var PHOTO_(?:PUBLIC|FALLBACK)_BASE = [^\n]*\n/gm, '\n');
   if (/fetch\('(?:family-tree|access)\.json|PHOTO_(?:PUBLIC|FALLBACK)_BASE|photo(?:Thumb|Full)(?:Fallback)?Url\(/.test(s)) throw new Error('Legacy reader: remaining public data reference');
   return s;

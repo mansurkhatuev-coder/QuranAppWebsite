@@ -204,8 +204,9 @@
         <p class="field-hint">Адрес для приглашений <code id="create-path-preview">/t/…</code></p>
         <label>
           Пароль семьи
-          <input id="create-password" name="password" type="password" maxlength="64" required minlength="2" autocomplete="new-password" inputmode="text" />
+          <input id="create-password" name="password" type="password" maxlength="128" required minlength="15" autocomplete="new-password" inputmode="text" aria-describedby="create-password-hint" />
         </label>
+        <p class="field-hint" id="create-password-hint">От 15 до 64 символов. Можно использовать фразу из нескольких слов.</p>
         <label>
           Чей род
           <select id="create-ownership" name="ownership">
@@ -230,6 +231,6 @@
     <script src="./billing-config.js?v=1"></script>
     <script src="../assets/drewo-billing.js?v=1"></script>
     <script src="./supabase-config.js?v=2"></script>
-    <script type="module" src="./trees.js?v=15"></script>
+    <script type="module" src="./trees.js?v=16"></script>
   </body>
 </html>

@@ -1,10 +1,10 @@
 /* Trees PWA — cache only the public application shell. */
-const CACHE = 'waydean-trees-v11';
+const CACHE = 'waydean-trees-v12';
 const PRECACHE = [
   './', './index.html', './manifest.webmanifest',
-  './trees.css?v=11', './trees.js?v=15',
+  './trees.css?v=11', './trees.js?v=16',
   './icon-192.png', './icon-512.png',
-  '../assets/drewo-motion.css?v=20261126-3', '../assets/drewo-auth-preferences.mjs',
+  '../assets/drewo-motion.css?v=20261126-3', '../assets/drewo-auth-preferences.mjs', '../assets/drewo-family-password.mjs?v=1',
   '../assets/auth-lock.js?v=1', './billing-config.js?v=1',
   '../assets/drewo-billing.js?v=1', './supabase-config.js?v=2',
 ];

@@ -118,6 +118,8 @@ test('all eight legacy reader templates compile after private data removal', asy
     assert.match(sanitized, /<head>\s*<meta name="referrer" content="no-referrer">/);
     assert.match(sanitized, /action: 'family-load', treeDir: TREE_DIR, sessionToken: token/);
     assert.match(sanitized, /module\.familySessionRedirect\(/);
+    assert.match(sanitized, /id="admin-new-password"[^>]+minlength="15" maxlength="128"/);
+    assert.match(sanitized, /data\.treeDir === TREE_DIR && data\.sessionToken\) storeNekToken\(data\.sessionToken\);/);
     assert.doesNotMatch(sanitized, /\?nek=['"]\s*\+/);
     assert.match(sanitized, /if \(!nekSessionActive\) \{/);
     assert.doesNotMatch(sanitized, /fetch\('(?:family-tree|access)\.json|PHOTO_(?:PUBLIC|FALLBACK)_BASE|photo(?:Thumb|Full)(?:Fallback)?Url\(/);

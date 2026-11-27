@@ -7,7 +7,7 @@ import {
 } from './waydean-preview-camera.mjs?v=camera-pan-20261116-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
 import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=private-photo-1';
-import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
+import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-2';
 import { accountPublishButtonState, buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
@@ -31,7 +31,7 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-3';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-4';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
