@@ -28,18 +28,9 @@ export type NekSessionPayload = {
   treeDir: string;
   role: 'editor' | 'super';
   exp: number; // unix ms
-  /** Short fingerprint of the family password at sign time — see passwordFingerprint. */
+  /** Fingerprint of the stored password record at sign time. */
   pwdFp: string;
 };
-
-/**
- * Ties a session to the password that created it: changing the family password
- * changes the fingerprint, so old tokens stop verifying.
- */
-export function passwordFingerprint(passwordHash?: string | null): string {
-  const hash = String(passwordHash ?? '').toLowerCase();
-  return /^[a-f0-9]{8,}$/.test(hash) ? hash.slice(0, 8) : 'nopwhash';
-}
 
 export async function signNekSession(
   payload: NekSessionPayload,

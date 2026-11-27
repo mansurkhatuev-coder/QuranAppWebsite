@@ -58,10 +58,10 @@ import { configureWebPushFromEnv, notifyAddedPeople } from './push-send.ts';
 import type { DrewoTreeRow, PushSubRow } from './push-notify.ts';
 import {
   NEK_SESSION_TTL_MS,
-  passwordFingerprint,
   signNekSession,
   verifyNekSession,
 } from './session.ts';
+import { createFamilyPasswordHash, passwordFingerprint, verifyFamilyPassword } from './password-hash.ts';
 
 import {
   LEGACY_VAULT_PATH,
@@ -749,8 +749,8 @@ function parseAccess(raw?: string): AccessState {
   if (!raw) return base;
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.passwordHash === 'string' && /^[a-f0-9]{64}$/i.test(parsed.passwordHash)) {
-      base.passwordHash = parsed.passwordHash.toLowerCase();
+    if (parsed.passwordHash != null && parsed.passwordHash !== '') {
+      base.passwordHash = typeof parsed.passwordHash === 'string' ? parsed.passwordHash : 'invalid';
     }
     base.locked = parsed.locked === true;
     if (typeof parsed.lockedReason === 'string') {
@@ -789,10 +789,6 @@ function serializeAccess(access: AccessState) {
 
 type AuthRole = 'editor' | 'super';
 
-async function hashPassword(normalized: string) {
-  return fingerprintText(`drewo-pw:${normalized}`);
-}
-
 async function resolveRole(
   password: unknown,
   treeDir: TreeDir,
@@ -802,9 +798,8 @@ async function resolveRole(
   if (!given) return null;
   const superPw = superPasswordValue(treeDir);
   if (superPw && given === superPw) return 'super';
-  if (access.passwordHash) {
-    const hashed = await hashPassword(given);
-    return hashed === access.passwordHash ? 'editor' : null;
+  if (access.passwordHash !== null) {
+    return await verifyFamilyPassword(given, access.passwordHash) ? 'editor' : null;
   }
   return given === fallbackEditorPassword(treeDir) ? 'editor' : null;
 }
@@ -1317,7 +1312,7 @@ Deno.serve(async (request) => {
         rootName,
         treeJson,
       });
-      const passwordHash = await hashPassword(password);
+      const passwordHash = await createFamilyPasswordHash(password);
       const sessionToken = await signNekSession({
         treeDir, role: 'editor', exp: Date.now() + NEK_SESSION_TTL_MS,
         pwdFp: passwordFingerprint(passwordHash),
@@ -2051,7 +2046,7 @@ Deno.serve(async (request) => {
       }
       const next: AccessState = {
         ...access,
-        passwordHash: await hashPassword(nextPassword),
+        passwordHash: await createFamilyPasswordHash(nextPassword),
       };
 
       const meta = registryEntryFor(registry, treeDir);

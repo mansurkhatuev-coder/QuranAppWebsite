@@ -1,5 +1,6 @@
 import { assertEquals, assertNotEquals } from 'https://deno.land/std@0.224.0/assert/mod.ts';
-import { passwordFingerprint, signNekSession, verifyNekSession } from './session.ts';
+import { signNekSession, verifyNekSession } from './session.ts';
+import { passwordFingerprint } from './password-hash.ts';
 
 const HASH_A = 'a1b2c3d4'.repeat(8); // 64 hex chars
 const HASH_B = 'f9e8d7c6'.repeat(8);
@@ -72,7 +73,7 @@ Deno.test('passwordFingerprint is 8 hex chars of the hash', () => {
 Deno.test('passwordFingerprint falls back when no hash is stored', () => {
   assertEquals(passwordFingerprint(null), 'nopwhash');
   assertEquals(passwordFingerprint(''), 'nopwhash');
-  assertEquals(passwordFingerprint('not-a-hash'), 'nopwhash');
+  assertNotEquals(passwordFingerprint('not-a-hash'), 'nopwhash');
 });
 
 Deno.test('session signed under an old password is rejected', async () => {
