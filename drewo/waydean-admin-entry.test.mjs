@@ -55,6 +55,7 @@ test('all registered family pages keep manager remember, local throttle, and log
     assert.ok(page.includes('../assets/auth-lock.js?v=1'), `${treeDir} must load the manager login throttle`);
     assert.ok(page.includes('id="familyLogout"'), `${treeDir} must include family logout`);
     assert.ok(page.includes('id="switchAccount"'), `${treeDir} must include account switching`);
-    assert.ok(page.includes('account=7'), `${treeDir} must load the current shared editor`);
+    assert.ok(page.includes('account=8'), `${treeDir} must load the current shared editor`);
+    assert.ok(page.includes('waydean-preview-bundle.css?v=20261127-hover-3'), `${treeDir} must load the current shared styles`);
   }
 });

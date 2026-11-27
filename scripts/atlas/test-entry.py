@@ -73,6 +73,40 @@ def check(browser, base, width, height):
         context.close()
 
 
+def check_hover_media(browser, base, *, touch):
+    viewport = {"width": 390, "height": 844} if touch else {"width": 1280, "height": 800}
+    context = browser.new_context(viewport=viewport, is_mobile=touch, has_touch=touch,
+                                 reduced_motion="reduce", service_workers="block")
+    page = context.new_page()
+    page.set_default_timeout(10000)
+    context.route("**/*", lambda route: route.continue_() if route.request.url.startswith(base + "/") else route.abort())
+    try:
+        page.goto(base + "/atlas/", wait_until="domcontentloaded")
+        create_tree = page.locator("#create-tree")
+        create_tree.wait_for()
+        assert create_tree.is_visible()
+        media = page.evaluate("({hover: matchMedia('(hover: hover)').matches, fine: matchMedia('(pointer: fine)').matches, none: matchMedia('(hover: none)').matches, coarse: matchMedia('(pointer: coarse)').matches})")
+        if touch:
+            assert media["none"] and media["coarse"], media
+        else:
+            assert media["hover"] and media["fine"], media
+        before = create_tree.evaluate("e => getComputedStyle(e).backgroundColor")
+        create_tree.hover()
+        after = create_tree.evaluate("e => getComputedStyle(e).backgroundColor")
+        assert (before == after) if touch else (before != after), (before, after, media)
+        preview = context.new_page()
+        preview.goto(base + "/drewo/", wait_until="domcontentloaded")
+        zoom_in = preview.locator("#zoomIn")
+        zoom_in.wait_for()
+        before = zoom_in.evaluate("e => ({background:getComputedStyle(e).backgroundColor, border:getComputedStyle(e).borderColor, color:getComputedStyle(e).color, shadow:getComputedStyle(e).boxShadow})")
+        zoom_in.hover()
+        after = zoom_in.evaluate("e => ({background:getComputedStyle(e).backgroundColor, border:getComputedStyle(e).borderColor, color:getComputedStyle(e).color, shadow:getComputedStyle(e).boxShadow})")
+        assert (before == after) if touch else (before != after), (before, after, media)
+        print(f"Hover media ({'touch' if touch else 'mouse'}) in Atlas and Waydean: OK", flush=True)
+    finally:
+        context.close()
+
+
 def wait_for_family_markers(page, *ids):
     page.wait_for_function("""ids => ids.every(id => {
       const button = document.querySelector(`.is-family-marker:not([hidden])[data-marker-id="${id}"] button`);
@@ -273,6 +307,9 @@ if __name__ == "__main__":
                 if not args.family_3d:
                     for width, height in [(320, 568), (390, 844), (844, 390), (768, 1024), (1280, 800)]:
                         check(browser, base, width, height)
+                    if args.browser == "chromium":
+                        check_hover_media(browser, base, touch=True)
+                        check_hover_media(browser, base, touch=False)
                 check_family_map(browser, base, with_3d=args.family_3d)
                 browser.close()
         finally:

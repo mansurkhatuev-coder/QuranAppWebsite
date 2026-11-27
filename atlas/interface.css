@@ -115,8 +115,10 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
  color: #182c23;
 }
 
-.opening-dock .opening-search:hover {
- background: #efdaab;
+@media (hover: hover) and (pointer: fine) {
+ .opening-dock .opening-search:hover {
+  background: #efdaab;
+ }
 }
 
 .opening-search small {
@@ -136,10 +138,12 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
  color: var(--opening-ink);
 }
 
-.opening-dock .opening-link:hover,
-.opening-dock .opening-create:hover {
- border-color: #cfb67b8a;
- background: #244437;
+@media (hover: hover) and (pointer: fine) {
+ .opening-dock .opening-link:hover,
+ .opening-dock .opening-create:hover {
+  border-color: #cfb67b8a;
+  background: #244437;
+ }
 }
 
 .opening-link small {

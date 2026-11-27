@@ -18,13 +18,13 @@
   }
 }
 
-body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node:hover,
 body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node:focus-visible,
 body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node.selected {
   border-color: rgba(255, 225, 140, .96);
   background: linear-gradient(135deg, rgba(27, 31, 25, .66), rgba(11, 16, 15, .46));
   box-shadow: 0 0 0 1px rgba(223, 169, 58, .68), 0 0 22px rgba(255, 195, 76, .42), 0 10px 30px rgba(0, 0, 0, .52), inset 0 1px 0 rgba(255, 255, 255, .2);
 }
+@media (hover: hover) and (pointer: fine) { body:not(.synthetic-fixture) .graph[data-lod="detail"] .person-node:hover { border-color: rgba(255, 225, 140, .96); background: linear-gradient(135deg, rgba(27, 31, 25, .66), rgba(11, 16, 15, .46)); } }
 
 body:not(.synthetic-fixture) .graph[data-lod="detail"] .node-avatar {
   border-color: rgba(221, 193, 127, .72);

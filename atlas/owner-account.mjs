@@ -143,6 +143,7 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
   let people = [];
   let personPlaces = [];
   let actionButton = null;
+  let returnFocusTarget = null;
   let requestBusy = false;
   let sdkPromise = null;
 
@@ -246,6 +247,15 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
     if (typeof dialog.close === 'function' && dialog.open) dialog.close();
     else dialog.hidden = true;
   }
+
+  dialog.addEventListener('close', () => {
+    const target = returnFocusTarget;
+    returnFocusTarget = null;
+    if (!target?.isConnected || target.disabled || target.getAttribute('aria-hidden') === 'true') return;
+    requestAnimationFrame(() => {
+      if (target.isConnected && !target.disabled && target.getClientRects().length) target.focus({ preventScroll: true });
+    });
+  });
 
   function resetContent() { content.replaceChildren(); }
 
@@ -879,6 +889,10 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
   }
 
   async function open(mode = 'home') {
+    const opener = documentRef.activeElement;
+    if (opener && opener !== dialog && !dialog.contains(opener) && typeof opener.focus === 'function') {
+      returnFocusTarget = opener;
+    }
     openDialog();
     shell({ title: 'Загрузка аккаунта', description: 'Проверяю вход.' });
     if (mode === 'register' && !activeUser) {

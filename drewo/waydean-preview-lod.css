@@ -38,19 +38,26 @@
   box-shadow: 0 0 0 1px #d9ad5855, 0 0 8px #d5a84642;
 }
 .graph[data-lod="compact"] .person-node.dimmed { filter: none; opacity: .45; }
-.graph[data-lod="compact"] .person-node:hover,
 .graph[data-lod="compact"] .person-node:focus-visible {
   border-color: transparent;
   background: transparent;
   box-shadow: none;
   filter: none;
 }
-.graph[data-lod="compact"] .person-node:hover::after,
+@media (hover: hover) and (pointer: fine) {
+.graph[data-lod="compact"] .person-node:hover {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  filter: none;
+}
+}
 .graph[data-lod="compact"] .person-node:focus-visible::after {
   border-color: #ffe18c;
   box-shadow: 0 0 8px #ffc34c99;
   opacity: 1;
 }
+@media (hover: hover) and (pointer: fine) { .graph[data-lod="compact"] .person-node:hover::after { border-color: #ffe18c; box-shadow: 0 0 8px #ffc34c99; opacity: 1; } }
 
 /* Keep the same compact marker for every person; the selected lineage stays visible in its connectors. */
 

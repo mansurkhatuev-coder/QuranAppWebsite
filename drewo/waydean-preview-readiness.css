@@ -11,6 +11,7 @@
 .status-missing{background:#9b7864}
 .local-status-links{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:9px 0 0 17px}
 .local-status-links a{padding:8px 9px;border:1px solid #d0a95138;border-radius:6px;background:#ffffff06;color:#e7d39e;font:10px/1.35 var(--sans);text-decoration:none}
-.local-status-links a:hover,.local-status-links a:focus-visible{border-color:#e2bd68;background:#d5a94b14;outline:none}
+.local-status-links a:focus-visible{border-color:#e2bd68;background:#d5a94b14;outline:none}
+@media (hover: hover) and (pointer: fine){.local-status-links a:hover{border-color:#e2bd68;background:#d5a94b14;outline:none}}
 .local-status-footnote{padding-top:10px;border-top:1px solid #ffffff17;color:#827d70;font-size:10px}
 @media(max-width:700px){.local-status-popover{max-height:72dvh;padding:14px}.local-status-links{grid-template-columns:1fr}.local-status-group{padding:9px 0}.local-status-group p{font-size:10px}}
