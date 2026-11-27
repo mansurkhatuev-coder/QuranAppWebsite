@@ -97,4 +97,4 @@ git diff --check
 
 ## Статус PR
 
-Последняя live-проверка GitHub до текущего пакета: PR #262 открыт, не слит и mergeable; PR #263 уже слит в эту ветку. После отправки текущего пакета обновить описание PR и перед финальным одобрением заново проверить live SHA, checks, reviews и review threads. Production/Auth и live family data не менялись.
+PR #262 остаётся открытым и не слитым; PR #263 уже включён в ветку. После отправки пакета описание PR обновлено. Точный live SHA, CI checks, reviews и review threads нужно перечитать перед финальным одобрением. Production/Auth и live family data не менялись.
