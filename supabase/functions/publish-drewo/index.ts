@@ -811,6 +811,18 @@ async function resolveRole(
 
 const AUTO_BACKUP_KEEP = 30;
 
+async function familySessionRevoked(sessionKey: string, revokeUntil?: number) {
+  const db = supabaseService();
+  const { data, error } = await db.rpc('drewo_family_session', {
+    p_session_key: sessionKey,
+    p_revoke_until: revokeUntil,
+  });
+  if (error || typeof data !== 'boolean') {
+    throw httpError('Проверка семейной сессии временно недоступна. Попробуйте позже.', 503);
+  }
+  return data;
+}
+
 async function reservePasswordAttempt(subject: string, request: Request) {
   const keys = await passwordBudgetKeys(sessionSecret(), subject, passwordClientAddress(request.headers));
   const db = supabaseService();
@@ -1656,7 +1668,9 @@ Deno.serve(async (request) => {
 
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
-      action === 'status' ? Promise.resolve(null) : githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
+      action === 'status' || action === 'logout-family'
+        ? Promise.resolve(null)
+        : githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
     ]);
     const access = parseAccess(accessFile?.content);
     const manifest = parseManifest(manifestFile?.content);
@@ -1671,22 +1685,27 @@ Deno.serve(async (request) => {
       return jsonResponse({ ok: true, treeDir, ignored: true });
     }
 
-    // A valid session token from `login-tree` replaces the password for this tree.
-    // Anything else (missing, expired, wrong tree, password changed since) falls
-    // back to the password check.
-    const rawSessionToken = waydeanAdminPublish
+    const rawSessionToken = isWaydeanAdminRequest
       ? ''
       : typeof body.sessionToken === 'string' ? body.sessionToken.trim() : '';
-    const sessionPayload = rawSessionToken
+    const verifiedSession = rawSessionToken
       ? await verifyNekSession(
           rawSessionToken,
           sessionSecret(),
           passwordFingerprint(access.passwordHash)
         )
       : null;
+    const sessionPayload = verifiedSession?.treeDir === treeDir ? verifiedSession : null;
+    if (action === 'logout-family') {
+      if (sessionPayload) await familySessionRevoked(sessionPayload.sessionKey, sessionPayload.exp);
+      return jsonResponse({ ok: true });
+    }
+    if (sessionPayload && await familySessionRevoked(sessionPayload.sessionKey)) {
+      return jsonResponse({ error: 'Семейная сессия завершена. Войдите снова.' }, 401);
+    }
     let role: AuthRole | null = isWaydeanAdminRequest && !waydeanAdminLoad
       ? 'super'
-      : sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
+      : sessionPayload?.role ?? null;
 
     // Photo reads always require a verified tree session or the account-admin gate.
     if (action === 'photo-load' && !role) {
@@ -1715,7 +1734,8 @@ Deno.serve(async (request) => {
         billing: lock.billing,
         deletedAt: lock.deletedAt,
         superConfigured,
-        sessionToken: await signNekSession(
+        // Keep the session identity and expiry fixed across repeated checks.
+        sessionToken: sessionPayload ? rawSessionToken : await signNekSession(
           {
             treeDir,
             role,

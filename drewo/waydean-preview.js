@@ -31,12 +31,12 @@ import {
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-1';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-2';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=verified-family-1';
+import { FAMILY_LOGOUT_UNCONFIRMED, consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, revokeFamilySession, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-logout-1';
 import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=private-photo-1';
 import { createPrivatePhotoCache, photoResponseBlob } from './waydean-preview-private-photo.mjs?v=1';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
@@ -4002,36 +4002,44 @@ function bindWaydeanFamilyLogin() {
 
 }
 
+let accountExitPending = false;
+
 async function leaveEditorAccount(switchAccount) {
+  if (accountExitPending || (!familyPreview && !accountAdminAccess)) return;
   if (editStatus === 'saving') {
     announce('Дождитесь окончания сохранения.');
     return;
   }
   if (hasUncommittedDraft() && !window.confirm('На сайте есть несохранённые правки. Выйти из древа?')) return;
 
+  accountExitPending = true;
   const url = new URL(location.href);
   url.hash = '';
   for (const key of ['nek', 'invite', 'person', 'switch']) url.searchParams.delete(key);
   url.searchParams.set('state', 'all-tree');
+  let revocation;
   if (familyPreview) {
+    const token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
     clearFamilyAccess(activeTreeDir);
     familySessionTokenMemory = '';
+    const endpoint = document.querySelector('meta[name="waydean-publish-api"]')?.content?.trim();
+    revocation = revokeFamilySession({ endpoint, treeDir: activeTreeDir, token });
     url.searchParams.set('source', 'family');
   } else if (accountAdminAccess) {
     try {
       await window.AdminSupabase.signOut();
     } catch {
+      accountExitPending = false;
       announce('Не удалось выйти. Проверьте подключение и повторите попытку.');
       return;
     }
     accountAdminAccess = null;
     url.searchParams.set('source', 'account');
-  } else {
-    return;
   }
   clearPrivatePhotos();
   allowUnsavedExit = true;
   $('.app-shell').style.visibility = 'hidden';
+  if (revocation && !(await revocation)) window.alert(FAMILY_LOGOUT_UNCONFIRMED);
   if (switchAccount && familyPreview) {
     location.replace('/atlas/?login=1&switch=1');
     return;

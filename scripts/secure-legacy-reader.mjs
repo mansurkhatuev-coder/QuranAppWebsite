@@ -158,7 +158,18 @@ export function secureLegacyReader(html) {
 `, 'lightbox');
   s = once(s, '      function closePhotoLightbox() {', '      function closePhotoLightbox() {\n        legacyLightboxGeneration++;', 'lightbox cancellation');
   s = once(s, "      function clearNekToken() {\n        storeNekToken('');", "      function clearNekToken() {\n        clearLegacyPhotos();\n        storeNekToken('');", 'logout cache');
-  s = once(s, "        showToast('Вы вышли', 'success');", "        showToast('Вы вышли', 'success');\n        window.location.reload();", 'logout memory');
+  s = once(s, '      function logoutView() {', `      function logoutView() {
+        if (!nekSessionActive) return;
+        var logoutToken = readNekToken();`, 'logout token');
+  s = once(s, "        showToast('Вы вышли', 'success');", `        setGateBusy('Выходим…');
+        import('/drewo/waydean-preview-family-auth.mjs?v=family-logout-1').then(function (module) {
+          return module.revokeFamilySession({ endpoint: PUBLISH_URL, treeDir: TREE_DIR, token: logoutToken })
+            .then(function (revoked) {
+              if (!revoked) window.alert(module.FAMILY_LOGOUT_UNCONFIRMED);
+            });
+        }).catch(function () {
+          window.alert('Вы вышли в этом браузере. Сервер не подтвердил завершение сессии.');
+        }).finally(function () { window.location.reload(); });`, 'logout memory');
   s = s.replace(/^\s*var PHOTO_(?:PUBLIC|FALLBACK)_BASE = [^\n]*\n/gm, '\n');
   if (/fetch\('(?:family-tree|access)\.json|PHOTO_(?:PUBLIC|FALLBACK)_BASE|photo(?:Thumb|Full)(?:Fallback)?Url\(/.test(s)) throw new Error('Legacy reader: remaining public data reference');
   return s;

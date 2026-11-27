@@ -8,6 +8,7 @@ import {
   readFamilySession,
   resolveFamilyInvite,
   resolveFamilyPreviewAccess,
+  revokeFamilySession,
   storeFamilySession,
   verifyFamilySession
 } from './waydean-preview-family-auth.mjs';
@@ -25,6 +26,25 @@ function memoryStorage() {
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), { status });
 }
+
+test('family logout submits the current session and requires confirmation', async () => {
+  const options = { endpoint: 'https://example.test/publish-drewo', treeDir: 'drewo', token: 'family-session' };
+  assert.equal(await revokeFamilySession({
+    ...options,
+    fetcher: async (url, request) => {
+      assert.equal(url, options.endpoint);
+      assert.equal(request.method, 'POST');
+      assert.equal(request.redirect, 'error');
+      assert.deepEqual(JSON.parse(request.body), {
+        action: 'logout-family', treeDir: 'drewo', sessionToken: 'family-session'
+      });
+      return jsonResponse({ ok: true });
+    }
+  }), true);
+  assert.equal(await revokeFamilySession({
+    ...options, fetcher: async () => jsonResponse({ error: 'Unavailable' }, 503)
+  }), false);
+});
 
 test('stores family sessions in tab-scoped storage under the legacy tree key', () => {
   const storage = memoryStorage();

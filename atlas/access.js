@@ -1,4 +1,5 @@
 import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
+import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean-preview-family-auth.mjs?v=family-logout-1';
 
 (() => {
   const login = document.querySelector('#family-access');
@@ -40,12 +41,14 @@ import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
   }
   // A local session is only a shortcut. The editor revalidates it on arrival.
   let familyPath = '';
+  let familyToken = '';
   let managerSession = false;
   try {
     const recent = JSON.parse(localStorage.getItem('nek:lastTree') || 'null');
     if (/^\/drewo(?:-[a-z0-9-]+)?\/$/.test(recent?.path)) {
       const dir = recent.path.split('/')[1];
-      if (sessionStorage.getItem('nek-session:' + dir)) familyPath = recent.path;
+      familyToken = sessionStorage.getItem('nek-session:' + dir) || '';
+      if (familyToken) familyPath = recent.path;
     }
     const session = JSON.parse(localStorage.getItem('waydean-trees-auth') || 'null');
     managerSession = Number(session?.expires_at) > Date.now() / 1000;
@@ -64,14 +67,23 @@ import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
     });
     document.querySelector('.top-actions').append(switcher);
   }
+  let leavingFamily = false;
   for (const [id, switchAccount] of [['atlas-sign-out', false], ['atlas-switch-account', true]]) {
-    document.querySelector('#' + id).addEventListener('click', () => {
-      if (!familyPath) return;
-      clearFamilyAccess(familyPath.split('/')[1]);
+    document.querySelector('#' + id).addEventListener('click', async () => {
+      if (!familyPath || leavingFamily) return;
+      leavingFamily = true;
+      const treeDir = familyPath.split('/')[1];
+      clearFamilyAccess(treeDir);
+      const revoked = await revokeFamilySession({
+        endpoint: window.SUPABASE_CONFIG?.publishDrewoUrl, treeDir, token: familyToken
+      });
+      familyToken = '';
+      if (!revoked) window.alert(FAMILY_LOGOUT_UNCONFIRMED);
       location.replace(switchAccount ? '/atlas/?login=1&switch=1' : '/atlas/');
     });
   }
   enterButton.addEventListener('click', () => {
+    if (leavingFamily) return;
     if (familyPath || managerSession) location.assign(familyPath || '/trees/');
     else openLogin();
   });

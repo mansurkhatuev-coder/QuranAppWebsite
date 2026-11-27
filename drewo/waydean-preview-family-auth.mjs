@@ -28,8 +28,9 @@ function safeEndpoint(value) {
   return url.href;
 }
 
-async function postFamilyAction(endpoint, payload, fetcher) {
+async function postFamilyAction(endpoint, payload, fetcher, options = {}) {
   const response = await fetcher(safeEndpoint(endpoint), {
+    ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -37,6 +38,24 @@ async function postFamilyAction(endpoint, payload, fetcher) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data?.ok !== true) throw familyError(data, response.status);
   return data;
+}
+
+export const FAMILY_LOGOUT_UNCONFIRMED = 'Вы вышли в этом браузере. Сервер не подтвердил завершение сессии.';
+
+export async function revokeFamilySession({ endpoint, treeDir, token, fetcher = fetch }) {
+  if (!token) return true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    await postFamilyAction(endpoint, {
+      action: 'logout-family', treeDir: normalizeTreeDir(treeDir), sessionToken: token
+    }, fetcher, { cache: 'no-store', redirect: 'error', signal: controller.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function safeTreePath(treeDir, path) {
