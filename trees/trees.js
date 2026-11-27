@@ -59,10 +59,6 @@ import {
     );
   }
 
-  function getClient() {
-    return managerAuth.getClient();
-  }
-
   function showBoot(text) {
     const overlay = $('#boot-overlay');
     const label = $('#boot-text');
@@ -122,14 +118,10 @@ import {
       apikey: config.anonKey || '',
     };
     try {
-      const sb = getClient();
-      if (sb) {
-        const { data } = await sb.auth.getSession();
-        if (data?.session?.access_token) {
-          headers.Authorization = `Bearer ${data.session.access_token}`;
-        }
-      }
-    } catch { /* keep anon */
+      const session = await managerAuth.getSession();
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+    } catch {
+      // Keep anonymous headers if session storage is unavailable.
     }
     return headers;
   }

@@ -4,6 +4,7 @@ import {
   createDrewoManagerAuth,
   DREWO_MANAGER_IGNORE_LEGACY_KEY,
   DREWO_MANAGER_STORAGE_KEY,
+  DREWO_MANAGER_TAB_ID_KEY,
   hasDrewoManagerSession
 } from '../../assets/drewo-manager-auth.mjs';
 
@@ -93,6 +94,20 @@ test('checked login still works when this browser blocks tab storage', async t =
   assert.equal((await auth.getSession()).access_token, 'token-fixture@example.test');
 });
 
+test('explicit sign-out clears a tab session after storage access is blocked', async t => {
+  const { localStorage, sessionStorage, auth } = browser(t);
+  await auth.signIn('fixture@example.test', 'synthetic-password', false);
+  const storageKey = sessionStorage.getItem(DREWO_MANAGER_TAB_ID_KEY);
+  const tabAuthKey = `waydean-trees-tab-auth-${storageKey}`;
+  const readStorage = sessionStorage.getItem.bind(sessionStorage);
+  sessionStorage.getItem = () => { throw new Error('storage disabled'); };
+  sessionStorage.setItem = () => { throw new Error('storage disabled'); };
+
+  await auth.signOut();
+  assert.equal(readStorage(tabAuthKey), null);
+  assert.equal(localStorage.getItem(DREWO_MANAGER_IGNORE_LEGACY_KEY), '1');
+});
+
 test('failed login does not save a manager session', async t => {
   const { localStorage, sessionStorage, auth } = browser(t);
   await assert.rejects(auth.signIn('fixture@example.test', 'wrong-password', true), /Invalid login/);
@@ -127,6 +142,24 @@ test('legacy editor session works once and explicit sign-out prevents its return
   assert.equal(legacySignOuts, 1);
   assert.equal(localStorage.getItem(DREWO_MANAGER_IGNORE_LEGACY_KEY), '1');
   assert.equal(await auth.getSession(), null);
+});
+
+test('a corrupt new session is not replaced by another account from the legacy key', async t => {
+  let legacyReads = 0;
+  const legacyAuth = { getSession: async () => { legacyReads += 1; return { access_token: 'legacy-token' }; } };
+  const { localStorage, auth } = browser(t, { legacyAuth });
+  localStorage.setItem(DREWO_MANAGER_STORAGE_KEY, '{broken');
+  await assert.rejects(auth.getSession(), SyntaxError);
+  assert.equal(legacyReads, 0);
+});
+
+test('an old editor session still works when tab storage is blocked and no newer session exists', async t => {
+  const legacySession = { access_token: 'legacy-token' };
+  const legacyAuth = { getSession: async () => legacySession };
+  const { sessionStorage, auth } = browser(t, { legacyAuth });
+  sessionStorage.getItem = () => { throw new Error('storage disabled'); };
+  sessionStorage.setItem = () => { throw new Error('storage disabled'); };
+  assert.equal(await auth.getSession(), legacySession);
 });
 
 test('new manager login suppresses stale legacy fallback', async t => {

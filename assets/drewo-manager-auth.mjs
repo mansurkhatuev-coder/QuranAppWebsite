@@ -10,6 +10,17 @@ function hasStoredSession(storage, key) {
   try { return Boolean(storage?.getItem(key)); } catch { return false; }
 }
 
+function hasScopedSessionRecord() {
+  const local = browserStorage('localStorage');
+  const session = browserStorage('sessionStorage');
+  let tabKey = '';
+  try {
+    const tabId = session?.getItem(DREWO_MANAGER_TAB_ID_KEY);
+    if (tabId) tabKey = `waydean-trees-tab-auth-${tabId}`;
+  } catch { /* The tab session is unavailable. */ }
+  return hasStoredSession(local, DREWO_MANAGER_STORAGE_KEY) || hasStoredSession(session, tabKey);
+}
+
 function tabStorageKey() {
   const storage = browserStorage('sessionStorage');
   if (!storage) throw new Error('Хранилище текущей вкладки недоступно. Разрешите хранилище сайта и повторите вход.');
@@ -116,16 +127,21 @@ export function createDrewoManagerAuth({ legacyAuth = null } = {}) {
 
   async function getSession() {
     const scope = activeScope || preferredScope();
-    const client = getClient(scope);
-    if (client) {
-      const { data } = await client.auth.getSession();
-      if (data?.session) {
-        activeScope = scope;
-        legacyActive = false;
-        return data.session;
+    const hadScopedRecord = hasScopedSessionRecord();
+    try {
+      const client = getClient(scope);
+      if (client) {
+        const { data } = await client.auth.getSession();
+        if (data?.session) {
+          activeScope = scope;
+          legacyActive = false;
+          return data.session;
+        }
       }
+    } catch (error) {
+      if (!mayUseLegacyFallback() || hadScopedRecord) throw error;
     }
-    if (mayUseLegacyFallback()) {
+    if (!hadScopedRecord && mayUseLegacyFallback()) {
       try {
         const auth = resolveLegacyAuth();
         const session = await auth?.getSession?.();
