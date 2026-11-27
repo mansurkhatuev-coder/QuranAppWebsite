@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 const treePage = await readFile(new URL('./legacy.html', import.meta.url), 'utf8');
 const previewPage = await readFile(new URL('./waydean-preview.html', import.meta.url), 'utf8');
 const previewScript = await readFile(new URL('./waydean-preview.js', import.meta.url), 'utf8');
+const treesManagerScript = await readFile(new URL('../trees/trees.js', import.meta.url), 'utf8');
+const registry = JSON.parse(await readFile(new URL('../trees/registry.json', import.meta.url), 'utf8'));
 
 test('legacy tree offers an optional new interface using its existing family session', () => {
   assert.ok(/<button[^>]*id="waydean-premium-open"[^>]*>Открыть новый интерфейс<\/button>/.test(treePage), 'the visible entry link must be present');
@@ -43,4 +45,16 @@ test('manager login uses the same local throttle as the admin console', () => {
   assert.match(previewScript, /authLock\?\.assertAllowed\(authLockScope\)/);
   assert.match(previewScript, /authLock\.recordFailure\(authLockScope\)/);
   assert.match(previewScript, /authLock\?\.clear\(authLockScope\)/);
+  assert.match(treesManagerScript, /const AUTH_LOCK_SCOPE = 'admin'/);
+});
+
+test('all registered family pages keep manager remember, local throttle, and logout controls', async () => {
+  for (const { treeDir } of registry.trees) {
+    const page = await readFile(new URL(`../${treeDir}/index.html`, import.meta.url), 'utf8');
+    assert.ok(page.includes('id="waydeanAdminRemember"'), `${treeDir} must include manager remember option`);
+    assert.ok(page.includes('../assets/auth-lock.js?v=1'), `${treeDir} must load the manager login throttle`);
+    assert.ok(page.includes('id="familyLogout"'), `${treeDir} must include family logout`);
+    assert.ok(page.includes('id="switchAccount"'), `${treeDir} must include account switching`);
+    assert.ok(page.includes('account=6'), `${treeDir} must load the current shared editor`);
+  }
 });
