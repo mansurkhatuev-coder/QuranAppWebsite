@@ -78,7 +78,9 @@ function fakeAtlasDom() {
   }
   for (const selector of [
     '#family-access', '#create-access', '#atlas-login', '#create-tree', '#theme-toggle',
-    '#atlas-sign-out', '#atlas-switch-account', '#atlas-account', '#login-input', '#password-input',
+    '#atlas-sign-out', '#atlas-switch-account', '#atlas-account', '#atlas-manager-account',
+    '#atlas-manager-sign-out', '#atlas-manager-switch-account', '#atlas-manager-account-error',
+    '#login-input', '#password-input',
   ]) nodes.set(selector, element());
   nodes.set('.top-actions', topActions);
   nodes.set('meta[name="theme-color"]', { content: '' });
@@ -125,12 +127,12 @@ test('tab-only session is shared across cabinet, editor, and atlas then cleared 
   assert.equal(await createDrewoManagerAuth().getSession(), null);
 });
 
-test('Atlas routes to the cabinet for a tab session and hides it after the shared logout', async t => {
+test('Atlas manager account menu signs out through the shared auth module', async t => {
   const { localStorage, sessionStorage } = browser(t);
   const auth = createDrewoManagerAuth();
   await auth.signIn('fixture@example.test', 'synthetic-password', false);
 
-  const location = { search: '', hash: '', pathname: '/atlas/', assigned: '', assign(value) { this.assigned = value; } };
+  const location = { search: '', hash: '', pathname: '/atlas/', assigned: '', replaced: '', assign(value) { this.assigned = value; }, replace(value) { this.replaced = value; } };
   const window = globalThis.window;
   window.location = location;
   window.visualViewport = null;
@@ -144,9 +146,12 @@ test('Atlas routes to the cabinet for a tab session and hides it after the share
   assert.equal(dom.nodes.get('#atlas-login').textContent, 'Мои древа');
   dom.nodes.get('#atlas-login').listeners.click();
   assert.equal(location.assigned, '/trees/');
-
-  await auth.signOut();
+  dom.topActions.children[0].listeners.click();
+  assert.equal(dom.nodes.get('#atlas-manager-account').open, true);
+  await dom.nodes.get('#atlas-manager-sign-out').listeners.click({ currentTarget: dom.nodes.get('#atlas-manager-sign-out') });
+  assert.equal(location.replaced, '/atlas/');
   assert.equal(hasDrewoManagerSession(), false);
+
   location.assigned = '';
   dom = fakeAtlasDom();
   installGlobal(t, 'document', dom.document);
@@ -155,6 +160,25 @@ test('Atlas routes to the cabinet for a tab session and hides it after the share
   assert.equal(location.assigned, '');
   assert.equal(dom.nodes.get('#family-access').open, true);
   assert.equal(dom.topActions.children.length, 0);
+});
+
+test('Atlas manager switch-account signs out then opens the shared login with remembered choice cleared', async t => {
+  const { auth } = browser(t);
+  await auth.signIn('fixture@example.test', 'synthetic-password', false);
+  const location = { search: '', hash: '', pathname: '/atlas/', assigned: '', replaced: '', assign(value) { this.assigned = value; }, replace(value) { this.replaced = value; } };
+  const window = globalThis.window;
+  window.location = location;
+  window.visualViewport = null;
+  window.addEventListener = () => {};
+  installGlobal(t, 'location', location);
+  installGlobal(t, 'navigator', {});
+  const dom = fakeAtlasDom();
+  installGlobal(t, 'document', dom.document);
+  await import(`../../atlas/access.js?manager-switch=${Date.now()}`);
+  dom.topActions.children[0].listeners.click();
+  await dom.nodes.get('#atlas-manager-switch-account').listeners.click({ currentTarget: dom.nodes.get('#atlas-manager-switch-account') });
+  assert.equal(location.replaced, '/trees/?switch=1');
+  assert.equal(hasDrewoManagerSession(), false);
 });
 
 test('checked login shares the persistent manager session with the cabinet and editor', async t => {

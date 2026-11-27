@@ -1,10 +1,12 @@
 import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
-import { hasDrewoManagerSession } from '../assets/drewo-manager-auth.mjs?v=1';
+import { createDrewoManagerAuth, hasDrewoManagerSession } from '../assets/drewo-manager-auth.mjs?v=1';
 import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean-preview-family-auth.mjs?v=family-logout-1';
 
 (() => {
   const login = document.querySelector('#family-access');
   const create = document.querySelector('#create-access');
+  const managerAccount = document.querySelector('#atlas-manager-account');
+  const managerAuth = createDrewoManagerAuth();
   const enterButton = document.querySelector('#atlas-login');
   const createButton = document.querySelector('#create-tree');
   const theme = document.querySelector('#theme-toggle');
@@ -63,9 +65,18 @@ import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean
     switcher.setAttribute('aria-label', accountLabel);
     switcher.addEventListener('click', () => {
       if (familyPath) document.querySelector('#atlas-account').showModal();
-      else location.assign('/trees/');
+      else managerAccount.showModal();
     });
     document.querySelector('.top-actions').append(switcher);
+    if (familyPath && managerSession) {
+      const managerSwitcher = document.createElement('button');
+      managerSwitcher.className = 'top-action';
+      managerSwitcher.innerHTML = '<svg aria-hidden="true"><use href="/assets/drewo-icons.svg#people"/></svg><span></span>';
+      managerSwitcher.querySelector('span').textContent = 'Кабинет';
+      managerSwitcher.setAttribute('aria-label', 'Кабинет управляющего');
+      managerSwitcher.addEventListener('click', () => managerAccount.showModal());
+      document.querySelector('.top-actions').append(managerSwitcher);
+    }
   }
   let leavingFamily = false;
   for (const [id, switchAccount] of [['atlas-sign-out', false], ['atlas-switch-account', true]]) {
@@ -80,6 +91,46 @@ import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean
       familyToken = '';
       if (!revoked) window.alert(FAMILY_LOGOUT_UNCONFIRMED);
       location.replace(switchAccount ? '/atlas/?login=1&switch=1' : '/atlas/');
+    });
+  }
+  let leavingManager = false;
+  function ensureSupabaseClient() {
+    if (window.supabase?.createClient) return Promise.resolve();
+    if (window.drewoSupabaseClientPromise) return window.drewoSupabaseClientPromise;
+    const pending = new Promise((resolve, reject) => {
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+      script.onload = () => window.supabase?.createClient
+        ? resolve()
+        : reject(new Error('Не удалось загрузить модуль входа.'));
+      script.onerror = () => reject(new Error('Не удалось подключиться к службе входа.'));
+      document.head.append(script);
+    });
+    window.drewoSupabaseClientPromise = pending.catch(error => {
+      delete window.drewoSupabaseClientPromise;
+      throw error;
+    });
+    return window.drewoSupabaseClientPromise;
+  }
+  for (const [id, switchAccount] of [['atlas-manager-sign-out', false], ['atlas-manager-switch-account', true]]) {
+    document.querySelector('#' + id).addEventListener('click', async event => {
+      if (!managerSession || leavingManager) return;
+      leavingManager = true;
+      const button = event.currentTarget;
+      const error = document.querySelector('#atlas-manager-account-error');
+      button.disabled = true;
+      error.hidden = true;
+      try {
+        await ensureSupabaseClient();
+        if (!managerAuth.isEnabled()) throw new Error('Вход управляющего не настроен.');
+        await managerAuth.signOut();
+        location.replace(switchAccount ? '/trees/?switch=1' : '/atlas/');
+      } catch (reason) {
+        error.textContent = reason?.message || 'Не удалось выйти. Проверьте подключение и повторите попытку.';
+        error.hidden = false;
+        leavingManager = false;
+        button.disabled = false;
+      }
     });
   }
   enterButton.addEventListener('click', () => {

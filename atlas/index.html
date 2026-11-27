@@ -167,6 +167,15 @@
    <button class="access-primary" type="button" id="atlas-sign-out">Выйти</button>
   </div>
  </dialog>
+ <dialog id="atlas-manager-account" class="info-dialog access-dialog" aria-labelledby="atlas-manager-account-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="atlas-manager-account-heading">Аккаунт управляющего</h2>
+  <p role="alert" id="atlas-manager-account-error" hidden></p>
+  <div class="dialog-list">
+   <button class="access-primary" type="button" id="atlas-manager-switch-account">Сменить аккаунт</button>
+   <button class="access-primary" type="button" id="atlas-manager-sign-out">Выйти</button>
+  </div>
+ </dialog>
  <dialog id="family-map" class="info-dialog access-dialog" aria-labelledby="family-map-heading">
   <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
   <h2 id="family-map-heading">Мой род</h2>
@@ -190,7 +199,7 @@
  <div id="toast" class="toast" role="status" aria-live="polite"></div>
  <script defer src="/trees/supabase-config.js"></script>
  <script defer src="/nek/nek.js?v=11"></script>
- <script type="module" src="./access.js?v=account-3"></script>
+ <script type="module" src="./access.js?v=account-4"></script>
  <script type="module" src="./app.mjs?v=20261128-1"></script>
 </body>
 </html>
