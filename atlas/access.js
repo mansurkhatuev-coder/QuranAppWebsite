@@ -1,11 +1,13 @@
 import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
 import { createDrewoManagerAuth, hasDrewoManagerSession } from '../assets/drewo-manager-auth.mjs?v=1';
 import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean-preview-family-auth.mjs?v=family-logout-1';
+import { initAtlasOwnerAccount } from './owner-account.mjs?v=1';
 
 (() => {
   const login = document.querySelector('#family-access');
   const create = document.querySelector('#create-access');
   const managerAccount = document.querySelector('#atlas-manager-account');
+  const ownerAccount = initAtlasOwnerAccount();
   const managerAuth = createDrewoManagerAuth();
   const enterButton = document.querySelector('#atlas-login');
   const createButton = document.querySelector('#create-tree');
@@ -41,6 +43,13 @@ import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean
     login.showModal();
     const field = document.querySelector('#login-input');
     (field.value ? document.querySelector('#password-input') : field).focus();
+  }
+  async function openOwnerAccount(mode, sourceDialogs = []) {
+    const closing = [...new Set(sourceDialogs.filter(dialog => dialog?.open))];
+    const closed = Promise.all(closing.map(dialog => new Promise(resolve => dialog.addEventListener('close', resolve, { once: true }))));
+    closing.forEach(dialog => dialog.close());
+    await closed;
+    await ownerAccount.open(mode);
   }
   // A local session is only a shortcut. The editor revalidates it on arrival.
   let familyPath = '';
@@ -139,6 +148,15 @@ import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean
     else openLogin();
   });
   createButton.addEventListener('click', () => managerSession ? location.assign('/trees/#create') : create.showModal());
+  document.querySelector('#owner-account-register')?.addEventListener('click', () => {
+    void openOwnerAccount('register', [create]);
+  });
+  for (const id of ['owner-account-login', 'owner-family-login']) {
+    document.querySelector('#' + id)?.addEventListener('click', () => {
+      void openOwnerAccount('login', [create, login]);
+    });
+  }
   if (familyInvite || params.get('login') === '1' || oldRoute === '#/nek/login') openLogin();
   if (oldRoute === '#/nek/register') create.showModal();
+  void ownerAccount.start();
 })();

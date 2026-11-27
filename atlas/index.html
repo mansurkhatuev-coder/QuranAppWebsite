@@ -157,7 +157,8 @@
    <button id="login-submit" class="access-primary" type="submit">Войти</button>
   </form>
   <p id="recent" hidden><a id="recent-link"></a></p>
-  <a href="/trees/">Кабинет управляющего</a>
+  <button class="owner-inline-link" type="button" id="owner-family-login">Войти в личный аккаунт</button>
+  <a href="/trees/">Вход управляющего</a>
  </dialog>
  <dialog id="atlas-account" class="info-dialog access-dialog" aria-labelledby="atlas-account-heading">
   <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
@@ -190,16 +191,21 @@
  <dialog id="create-access" class="info-dialog access-dialog" aria-labelledby="create-heading">
   <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
   <h2 id="create-heading">Новое древо</h2>
-  <p>Управляющий создаст древо и передаст вашей семье логин и пароль. Для начала достаточно знать имя первого родственника.</p>
-  <a class="access-primary" href="https://wa.me/79288867854">Запросить древо в WhatsApp</a>
-  <a href="/trees/#create">Создать через кабинет управляющего</a>
+  <p>Создайте личный аккаунт и своё древо. На один аккаунт можно создать одно древо. Тухум и тейп можно не указывать.</p>
+  <button class="access-primary" type="button" id="owner-account-register">Создать аккаунт и древо</button>
+  <button class="owner-inline-link" type="button" id="owner-account-login">Уже есть аккаунт — войти</button>
+  <a href="https://wa.me/79288867854">Нужна помощь? Написать в WhatsApp</a>
+ </dialog>
+ <dialog id="owner-account-dialog" class="info-dialog access-dialog owner-account-dialog" aria-labelledby="owner-account-title">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <div id="owner-account-content" aria-live="polite"></div>
  </dialog>
  <dialog id="info-dialog" class="info-dialog"><button class="icon-button dialog-close" type="button" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button><div id="dialog-content"></div></dialog>
  <dialog id="photo-dialog" class="photo-dialog" aria-label="Иллюстрация места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть иллюстрацию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>
  <script defer src="/trees/supabase-config.js"></script>
  <script defer src="/nek/nek.js?v=11"></script>
- <script type="module" src="./access.js?v=account-4"></script>
+  <script type="module" src="./access.js?v=owner-account-1"></script>
  <script type="module" src="./app.mjs?v=20261128-1"></script>
 </body>
 </html>

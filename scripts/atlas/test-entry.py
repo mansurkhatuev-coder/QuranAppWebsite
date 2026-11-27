@@ -40,6 +40,7 @@ def check(browser, base, width, height):
         page.goto(base + ("/t/?c=sample" if width == 320 else "/nek/?login=1&u=sample"))
         page.locator("#family-access[open]").wait_for()
         assert page.locator("#login-input").input_value() == "sample"
+        assert page.locator('#family-access a[href="/trees/"]').is_visible()
         if width < 1000:
             assert page.locator("#password-input").evaluate("e => parseFloat(getComputedStyle(e).fontSize)") >= 16
         page.locator("#password-input").fill("synthetic")
@@ -48,7 +49,9 @@ def check(browser, base, width, height):
         page.keyboard.press("Escape")
         assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
         page.locator("#create-tree").click()
-        assert page.locator('#create-access a[href="/trees/#create"]').is_visible()
+        assert page.locator('#owner-account-register').is_visible()
+        assert page.locator('#owner-account-login').is_visible()
+        assert page.locator('#create-access a[href="/trees/#create"]').count() == 0
         page.keyboard.press("Escape")
         page.locator("#opening-roots").click()
         page.locator("#catalog-row-shatoi").click()
