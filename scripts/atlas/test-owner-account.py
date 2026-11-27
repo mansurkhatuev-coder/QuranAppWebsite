@@ -19,9 +19,11 @@ class QuietHandler(SimpleHTTPRequestHandler):
 
 MOCK_AUTH = r"""(() => {
   const state = window.ownerMock = {
-    user: null, session: null, tree: null, people: [], calls: [],
-    nextPerson: 1, nextTree: 1
+    user: null, session: null, tree: null, people: [], personPlaces: [], calls: [],
+    nextPerson: 1, nextPlace: 1, nextTree: 1
   };
+  window.ownerMapEvents = [];
+  window.addEventListener('drewo-atlas:owner-places', event => window.ownerMapEvents.push(event.detail));
   window.supabase = { createClient(_url, _key, options = {}) {
     const storage = options.auth?.storage;
     const storageKey = options.auth?.storageKey;
@@ -77,13 +79,35 @@ MOCK_AUTH = r"""(() => {
           let treeId = null;
           return {
             eq(_column, value) { treeId = value; return this; },
-            order: async () => ({ data: state.people.filter(person => person.tree_id === treeId), error: null })
+            order: async () => ({ data: table === 'drewo_plus_people'
+              ? state.people.filter(person => person.tree_id === treeId)
+              : state.personPlaces.filter(record => record.tree_id === treeId), error: null })
           };
         },
         insert: values => {
           if (table === 'drewo_plus_people') state.people.push({ id: `person-${state.nextPerson++}`,
             revision: 1, created_at: new Date().toISOString(), ...values });
+          if (table === 'drewo_plus_person_places') {
+            if (state.personPlaces.some(record => record.tree_id === values.tree_id
+              && record.person_id === values.person_id && record.place_id === values.place_id && record.kind === values.kind)) {
+              return { error: { code: '23505', message: 'duplicate place link' } };
+            }
+            state.personPlaces.push({ id: `place-${state.nextPlace++}`, created_at: new Date().toISOString(), ...values });
+          }
           return { error: null };
+        },
+        delete: () => {
+          let id = null;
+          return {
+            eq(column, value) {
+              if (column === 'id') { id = value; return this; }
+              if (column === 'tree_id') {
+                state.personPlaces = state.personPlaces.filter(record => !(record.id === id && record.tree_id === value));
+                return Promise.resolve({ error: null });
+              }
+              return this;
+            }
+          };
         },
         update: values => ({ eq: (_column, id) => ({ eq: async (_treeColumn, treeId) => {
           const person = state.people.find(row => row.id === id && row.tree_id === treeId);
@@ -150,7 +174,7 @@ def main():
                 assert page.evaluate("ownerMock.calls.find(call => call.name === 'drewo_plus_create_tree').args.p_atlas_group_id") is None
                 assert page.evaluate("ownerMock.calls.find(call => call.name === 'drewo_plus_create_tree').args.p_atlas_teip_id") is None
                 assert dialog.locator(".owner-tree-stats dd").nth(0).inner_text() == "1"
-                assert dialog.locator(".owner-tree-stats dd").count() == 3
+                assert dialog.locator(".owner-tree-stats dd").count() == 4
 
                 dialog.get_by_role("button", name="Добавить родственника").click()
                 person_form = dialog.locator("form.owner-form")
@@ -161,8 +185,43 @@ def main():
                 dialog.locator(".owner-tree-stats dd").nth(0).get_by_text("2").wait_for()
                 assert dialog.locator(".owner-tree-stats dd").nth(1).inner_text() == "2"
                 assert dialog.locator(".owner-tree-stats dd").nth(2).inner_text() == "1"
-                assert dialog.locator(".owner-tree-stats dd").nth(3).inner_text() == "Зелим · 1980 г."
+                assert dialog.locator(".owner-tree-stats dd").count() == 5
+                assert dialog.locator(".owner-tree-stats dd").nth(3).inner_text() == "0"
+                assert dialog.locator(".owner-tree-stats dd").nth(4).inner_text() == "Зелим · 1980 г."
                 assert dialog.get_by_text("Зелим", exact=True).count() == 1
+
+                dialog.locator(".owner-person-name", has_text="Зелим").locator(
+                    "xpath=ancestor::li[contains(@class, 'owner-tree-person')][1]"
+                ).get_by_role("button", name="Добавить место").click()
+                place_form = dialog.locator("form.owner-place-form")
+                place_form.locator('[name="placeId"]').select_option("grozny")
+                place_form.locator('[name="kind"]').select_option(label="Место рождения")
+                place_form.locator('[name="note"]').fill("Семейное предание")
+                place_form.get_by_role("button", name="Добавить место").click()
+                dialog.get_by_role("button", name="Убрать Грозный · Место рождения").wait_for()
+                assert page.evaluate("ownerMock.personPlaces.length") == 1
+                assert page.evaluate("ownerMock.personPlaces[0].note") == "Семейное предание"
+                dialog.get_by_role("button", name="Назад к древу").click()
+                assert dialog.locator(".owner-tree-stats dd").nth(3).inner_text() == "1"
+                assert dialog.locator(".owner-person-places li").count() == 1
+                assert dialog.locator(".owner-person-places li").inner_text().splitlines() == [
+                    "Грозный · Место рождения", "Семейное предание"
+                ]
+                dialog.get_by_role("button", name="Показать места на карте").click()
+                assert page.evaluate("ownerMapEvents.length") == 1
+                assert page.evaluate("JSON.stringify(ownerMapEvents[0].marks)") == '[{"id":"grozny","kind":"Место рождения"}]'
+                assert page.evaluate("!JSON.stringify(ownerMapEvents).includes('Зелим') && !JSON.stringify(ownerMapEvents).includes('Семейное предание')")
+
+                if page.locator("#exit-family-map").is_visible():
+                    page.locator("#exit-family-map").click()
+                page.get_by_role("button", name="Открыть личный аккаунт и своё древо").click()
+                dialog = page.locator("#owner-account-dialog[open]")
+                dialog.get_by_role("heading", name="Семья Хьоти").wait_for()
+                dialog.get_by_role("button", name="Места (1)").click()
+                dialog.get_by_role("button", name="Убрать Грозный · Место рождения").click()
+                assert page.evaluate("ownerMock.personPlaces.length") == 0
+                dialog.get_by_role("button", name="Назад к древу").click()
+                assert dialog.locator(".owner-tree-stats dd").nth(3).inner_text() == "0"
 
                 dialog.get_by_role("button", name="Выйти").click()
                 page.wait_for_function("!document.querySelector('#owner-account-dialog').open")

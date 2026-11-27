@@ -453,6 +453,13 @@ body:not(.is-exploring) .atlas-opening .intro h1 {
 .owner-person-name { margin: 0; color: #f5f0df !important; font-weight: 650; overflow-wrap: anywhere; }
 .owner-person-dates { color: #cad6ca; font-size: 12px; white-space: nowrap; }
 .owner-person-note { margin: 0; color: #cad6ca; font-size: 12px !important; }
+.owner-person-places { display: grid; gap: 4px; margin: 0; padding-inline-start: 17px; color: #e3e9df; }
+.owner-person-places li { display: grid; gap: 2px; min-width: 0; font-size: 13px; overflow-wrap: anywhere; }
+.owner-place-list { display: grid; gap: 8px; }
+.owner-place-entry { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: center; gap: 8px; min-width: 0; padding: 9px 10px; border: 1px solid #71887a66; border-radius: 8px; }
+.owner-place-description { display: grid; gap: 3px; min-width: 0; }
+.owner-place-label { margin: 0; color: #f3e4bb; font-size: 14px; overflow-wrap: anywhere; }
+.owner-place-remove { min-width: 76px; }
 .owner-person-tools, .owner-account-actions { display: flex; flex-wrap: wrap; gap: 6px; }
 .owner-small-action { min-height: 36px; padding: 6px 9px; font-size: 12px; }
 .owner-account-actions > button { flex: 1 1 130px; }
@@ -470,6 +477,8 @@ html[data-color-scheme=light] .owner-account-dialog .owner-tree-stats dt,
 html[data-color-scheme=light] .owner-account-dialog .owner-person-dates,
 html[data-color-scheme=light] .owner-account-dialog .owner-person-note { color: #536354; }
 html[data-color-scheme=light] .owner-account-dialog .owner-person-name { color: #243a31 !important; }
+html[data-color-scheme=light] .owner-account-dialog .owner-person-places,
+html[data-color-scheme=light] .owner-account-dialog .owner-place-label { color: #344f40; }
 html[data-color-scheme=light] .owner-account-dialog .owner-tree-stats dd { color: #654e2b; }
 @media (max-width: 480px) {
  .owner-account-dialog { width: calc(100vw - 20px); padding: 32px 20px 20px; }

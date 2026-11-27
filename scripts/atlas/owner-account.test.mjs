@@ -2,10 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   buildOwnerTreeRequest,
+  buildOwnerPersonPlaceRequest,
   countOwnerTreeBranches,
+  countOwnerTreePlaces,
   createOwnerTree,
   earliestKnownOwnerAncestor,
   maxOwnerTreeDepth,
+  normalizeOwnerPersonPlaces,
   normalizeOwnerTreeInput,
   ownerAccountErrorMessage,
   validateOwnerTreeInput,
@@ -67,4 +70,27 @@ test('personal branch count and earliest known ancestor use only recorded parent
   assert.deepEqual(earliestKnownOwnerAncestor(people), { id: 'branch-b', name: 'Иса', born: 1800 });
   assert.equal(countOwnerTreeBranches([{ id: 'only-person', parent_id: null }]), 0);
   assert.equal(earliestKnownOwnerAncestor([{ id: 'root', name: 'Адам', born: null }]), null);
+});
+
+test('personal geography accepts only catalog places and keeps markers private to place and kind', () => {
+  const places = [
+    { place_id: 'grozny', kind: 'Место рождения' },
+    { place_id: 'grozny', kind: 'Переселение' },
+    { place_id: 'unknown-place', kind: 'Место рождения' },
+    { place_id: 'argun', kind: 'Неизвестная связь' },
+  ];
+  assert.equal(normalizeOwnerPersonPlaces(places).length, 2);
+  assert.equal(countOwnerTreePlaces(places), 1);
+  assert.deepEqual(buildOwnerPersonPlaceRequest('tree-id', 'person-id', {
+    placeId: 'khoi-village', kind: 'Переселение', note: 'Семейное предание',
+  }), {
+    tree_id: 'tree-id', person_id: 'person-id', place_id: 'khoi-village',
+    kind: 'Переселение', note: 'Семейное предание',
+  });
+  assert.throws(() => buildOwnerPersonPlaceRequest('tree-id', 'person-id', {
+    placeId: 'not-in-atlas', kind: 'Место рождения',
+  }), /каталога Atlas/);
+  assert.throws(() => buildOwnerPersonPlaceRequest('tree-id', 'person-id', {
+    placeId: 'grozny', kind: 'Неизвестная связь',
+  }), /тип связи/);
 });

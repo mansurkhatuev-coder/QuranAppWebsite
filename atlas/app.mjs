@@ -14,6 +14,8 @@ const state=createInitialState();
 const runtime={mapStatus:'loading'};
 let atlas=null;
 let activeFamilyPlaces=null;
+const atlasPlaceIds=new Set([...settlements,...sites].map(place=>place.id));
+const atlasPlaceKinds=new Set(['Родное место','Место рождения','Переселение']);
 let publicSummary=null;
 let sheetController=null;
 let currentEntry=null;
@@ -634,21 +636,30 @@ async function showFamilyMap(){
  try {
   const {openFamilyView}=await import('./family-view.mjs?v=4');
   await openFamilyView({dialog:$('#family-map'),
-   showMarkers:marks=>{
-    if(!atlas){toast('Карта пока недоступна');return;}
-    route({type:'ENTER_MAP_ONLY'},{replace:true});
-    activeFamilyPlaces=marks;
-    atlas.setFamilyPlaces(marks);
-    $('#exit-family-map').hidden=false;
-    requestAnimationFrame(()=>{
-     if(activeFamilyPlaces===marks)atlas.fitFamilyPlaces(marks);
-    });
-   },
+   showMarkers:marks=>showPlacesOnMap(marks),
    showPlace:place=>{if(place.coordinates)openCity(place.id);else openSite(place.id);},
    showTeip:(group,teip)=>route({type:'SELECT_TEIP',groupId:group.id,id:teip.id,sheet:'half'})
   });
  }catch{toast('Семейная карта сейчас недоступна');}
 }
+function showPlacesOnMap(marks){
+ if(!atlas){toast('Карта пока недоступна');return;}
+ const unique=new Map((Array.isArray(marks)?marks:[])
+  .filter(mark=>atlasPlaceIds.has(mark?.id)&&atlasPlaceKinds.has(mark?.kind))
+  .map(mark=>[`${mark.id}:${mark.kind}`,{id:mark.id,kind:mark.kind}]));
+ const places=Array.from(unique.values());
+ if(!places.length){toast('В этом древе пока нет мест из каталога Atlas');return;}
+ const ownerDialog=$('#owner-account-dialog');if(ownerDialog.open)ownerDialog.close();
+ $('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');
+ route({type:'ENTER_MAP_ONLY'},{replace:true});
+ activeFamilyPlaces=places;
+ atlas.setFamilyPlaces(places);
+ $('#exit-family-map').hidden=false;
+ requestAnimationFrame(()=>{
+  if(activeFamilyPlaces===places)atlas.fitFamilyPlaces(places);
+ });
+}
+window.addEventListener('drewo-atlas:owner-places',event=>showPlacesOnMap(event.detail?.marks));
 $('#family-view').addEventListener('click',()=>{
  $('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');
  void showFamilyMap();

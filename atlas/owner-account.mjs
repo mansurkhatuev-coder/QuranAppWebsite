@@ -1,4 +1,11 @@
-import { groups } from './catalog.mjs';
+import { groups, sites } from './catalog.mjs';
+import { settlements } from './settlements.mjs';
+
+export const OWNER_PLACE_KINDS = Object.freeze(['Родное место', 'Место рождения', 'Переселение']);
+const ownerPlaceCatalog = [...settlements, ...sites].sort((a, b) =>
+  (a.fullName || a.name).localeCompare(b.fullName || b.name, 'ru')
+);
+const ownerPlacesById = new Map(ownerPlaceCatalog.map(place => [place.id, place]));
 
 export const OWNER_AUTH_STORAGE_KEY = 'drewo-owner-auth-v1';
 const OWNER_EMAIL_KEY = 'drewo-owner-email-v1';
@@ -96,6 +103,27 @@ export function earliestKnownOwnerAncestor(people = []) {
   return earliest;
 }
 
+export function normalizeOwnerPersonPlaces(records = []) {
+  if (!Array.isArray(records)) return [];
+  return records.filter(record => ownerPlacesById.has(String(record?.place_id ?? ''))
+    && OWNER_PLACE_KINDS.includes(String(record?.kind ?? '')));
+}
+
+export function countOwnerTreePlaces(records = []) {
+  return new Set(normalizeOwnerPersonPlaces(records).map(record => String(record.place_id))).size;
+}
+
+export function buildOwnerPersonPlaceRequest(treeId, personId, value = {}) {
+  const placeId = String(value.placeId ?? '').trim();
+  const kind = String(value.kind ?? '').trim();
+  const note = String(value.note ?? '').trim();
+  if (!treeId || !personId) throw new Error('Не удалось определить древо или человека. Обновите окно и повторите попытку.');
+  if (!ownerPlacesById.has(placeId)) throw new Error('Выберите место из каталога Atlas.');
+  if (!OWNER_PLACE_KINDS.includes(kind)) throw new Error('Выберите тип связи с местом.');
+  if (note.length > 500) throw new Error('Пояснение не должно быть длиннее 500 символов.');
+  return { tree_id: treeId, person_id: personId, place_id: placeId, kind, note };
+}
+
 const make = (doc, tag, className, text) => {
   const node = doc.createElement(tag);
   if (className) node.className = className;
@@ -113,6 +141,7 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
   let activeUser = null;
   let ownedTree = null;
   let people = [];
+  let personPlaces = [];
   let actionButton = null;
   let requestBusy = false;
   let sdkPromise = null;
@@ -415,6 +444,17 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
     await loadOwnedTree();
   }
 
+  async function refreshOwnerPlaces() {
+    if (!ownedTree) { personPlaces = []; return; }
+    const { data, error } = await activeClient
+      .from('drewo_plus_person_places')
+      .select('id,tree_id,person_id,place_id,kind,note,created_at')
+      .eq('tree_id', ownedTree.id)
+      .order('created_at', { ascending: true });
+    if (error) throw error;
+    personPlaces = normalizeOwnerPersonPlaces(data);
+  }
+
   async function loadOwnedTree() {
     const root = shell({ title: 'Загружаю ваше древо', description: 'Проверяю аккаунт и доступ к данным.' });
     status(root, 'Загрузка…');
@@ -429,6 +469,8 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
     }
     ownedTree = data || null;
     if (!ownedTree) {
+      people = [];
+      personPlaces = [];
       renderCreateTree();
       return;
     }
@@ -442,6 +484,12 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
       return;
     }
     people = Array.isArray(peopleResult.data) ? peopleResult.data : [];
+    try {
+      await refreshOwnerPlaces();
+    } catch (error) {
+      ownerMessage(error);
+      return;
+    }
     renderOwnerTree();
   }
 
@@ -571,9 +619,21 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
       if (dates) head.append(make(documentRef, 'span', 'owner-person-dates', dates));
       item.append(head);
       if (person.note) item.append(make(documentRef, 'p', 'owner-person-note', person.note));
+      const locations = personPlaces.filter(record => String(record.person_id) === id);
+      if (locations.length) {
+        const locationList = make(documentRef, 'ul', 'owner-person-places');
+        for (const record of locations) {
+          const place = ownerPlacesById.get(String(record.place_id));
+          const row = make(documentRef, 'li', '', `${place?.name || place?.fullName} · ${record.kind}`);
+          if (record.note) row.append(make(documentRef, 'small', 'owner-person-note', record.note));
+          locationList.append(row);
+        }
+        item.append(locationList);
+      }
       const tools = make(documentRef, 'div', 'owner-person-tools');
       tools.append(action('Добавить родственника', 'owner-small-action', () => renderPersonForm(person.id)));
       tools.append(action('Изменить', 'owner-small-action', () => renderPersonForm(null, person)));
+      tools.append(action(locations.length ? `Места (${locations.length})` : 'Добавить место', 'owner-small-action', () => renderPersonPlaces(person)));
       item.append(tools);
       const children = (byParent.get(id) || []).filter(child => child.id !== person.id);
       if (children.length) {
@@ -607,16 +667,131 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
     addStat('Людей', numberFormat.format(people.length));
     addStat('Поколений', numberFormat.format(maxOwnerTreeDepth(people)));
     addStat('Семейных ветвей', numberFormat.format(countOwnerTreeBranches(people)));
+    addStat('Мест на карте', numberFormat.format(countOwnerTreePlaces(personPlaces)));
     const earliestAncestor = earliestKnownOwnerAncestor(people);
     if (earliestAncestor) addStat('Самый ранний предок', `${earliestAncestor.name} · ${earliestAncestor.born} г.`);
     root.append(stats);
     root.append(make(documentRef, 'h3', 'owner-section-title', 'Родословная'));
     root.append(people.length ? buildPeopleTree() : make(documentRef, 'p', 'owner-private-note', 'Добавьте первого родственника, чтобы начать.'));
+    if (personPlaces.length) {
+      root.append(action('Показать места на карте', 'access-primary owner-show-places', () => showOwnerPlacesOnAtlas()));
+      root.append(make(documentRef, 'p', 'owner-private-note', 'Точки на карте взяты из каталога Atlas и могут быть приблизительными.'));
+    }
     const footer = make(documentRef, 'div', 'owner-account-actions');
     footer.append(action('Выйти', 'owner-secondary', () => void leaveAccount(false)));
     footer.append(action('Сменить аккаунт', 'owner-secondary', () => void leaveAccount(true)));
     root.append(footer);
     root.append(make(documentRef, 'p', 'owner-private-note', 'Доступ к данным проверяется по вашему аккаунту. Это древо не публикуется в открытом каталоге.'));
+  }
+
+  function showOwnerPlacesOnAtlas() {
+    const marks = Array.from(new Map(normalizeOwnerPersonPlaces(personPlaces)
+      .map(record => [`${record.place_id}:${record.kind}`, { id: record.place_id, kind: record.kind }])).values());
+    if (!marks.length) return;
+    closeDialog();
+    windowRef.dispatchEvent(new windowRef.CustomEvent('drewo-atlas:owner-places', { detail: { marks } }));
+  }
+
+  function renderPersonPlaces(person) {
+    const root = shell({
+      title: `Места: ${person.name}`,
+      description: 'Привязывайте человека к местам каталога Atlas. Точки на карте могут быть приблизительными.',
+    });
+    const related = personPlaces.filter(record => String(record.person_id) === String(person.id));
+    const list = make(documentRef, 'div', 'owner-place-list');
+    if (!related.length) list.append(make(documentRef, 'p', 'owner-private-note', 'Для этого человека места ещё не добавлены.'));
+    for (const record of related) {
+      const place = ownerPlacesById.get(String(record.place_id));
+      const row = make(documentRef, 'div', 'owner-place-entry');
+      const description = make(documentRef, 'div', 'owner-place-description');
+      description.append(make(documentRef, 'p', 'owner-place-label', `${place?.name || place?.fullName} · ${record.kind}`));
+      if (record.note) description.append(make(documentRef, 'p', 'owner-person-note', record.note));
+      const remove = action('Убрать', 'owner-small-action owner-place-remove', async () => {
+        if (requestBusy) return;
+        requestBusy = true;
+        remove.disabled = true;
+        try {
+          const { error } = await activeClient.from('drewo_plus_person_places')
+            .delete().eq('id', record.id).eq('tree_id', ownedTree.id);
+          if (error) throw error;
+          await refreshOwnerPlaces();
+          renderPersonPlaces(person);
+        } catch (error) {
+          remove.disabled = false;
+          const feedback = content.querySelector('.owner-message');
+          if (feedback) { feedback.textContent = ownerAccountErrorMessage(error); feedback.hidden = false; feedback.setAttribute('role', 'alert'); }
+        } finally {
+          requestBusy = false;
+        }
+      });
+      remove.setAttribute('aria-label', `Убрать ${place?.name || place?.fullName} · ${record.kind}`);
+      row.append(description, remove);
+      list.append(row);
+    }
+    root.append(list);
+
+    const form = make(documentRef, 'form', 'owner-form owner-place-form');
+    form.noValidate = true;
+    const placeLabel = make(documentRef, 'label', 'owner-field');
+    placeLabel.append(make(documentRef, 'span', '', 'Место в каталоге Atlas'));
+    const placeSelect = make(documentRef, 'select'); placeSelect.name = 'placeId'; placeSelect.required = true;
+    const placePlaceholder = make(documentRef, 'option', '', 'Выберите место');
+    placePlaceholder.value = ''; placePlaceholder.disabled = true; placePlaceholder.selected = true;
+    placeSelect.append(placePlaceholder);
+    for (const [label, places] of [['Города и сёла', settlements], ['Исторические объекты', sites]]) {
+      const group = make(documentRef, 'optgroup'); group.label = label;
+      for (const place of places) {
+        const option = make(documentRef, 'option', '', place.fullName || place.name);
+        option.value = place.id;
+        group.append(option);
+      }
+      placeSelect.append(group);
+    }
+    placeLabel.append(placeSelect); form.append(placeLabel);
+
+    const kindLabel = make(documentRef, 'label', 'owner-field');
+    kindLabel.append(make(documentRef, 'span', '', 'Связь с человеком'));
+    const kindSelect = make(documentRef, 'select'); kindSelect.name = 'kind'; kindSelect.required = true;
+    for (const kind of OWNER_PLACE_KINDS) kindSelect.append(make(documentRef, 'option', '', kind));
+    kindLabel.append(kindSelect); form.append(kindLabel);
+
+    const noteLabel = make(documentRef, 'label', 'owner-field');
+    noteLabel.append(make(documentRef, 'span', '', 'Пояснение · необязательно'));
+    const note = make(documentRef, 'textarea'); note.name = 'note'; note.maxLength = 500; note.rows = 2;
+    note.placeholder = 'Например, семейное предание о переезде';
+    noteLabel.append(note); form.append(noteLabel);
+
+    const feedback = status(form);
+    const submit = make(documentRef, 'button', 'access-primary owner-submit', 'Добавить место');
+    submit.type = 'submit'; form.append(submit);
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      if (requestBusy) return;
+      let values;
+      try {
+        values = buildOwnerPersonPlaceRequest(ownedTree.id, person.id, {
+          placeId: placeSelect.value, kind: kindSelect.value, note: note.value,
+        });
+      } catch (error) {
+        feedback.textContent = error.message; feedback.hidden = false; feedback.setAttribute('role', 'alert'); return;
+      }
+      requestBusy = true; setBusy(form, true, 'Сохраняю…'); feedback.hidden = true;
+      try {
+        const { error } = await activeClient.from('drewo_plus_person_places').insert(values);
+        if (error) throw error;
+        await refreshOwnerPlaces();
+        renderPersonPlaces(person);
+      } catch (error) {
+        feedback.textContent = String(error?.code) === '23505'
+          ? 'Это место уже добавлено для выбранного типа связи.'
+          : ownerAccountErrorMessage(error);
+        feedback.hidden = false; feedback.setAttribute('role', 'alert');
+      } finally {
+        requestBusy = false; setBusy(form, false);
+      }
+    });
+    root.append(form);
+    root.append(action('Назад к древу', 'owner-secondary', () => renderOwnerTree()));
   }
 
   function renderPersonForm(parentId = null, person = null) {
@@ -684,7 +859,7 @@ export function initAtlasOwnerAccount({ windowRef = globalThis.window, documentR
     } finally {
       clearSavedOwnerSessions();
       if (signOutError) activeClient.auth.stopAutoRefresh?.();
-      activeClient = null; activeUser = null; ownedTree = null; people = [];
+      activeClient = null; activeUser = null; ownedTree = null; people = []; personPlaces = [];
       removeOwnerAction();
       requestBusy = false;
     }

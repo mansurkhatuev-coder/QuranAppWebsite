@@ -1,7 +1,7 @@
 import { clearFamilyAccess } from '../assets/drewo-auth-preferences.mjs';
 import { createDrewoManagerAuth, hasDrewoManagerSession } from '../assets/drewo-manager-auth.mjs?v=1';
 import { FAMILY_LOGOUT_UNCONFIRMED, revokeFamilySession } from '../drewo/waydean-preview-family-auth.mjs?v=family-logout-1';
-import { initAtlasOwnerAccount } from './owner-account.mjs?v=1';
+import { initAtlasOwnerAccount } from './owner-account.mjs?v=2';
 
 (() => {
   const login = document.querySelector('#family-access');
