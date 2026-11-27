@@ -149,6 +149,15 @@ def main():
                 form = dialog.locator("form.owner-form")
                 assert page.locator("#create-access[open]").count() == 0
                 assert page.locator("#owner-account-dialog[open]").count() == 1
+                assert form.locator('[name="email"]').evaluate("e => e === document.activeElement")
+                page.keyboard.press("Escape")
+                page.wait_for_function("!document.querySelector('#owner-account-dialog').open")
+                assert page.evaluate("document.activeElement?.id === 'create-tree'")
+                page.locator("#create-tree").click()
+                page.locator("#owner-account-register").click()
+                dialog = page.locator("#owner-account-dialog[open]")
+                dialog.wait_for()
+                form = dialog.locator("form.owner-form")
                 assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
                 assert dialog.evaluate("e => { const r=e.getBoundingClientRect(); return r.left >= 0 && r.right <= innerWidth && r.height <= innerHeight; }")
                 for control in form.locator('input:not([type="checkbox"])').all() + form.locator('button').all():
@@ -163,14 +172,25 @@ def main():
                 form.get_by_role("button", name="Создать аккаунт").click()
 
                 tree_form = dialog.locator("form.owner-form")
-                tree_form.locator('[name="title"]').fill("Семья Хьоти")
-                tree_form.locator('[name="firstName"]').fill("Ахмад")
+                long_title = "Я" * 100
+                long_first = "А" * 100
+                tree_form.locator('[name="title"]').fill(long_title)
+                tree_form.locator('[name="firstName"]').fill(long_first)
                 tree_form.get_by_role("button", name="Создать древо").click()
                 try:
-                    dialog.get_by_role("heading", name="Семья Хьоти").wait_for()
+                    dialog.get_by_role("heading", name=long_title).wait_for()
                 except Exception:
                     print("Owner dialog after tree creation:", dialog.inner_text(), flush=True)
                     raise
+                assert page.evaluate("document.documentElement.scrollWidth === innerWidth")
+                assert dialog.evaluate("""e => {
+                  const r = e.getBoundingClientRect();
+                  const nodes = [...e.querySelectorAll('.owner-title, .owner-person-name')];
+                  return nodes.length >= 2 && nodes.every(node => {
+                    const n = node.getBoundingClientRect();
+                    return n.left >= r.left - 1 && n.right <= r.right + 1 && n.width > 0;
+                  });
+                }""")
                 assert page.evaluate("ownerMock.calls.find(call => call.name === 'drewo_plus_create_tree').args.p_atlas_group_id") is None
                 assert page.evaluate("ownerMock.calls.find(call => call.name === 'drewo_plus_create_tree').args.p_atlas_teip_id") is None
                 assert dialog.locator(".owner-tree-stats dd").nth(0).inner_text() == "1"
@@ -180,7 +200,7 @@ def main():
                 person_form = dialog.locator("form.owner-form")
                 person_form.locator('[name="name"]').fill("Зелим")
                 person_form.locator('[name="born"]').fill("1980")
-                person_form.locator('[name="parentId"]').select_option(label="Ахмад")
+                person_form.locator('[name="parentId"]').select_option(label=long_first)
                 person_form.get_by_role("button", name="Добавить").click()
                 dialog.locator(".owner-tree-stats dd").nth(0).get_by_text("2").wait_for()
                 assert dialog.locator(".owner-tree-stats dd").nth(1).inner_text() == "2"
@@ -216,7 +236,7 @@ def main():
                     page.locator("#exit-family-map").click()
                 page.get_by_role("button", name="Открыть личный аккаунт и своё древо").click()
                 dialog = page.locator("#owner-account-dialog[open]")
-                dialog.get_by_role("heading", name="Семья Хьоти").wait_for()
+                dialog.get_by_role("heading", name=long_title).wait_for()
                 dialog.get_by_role("button", name="Места (1)").click()
                 dialog.get_by_role("button", name="Убрать Грозный · Место рождения").click()
                 assert page.evaluate("ownerMock.personPlaces.length") == 0
@@ -235,7 +255,7 @@ def main():
                 assert login_form.locator('[name="email"]').input_value() == "synthetic@example.test"
                 login_form.locator('[name="password"]').fill("synthetic-secure-password-47")
                 login_form.locator('button[type="submit"]').click()
-                dialog.get_by_role("heading", name="Семья Хьоти").wait_for()
+                dialog.get_by_role("heading", name=long_title).wait_for()
                 page.evaluate("ownerMock.failSignOut = true")
                 dialog.get_by_role("button", name="Сменить аккаунт").click()
                 dialog.get_by_role("status").get_by_text("Сеанс удалён с этого устройства").wait_for()

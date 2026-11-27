@@ -51,6 +51,29 @@ test('the release build rejects legacy routes the family API does not recognize'
   await missing(join(out, 'trees/registry.json'));
 });
 
+test('a verified deleted legacy tree keeps a safe route without family data or API registration', async t => {
+  const {root, put, out} = await fixture(t);
+  await put('trees/registry.json', JSON.stringify({ trees: [] }));
+  await put('drewo-retired/index.html', '<script id="tree-data">PRIVATE_TREE</script><main>PRIVATE_COPY</main>');
+  await put('drewo-retired/family-tree.json', '{"name":"PRIVATE_PERSON"}');
+  await put('drewo-retired/access.json', JSON.stringify({
+    locked: true,
+    lockedReason: 'Древо удалено из каталога',
+    deletedAt: '2026-11-02T11:00:00.000Z',
+    billing: { status: 'disabled' },
+  }));
+
+  await preparePagesArtifact(root, out, { release: true });
+
+  const page = await readFile(join(out, 'drewo-retired/index.html'), 'utf8');
+  assert.match(page, /Семейная страница отключена/);
+  assert.match(page, /href="\/atlas\/"/);
+  assert.match(page, /name="viewport" content="width=device-width, initial-scale=1"/);
+  assert.doesNotMatch(page, /PRIVATE_/);
+  await missing(join(out, 'drewo-retired/family-tree.json'));
+  await missing(join(out, 'drewo-retired/access.json'));
+});
+
 test('embedded private script blocks are emptied without changing ordinary scripts', async t => {
   const {root,put,out} = await fixture(t);
   const html = '<main>PUBLIC</main><script id="tree-data" type="application/json">PRIVATE_A</script><SCRIPT ID=activity-log>PRIVATE_B</SCRIPT><script id=\'TREE-DATA\'>PRIVATE_C</script><script data-id="tree-data">PUBLIC_JS</script>';

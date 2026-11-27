@@ -53,6 +53,7 @@ def check(browser, base, width, height):
         assert page.locator('#owner-account-login').is_visible()
         assert page.locator('#create-access a[href="/trees/#create"]').count() == 0
         page.keyboard.press("Escape")
+        assert page.evaluate("document.activeElement?.id === 'create-tree'")
         page.locator("#opening-roots").click()
         assert page.locator("#search").evaluate("e => parseFloat(getComputedStyle(e).fontSize)") >= 16
         if width >= 900:

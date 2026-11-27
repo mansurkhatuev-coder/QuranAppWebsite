@@ -6,6 +6,58 @@ import { secureLegacyReader } from './secure-legacy-reader.mjs';
 const excludedDirectories = new Set(['.git', '.github', '_private', 'backups', 'node_modules', 'dist']);
 const excludedFiles = new Set(['access.json', 'credentials.vault.json', 'push-subscriptions.json', 'activity-log.json', 'family-tree.json', 'tree-data.json']);
 const privateScriptIds = new Set(['tree-data', 'activity-log']);
+const retiredTreeReason = 'Древо удалено из каталога';
+
+function retiredTreePage() {
+  return `<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#102a23">
+  <title>Семейная страница отключена — Древо</title>
+  <style>
+    :root { color-scheme: dark; font-family: system-ui, sans-serif; background: #102a23; color: #f4f0e5; }
+    * { box-sizing: border-box; }
+    body { min-height: 100vh; min-height: 100dvh; margin: 0; padding: max(24px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) max(24px, env(safe-area-inset-bottom)) max(20px, env(safe-area-inset-left)); display: grid; place-items: center; }
+    main { width: min(100%, 34rem); padding: clamp(24px, 6vw, 40px); border: 1px solid #ffffff22; border-radius: 20px; background: #071913; }
+    h1 { margin: 0 0 12px; font-size: clamp(24px, 6vw, 34px); line-height: 1.15; }
+    p { margin: 0 0 24px; color: #d2d7ce; line-height: 1.6; }
+    a { display: inline-flex; min-height: 44px; align-items: center; padding: 10px 16px; border-radius: 10px; background: #c6a868; color: #102a23; font-weight: 650; text-decoration: none; }
+    a:focus-visible { outline: 3px solid #f5dfa6; outline-offset: 3px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Семейная страница отключена</h1>
+    <p>Эта ссылка больше не открывает семейные записи. Вернитесь в атлас, чтобы продолжить работу с другими древами.</p>
+    <a href="/atlas/">Вернуться в атлас</a>
+  </main>
+</body>
+</html>
+`;
+}
+
+async function findRetiredLegacyTreeDirs(source, allowed) {
+  const retired = new Set();
+  for (const entry of await readdir(source, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !/^drewo(?:-[a-z0-9-]+)?$/i.test(entry.name) || allowed.has(entry.name)) continue;
+    try {
+      const markerPath = join(source, entry.name, 'access.json');
+      const markerInfo = await lstat(markerPath);
+      if (!markerInfo.isFile() || markerInfo.isSymbolicLink()) continue;
+      const access = JSON.parse(await readFile(markerPath, 'utf8'));
+      if (access?.locked === true && access?.lockedReason === retiredTreeReason
+          && typeof access?.deletedAt === 'string' && Number.isFinite(Date.parse(access.deletedAt))
+          && access?.billing?.status === 'disabled') {
+        retired.add(entry.name);
+      }
+    } catch {
+      // An unverified or missing retirement marker never allows an API-less route.
+    }
+  }
+  return retired;
+}
 
 function segments(path) {
   return path.split(/[\\/]/).filter(Boolean).map(part => part.toLowerCase());
@@ -48,6 +100,11 @@ async function copyPublicTree(source, destination, legacyAccess, base = '') {
     const info = await lstat(from);
     if (info.isSymbolicLink()) throw new Error(`Refusing symlink in Pages source: ${path}`);
     if (info.isDirectory()) {
+      if (!base && legacyAccess?.retired.has(entry.name)) {
+        await mkdir(to, { recursive: true });
+        await writeFile(join(to, 'index.html'), retiredTreePage(), 'utf8');
+        continue;
+      }
       await mkdir(to, { recursive: true });
       await copyPublicTree(from, to, legacyAccess, path);
     } else if (info.isFile()) {
@@ -100,7 +157,8 @@ export async function preparePagesArtifact(sourceRoot, destinationRoot = join(so
     if (release) {
       const { knownTreeDirs, parseRegistry, REGISTRY_PATH } = await import('../supabase/functions/publish-drewo/create-tree.ts');
       const registry = parseRegistry(await readFile(join(source, REGISTRY_PATH), 'utf8'));
-      legacyAccess = { allowed: new Set(knownTreeDirs(registry)), missing: new Set() };
+      const allowed = new Set(knownTreeDirs(registry));
+      legacyAccess = { allowed, missing: new Set(), retired: await findRetiredLegacyTreeDirs(source, allowed) };
     }
     await copyPublicTree(source, destination, legacyAccess);
     if (legacyAccess?.missing.size) {
