@@ -103,7 +103,7 @@ body.is-exploring .city-marker .atlas-marker-label{font-size:21px;opacity:.65}
  .search-field{height:48px;min-height:48px;padding-inline:14px;border-color:#cdbb7b76;border-radius:3px;background:#071d17a8;color:#d9d7c7;transition:border-color .18s,box-shadow .18s,background .18s}
  .search-field:focus-within{border-color:#e0c67e;box-shadow:0 0 0 3px #ddc27a22;background:#071b16d9}
  .search-field>svg{color:#d6bf7e}
- .search-field input{font-size:15px;color:#f3eddb}
+ .search-field input{font-size:16px;color:#f3eddb}
  .search-field input::placeholder{color:#b6c0b1}
  .search-field kbd{font-size:15px;color:#c2c8b8}
  .search-results{padding:4px 8px;border:1px solid #d1bd8245;border-top:0;background:#10291f;box-shadow:0 10px 22px #020d0a55}
@@ -193,9 +193,11 @@ body.is-exploring .city-marker .atlas-marker-label{font-size:21px;opacity:.65}
 body.is-exploring .feature-card{display:none}
 .city-marker,.city-marker .atlas-marker-hit{pointer-events:auto}
 .city-content{padding-top:34px}.city-content .context-create-tree{margin-top:30px}
-.city-source{display:block;margin-top:24px;color:#5d6f50;font-size:14px}
-.return-chechnya{display:none;position:absolute;z-index:14;top:96px;right:32px;min-height:44px;padding:12px 20px;border:1px solid #d4b77880;border-radius:24px;background:#102a22ed;color:#f4e9cb;box-shadow:0 8px 30px #0004;font:500 14px var(--atlas-body);cursor:pointer}
-body[data-atlas-entrance=revealed]:is([data-world-view=world],[data-world-view=transition],[data-world-view=caucasus]) .return-chechnya{display:block}
+.city-source{display:inline-flex;align-items:center;gap:5px;margin-top:24px;color:#5d6f50;font-size:14px}
+.city-source svg{width:14px;height:14px;flex:none}
+.return-chechnya{display:none;position:absolute;z-index:14;top:96px;right:32px;min-height:44px;padding:12px 20px;border:1px solid #d4b77880;border-radius:24px;background:#102a22ed;color:#f4e9cb;box-shadow:0 8px 30px #0004;font:500 14px var(--atlas-body);cursor:pointer;align-items:center;gap:8px}
+.return-chechnya svg{width:16px;height:16px}
+body[data-atlas-entrance=revealed]:is([data-world-view=world],[data-world-view=transition],[data-world-view=caucasus]) .return-chechnya{display:flex}
 body[data-atlas-entrance=revealed]:is([data-world-view=world],[data-world-view=transition]) #overview-group-dock{opacity:0;visibility:hidden;pointer-events:none;transition:opacity .22s ease,visibility 0s linear .22s}
 .return-chechnya:focus-visible{outline:2px solid #e6c584;outline-offset:3px}
 .city-marker .atlas-marker-label,body.is-exploring .city-marker .atlas-marker-label{left:38px;top:-15px;font-size:18px;opacity:.9}

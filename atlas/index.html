@@ -12,8 +12,8 @@
  <link rel="stylesheet" href="./assets/cormorant.css">
  <link rel="stylesheet" href="./assets/source-sans.css">
  <link rel="stylesheet" href="./vendor/maplibre-gl.css">
- <link rel="stylesheet" href="./style.css?v=f3463c6">
- <link rel="stylesheet" href="./opening.css?v=f3463c6">
+ <link rel="stylesheet" href="./style.css?v=f3463c7">
+ <link rel="stylesheet" href="./opening.css?v=f3463c7">
  <link rel="stylesheet" href="./interface.css?v=20261127-3">
   <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261126-3">
 </head>
@@ -30,10 +30,15 @@
   <symbol id="i-branch" viewBox="0 0 24 24"><path d="M12 20V8m0 6-7-5m7 3 7-5"/><circle cx="12" cy="4.5" r="2.5"/><circle cx="4" cy="7" r="2"/><circle cx="20" cy="5" r="2"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-rotate-left" viewBox="0 0 24 24"><path d="M7 6 3 10l4 4M3 10h8a6 6 0 1 1-5.2 9"/></symbol>
+  <symbol id="i-rotate-right" viewBox="0 0 24 24"><path d="m17 6 4 4-4 4m4-4h-8a6 6 0 1 0 5.2 9"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 3 2.1 6.1L20 11l-5.9 2.1L12 19l-2.1-5.9L4 11l5.9-1.9L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></symbol>
+  <symbol id="i-north" viewBox="0 0 24 24"><path d="m12 3 7 16-7-3-7 3 7-16Zm0 13v6"/></symbol>
  </defs></svg>
 
  <main class="atlas-shell" id="atlas-shell" data-layout="side" data-sheet="peek">
-  <button id="return-chechnya" class="return-chechnya" type="button">↗ Вернуться в Чечню</button>
+  <button id="return-chechnya" class="return-chechnya" type="button"><svg aria-hidden="true"><use href="#i-back"/></svg>Вернуться в Чечню</button>
   <button type="button" id="exit-family-map" hidden>Все места атласа</button>
   <div id="map" class="map" role="region" aria-label="Карта рельефа Чечни"></div>
   <div class="map-vignette" aria-hidden="true"></div>
@@ -76,7 +81,7 @@
     <h2 class="panel-kicker" id="catalog-label" tabindex="-1">Тухумы</h2>
     <div class="panel-heading-actions">
      <span class="count" id="count" role="status"></span>
-     <button class="icon-button panel-toggle" id="catalog-toggle" type="button" aria-expanded="true" aria-label="Свернуть каталог"><span aria-hidden="true">−</span></button>
+     <button class="icon-button panel-toggle" id="catalog-toggle" type="button" aria-expanded="true" aria-label="Свернуть каталог"><svg aria-hidden="true"><use href="#i-minus"/></svg></button>
     </div>
    </div>
 
@@ -91,7 +96,7 @@
     <section class="aggregate-dashboard" id="aggregate-dashboard" hidden aria-label="Публичная сводка"></section>
     <div id="catalog-list" class="catalog-list"></div>
     <div class="catalog-empty" id="catalog-empty" hidden>
-     <span class="empty-mark" aria-hidden="true">✦</span>
+     <span class="empty-mark" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></span>
      <p></p>
      <button id="catalog-back" class="text-action" type="button">К предыдущему разделу <svg><use href="#i-arrow"/></svg></button>
     </div>
@@ -103,7 +108,7 @@
   <div class="map-topline"><span class="map-status" id="map-status" role="status" aria-live="polite"><span class="small-dot"></span>Загружаем рельеф</span></div>
 
   <aside class="camera-rail" id="camera-rail" aria-label="Управление картой">
-   <button class="icon-button north-button" id="reset-north" type="button" aria-label="Север сверху" title="Север сверху"><span class="north-needle" aria-hidden="true">↑</span><small>N</small></button>
+   <button class="icon-button north-button" id="reset-north" type="button" aria-label="Север сверху" title="Север сверху"><svg class="north-needle" aria-hidden="true"><use href="#i-north"/></svg><small>N</small></button>
    <div class="zoom-group" aria-label="Масштаб карты">
     <button class="icon-button" id="zoom-in" type="button" aria-label="Приблизить"><svg><use href="#i-plus"/></svg></button>
     <button class="icon-button" id="zoom-out" type="button" aria-label="Отдалить"><svg><use href="#i-minus"/></svg></button>
@@ -116,9 +121,9 @@
    <div class="view-actions">
     <button class="view-action" id="family-view" type="button"><svg><use href="#i-branch"/></svg>Мой род</button>
     <button class="view-action" id="home-view" type="button"><svg><use href="#i-compass"/></svg><span>Общий вид</span></button>
-    <button class="view-action" id="world-view" type="button">Земля <span>↗</span></button>
-    <button class="view-action" id="rotate-left" type="button" aria-label="Повернуть влево на 15 градусов">Повернуть влево <span>↶</span></button>
-    <button class="view-action" id="rotate-right" type="button" aria-label="Повернуть вправо на 15 градусов">Повернуть вправо <span>↷</span></button>
+    <button class="view-action" id="world-view" type="button">Земля <svg aria-hidden="true"><use href="#i-globe"/></svg></button>
+    <button class="view-action" id="rotate-left" type="button" aria-label="Повернуть влево на 15 градусов">Повернуть влево <svg aria-hidden="true"><use href="#i-rotate-left"/></svg></button>
+    <button class="view-action" id="rotate-right" type="button" aria-label="Повернуть вправо на 15 градусов">Повернуть вправо <svg aria-hidden="true"><use href="#i-rotate-right"/></svg></button>
    </div>
    <label class="pitch-control" for="pitch-slider"><span>Наклон</span><output id="pitch-value">44°</output><input id="pitch-slider" type="range" min="0" max="60" value="44"></label>
    <div class="view-footer">
@@ -206,6 +211,6 @@
  <script defer src="/trees/supabase-config.js"></script>
  <script defer src="/nek/nek.js?v=11"></script>
   <script type="module" src="./access.js?v=owner-account-1"></script>
- <script type="module" src="./app.mjs?v=20261128-1"></script>
+ <script type="module" src="./app.mjs?v=20261128-2"></script>
 </body>
 </html>

@@ -444,7 +444,8 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const title=document.createElement('h2');title.textContent=city.name;
  const coordinates=city.coordinates??city.center;
  const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
- const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Источник координат';
+ const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла':'Источник координат';
+ const sourceArrow=document.createElementNS('http://www.w3.org/2000/svg','svg');sourceArrow.setAttribute('aria-hidden','true');const sourceArrowUse=document.createElementNS('http://www.w3.org/2000/svg','use');sourceArrowUse.setAttribute('href','#i-arrow');sourceArrow.append(sourceArrowUse);source.append(sourceArrow);
  const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>document.querySelector('#create-tree').click());
  content.append(kicker,title,location,source,create);if(!isRiver){
   const panel=document.createElement('section');
@@ -684,7 +685,7 @@ $('#catalog-toggle').addEventListener('click',event=>{
  const collapsed=$('#explorer').classList.toggle('catalog-collapsed');
  event.currentTarget.setAttribute('aria-expanded',String(!collapsed));
  event.currentTarget.setAttribute('aria-label',collapsed?'Развернуть каталог':'Свернуть каталог');
- event.currentTarget.querySelector('span').textContent=collapsed?'+':'−';
+ event.currentTarget.querySelector('use').setAttribute('href',collapsed?'#i-plus':'#i-minus');
  scheduleViewport();
 });
 $('#catalog-back').addEventListener('click',()=>{

@@ -54,6 +54,15 @@ def check(browser, base, width, height):
         assert page.locator('#create-access a[href="/trees/#create"]').count() == 0
         page.keyboard.press("Escape")
         page.locator("#opening-roots").click()
+        assert page.locator("#search").evaluate("e => parseFloat(getComputedStyle(e).fontSize)") >= 16
+        if width >= 900:
+            toggle = page.locator("#catalog-toggle")
+            toggle.click()
+            assert toggle.get_attribute("aria-expanded") == "false"
+            assert toggle.locator("use").get_attribute("href") == "#i-plus"
+            toggle.click()
+            assert toggle.get_attribute("aria-expanded") == "true"
+            assert toggle.locator("use").get_attribute("href") == "#i-minus"
         page.locator("#catalog-row-shatoi").click()
         page.locator("#catalog-row-varand").click()
         assert page.locator("#aggregate-dashboard").is_visible()
@@ -183,6 +192,9 @@ def check_family_map(browser, base, *, with_3d=False):
             wait_for_family_markers(page, "grozny", "khoi-village")
             button.click()
             page.locator("#place-detail").get_by_role("heading", name="Грозный").wait_for()
+            source = page.get_by_role("link", name="Источник координат")
+            assert source.get_attribute("target") == "_blank"
+            assert source.locator("svg[aria-hidden=true]").count() == 1
             assert page.locator('#exit-family-map').is_hidden()
             assert label.text_content() == 'Грозный'
             print("3D family map: labels, reauthorization and place details OK", flush=True)
