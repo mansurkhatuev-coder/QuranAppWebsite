@@ -58,6 +58,44 @@ function browser(t, { legacyAuth = null } = {}) {
   return { localStorage, sessionStorage, clients, auth: createDrewoManagerAuth({ legacyAuth }) };
 }
 
+function installGlobal(t, name, value) {
+  const before = Object.getOwnPropertyDescriptor(globalThis, name);
+  Object.defineProperty(globalThis, name, { value, configurable: true });
+  t.after(() => before ? Object.defineProperty(globalThis, name, before) : delete globalThis[name]);
+}
+
+function fakeAtlasDom() {
+  const nodes = new Map();
+  const topActions = { children: [], append(node) { this.children.push(node); } };
+  function element() {
+    return {
+      listeners: {}, attributes: {}, hidden: false, textContent: '',
+      addEventListener(type, callback) { this.listeners[type] = callback; },
+      setAttribute(name, value) { this.attributes[name] = value; },
+      getAttribute(name) { return this.attributes[name] || null; },
+      showModal() { this.open = true; }, focus() { this.focused = true; },
+    };
+  }
+  for (const selector of [
+    '#family-access', '#create-access', '#atlas-login', '#create-tree', '#theme-toggle',
+    '#atlas-sign-out', '#atlas-switch-account', '#atlas-account', '#login-input', '#password-input',
+  ]) nodes.set(selector, element());
+  nodes.set('.top-actions', topActions);
+  nodes.set('meta[name="theme-color"]', { content: '' });
+  nodes.get('#theme-toggle').getAttribute = name => name === 'aria-pressed' ? 'false' : null;
+  const document = {
+    documentElement: { dataset: { colorScheme: 'dark' }, style: { setProperty() {} } },
+    querySelector(selector) { return nodes.get(selector) || null; },
+    createElement() {
+      const button = element();
+      const label = { textContent: '' };
+      button.querySelector = () => label;
+      return button;
+    },
+  };
+  return { document, nodes, topActions };
+}
+
 test('unchecked login stays in this tab and survives navigation in the same tab', async t => {
   const { localStorage, sessionStorage, clients, auth } = browser(t);
   await auth.signIn('fixture@example.test', 'synthetic-password', false);
@@ -72,6 +110,51 @@ test('unchecked login stays in this tab and survives navigation in the same tab'
 
   const afterNavigation = createDrewoManagerAuth();
   assert.equal((await afterNavigation.getSession()).access_token, 'token-fixture@example.test');
+});
+
+test('tab-only session is shared across cabinet, editor, and atlas then cleared by editor logout', async t => {
+  const { auth } = browser(t);
+  await auth.signIn('fixture@example.test', 'synthetic-password', false);
+  assert.equal(hasDrewoManagerSession(), true);
+
+  const editor = createDrewoManagerAuth();
+  assert.equal((await editor.getSession()).access_token, 'token-fixture@example.test');
+  await editor.signOut();
+
+  assert.equal(hasDrewoManagerSession(), false);
+  assert.equal(await createDrewoManagerAuth().getSession(), null);
+});
+
+test('Atlas routes to the cabinet for a tab session and hides it after the shared logout', async t => {
+  const { localStorage, sessionStorage } = browser(t);
+  const auth = createDrewoManagerAuth();
+  await auth.signIn('fixture@example.test', 'synthetic-password', false);
+
+  const location = { search: '', hash: '', pathname: '/atlas/', assigned: '', assign(value) { this.assigned = value; } };
+  const window = globalThis.window;
+  window.location = location;
+  window.visualViewport = null;
+  window.addEventListener = () => {};
+  installGlobal(t, 'location', location);
+  installGlobal(t, 'navigator', {});
+
+  let dom = fakeAtlasDom();
+  installGlobal(t, 'document', dom.document);
+  await import(`../../atlas/access.js?manager-integration=${Date.now()}`);
+  assert.equal(dom.nodes.get('#atlas-login').textContent, 'Мои древа');
+  dom.nodes.get('#atlas-login').listeners.click();
+  assert.equal(location.assigned, '/trees/');
+
+  await auth.signOut();
+  assert.equal(hasDrewoManagerSession(), false);
+  location.assigned = '';
+  dom = fakeAtlasDom();
+  installGlobal(t, 'document', dom.document);
+  await import(`../../atlas/access.js?manager-integration=after-logout-${Date.now()}`);
+  dom.nodes.get('#atlas-login').listeners.click();
+  assert.equal(location.assigned, '');
+  assert.equal(dom.nodes.get('#family-access').open, true);
+  assert.equal(dom.topActions.children.length, 0);
 });
 
 test('checked login shares the persistent manager session with the cabinet and editor', async t => {
