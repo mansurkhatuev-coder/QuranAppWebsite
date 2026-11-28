@@ -3,9 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 
 const migration = readFileSync(new URL("./supabase-migration-waydean-video-library.sql", import.meta.url), "utf8");
-const workflow = readFileSync(new URL("../.github/workflows/apply-waydean-video-library-migration.yml", import.meta.url), "utf8");
 
-test("private video storage has restrictive owner guards even if broad permissive policies exist", () => {
+test("legacy private video storage migration has restrictive owner guards", () => {
   for (const action of ["read", "upload", "update", "delete"]) {
     const policy = new RegExp(
       "create\\s+policy\\s+\"Waydean video owner " + action + " guard\"\\s+on\\s+storage\\.objects\\s+as\\s+restrictive",
@@ -20,6 +19,4 @@ test("private video storage has restrictive owner guards even if broad permissiv
     assert.match(body, /bucket_id\s*=\s*'waydean-videos'/i);
     assert.match(body, /foldername\(name\)\)\[1\]\s*=\s*\(select auth\.uid\(\)::text\)/i);
   }
-  assert.match(workflow, /public_guard_count/);
-  assert.match(workflow, /p\.roles\s*@>\s*ARRAY\['public'\]::name\[\]/);
 });

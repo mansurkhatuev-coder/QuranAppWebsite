@@ -7,7 +7,6 @@ import {
   readVideoExportHandoff,
   recordCanvasVideo
 } from "./remotion-preview/src/browser-export-model.mjs?v=20261018-wall-clock-duration-1";
-import { createWaydeanVideoLink, listWaydeanVideos, uploadWaydeanVideo } from "./browser-video-storage.mjs?v=20261016-account-upload";
 import {
   buildBrowserRenderPlan,
   createBrowserCanvasFrameRenderer,
@@ -76,7 +75,6 @@ let backgroundVideoElement = null;
 let backgroundLoadToken = 0;
 let videoBlob = null;
 let videoUrl = "";
-let videoObjectPath = "";
 let renderController = null;
 let rendering = false;
 let transitionSoundStyle = "click";
@@ -118,14 +116,21 @@ function syncPreviewBackgroundToFrame() {
   try { video.currentTime = targetTime; } catch { /* Keep the poster until the media element can seek. */ }
 }
 
-function clearVideo() {
+function setVideoFileStatus(message = "") {
+  const status = root.querySelector(".browser-export-video-status");
+  if (status) status.textContent = message;
+}
+
+function clearVideo(message = "") {
   videoBlob = null;
-  videoObjectPath = "";
   if (videoUrl) URL.revokeObjectURL(videoUrl);
   videoUrl = "";
   const ready = root.querySelector(".browser-export-ready");
-  ready.hidden = true;
-  ready.replaceChildren();
+  if (ready) {
+    ready.hidden = true;
+    ready.replaceChildren();
+  }
+  setVideoFileStatus(message);
 }
 
 function setPreviewPlaybackButton(playing) {
@@ -352,7 +357,7 @@ function renderShell() {
       <section class="browser-export-intro">
         <span class="browser-export-eyebrow">МОБИЛЬНЫЙ ЭКСПОРТ · ${people.length} ЗАПИСЕЙ</span>
         <h1>История рода в видео</h1>
-        <p>Видео рендерится на телефоне и после записи автоматически загружается в закрытый раздел вашего аккаунта.</p>
+        <p>Видео создаётся на устройстве и не отправляется на сайт. Сохраните готовый файл в Фото или Файлы; временная копия живёт только в этой открытой странице.</p>
       </section>
       ${handoff ? "" : `<p class="browser-export-demo-note" role="status">Открыт демонстрационный пример. Откройте экспорт из загруженного дерева, чтобы создать видео своей семьи.</p>`}
       <div class="browser-export-grid">
@@ -404,20 +409,17 @@ function renderShell() {
             <button type="button" class="browser-export-sound-preview">Прослушать</button>
           </div>
           <p class="browser-export-sound-status" role="status">Короткий мягкий щелчок звучит при появлении подсветки следующей карточки.</p>
-          <div class="browser-export-local-note"><strong>Рендер на телефоне · сохранение в аккаунте</strong><span>Видео собирается в реальном времени и загружается после записи. Не закрывайте страницу. Для длинной истории оставьте экран включённым и подключите стабильный Wi‑Fi. В аккаунт загружаются ролики до 50 МБ; готовый файл можно сохранить в Фото или Файлы.</span></div>
+          <div class="browser-export-local-note"><strong>Видео остаётся на устройстве</strong><span>Ролик создаётся в памяти этой страницы и не загружается в Supabase. Не закрывайте её до сохранения. После скачивания нажмите «Удалить временную копию»; при закрытии страницы файл также исчезнет.</span></div>
           <button id="browser-export-start" type="button" class="browser-export-start">Создать видео на устройстве</button>
           <div class="browser-export-progress" role="progressbar" aria-label="Рендер видео" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div>
           <button type="button" class="browser-export-cancel" hidden>Остановить</button>
           <p id="browser-export-mime" class="browser-export-note"></p>
           <p class="browser-export-error" role="alert" hidden></p>
           <p class="browser-export-unsupported" role="status" hidden></p>
+          <p class="browser-export-video-status" role="status" aria-live="polite"></p>
           <div class="browser-export-ready" hidden></div>
         </section>
       </div>
-      <section class="browser-export-library" aria-label="Видео в аккаунте" hidden>
-        <div class="browser-export-library-heading"><h2>Видео в аккаунте</h2><p class="browser-export-library-status" role="status"></p></div>
-        <div class="browser-export-library-items"></div>
-      </section>
     </div>`;
   renderPersonPickerResults("");
   bindEvents();
@@ -761,13 +763,20 @@ async function startExport() {
     const fileName = `waydean-family-story.${extension}`;
     const ready = root.querySelector(".browser-export-ready");
     ready.hidden = false;
-    ready.innerHTML = `<strong>Видео готово</strong><video controls playsinline></video><button type="button" class="browser-export-start browser-export-save-local">Сохранить в Фото или Файлы</button><a class="browser-export-download" download="${fileName}">Скачать видео</a><section class="browser-export-account-upload" aria-live="polite"><div class="browser-export-upload-heading"><strong>Сохранение в аккаунт</strong><span class="browser-export-upload-status">Готовим защищённую загрузку…</span></div><div class="browser-export-upload-progress" role="progressbar" aria-label="Загрузка видео в аккаунт" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><i></i></div><a class="browser-export-account-login" href="/admin/" target="_blank" rel="noopener" hidden>Войти в аккаунт Waydean</a><a class="browser-export-account-link" target="_blank" rel="noopener" hidden>Открыть сохранённое видео</a><button type="button" class="browser-export-start browser-export-retry" hidden>Повторить загрузку</button></section>`;
+    ready.innerHTML = `<strong>Видео готово</strong><p>Файл пока хранится только в памяти этой страницы. Он не загружен на сайт.</p><video controls playsinline></video><button type="button" class="browser-export-start browser-export-save-local">Сохранить в Фото или Файлы</button><a class="browser-export-download" download="${fileName}">Скачать видео</a><button type="button" class="browser-export-clear-local">Удалить временную копию</button>`;
     ready.querySelector("video").src = videoUrl;
-    ready.querySelector(".browser-export-download").href = videoUrl;
+    const download = ready.querySelector(".browser-export-download");
+    download.href = videoUrl;
+    download.addEventListener("click", () => {
+      setVideoFileStatus("Скачивание запущено. После сохранения нажмите «Удалить временную копию».");
+    });
     ready.querySelector(".browser-export-save-local").addEventListener("click", () => void saveVideo(fileName));
+    ready.querySelector(".browser-export-clear-local").addEventListener("click", () => {
+      clearVideo("Временная копия удалена из этой страницы.");
+    });
     updateProgress(plan.totalFrames, plan.totalFrames);
     root.querySelector(".browser-export-cancel").hidden = true;
-    await uploadVideoToAccount(fileName);
+    setVideoFileStatus("Сохраните ролик на устройство, затем удалите временную копию.");
   } catch (error) {
     showError(error instanceof DOMException && error.name === "AbortError" ? "Экспорт остановлен." : error instanceof Error ? error.message : "Не удалось создать видео на этом устройстве.");
   } finally {
@@ -786,113 +795,26 @@ async function startExport() {
   }
 }
 
-async function uploadVideoToAccount(fileName) {
-  if (!videoBlob) return;
-  const section = root.querySelector(".browser-export-account-upload");
-  const status = section?.querySelector(".browser-export-upload-status");
-  const progress = section?.querySelector(".browser-export-upload-progress");
-  const retry = section?.querySelector(".browser-export-retry");
-  const login = section?.querySelector(".browser-export-account-login");
-  const link = section?.querySelector(".browser-export-account-link");
-  if (!section || !status || !progress || !retry || !login || !link) return;
-  section.hidden = false;
-  retry.hidden = true;
-  login.hidden = true;
-  link.hidden = true;
-  status.textContent = "Загружаем видео в закрытый раздел аккаунта…";
-  progress.setAttribute("aria-valuenow", "0");
-  progress.querySelector("i").style.width = "0%";
-  try {
-    const result = await uploadWaydeanVideo({
-      blob: videoBlob,
-      fileName,
-      title: settings.title,
-      objectPath: videoObjectPath,
-      client: window.AdminSupabase?.getClient?.(),
-      config: window.SUPABASE_CONFIG,
-      tusClient: window.tus,
-      onObjectPath: path => { videoObjectPath = path; },
-      onProgress: (uploaded, total) => {
-        const percent = total ? Math.min(100, Math.round(uploaded / total * 100)) : 0;
-        progress.setAttribute("aria-valuenow", String(percent));
-        progress.querySelector("i").style.width = `${percent}%`;
-        status.textContent = `Загружаем в аккаунт · ${percent}%`;
-      }
-    });
-    progress.setAttribute("aria-valuenow", "100");
-    progress.querySelector("i").style.width = "100%";
-    status.textContent = "Видео сохранено в аккаунте. Временная ссылка действует 7 дней.";
-    videoObjectPath = result.path;
-    link.href = result.signedUrl;
-    link.hidden = false;
-    await loadVideoLibrary();
-  } catch (error) {
-    status.textContent = error instanceof Error ? error.message : "Не удалось сохранить видео в аккаунте. Видео пока доступно на этой странице — сохраните его в Фото или Файлы.";
-    if (error?.uploaded) status.textContent = "Видео уже сохранено в закрытом разделе аккаунта, но временную ссылку не удалось создать.";
-    login.hidden = error?.code !== "WAYDEAN_VIDEO_AUTH_REQUIRED";
-    retry.hidden = Boolean(error?.uploaded);
-    retry.onclick = error?.uploaded ? null : () => void uploadVideoToAccount(fileName);
-  }
-}
-
-async function loadVideoLibrary() {
-  const section = root.querySelector(".browser-export-library");
-  const status = section?.querySelector(".browser-export-library-status");
-  const items = section?.querySelector(".browser-export-library-items");
-  if (!section || !status || !items) return;
-  try {
-    const videos = await listWaydeanVideos({ client: window.AdminSupabase?.getClient?.(), limit: 20 });
-    if (videos.length === 0 && !videoBlob) return;
-    section.hidden = false;
-    status.textContent = videos.length ? `${videos.length} сохранено` : "Сохранённых видео пока нет.";
-    if (!videos.length) {
-      items.replaceChildren();
-      return;
-    }
-    items.innerHTML = videos.map(video => {
-      const date = video.createdAt ? new Date(video.createdAt).toLocaleDateString("ru-RU", { day: "numeric", month: "short", year: "numeric" }) : "";
-      const size = video.sizeBytes ? `${Math.max(1, Math.round(video.sizeBytes / (1024 * 1024)))} МБ` : "";
-      const title = video.title || "История семьи";
-      return `<article class="browser-export-library-item"><div><strong>${escapeHtml(title)}</strong><small>${escapeHtml([date, size].filter(Boolean).join(" · "))}</small></div><button type="button" class="browser-export-library-open" data-video-path="${escapeHtml(video.path)}">Открыть</button></article>`;
-    }).join("");
-    items.querySelectorAll("[data-video-path]").forEach(button => button.addEventListener("click", () => void openLibraryVideo(button.dataset.videoPath, button)));
-  } catch {
-    section.hidden = true;
-  }
-}
-
-async function openLibraryVideo(path, button) {
-  const popup = window.open("about:blank", "_blank");
-  const section = root.querySelector(".browser-export-library");
-  const status = section?.querySelector(".browser-export-library-status");
-  if (!popup) {
-    if (status) status.textContent = "Разрешите новое окно и нажмите «Открыть» ещё раз.";
-    return;
-  }
-  popup.opener = null;
-  button.disabled = true;
-  try {
-    const signedUrl = await createWaydeanVideoLink({ client: window.AdminSupabase?.getClient?.(), path });
-    popup.location.replace(signedUrl);
-  } catch {
-    popup.close();
-    if (status) status.textContent = "Не удалось открыть это видео. Войдите в аккаунт и повторите попытку.";
-  } finally {
-    button.disabled = false;
-  }
-}
-
 async function saveVideo(fileName) {
   if (!videoBlob || !videoUrl) return;
   try {
     const file = new File([videoBlob], fileName, { type: videoBlob.type });
     if (navigator.share && navigator.canShare?.({ files: [file] })) {
       await navigator.share({ files: [file], title: settings.title });
+      clearVideo("Передача завершена. Временная копия удалена из страницы.");
       return;
     }
-    const link = document.createElement("a"); link.href = videoUrl; link.download = fileName; link.click();
+    const link = document.createElement("a");
+    link.href = videoUrl;
+    link.download = fileName;
+    link.click();
+    setVideoFileStatus("Скачивание запущено. После сохранения нажмите «Удалить временную копию».");
   } catch (error) {
-    if (!(error instanceof DOMException && error.name === "AbortError")) showError("Не удалось открыть сохранение. Используйте ссылку «Скачать видео».");
+    if (error instanceof DOMException && error.name === "AbortError") {
+      setVideoFileStatus("Сохранение отменено. Временный файл пока остаётся в открытой странице.");
+      return;
+    }
+    showError("Не удалось открыть сохранение. Используйте ссылку «Скачать видео».");
   }
 }
 
@@ -973,4 +895,4 @@ function loadBackground() {
 renderShell();
 showSupport();
 loadBackground();
-void loadVideoLibrary();
+window.addEventListener("pagehide", () => clearVideo());

@@ -102,18 +102,15 @@ test("video export speed control accelerates the tree animation while background
   assert.match(studioCss, /\.browser-export-speed input/);
 });
 
-test("browser video export auto-uploads finished renders to the private account library", () => {
-  assert.match(studioHtml, /assets\/tus\.min\.js/);
-  assert.match(studioHtml, /supabase-config\.js/);
-  assert.match(studioSource, /uploadWaydeanVideo\(/);
-  assert.match(studioSource, /автоматически загружается в закрытый раздел/);
-  assert.match(studioSource, /Сохранить в Фото или Файлы/);
-  assert.match(studioSource, /Повторить загрузку/);
-  assert.match(studioSource, /готовый файл можно сохранить в Фото или Файлы/);
-});
-
-test("account login opens separately so the rendered video stays in the current export page", () => {
-  assert.match(studioSource, /class="browser-export-account-login" href="\/admin\/" target="_blank" rel="noopener"/);
+test("browser video exports stay in page memory and download without Supabase storage", () => {
+  assert.match(studioHtml, /20261128-local-video-only-1/);
+  assert.doesNotMatch(studioHtml, /supabase-js|supabase-config\.js|admin-supabase\.js|tus\.min\.js/);
+  assert.doesNotMatch(studioSource, /uploadWaydeanVideo|listWaydeanVideos|createWaydeanVideoLink|waydean-videos/);
+  assert.match(studioSource, /Файл пока хранится только в памяти этой страницы/);
+  assert.match(studioSource, /Скачать видео/);
+  assert.match(studioSource, /Удалить временную копию/);
+  assert.match(studioSource, /URL\.revokeObjectURL/);
+  assert.match(studioSource, /window\.addEventListener\("pagehide", \(\) => clearVideo\(\)\)/);
 });
 
 test("video preview has an accessible play control and frame-based playback", () => {
