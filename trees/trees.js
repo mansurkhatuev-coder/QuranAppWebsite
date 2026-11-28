@@ -1,5 +1,10 @@
+import { ACCOUNT_EMAIL_KEY, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
+import { createDrewoManagerAuth } from '../assets/drewo-manager-auth.mjs?v=1';
+import {
+  FAMILY_PASSWORD_MAX_LENGTH, familyPasswordLength, newFamilyPasswordError, normalizeFamilyPassword
+} from '../assets/drewo-family-password.mjs?v=1';
+
 (function initTreesHub() {
-  const EMAIL_KEY = 'waydean_trees_email_v1';
   const PWA_DISMISS_KEY = 'waydean_trees_pwa_dismiss_v1';
   const POLL_MS = 30000;
 
@@ -38,11 +43,12 @@
   };
 
   const config = window.SUPABASE_CONFIG || {};
-  let client = null;
+  const managerAuth = createDrewoManagerAuth({ legacyAuth: () => window.AdminSupabase });
   let pollTimer = null;
-  let refreshInFlight = false;
+  let accountVersion = 0;
+  let refreshInFlight = null;
   let credentials = [];
-  let credentialsInFlight = false;
+  let credentialsInFlight = null;
 
   const $ = (sel) => document.querySelector(sel);
 
@@ -51,25 +57,6 @@
       config.publishDrewoUrl ||
       'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo'
     );
-  }
-
-  function isAuthReady() {
-    return Boolean(config.url && config.anonKey && window.supabase?.createClient);
-  }
-
-  function getClient() {
-    if (!isAuthReady()) return null;
-    if (!client) {
-      client = window.supabase.createClient(config.url, config.anonKey, {
-        auth: {
-          persistSession: true,
-          autoRefreshToken: true,
-          detectSessionInUrl: true,
-          storageKey: 'waydean-trees-auth',
-        },
-      });
-    }
-    return client;
   }
 
   function showBoot(text) {
@@ -85,6 +72,7 @@
   }
 
   function showLogin() {
+    accountVersion += 1;
     $('#login-screen').hidden = false;
     $('#app-screen').hidden = true;
     stopPolling();
@@ -96,8 +84,13 @@
   }
 
   function showApp() {
+    accountVersion += 1;
     $('#login-screen').hidden = true;
     $('#app-screen').hidden = false;
+    if (location.hash === '#create') {
+      history.replaceState(null, '', location.pathname + location.search);
+      openCreateDialog();
+    }
   }
 
   function formatNumber(value) {
@@ -118,97 +111,17 @@
     return rtf.format(-Math.round(diffSec / 86400), 'day');
   }
 
-  function walkNodes(root) {
-    const out = [];
-    function visit(node) {
-      if (!node || typeof node !== 'object') return;
-      out.push(node);
-      const sons = Array.isArray(node.sons) ? node.sons : [];
-      sons.forEach(visit);
-    }
-    visit(root);
-    return out;
-  }
-
-  function analyzeTreeJson(data) {
-    const nodes = walkNodes(data);
-    let photos = 0;
-    let withYears = 0;
-    let withBio = 0;
-    let maxDepth = 0;
-
-    function depthWalk(node, depth) {
-      if (!node) return;
-      maxDepth = Math.max(maxDepth, depth);
-      const sons = Array.isArray(node.sons) ? node.sons : [];
-      sons.forEach((child) => depthWalk(child, depth + 1));
-    }
-    depthWalk(data, 1);
-
-    nodes.forEach((node) => {
-      if (node.photo) photos += 1;
-      if (node.born || node.died) withYears += 1;
-      if (node.bio || node.note) withBio += 1;
-    });
-
-    return {
-      people: nodes.length,
-      photos,
-      withYears,
-      withBio,
-      maxDepth,
-    };
-  }
-
-  function analyzeManifest(manifest) {
-    const items = Array.isArray(manifest?.items) ? manifest.items : [];
-    const withPeople = items.filter((item) => Number(item.personCount) > 0);
-    const latest = withPeople[0] || items[0] || null;
-    const previousDifferent = withPeople.find(
-      (item, index) => index > 0 && Number(item.personCount) !== Number(latest?.personCount)
-    );
-    const baseline = [...withPeople].reverse()[0] || null;
-    const personCount = Number(latest?.personCount) || 0;
-    const addedSinceBaseline =
-      baseline && personCount >= Number(baseline.personCount)
-        ? personCount - Number(baseline.personCount)
-        : null;
-    const addedSincePrevious =
-      previousDifferent && personCount >= Number(previousDifferent.personCount)
-        ? personCount - Number(previousDifferent.personCount)
-        : 0;
-
-    return {
-      backupCount: items.length,
-      lastSavedAt: latest?.savedAt || null,
-      manifestPeople: personCount,
-      addedSinceBaseline,
-      addedSincePrevious,
-    };
-  }
-
-  async function fetchJson(url) {
-    const response = await fetch(url, { cache: 'no-store' });
-    if (!response.ok) throw new Error(`HTTP ${response.status} for ${url}`);
-    return response.json();
-  }
-
   async function authHeaders() {
     const headers = {
       'Content-Type': 'application/json',
       Authorization: `Bearer ${config.anonKey || ''}`,
       apikey: config.anonKey || '',
     };
-    const sb = getClient();
-    if (sb) {
-      try {
-        const { data } = await sb.auth.getSession();
-        if (data?.session?.access_token) {
-          headers.Authorization = `Bearer ${data.session.access_token}`;
-        }
-      } catch {
-        // keep anon
-      }
+    try {
+      const session = await managerAuth.getSession();
+      if (session?.access_token) headers.Authorization = `Bearer ${session.access_token}`;
+    } catch {
+      // Keep anonymous headers if session storage is unavailable.
     }
     return headers;
   }
@@ -221,20 +134,9 @@
     });
     if (!response.ok) {
       const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `hub-overview ${response.status}`);
-    }
-    return response.json();
-  }
-
-  async function callStatus(treeDir) {
-    const response = await fetch(publishUrl(), {
-      method: 'POST',
-      headers: await authHeaders(),
-      body: JSON.stringify({ action: 'status', treeDir }),
-    });
-    if (!response.ok) {
-      const err = await response.json().catch(() => ({}));
-      throw new Error(err.error || `status ${response.status}`);
+      const error = new Error(err.error || `hub-overview ${response.status}`);
+      error.status = response.status;
+      throw error;
     }
     return response.json();
   }
@@ -337,91 +239,41 @@
     return Array.from(byDir.values());
   }
 
-  async function loadLocalStats(meta) {
-    const base = meta.path;
-    const [treeResult, manifestResult] = await Promise.allSettled([
-      fetchJson(`${base}family-tree.json`),
-      fetchJson(`${base}backups/manifest.json`),
-    ]);
-
-    const treeStats =
-      treeResult.status === 'fulfilled' ? analyzeTreeJson(treeResult.value) : null;
-    const manifestStats =
-      manifestResult.status === 'fulfilled' ? analyzeManifest(manifestResult.value) : null;
-
-    const people = treeStats?.people ?? manifestStats?.manifestPeople ?? null;
-
-    return {
-      meta,
-      people,
-      photos: treeStats?.photos ?? null,
-      withYears: treeStats?.withYears ?? null,
-      withBio: treeStats?.withBio ?? null,
-      maxDepth: treeStats?.maxDepth ?? null,
-      backupCount: manifestStats?.backupCount ?? null,
-      lastSavedAt: manifestStats?.lastSavedAt ?? null,
-      addedSinceBaseline: manifestStats?.addedSinceBaseline ?? null,
-      addedSincePrevious: manifestStats?.addedSincePrevious ?? null,
-      treeOk: treeResult.status === 'fulfilled',
-    };
-  }
-
   async function loadAll() {
-    let overviewTrees = [];
-    let overviewByDir = new Map();
-    try {
-      const overview = await callHubOverview();
-      if (overview?.ok && Array.isArray(overview.trees)) {
-        overviewTrees = overview.trees;
-        overview.trees.forEach((row) => overviewByDir.set(row.treeDir, row));
-      }
-    } catch {
-      overviewByDir = new Map();
+    // Only authorized API data reaches the cabinet; no public tree JSON reads.
+    const overview = await callHubOverview();
+    if (!overview?.ok || !Array.isArray(overview.trees)) {
+      throw new Error('Не удалось подтвердить доступ к кабинету.');
     }
-
-    const metas = mergeTreeMetas(overviewTrees);
-    const locals = await Promise.all(metas.map((meta) => loadLocalStats(meta)));
-
-    return Promise.all(
-      locals.map(async (local) => {
-        let remote = overviewByDir.get(local.meta.dir) || null;
-        let liveOk = Boolean(remote);
-        if (!remote) {
-          try {
-            remote = await callStatus(local.meta.dir);
-            liveOk = true;
-          } catch {
-            remote = null;
-            liveOk = false;
-          }
-        }
-
-        return {
-          ...local,
-          locked: Boolean(remote?.locked),
-          lockedReason: remote?.lockedReason || '',
-          billing: remote?.billing || null,
-          deletedAt: remote?.deletedAt || null,
-          lastSavedAt: remote?.lastSavedAt || local.lastSavedAt,
-          backupCount: remote?.backupCount ?? local.backupCount,
-          addedSinceBaseline:
-            remote?.addedSinceBaseline != null
-              ? remote.addedSinceBaseline
-              : local.addedSinceBaseline,
-          addedSincePrevious:
-            remote?.addedSincePrevious != null
-              ? remote.addedSincePrevious
-              : local.addedSincePrevious,
-          people: local.people ?? remote?.personCount ?? null,
-          liveOk,
-        };
-      })
-    );
+    const byDir = new Map(overview.trees.map(row => [row.treeDir, row]));
+    return mergeTreeMetas(overview.trees).filter(meta => byDir.has(meta.dir)).map(meta => {
+      const remote = byDir.get(meta.dir);
+      return {
+        meta,
+        people: remote.personCount ?? null,
+        photos: remote.photos ?? null,
+        withYears: remote.withYears ?? null,
+        withBio: remote.withBio ?? null,
+        maxDepth: remote.maxDepth ?? null,
+        backupCount: remote.backupCount ?? null,
+        lastSavedAt: remote.lastSavedAt ?? null,
+        addedSinceBaseline: remote.addedSinceBaseline ?? null,
+        addedSincePrevious: remote.addedSincePrevious ?? null,
+        locked: Boolean(remote.locked),
+        lockedReason: remote.lockedReason || '',
+        billing: remote.billing || null,
+        deletedAt: remote.deletedAt || null,
+        treeOk: remote.personCount != null,
+        liveOk: true,
+      };
+    });
   }
 
   function renderSummary(rows) {
-    const people = rows.reduce((sum, row) => sum + (Number(row.people) || 0), 0);
-    const added = rows.reduce((sum, row) => sum + (Number(row.addedSinceBaseline) || 0), 0);
+    const completeSum = key => rows.every(row => row[key] != null && Number.isFinite(Number(row[key])))
+      ? rows.reduce((sum, row) => sum + Number(row[key]), 0) : null;
+    const people = completeSum('people');
+    const added = completeSum('addedSinceBaseline');
 
     $('#sum-people').textContent = formatNumber(people);
     $('#sum-added').textContent = formatNumber(added);
@@ -434,7 +286,7 @@
       bits.push(`<span class="badge badge-quiet">Заказчик</span>`);
     }
     if (billing?.status === 'trial') {
-      bits.push(`<span class="badge badge-trial">Trial</span>`);
+      bits.push(`<span class="badge badge-trial">Пробный период</span>`);
     } else if (billing?.status === 'active') {
       bits.push(`<span class="badge badge-ok">Оплачено</span>`);
     } else if (billing?.status === 'expired') {
@@ -559,10 +411,10 @@
       .map((row, index) => {
         const addedHint =
           row.addedSincePrevious != null && row.addedSincePrevious > 0
-            ? `+${formatNumber(row.addedSincePrevious)} с прошлого бэкапа`
-            : 'с первого учёта';
+            ? `+${formatNumber(row.addedSincePrevious)} с прошлой копии`
+            : row.addedSinceBaseline == null ? 'Нет данных' : 'С первого учёта';
         const photoText =
-          row.photos != null ? `${formatNumber(row.photos)} с фото` : 'фото —';
+          row.photos != null ? `${formatNumber(row.photos)} с фото` : 'Нет данных о фото';
         const yearsText =
           row.withYears != null ? `${formatNumber(row.withYears)} с годами` : '';
         const depthText = row.maxDepth != null ? `глубина ${formatNumber(row.maxDepth)}` : '';
@@ -592,11 +444,11 @@
                   <span class="m-hint">${addedHint}</span>
                 </div>
                 <div class="metric">
-                  <span class="m-label">Бэкапы</span>
+                  <span class="m-label">Резервные копии</span>
                   <span class="m-value">${formatNumber(row.backupCount)}</span>
                 </div>
                 <div class="metric">
-                  <span class="m-label">Состав</span>
+                  <span class="m-label">Биографии</span>
                   <span class="m-value">${formatNumber(row.withBio)}</span>
                   <span class="m-hint">${[yearsText, depthText].filter(Boolean).join(' · ') || 'био / заметки'}</span>
                 </div>
@@ -618,8 +470,9 @@
   }
 
   async function refresh(opts = {}) {
-    if (refreshInFlight) return;
-    refreshInFlight = true;
+    const version = accountVersion;
+    if (refreshInFlight === version) return;
+    refreshInFlight = version;
     const btn = $('#refresh-btn');
     if (btn) btn.classList.add('is-spinning');
     if (opts.boot) showBoot('Считываю древа…');
@@ -627,6 +480,7 @@
     const status = $('#status-line');
     try {
       const rows = await loadAll();
+      if (version !== accountVersion) return;
       renderSummary(rows);
       renderCards(rows);
       const stamp = new Date().toLocaleTimeString('ru-RU', {
@@ -634,18 +488,26 @@
         minute: '2-digit',
       });
       $('#updated-at').textContent = `Обновлено в ${stamp}`;
-      if (status) status.textContent = 'Данные с сайта и live-статуса. Старые ссылки /drewo/ не менялись.';
+      if (status) status.textContent = 'Данные получены из защищённого API.';
     } catch (error) {
+      if (version !== accountVersion) return;
+      // Previously rendered data must not remain visible after a denied or failed verification.
+      $('#tree-list')?.replaceChildren();
+      $('#sum-people').textContent = '—';
+      $('#sum-added').textContent = '—';
+      $('#updated-at').textContent = 'Нет подтверждённых данных';
+      credentials = [];
+      renderCredentials();
       if (status) {
         status.textContent =
           error instanceof Error ? error.message : 'Не удалось обновить данные';
       }
     } finally {
-      refreshInFlight = false;
-      if (btn) {
-        window.setTimeout(() => btn.classList.remove('is-spinning'), 700);
+      if (refreshInFlight === version) {
+        refreshInFlight = null;
+        if (btn) window.setTimeout(() => btn.classList.remove('is-spinning'), 700);
+        if (opts.boot && version === accountVersion) hideBoot();
       }
-      if (opts.boot) hideBoot();
     }
   }
 
@@ -663,7 +525,7 @@
     }
   }
 
-  const AUTH_LOCK_SCOPE = 'trees';
+  const AUTH_LOCK_SCOPE = 'admin';
   let authLockTimer = null;
 
   function authLockApi() {
@@ -687,7 +549,7 @@
       if (submit) submit.disabled = true;
       return;
     }
-    if (submit && isAuthReady()) submit.disabled = false;
+    if (submit && managerAuth.isEnabled()) submit.disabled = false;
   }
 
   function startAuthLockTicker() {
@@ -718,8 +580,7 @@
     const email = $('#login-email').value.trim();
     const password = $('#login-password').value;
 
-    const sb = getClient();
-    if (!sb) {
+    if (!managerAuth.isEnabled()) {
       setLoginError('Supabase не настроен');
       return;
     }
@@ -738,14 +599,10 @@
 
     showBoot('Вход…');
     try {
-      const { error } = await sb.auth.signInWithPassword({ email, password });
-      if (error) throw error;
+      await managerAuth.signIn(email, password, $('#login-remember-account')?.checked);
       if (lock) lock.clear(AUTH_LOCK_SCOPE);
-      try {
-        localStorage.setItem(EMAIL_KEY, email);
-      } catch {
-        // ignore
-      }
+      rememberIdentifier(ACCOUNT_EMAIL_KEY, email, $('#login-remember-account')?.checked);
+      $('#login-password').value = '';
       showApp();
       await refresh({ boot: true });
       void loadCredentials();
@@ -767,22 +624,31 @@
     }
   }
 
-  async function handleLogout() {
-    const sb = getClient();
+  async function handleLogout(switchAccount = false) {
     stopPolling();
     showBoot('Выход…');
     try {
-      if (sb) await sb.auth.signOut();
+      await managerAuth.signOut();
     } catch {
-      // ignore
+      hideBoot();
+      const status = $('#status-line');
+      if (status) status.textContent = 'Не удалось выйти. Проверьте подключение и повторите попытку.';
+      startPolling();
+      return;
+    }
+    $('#tree-list')?.replaceChildren();
+    $('#login-password').value = '';
+    if (switchAccount) {
+      $('#login-email').value = '';
+      $('#login-remember-account').checked = false;
     }
     hideBoot();
     showLogin();
+    $('#login-email').focus();
   }
 
   async function restoreSession() {
-    const sb = getClient();
-    if (!sb) {
+    if (!managerAuth.isEnabled()) {
       $('#login-setup-notice').hidden = false;
       $('#login-submit').disabled = true;
       hideBoot();
@@ -791,8 +657,8 @@
 
     showBoot('Проверка сессии…');
     try {
-      const { data } = await sb.auth.getSession();
-      if (!data?.session) {
+      const session = await managerAuth.getSession();
+      if (!session) {
         hideBoot();
         return;
       }
@@ -958,12 +824,14 @@
   }
 
   async function loadCredentials() {
-    if (credentialsInFlight) return;
-    credentialsInFlight = true;
+    const version = accountVersion;
+    if (credentialsInFlight === version) return;
+    credentialsInFlight = version;
     const btn = $('#credentials-refresh');
     if (btn) btn.disabled = true;
     try {
       const data = await callHubCredentials();
+      if (version !== accountVersion) return;
       credentials = Array.isArray(data?.trees) ? data.trees : [];
       vaultConfigured = data?.vaultConfigured !== false;
       renderCredentials();
@@ -975,14 +843,17 @@
         credentialNote('');
       }
     } catch (error) {
+      if (version !== accountVersion) return;
       credentials = [];
       renderCredentials();
       credentialNote(
         error instanceof Error ? error.message : 'Не удалось загрузить доступы древ'
       );
     } finally {
-      credentialsInFlight = false;
-      if (btn) btn.disabled = false;
+      if (credentialsInFlight === version) {
+        credentialsInFlight = null;
+        if (btn) btn.disabled = false;
+      }
     }
   }
 
@@ -1016,7 +887,7 @@
     const treeDir = form.getAttribute('data-set-form') || '';
     const input = form.querySelector('.cred-set-input');
     const password = String(input?.value || '');
-    if (password.length < 2 || password.length > 64) {
+    if (password.length < 2 || familyPasswordLength(password) > FAMILY_PASSWORD_MAX_LENGTH) {
       credentialNote('Пароль семьи: от 2 до 64 символов');
       input?.focus();
       return;
@@ -1103,7 +974,7 @@
   function suggestLoginFromTitle() {
     const loginInput = $('#create-login');
     if (!loginInput || loginInput.value.trim()) return;
-    const suggested = slugifyTreeCode($('#create-title')?.value);
+    const suggested = slugifyTreeCode($('#create-title')?.value || $('#create-root')?.value);
     if (suggested.length < 2) return;
     loginInput.value = suggested;
     updateCodePreview();
@@ -1127,7 +998,7 @@
       action === 'extend'
         ? 'Продлеваю…'
         : action === 'activate_trial'
-          ? 'Включаю trial…'
+          ? 'Включаю пробный период…'
           : action === 'set_exempt'
             ? 'Снимаю оплату…'
             : 'Отключаю…'
@@ -1237,37 +1108,6 @@
     }
   }
 
-  async function waitUntilPageReady(path, options) {
-    const href = openHref(path);
-    const maxMs = options?.maxMs ?? 90000;
-    const started = Date.now();
-    let attempt = 0;
-    while (Date.now() - started < maxMs) {
-      attempt += 1;
-      const elapsedSec = Math.round((Date.now() - started) / 1000);
-      showBoot(
-        attempt === 1
-          ? 'Публикую страницу на сайте…'
-          : `Жду появления страницы… ${elapsedSec} с`
-      );
-      try {
-        const response = await fetch(href, {
-          method: 'GET',
-          cache: 'no-store',
-          redirect: 'follow',
-        });
-        if (response.ok) return href;
-      } catch {
-        // CDN/Pages may still be rolling out.
-      }
-      const delay = Math.min(2500, 700 + attempt * 350);
-      await new Promise((resolve) => window.setTimeout(resolve, delay));
-    }
-    throw new Error(
-      'Древо создано, но страница ещё не успела появиться на сайте. Обновите список через минуту и откройте вручную.'
-    );
-  }
-
   async function handleCreateTree(event) {
     event.preventDefault();
     const err = $('#create-tree-error');
@@ -1288,11 +1128,21 @@
       return;
     }
 
+    const passwordInput = $('#create-password');
+    const password = normalizeFamilyPassword(passwordInput.value);
+    const passwordError = newFamilyPasswordError(password);
+    if (passwordError) {
+      err.hidden = false;
+      err.textContent = passwordError;
+      passwordInput.focus();
+      return;
+    }
+
     const payload = {
-      title: $('#create-title')?.value.trim() || '',
+      title: $('#create-title')?.value.trim() || `Семья · ${$('#create-root').value.trim()}`.slice(0,80),
       login,
       code: login,
-      password: $('#create-password')?.value || '',
+      password,
       rootName: $('#create-root')?.value.trim() || '',
       ownership: $('#create-ownership')?.value || 'mine',
       note: $('#create-note')?.value.trim() || '',
@@ -1305,15 +1155,20 @@
       closeCreateDialog();
       const form = $('#create-tree-form');
       if (form) form.reset();
+      if (created.treeDir === 'drewo-' + login) {
+        const entry = new URL(`/${created.treeDir}/`, window.location.origin);
+        if (created.sessionToken) {
+          try { sessionStorage.setItem('nek-session:' + created.treeDir, created.sessionToken); }
+          catch { entry.hash = 'nek=' + encodeURIComponent(created.sessionToken); }
+        }
+        window.location.assign(entry.pathname + entry.hash);
+        return;
+      }
       await refresh();
       void loadCredentials();
       const status = $('#status-line');
       if (status) {
         status.textContent = `Создано: ${created.inviteUrl || created.invitePath || created.path || ''} · логин ${created.login || created.code || ''}. Откройте и добавьте людей.`;
-      }
-      if (created.path) {
-        const readyHref = await waitUntilPageReady(created.path);
-        window.location.href = readyHref;
       }
     } catch (error) {
       if (err) {
@@ -1337,6 +1192,7 @@
     $('#logout-btn')?.addEventListener('click', () => {
       void handleLogout();
     });
+    $('#switch-account-btn')?.addEventListener('click', () => void handleLogout(true));
     $('#refresh-btn')?.addEventListener('click', () => {
       void refresh();
     });
@@ -1347,6 +1203,7 @@
     $('#create-tree-cancel')?.addEventListener('click', () => closeCreateDialog());
     $('#create-login')?.addEventListener('input', updateCodePreview);
     $('#create-title')?.addEventListener('blur', suggestLoginFromTitle);
+    $('#create-root')?.addEventListener('blur', suggestLoginFromTitle);
     $('#create-tree-form')?.addEventListener('submit', (event) => {
       void handleCreateTree(event);
     });
@@ -1364,14 +1221,9 @@
       void saveCredentialPassword(form);
     });
 
-    try {
-      const saved = localStorage.getItem(EMAIL_KEY);
-      if (saved && $('#login-email')) $('#login-email').value = saved;
-    } catch {
-      // ignore
-    }
+    restoreRememberedIdentifier($('#login-email'), $('#login-remember-account'), ACCOUNT_EMAIL_KEY, { checkChoice: false });
 
-    if (!isAuthReady()) {
+    if (!managerAuth.isEnabled()) {
       const notice = $('#login-setup-notice');
       const submit = $('#login-submit');
       if (notice) notice.hidden = false;

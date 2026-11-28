@@ -1,7 +1,7 @@
 {
-  "name": "Trees — пульт древ",
-  "short_name": "Trees",
-  "description": "Мониторинг семейных древ waydean.ru для тестирования",
+  "name": "Древо — кабинет управляющего",
+  "short_name": "Кабинет",
+  "description": "Управление родословными и доступом семей",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

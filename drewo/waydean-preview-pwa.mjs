@@ -1,4 +1,5 @@
-const CACHE_NAME = 'waydean-preview-shell-v64';
+import {familyDirectoryForUrl} from './waydean-preview-route.mjs?v=shared-family-1';
+const CACHE_NAME = 'waydean-preview-shell-v90';
 
 function isLoopbackHost(hostname) {
   const host = String(hostname || '').toLowerCase().replace(/\.$/, '');
@@ -10,12 +11,7 @@ function isInstalled() {
 }
 
 function activeTreeDir() {
-  const dirs = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
-  const params = new URLSearchParams(location.search);
-  const requested = String(params.get('tree') || '').trim().toLowerCase();
-  if (dirs.has(requested)) return requested;
-  const match = location.pathname.match(/^\/(drewo(?:-[a-z0-9-]+)?)(?:\/|$)/i);
-  return match && dirs.has(match[1].toLowerCase()) ? match[1].toLowerCase() : 'drewo';
+  return familyDirectoryForUrl(new URL(location.href));
 }
 
 function familyAppUrl() {
@@ -30,15 +26,15 @@ function familyAppUrl() {
   return url.href;
 }
 
-function installInstructions() {
+function installInstructions(appName) {
   const ua = navigator.userAgent || '';
   if (/iphone|ipad|ipod/i.test(ua)) {
-    return 'На iPhone или iPad откройте Waydean в Safari, нажмите «Поделиться» → «На экран Домой» → «Добавить».';
+    return `В Safari откройте «${appName}», нажмите «Поделиться» → «На экран Домой» → «Добавить».`;
   }
   if (/android/i.test(ua)) {
     return 'На Android откройте меню Chrome и выберите «Установить приложение» или «Добавить на главный экран».';
   }
-  return 'В Chrome или Edge нажмите значок установки в адресной строке либо откройте меню браузера и выберите «Установить Waydean».';
+  return `В Chrome или Edge нажмите значок установки в адресной строке или выберите «Установить ${appName}» в меню браузера.`;
 }
 
 export function createWaydeanPwaController(onChange = () => {}, {
@@ -46,14 +42,17 @@ export function createWaydeanPwaController(onChange = () => {}, {
   accountAdminAction = null,
   familySessionAction = null
 } = {}) {
+  const params = new URLSearchParams(location.search);
+  const sharedFamilyApp = params.get('source') === 'family' && params.has('familyPath');
   const state = {
     localPreview: isLoopbackHost(location.hostname),
+    sharedFamilyApp,
     serverPushAvailable: Boolean(allowServerPush && !isLoopbackHost(location.hostname)
       && location.protocol === 'https:' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window),
     online: navigator.onLine !== false,
     installed: isInstalled(),
     installPromptAvailable: false,
-    installInstructions: installInstructions(),
+    installInstructions: installInstructions(sharedFamilyApp ? 'Древо' : 'Waydean'),
     serviceWorkerReady: false,
     serviceWorkerError: false,
     offlineReady: false,
@@ -66,7 +65,6 @@ export function createWaydeanPwaController(onChange = () => {}, {
   let deferredInstallPrompt = null;
   let registration = null;
   let registrationPromise = Promise.resolve(null);
-  const params = new URLSearchParams(location.search);
   const familyApp = params.get('source') === 'family' || params.has('nek') || params.has('invite');
   if (!state.localPreview && !familyApp) document.querySelector('link[rel="manifest"]')?.remove();
 
@@ -82,8 +80,9 @@ export function createWaydeanPwaController(onChange = () => {}, {
     try {
       const cache = await caches.open(CACHE_NAME);
       const page = familyAppUrl();
-      const tree = new URL(`../${activeTreeDir()}/family-tree.json`, location.href).href;
-      state.offlineReady = Boolean(await cache.match(page, { ignoreSearch: true }) && await cache.match(tree, { ignoreSearch: true }));
+      // The private family snapshot is not cached. Only the synthetic fixture can be read offline.
+      const fixture = new URL('../docs/design/waydean/fixtures/master-tree.json', location.href).href;
+      state.offlineReady = params.get('fixture') === 'master' && Boolean(await cache.match(page, { ignoreSearch: true }) && await cache.match(fixture));
     } catch {
       state.offlineReady = false;
     }

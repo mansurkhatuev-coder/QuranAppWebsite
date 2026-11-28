@@ -1,5 +1,38 @@
 const TREE_MODES = new Set(['path', 'branch', 'all-tree']);
 const FAMILY_TREE_DIRS = new Set(['drewo', 'drewo-adam', 'drewo-dada-yurt', 'drewo-eldarovy', 'drewo-guzat', 'drewo-reklama']);
+const SHARED_EDITOR_PATH = '/drewo/waydean-preview.html';
+
+function familyDirectoryInPath(path) {
+  return path.match(/^\/(drewo(?:-[a-z][a-z0-9-]{1,24})?)(?:\/(?:index\.html)?)?$/)?.[1] || '';
+}
+
+// Keep the canonical family link usable when Pages has only the shared editor.
+export function familyEditorRedirect(href) {
+  const from = new URL(href);
+  const treeDir = familyDirectoryInPath(from.pathname);
+  if (!treeDir) return null;
+  const target = new URL(SHARED_EDITOR_PATH, from.origin);
+  target.searchParams.set('source', 'family');
+  target.searchParams.set('familyPath', `/${treeDir}/`);
+  const state = from.searchParams.get('state');
+  if (TREE_MODES.has(state)) target.searchParams.set('state', state);
+  const invite = from.searchParams.get('invite') || '';
+  if (/^[a-z][a-z0-9-]{1,24}$/.test(invite)) target.searchParams.set('invite', invite);
+  const token = (from.hash.startsWith('#nek=') && new URLSearchParams(from.hash.slice(1)).get('nek')) || from.searchParams.get('nek');
+  if (token) target.hash = `nek=${encodeURIComponent(token)}`;
+  return `${target.pathname}${target.search}${target.hash}`;
+}
+
+export function familyDirectoryForUrl(url) {
+  const canonical = familyDirectoryInPath(url.pathname);
+  if (canonical) return canonical;
+  if (url.pathname === SHARED_EDITOR_PATH && url.searchParams.get('source') === 'family') {
+    const shared = familyDirectoryInPath(url.searchParams.get('familyPath') || '');
+    if (shared) return shared;
+  }
+  const requested = String(url.searchParams.get('tree') || '').trim().toLowerCase();
+  return FAMILY_TREE_DIRS.has(requested) ? requested : 'drewo';
+}
 
 export function initialPreviewView(state, { mobile = false } = {}) {
   const mode = state === 'all' || ['filtersEmpty', 'search', 'stats'].includes(state)
@@ -48,12 +81,17 @@ export function resolveFamilyPreviewRoute(href, hostname) {
   const maySelectTree = !isAccountRoute && (requestedFamily || loopback);
   let treeDir = 'drewo';
 
-  if (maySelectTree && FAMILY_TREE_DIRS.has(requestedTreeDir)) treeDir = requestedTreeDir;
-  else url.searchParams.delete('tree');
+  if (!isProductionHost || url.pathname !== SHARED_EDITOR_PATH || url.searchParams.get('source') !== 'family'
+      || !familyDirectoryInPath(url.searchParams.get('familyPath') || '')) {
+    url.searchParams.delete('familyPath');
+  }
+  if (maySelectTree) treeDir = familyDirectoryForUrl(url);
+  if (!maySelectTree || requestedTreeDir !== treeDir) url.searchParams.delete('tree');
 
   if (!isProductionHost) {
     url.searchParams.delete('nek');
     url.searchParams.delete('invite');
+    if (url.hash.startsWith('#nek=')) url.hash = '';
     if (url.searchParams.get('source') === 'family') url.searchParams.delete('source');
     if (!loopback) {
       url.searchParams.delete('tree');
@@ -85,7 +123,7 @@ export function buildTreeSharePayload({ href, title = 'WAYDEAN', localPreview = 
   const url = new URL(sourceUrl.href);
   const isProductionHost = ['waydean.ru', 'www.waydean.ru'].includes(sourceUrl.hostname.toLowerCase());
   if (localPreview || !isProductionHost) {
-    for (const key of ['refresh', 'source', 'nek', 'invite']) url.searchParams.delete(key);
+    for (const key of ['refresh', 'source', 'nek', 'invite', 'familyPath']) url.searchParams.delete(key);
     url.hash = '';
   } else {
     url.pathname = `/${treeDir}/`;

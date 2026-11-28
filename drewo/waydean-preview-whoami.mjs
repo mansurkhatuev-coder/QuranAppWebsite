@@ -1,14 +1,8 @@
-const FAMILY_TREE_KEYS = new Set([
-  'drewo-adam',
-  'drewo-dada-yurt',
-  'drewo-eldarovy',
-  'drewo-guzat',
-  'drewo-reklama'
-]);
+const familyKey = key => /^drewo-[a-z][a-z0-9-]{1,24}$/.test(key);
 
 function normalizedTreeKey(treeKey) {
   const key = String(treeKey ?? '').trim().toLowerCase();
-  return key === 'demo' || key === 'hoti' || FAMILY_TREE_KEYS.has(key) ? key : 'hoti';
+  return key === 'demo' || key === 'hoti' || familyKey(key) ? key : 'hoti';
 }
 
 export function whoAmIPersonStorageKey(treeKey) {
@@ -28,7 +22,7 @@ export function readWhoAmIPerson(storage, treeKey, validPersonIds) {
   try {
     const personId = storage?.getItem(key);
 
-    if (FAMILY_TREE_KEYS.has(normalizedKey)) {
+    if (familyKey(normalizedKey)) {
       const sourceKey = whoAmIPersonSourceStorageKey(normalizedKey);
       if (storage?.getItem(sourceKey) !== 'explicit-v1') {
         // Discard values written by the old shared-key migration. Their tree of origin is unknown.
@@ -52,7 +46,7 @@ export function saveWhoAmIPerson(storage, treeKey, personId) {
   try {
     if (!storage) return false;
     const normalizedKey = normalizedTreeKey(treeKey);
-    if (FAMILY_TREE_KEYS.has(normalizedKey)) {
+    if (familyKey(normalizedKey)) {
       storage.setItem(whoAmIPersonSourceStorageKey(normalizedKey), 'explicit-v1');
     }
     storage.setItem(whoAmIPersonStorageKey(normalizedKey), personId);
@@ -67,7 +61,7 @@ export function clearWhoAmIPerson(storage, treeKey) {
     if (!storage) return false;
     const normalizedKey = normalizedTreeKey(treeKey);
     storage.removeItem(whoAmIPersonStorageKey(normalizedKey));
-    if (FAMILY_TREE_KEYS.has(normalizedKey)) {
+    if (familyKey(normalizedKey)) {
       storage.removeItem(whoAmIPersonSourceStorageKey(normalizedKey));
     }
     return true;

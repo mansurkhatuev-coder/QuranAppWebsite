@@ -6,14 +6,16 @@ import {
   panViewportByPointer, pointerPanThreshold, preventNativeTouchScroll
 } from './waydean-preview-camera.mjs?v=camera-pan-20261116-1';
 import { requireWaydeanAdminAccess } from './waydean-preview-access.mjs?v=admin-auth-2';
-import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=admin-push-20261028-1';
-import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-1';
+import { callWaydeanAdminAction } from './waydean-preview-admin-api.mjs?v=private-photo-1';
+import { accountLockPresentation, validateFamilyPasswordChange } from './waydean-preview-admin-controls.mjs?v=account-admin-controls-2';
 import { accountPublishButtonState, buildWaydeanPublishPayload } from './waydean-preview-publish.mjs?v=person-gender-publish-20261108-1';
 import { describeWaydeanActivity, parseWaydeanActivity, parseWaydeanBackups } from './waydean-preview-account-history.mjs?v=1';
 import { readWaydeanAdminEmail } from './waydean-admin-identity.mjs?v=1';
+import { createDrewoManagerAuth } from '../assets/drewo-manager-auth.mjs?v=1';
+import { ACCOUNT_EMAIL_KEY, FAMILY_LOGIN_KEY, clearFamilyAccess, rememberIdentifier, restoreRememberedIdentifier } from '../assets/drewo-auth-preferences.mjs';
 import {
   clearWhoAmIPerson, readWhoAmIPerson, saveWhoAmIPerson
-} from './waydean-preview-whoami.mjs?v=identity-storage-explicit-per-tree-20261119-1';
+} from './waydean-preview-whoami.mjs?v=atlas-family-1';
 import { connectorPaths } from './waydean-preview-lines.mjs';
 import { masterFixtureFocus, masterFixtureVisibleRecords } from './waydean-preview-fixture.mjs';
 import { includePersonInFilters, fallbackSelectedPersonId } from './waydean-preview-selection.mjs';
@@ -23,30 +25,40 @@ import {
 import {
   accountPreviewUrl, buildPreviewReloadUrl, buildTreeSharePayload, canLoadPreviewTree, initialPreviewView,
   isFamilyPreviewRoute, isLoopbackHost, isMasterFixtureQuery, previewUrlForMode, resolveFamilyPreviewRoute, shareTreeLink
-} from './waydean-preview-route.mjs?v=family-route-10-initial-full-tree';
+} from './waydean-preview-route.mjs?v=shared-family-1';
 import { cloneTree, updatePerson, setPersonPhotoKey, addChild, generateUniquePersonId, reparentPerson, deleteLeaf, isDirty, mockSave } from './waydean-preview-edit.mjs?v=person-gender-20261108-1';
 import {
   loadLocalTreeDraft, saveLocalTreeDraft, clearLocalTreeDraft, listLocalTreePhotos,
   createLocalTreeBackup, listLocalTreeBackups, setLocalTreeBackupPinned,
   restoreLocalTreeBackup, listLocalTreeHistory
 } from './waydean-preview-storage.mjs?v=3';
-import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=pwa-scope-20261119-2';
+import { createWaydeanPwaController } from './waydean-preview-pwa.mjs?v=account-8';
 import { createExportWorkshopHandoff, readExportWorkshopHandoff, writeExportWorkshopHandoff } from '../docs/design/waydean/export/workshop-model.mjs?v=shared-export-3-family-trees';
 import {
   createWeatherController, normalizeAppearance, normalizeColorScheme, readAppearance, readColorScheme, resolveColorSchemeSkyPeriod, writeAppearance, writeColorScheme
 } from './waydean-preview-appearance.mjs?v=dark-default-20261103-1';
-import { consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, readLegacyTreeViewSession, resolveFamilyInvite, resolveFamilyPreviewAccess, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-auth-3';
-import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-lock-2';
+import { FAMILY_LOGOUT_UNCONFIRMED, consumeFamilyTokenFromUrl, loginFamilySession, readFamilySession, resolveFamilyInvite, resolveFamilyPreviewAccess, revokeFamilySession, storeFamilySession } from './waydean-preview-family-auth.mjs?v=family-handoff-1';
+import { callFamilyTreeAction, canEditFamilyTreeRole, canPublishFamilyTreeSession } from './waydean-preview-family-api.mjs?v=family-places-1';
+import { createPrivatePhotoCache, photoResponseBlob } from './waydean-preview-private-photo.mjs?v=1';
 import { formatLifeYears as formatPersonLifeYears } from './waydean-preview-dates.mjs?v=calendar-parity-1';
 
 const USER_ICON = 'M224 256A128 128 0 1 0 224 0a128 128 0 1 0 0 256zm-45.7 48C79.8 304 0 383.8 0 482.3 0 498.7 13.3 512 29.7 512l388.6 0c16.4 0 29.7-13.3 29.7-29.7C448 383.8 368.2 304 269.7 304l-91.4 0z';
-const PHOTO_FALLBACK_BASE = 'https://rivjkiksknnesahrvamf.supabase.co/storage/v1/object/public/drewo-photos';
 const FIXTURE_PHOTOS = new Map([
   ['demo-01', '../docs/design/waydean/assets/demo/waydean-demo-elder-portrait.jpg'],
   ['demo-03', '../docs/design/waydean/assets/demo/waydean-demo-middle-aged-portrait.jpg']
 ]);
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const editorIcon = name => {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.classList.add('drewo-icon');
+  svg.setAttribute('aria-hidden', 'true');
+  const use = document.createElementNS('http://www.w3.org/2000/svg', 'use');
+  use.setAttribute('href', `/assets/drewo-icons.svg?v=20261127-arrows#${name}`);
+  svg.append(use);
+  return svg;
+};
+const drewoManagerAuth = createDrewoManagerAuth({ legacyAuth: () => window.AdminSupabase });
 const railPreferenceKey = 'waydean-preview:tree-actions:v2';
 const ui = {
   app: $('.app-shell'), mobileSelected: $('#mobileSelected'), mobileSearch: $('#mobileSearchTrigger'),
@@ -87,8 +99,6 @@ let familyPreview = false;
 let activeTreeDir = 'drewo';
 let activeTreeId = 'hoti';
 let demoMode = false;
-let familyLegacyReadOnly = false;
-let familyLegacyViewPersonId = '';
 let familySessionTokenMemory = '';
 let familySessionRole = '';
 let familySessionLocked = false;
@@ -133,6 +143,62 @@ let pwaController = null;
 let pwaPushAction = 'subscribe';
 const localPhotoUrls = new Map();
 const localPhotoFullUrls = new Map();
+const privatePhotoCache = createPrivatePhotoCache({
+  request: async ({ personId, variant, treeDir, token, admin }) => {
+    const payload = { personId, variant };
+    const result = admin
+      ? await callWaydeanAdminAction('waydean-admin-photo-load', payload, admin)
+      : await callFamilyTreeAction('photo-load', payload, {
+          endpoint: familyEndpoint(), treeDir, sessionToken: token
+        });
+    return photoResponseBlob(result, payload);
+  },
+  makeUrl: blob => URL.createObjectURL(blob),
+  revokeUrl: url => URL.revokeObjectURL(url)
+});
+let photoLightboxRequest = 0;
+const pendingAvatarPhotos = new WeakMap();
+const privatePhotoObserver = typeof IntersectionObserver === 'function'
+  ? new IntersectionObserver(entries => {
+      for (const entry of entries) {
+        if (!entry.target.isConnected) {
+          privatePhotoObserver.unobserve(entry.target);
+          pendingAvatarPhotos.delete(entry.target);
+          continue;
+        }
+        if (!entry.isIntersecting) continue;
+        privatePhotoObserver.unobserve(entry.target);
+        const load = pendingAvatarPhotos.get(entry.target);
+        pendingAvatarPhotos.delete(entry.target);
+        load?.();
+      }
+    }, { rootMargin: '180px' })
+  : null;
+function privatePhotoContext(person) {
+  if (demoMode || syntheticFixture || !person?.hasPhoto ||
+      (localTreeDraft && String(person.photoKey ?? '').startsWith('local-'))) return null;
+  if (familyPreview && familySessionTokenMemory) return { treeDir: activeTreeDir, token: familySessionTokenMemory };
+  if (accountPreview && accountAdminAccess) return { treeDir: 'drewo', admin: accountAdminAccess };
+  return null;
+}
+function privatePhotoKey(person, variant, context) {
+  return JSON.stringify([context.treeDir, person.id, person.photoKey || '1', variant]);
+}
+function getPrivatePhoto(person, variant) {
+  const context = privatePhotoContext(person);
+  return context ? privatePhotoCache.get(privatePhotoKey(person, variant, context)) : null;
+}
+function loadPrivatePhoto(person, variant) {
+  const context = privatePhotoContext(person);
+  if (!context) return Promise.resolve(null);
+  return privatePhotoCache.load(privatePhotoKey(person, variant, context),
+    { ...context, personId: String(person.id), variant });
+}
+function clearPrivatePhotos() {
+  photoLightboxRequest++;
+  privatePhotoObserver?.disconnect();
+  privatePhotoCache.clear();
+}
 const pendingLocalPhotoWrites = new Map();
 const pendingLocalPhotoDeletes = new Set();
 let suppressPersonClick = null;
@@ -316,21 +382,18 @@ function preparePreviewRecords(root) {
 function photoSource(person) {
   if (demoMode) return null;
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
-  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
-    return localPhotoUrls.get(person.id) || null;
-  }
-  return person.hasPhoto
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) return localPhotoUrls.get(person.id) || null;
+  if (privatePhotoContext(person)) return getPrivatePhoto(person, 'thumbnail');
+  return isLoopbackHost(location.hostname) && person.hasPhoto
     ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}-thumb.webp?v=${encodeURIComponent(String(person.photoKey || '1'))}`
     : null;
 }
-
 function fullPhotoSource(person) {
   if (demoMode) return null;
   if (syntheticFixture && FIXTURE_PHOTOS.has(person.id)) return FIXTURE_PHOTOS.get(person.id);
-  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) {
-    return localPhotoFullUrls.get(person.id) || null;
-  }
-  return person.hasPhoto
+  if (localTreeDraft && String(person.photoKey ?? '').startsWith('local-')) return localPhotoFullUrls.get(person.id) || null;
+  if (privatePhotoContext(person)) return getPrivatePhoto(person, 'full');
+  return isLoopbackHost(location.hostname) && person.hasPhoto
     ? `../${activeTreeDir}/photos/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`
     : null;
 }
@@ -356,36 +419,42 @@ async function restoreLocalPhotoUrls() {
 }
 
 function hasDisplayPhoto(person) {
-  return Boolean(photoSource(person));
+  return Boolean(photoSource(person) || privatePhotoContext(person));
 }
 
-function openPhotoLightbox(person) {
+async function openPhotoLightbox(person) {
   if (!person || !ui.photoLightbox || !ui.photoLightboxImage) return;
-  const source = fullPhotoSource(person);
-  if (!source) return;
+  if (!hasDisplayPhoto(person)) return;
+  const request = ++photoLightboxRequest;
+  const image = ui.photoLightboxImage;
+  image.removeAttribute('src');
   ui.photoLightboxTitle.textContent = person.name || 'Фото';
-  ui.photoLightboxImage.alt = `Полное фото: ${person.name || 'человек'}`;
-  ui.photoLightboxStatus.textContent = '';
-  ui.photoLightboxImage.dataset.photoFallback = '';
-  ui.photoLightboxImage.onerror = () => {
-    if (ui.photoLightboxImage.dataset.photoFallback === 'remote'
-      || source.startsWith('blob:') || syntheticFixture) {
-      ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
-      return;
-    }
-    ui.photoLightboxImage.dataset.photoFallback = 'remote';
-    ui.photoLightboxImage.src = `${PHOTO_FALLBACK_BASE}/${encodeURIComponent(activeTreeDir)}/${encodeURIComponent(person.id)}.jpg?v=${encodeURIComponent(String(person.photoKey || '1'))}`;
+  image.alt = `Полное фото: ${person.name || 'человек'}`;
+  ui.photoLightboxStatus.textContent = 'Загружаем фотографию…';
+  image.onerror = () => {
+    if (request === photoLightboxRequest) ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
   };
-  ui.photoLightboxImage.src = source;
+  image.onload = () => {
+    if (request === photoLightboxRequest) ui.photoLightboxStatus.textContent = '';
+  };
   if (!ui.photoLightbox.open) ui.photoLightbox.showModal();
+  const source = fullPhotoSource(person) || await loadPrivatePhoto(person, 'full');
+  if (request !== photoLightboxRequest || !ui.photoLightbox.open) return;
+  if (!source) {
+    ui.photoLightboxStatus.textContent = 'Не удалось загрузить фотографию.';
+    return;
+  }
+  image.src = source;
 }
 
 function closePhotoLightbox() {
+  photoLightboxRequest++;
   resetCameraGestureState();
   if (ui.photoLightboxImage) {
     ui.photoLightboxImage.removeAttribute('src');
     ui.photoLightboxImage.alt = '';
     ui.photoLightboxImage.onerror = null;
+    ui.photoLightboxImage.onload = null;
   }
   if (ui.photoLightbox?.open) ui.photoLightbox.close();
 }
@@ -666,7 +735,8 @@ function syncWhoAmIButton() {
   const hasSelf = Boolean(myPersonId && byId.has(myPersonId));
   const showingPath = mode === 'path' && hasSelf;
   if (button) {
-    button.textContent = showingPath ? '◎ Всё древо' : hasSelf ? '◎ Мой путь' : '◎ Кто я?';
+    const label = button.querySelector('.who-label') || button;
+    label.textContent = showingPath ? 'Всё древо' : hasSelf ? 'Мой путь' : 'Кто я?';
     button.setAttribute('aria-label', showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь');
     button.title = showingPath ? 'Вернуться ко всему древу' : hasSelf ? 'Показать мой путь к предкам' : 'Отметить себя и показать мой путь';
   }
@@ -711,31 +781,48 @@ function clearSelfPerson() {
 }
 
 function createAvatar(person, className = 'avatar') {
-  const src = photoSource(person);
-  const fallbackSrc = jpegFallbackSource(src);
   const wrapper = document.createElement('span');
-  wrapper.className = `${className} ${src ? 'has-photo' : 'is-empty'}`;
+  wrapper.className = `${className} is-empty`;
   wrapper.setAttribute('aria-hidden', 'true');
-  if (src) {
+  const showPlaceholder = () => {
+    wrapper.classList.remove('has-photo');
+    wrapper.classList.add('is-empty');
+    wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
+  };
+  const showPhoto = src => {
+    if (!src) return;
+    const fallbackSrc = jpegFallbackSource(src);
     const image = document.createElement('img');
     image.alt = '';
     image.loading = 'lazy';
     image.decoding = 'async';
-    image.src = src;
     image.addEventListener('error', () => {
       if (fallbackSrc && image.dataset.photoFallback !== 'jpeg') {
         image.dataset.photoFallback = 'jpeg';
         image.src = fallbackSrc;
         return;
       }
-      image.remove();
-      wrapper.classList.remove('has-photo');
-      wrapper.classList.add('is-empty');
-      wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
+      showPlaceholder();
     });
-    wrapper.append(image);
-  } else {
-    wrapper.innerHTML = `<svg viewBox="0 0 448 512" focusable="false"><path d="${USER_ICON}"/></svg>`;
+    wrapper.replaceChildren(image);
+    wrapper.classList.remove('is-empty');
+    wrapper.classList.add('has-photo');
+    image.src = src;
+  };
+  const src = photoSource(person);
+  if (src) showPhoto(src);
+  else {
+    showPlaceholder();
+    if (privatePhotoContext(person)) {
+      const load = async () => {
+        const photo = await loadPrivatePhoto(person, 'thumbnail');
+        if (wrapper.isConnected && photo) showPhoto(photo);
+      };
+      if (privatePhotoObserver) {
+        pendingAvatarPhotos.set(wrapper, load);
+        privatePhotoObserver.observe(wrapper);
+      } else queueMicrotask(load);
+    }
   }
   return wrapper;
 }
@@ -750,7 +837,9 @@ function drawTree() {
   const hasActiveFilters = filters.min > 1 || filters.max < fullDataDepth || filters.photosOnly;
   const treeBack = $('#showFullTree');
   treeBack.hidden = mode === 'all-tree' && !hasActiveFilters;
-  treeBack.textContent = mode === 'all-tree' ? 'Сбросить фильтры' : '← Назад к полному древу';
+  const treeBackLabel = document.createElement('span');
+  treeBackLabel.textContent = mode === 'all-tree' ? 'Сбросить фильтры' : 'Назад к полному древу';
+  treeBack.replaceChildren(...(mode === 'all-tree' ? [] : [editorIcon('arrow-left')]), treeBackLabel);
   treeBack.title = mode === 'all-tree' ? 'Показать всех людей без фильтров' : 'Вернуться к полному древу';
   treeBack.setAttribute('aria-label', treeBack.title);
   const metrics = nodeMetrics();
@@ -988,7 +1077,7 @@ function renderProfile(tab = 'info') {
   const selectedArrow = document.createElement('span');
   selectedArrow.className = 'mobile-selected-arrow';
   selectedArrow.setAttribute('aria-hidden', 'true');
-  selectedArrow.textContent = '›';
+  selectedArrow.append(editorIcon('chevron-right'));
   ui.mobileSelected.append(selectedCopy, selectedArrow);
   ui.mobileSelected.setAttribute('aria-label', `Открыть профиль: ${person.name}`);
   const parent = person.parentId ? byId.get(person.parentId) : null;
@@ -1045,7 +1134,9 @@ function renderProfile(tab = 'info') {
     bio.className = `person-sheet-bio${String(person.bio || '').trim() ? '' : ' is-empty'}`;
     bio.textContent = String(person.bio || '').trim() || 'Краткой биографии пока нет.';
     const branch = document.createElement('button');
-    branch.type = 'button'; branch.className = 'branch-button'; branch.textContent = 'Показать ветвь　›';
+    branch.type = 'button'; branch.className = 'branch-button';
+    const branchLabel = document.createElement('span'); branchLabel.textContent = 'Показать ветвь';
+    branch.append(branchLabel, editorIcon('chevron-right'));
     branch.addEventListener('click', () => setMode('branch'));
     const selfAction = document.createElement('button');
     selfAction.type = 'button';
@@ -1059,6 +1150,30 @@ function renderProfile(tab = 'info') {
     selfNote.className = 'self-person-note';
     selfNote.textContent = isSelf ? 'Теперь «Мой путь» ведёт от предков к этой карточке.' : 'Отметка хранится в этом браузере отдельно для каждого древа.';
     body.append(facts, bio, branch);
+    if (person.teip) {
+      const button = document.createElement('button');
+      button.className = 'branch-button';
+      button.textContent = 'Найти тейп в атласе';
+      button.addEventListener('click', async () => {
+        try {
+          const {groups} = await import('../atlas/catalog.mjs');
+          const matches = groups.flatMap(group => group.teips
+            .filter(teip => teip.name.localeCompare(person.teip, 'ru', {sensitivity:'base'}) === 0)
+            .map(teip => ({group, teip})));
+          if (!matches.length) { announce('Этого тейпа пока нет в каталоге'); return; }
+          const links = matches.map(({group,teip}) => {
+            const link = document.createElement('a');
+            link.className = 'branch-button';
+            link.href = '/atlas/#/teip/' + group.id + '/' + teip.id;
+            link.textContent = teip.name + ' · ' + group.name;
+            return link;
+          });
+          button.replaceWith(...links);
+          links[0].focus();
+        } catch { announce('Не удалось загрузить каталог тейпов'); }
+      });
+      body.append(button);
+    }
     body.append(selfAction, selfNote);
     if (canEditDraft()) body.append(buildEditControls(person));
   } else if (tab === 'relatives') {
@@ -1183,7 +1298,7 @@ function buildAddChildForm(person) {
       pendingChildUndo = { tree: before, parentId: person.id, childId: child.id, name: child.name, womenVisibleBefore };
       addChildFormOpenForPerson = null;
       if (child.gender === 'female') setWomenVisibility(true);
-      markRelationshipDirty({ preserveChildUndo: true });
+      markRelationshipDirty({ preserveChildUndo: true, focusId: child.id });
       announce(`«${child.name}» добавлен(а) в черновик. Публикация остаётся отдельным шагом.`);
     } catch (error) {
       status.textContent = error?.message || 'Не удалось добавить запись.';
@@ -1869,7 +1984,7 @@ function buildRelationshipControls(person) {
   const dragNote = document.createElement('p'); dragNote.className = 'reparent-mode-note';
   dragNote.textContent = relationshipDragEnabled
     ? 'Карточки можно переносить только после проверки новой связи. Корень переносить нельзя; самого человека и его потомка нельзя назначить новым отцом.'
-    : 'Перетаскивание включается отдельно, чтобы случайно не изменить связь при перемещении древа.';
+    : 'Включите перенос, чтобы изменить родителя.';
   content.append(dragToggle, dragNote);
   const candidates = records.filter(item => item.id !== person.id);
   const moveForm = document.createElement('form'); moveForm.className = 'mock-edit-form';
@@ -1905,12 +2020,12 @@ function buildRelationshipControls(person) {
   });
   content.append(moveForm);
   const deleteForm = document.createElement('form'); deleteForm.className = 'mock-edit-form';
-  const target = addSelect('deleteId', 'Листовой человек для удаления', 'Листового человека для удаления'); deleteForm.append(target);
-  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Удалить листового человека';
+  const target = addSelect('deleteId', 'Листовой человек для удаления', 'Человека без потомков для удаления'); deleteForm.append(target);
+  const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = 'Удалить человека без потомков';
   remove.dataset.profileFocus = 'action:delete';
   remove.addEventListener('click', () => {
     if (!target.value) { announce('Сначала выберите человека.'); return; }
-    if (!window.confirm(`Удалить выбранного листового человека из ${draftSubject()}?`)) return;
+    if (!window.confirm(`Удалить выбранного человека без потомков из ${draftSubject()}?`)) return;
     try {
       const removedPerson = byId.get(target.value);
       deleteLeaf(editableDraftRoot(), target.value);
@@ -1932,9 +2047,12 @@ function buildRelationshipControls(person) {
   return section;
 }
 
-function markRelationshipDirty({ preserveChildUndo = false } = {}) {
+function markRelationshipDirty({ preserveChildUndo = false, focusId = selectedId } = {}) {
   if (!preserveChildUndo) pendingChildUndo = null;
   editStatus = 'dirty'; refreshEditableModel(); renderProfile('relatives');
+  animateTreeLayer(ui.lines, 0.5, 220);
+  const changed = focusId && ui.nodes.querySelector(`[data-person-id="${CSS.escape(focusId)}"]`);
+  if (changed) animateTreeLayer(changed, 0.35, 240);
   announce(hasRemoteTreeWriteAccess() ? 'Черновик изменён. Сохраните его, затем опубликуйте кнопкой «Опубликовать в древо».' : 'Черновик изменён. Сохраните его через вкладку «Информация».');
 }
 
@@ -1956,7 +2074,7 @@ function refreshEditableModel() {
     syncModeButtons(mode);
   }
   syncWhoAmIButton();
-  drawTree(); updateStats();
+  drawTree();
 }
 
 function blobToDataUrl(blob) {
@@ -2234,6 +2352,12 @@ async function resetFixture() {
 window.addEventListener('beforeunload', event => {
   if (!allowUnsavedExit && canEditDraft() && (rawDraftDirty || isDirty(originalFixtureRoot, editableDraftRoot()))) { event.preventDefault(); event.returnValue = ''; }
 });
+window.addEventListener('pagehide', event => {
+  if (event.persisted && (familySessionTokenMemory || accountAdminAccess)) $('.app-shell').style.visibility = 'hidden';
+});
+window.addEventListener('pageshow', event => {
+  if (event.persisted && (familySessionTokenMemory || accountAdminAccess)) location.reload();
+});
 
 function centerPerson(id) {
   const card = ui.nodes.querySelector('[data-person-id="' + CSS.escape(id) + '"]');
@@ -2255,6 +2379,7 @@ function centerVisiblePerson() {
 
 function selectPerson(id, { preserveContext = false } = {}) {
   if (!byId.has(id)) return;
+  const selectionChanged = selectedId !== id;
   if (!showWomen && !filterPeopleByWomen(records, false).some(person => person.id === String(id))) {
     setWomenVisibility(true);
   }
@@ -2279,6 +2404,7 @@ function selectPerson(id, { preserveContext = false } = {}) {
   closePopovers();
   drawTree();
   renderProfile();
+  if (selectionChanged) animateTreeLayer(ui.profile, 0.8, 180);
   syncWhoAmIButton();
   if (zoom < 0.9 && mode !== 'all-tree') setZoom(0.9);
   centerPerson(id);
@@ -2368,29 +2494,31 @@ function renderPwaStatus(state = pwaController?.getState()) {
   const notificationStatus = $('#pwaNotificationStatus');
   const notificationEnable = $('#pwaNotificationEnable');
   const notificationTest = $('#pwaNotificationTest');
+  const canInstall = state.localPreview || state.sharedFamilyApp;
+  const appName = state.sharedFamilyApp ? 'Древо' : 'Waydean';
 
   installStatus.textContent = state.installed
     ? 'Приложение уже установлено'
-    : state.localPreview ? 'Waydean готов к установке' : 'Установка доступна в локальном preview';
+    : canInstall ? 'Можно добавить на главный экран' : 'Установка доступна в локальном preview';
   installHelp.textContent = state.installed
-    ? 'Откройте Waydean с главного экрана или из списка приложений.'
-    : !state.localPreview
+    ? `Откройте «${appName}» с главного экрана или из списка приложений.`
+    : !canInstall
       ? 'Установка отдельного приложения появится после выпуска Waydean.'
       : state.installPromptAvailable
-        ? 'Браузер предлагает установить Waydean отдельным приложением.'
+        ? `Браузер предлагает установить «${appName}» отдельным приложением.`
         : state.installInstructions;
   installButton.textContent = state.installed
-    ? 'Waydean установлено'
-    : state.installPromptAvailable ? 'Установить Waydean' : 'Как установить Waydean';
-  installButton.disabled = state.installed || !state.localPreview;
+    ? 'Приложение установлено'
+    : state.installPromptAvailable ? `Установить ${appName}` : 'Как установить';
+  installButton.disabled = state.installed || !canInstall;
 
   offlineStatus.textContent = !state.localPreview
     ? 'Подключим вместе с выпуском Waydean'
     : state.offlineReady
-      ? 'Готово после первой загрузки'
+      ? 'Демо доступно офлайн'
       : state.serviceWorkerError
-        ? 'Не удалось включить кеш'
-        : 'Кешируется при первом открытии';
+        ? 'Не удалось включить кеш интерфейса'
+        : 'Для семейных данных нужен вход и интернет';
   networkStatus.textContent = state.online ? 'В сети' : 'Нет сети';
   $('#pwaOfflineNote').hidden = !state.localPreview;
 
@@ -2947,6 +3075,23 @@ function resetGenerationFilters() {
   $('#photosOnly').checked = false;
 }
 
+// Keep motion on the visual layers only: the camera, layout, and hit testing
+// are controlled by the existing tree renderer. Cancel stale effects on repeat.
+const drewoMotionAnimations = new WeakMap();
+function animateTreeLayer(element, fromOpacity = 0.72, duration = 220) {
+  if (!element || typeof element.animate !== 'function') return;
+  drewoMotionAnimations.get(element)?.cancel();
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const animation = element.animate(
+    [{ opacity: fromOpacity }, { opacity: 1 }],
+    { duration, easing: 'cubic-bezier(.2,.75,.25,1)' }
+  );
+  drewoMotionAnimations.set(element, animation);
+  animation.onfinish = () => {
+    if (drewoMotionAnimations.get(element) === animation) drewoMotionAnimations.delete(element);
+  };
+}
+
 function setMode(next, announceMode = true) {
   masterMobileOverview = false;
   if (next === 'path' && (!myPersonId || !byId.has(myPersonId))) {
@@ -2969,6 +3114,8 @@ function setMode(next, announceMode = true) {
   syncModeButtons(next);
   drawTree();
   fitTree();
+  animateTreeLayer(ui.nodes, 0.65, 240);
+  animateTreeLayer(ui.lines, 0.65, 240);
   syncWhoAmIButton();
   const labels = { path: 'Подсвечен путь от старшего известного предка.', branch: 'Показана выбранная ветвь.', all: 'Показаны ближайшие три поколения.', 'all-tree': 'Всё дерево доступно. Мини-карта поможет перейти к другим ветвям.' };
   if (announceMode) announce(labels[next] || labels.all);
@@ -3004,7 +3151,7 @@ function updateSearch(value) {
       teipLabel.title = teipLabel.textContent;
       copy.append(teipLabel);
     }
-    const arrow = document.createElement('span'); arrow.className = 'result-arrow'; arrow.textContent = '›'; button.append(arrow);
+    const arrow = document.createElement('span'); arrow.className = 'result-arrow'; arrow.append(editorIcon('chevron-right')); button.append(arrow);
     button.addEventListener('click', () => selectPerson(person.id));
     list.append(button);
   }
@@ -3029,8 +3176,23 @@ function updateStats() {
     const caption = document.createElement('small'); caption.textContent = label;
     card.append(number, caption); $('#statsGrid').append(card);
   }
+  if (familyPreview && familySessionTokenMemory && !demoMode) {
+    const button = document.createElement('button');
+    button.type = 'button'; button.className = 'branch-button';
+    button.textContent = 'Мой род в атласе';
+    button.onclick = async () => {
+      try {
+        const {prepareFamilyView} = await import('../atlas/family-view.mjs?v=4');
+        prepareFamilyView(activeTreeDir,records);
+        location.assign('/atlas/#/family');
+      } catch { announce('Не удалось открыть семейную карту в этой вкладке'); }
+    };
+    $('#statsGrid').append(button);
+  }
   const visibleCount = ui.nodes.querySelectorAll('.person-node').length;
-  $('#statsNote').textContent = `В кадре сейчас ${russianCount(visibleCount, 'человек', 'человека', 'человек')}.`;
+  const earliest = records.reduce((first, person) => person.born > 0 && (!first || person.born < first.born) ? person : first, null);
+  const dateNote = earliest ? ` Самая ранняя известная дата рождения — ${earliest.born}, ${earliest.name}.` : '';
+  $('#statsNote').textContent = `На схеме сейчас ${russianCount(visibleCount, 'человек', 'человека', 'человек')}.` + dateNote;
 }
 
 function updateMiniViewport() {
@@ -3126,6 +3288,8 @@ function bindControls() {
   $('#moreStats').addEventListener('click', () => openPopover(ui.stats));
   $('#moreOpen').addEventListener('click', () => openPopover(ui.more));
   $('#mobileMore').addEventListener('click', () => openPopover(ui.more));
+  $('#familyLogout').addEventListener('click', () => void leaveEditorAccount(false));
+  $('#switchAccount').addEventListener('click', () => void leaveEditorAccount(true));
   $('#morePwa').addEventListener('click', () => { openPopover(ui.pwa); renderPwaStatus(); });
   $('#pwaInstall').addEventListener('click', async () => {
     try {
@@ -3694,7 +3858,7 @@ function showError(error) {
     accountHint.hidden = true;
     accountHint.textContent = '';
     if (accessDenied) {
-      void readWaydeanAdminEmail(window.AdminSupabase).then((email) => {
+      void readWaydeanAdminEmail(drewoManagerAuth).then((email) => {
         if (!email) return;
         accountHint.textContent = `В этой вкладке выполнен вход как ${email}.`;
         accountHint.hidden = false;
@@ -3749,12 +3913,57 @@ function bindWaydeanAdminLogin() {
 
   const emailInput = $('#waydeanAdminEmail');
   const passwordInput = $('#waydeanAdminPassword');
+  const rememberInput = $('#waydeanAdminRemember');
   const errorMessage = $('#waydeanAdminLoginError');
   const submitButton = $('#waydeanAdminLoginSubmit');
+  const authLock = window.AuthLock;
+  const authLockScope = 'admin';
+  let authLockTimer = 0;
+
+  function renderAuthLockState() {
+    if (!authLock) return;
+    const state = authLock.getState(authLockScope);
+    if (submitButton) submitButton.disabled = state.locked;
+    if (state.locked || state.fails > 0) {
+      if (errorMessage) {
+        errorMessage.textContent = state.locked
+          ? state.message
+          : `Неверные данные для входа. Осталось попыток: ${state.attemptsLeft}`;
+        errorMessage.hidden = false;
+      }
+    } else if (/Слишком много попыток|Осталось попыток|Неверные данные для входа/.test(errorMessage?.textContent || '')) {
+      errorMessage.hidden = true;
+    }
+    if (state.locked && !authLockTimer) {
+      authLockTimer = window.setInterval(() => {
+        const current = authLock.getState(authLockScope);
+        if (current.locked) {
+          if (errorMessage) errorMessage.textContent = current.message;
+          return;
+        }
+        window.clearInterval(authLockTimer);
+        authLockTimer = 0;
+        renderAuthLockState();
+      }, 1000);
+    }
+  }
+
+  restoreRememberedIdentifier(emailInput, rememberInput, ACCOUNT_EMAIL_KEY, { checkChoice: false });
+  renderAuthLockState();
 
   form.addEventListener('submit', async (event) => {
     event.preventDefault();
     if (errorMessage) errorMessage.hidden = true;
+    try {
+      authLock?.assertAllowed(authLockScope);
+    } catch (error) {
+      if (errorMessage) {
+        errorMessage.textContent = error?.message || 'Слишком много попыток. Подождите и попробуйте снова.';
+        errorMessage.hidden = false;
+      }
+      renderAuthLockState();
+      return;
+    }
     if (submitButton) {
       submitButton.disabled = true;
       submitButton.textContent = 'Проверяем вход…';
@@ -3762,22 +3971,34 @@ function bindWaydeanAdminLogin() {
 
     try {
       await window.ensureWaydeanAdminSupabase?.();
-      if (!window.AdminSupabase?.isEnabled?.()) throw new Error('Supabase auth is unavailable');
-      await window.AdminSupabase.signIn(emailInput.value.trim(), passwordInput.value);
+      if (!drewoManagerAuth.isEnabled()) throw new Error('Supabase auth is unavailable');
+      await drewoManagerAuth.signIn(emailInput.value.trim(), passwordInput.value, rememberInput?.checked);
+      authLock?.clear(authLockScope);
+      rememberIdentifier(ACCOUNT_EMAIL_KEY, emailInput.value, rememberInput?.checked);
       passwordInput.value = '';
       window.location.reload();
-    } catch {
+    } catch (error) {
       passwordInput.value = '';
       if (errorMessage) {
-        errorMessage.textContent = 'Не удалось войти. Проверьте email и пароль от раздела управления.';
+        if (/хранилище/i.test(error?.message || '')) {
+          errorMessage.textContent = error.message;
+        } else if (authLock) {
+          const state = authLock.recordFailure(authLockScope);
+          errorMessage.textContent = state.locked
+            ? state.message
+            : `Не удалось войти. Проверьте email и пароль от раздела управления. Осталось попыток: ${state.attemptsLeft}`;
+        } else {
+          errorMessage.textContent = 'Не удалось войти. Проверьте email и пароль от раздела управления.';
+        }
         errorMessage.hidden = false;
       }
+      renderAuthLockState();
       passwordInput.focus();
     } finally {
       if (submitButton) {
-        submitButton.disabled = false;
         submitButton.textContent = 'Войти и открыть древо';
       }
+      renderAuthLockState();
     }
   });
 }
@@ -3798,8 +4019,10 @@ function bindWaydeanFamilyLogin() {
     form.dataset.bound = 'true';
     const loginInput = $('#waydeanFamilyLogin');
     const passwordInput = $('#waydeanFamilyPassword');
+    const rememberInput = $('#waydeanFamilyRemember');
     const errorMessage = $('#waydeanFamilyLoginError');
     const submitButton = $('#waydeanFamilyLoginSubmit');
+    restoreRememberedIdentifier(loginInput, rememberInput, FAMILY_LOGIN_KEY);
     form.addEventListener('submit', async event => {
       event.preventDefault();
       if (errorMessage) errorMessage.hidden = true;
@@ -3814,9 +4037,9 @@ function bindWaydeanFamilyLogin() {
           password: passwordInput.value,
           treeDir: activeTreeDir,
           allowTreeRedirect: !demoMode,
-          origin: window.location.origin,
           storage: familySessionStorage()
         });
+        if (!demoMode) rememberIdentifier(FAMILY_LOGIN_KEY, loginInput.value, rememberInput?.checked);
         passwordInput.value = '';
         if (result.redirect) {
           window.location.assign(result.redirectUrl);
@@ -3824,8 +4047,11 @@ function bindWaydeanFamilyLogin() {
         }
         if (!result.stored) {
           const handoff = new URL(window.location.href);
-          handoff.searchParams.set('nek', result.sessionToken);
-          window.location.replace(`${handoff.pathname}${handoff.search}${handoff.hash}`);
+          handoff.searchParams.delete('nek');
+          handoff.searchParams.set('source', 'family');
+          handoff.hash = `nek=${encodeURIComponent(result.sessionToken)}`;
+          window.history.replaceState(window.history.state, '', handoff);
+          window.location.reload();
           return;
         }
         window.location.reload();
@@ -3845,28 +4071,52 @@ function bindWaydeanFamilyLogin() {
     });
   }
 
-  const logout = $('#familyLogout');
-  if (logout && logout.dataset.bound !== 'true') {
-    logout.dataset.bound = 'true';
-    logout.addEventListener('click', () => {
-      familySessionTokenMemory = '';
-      familySessionRole = '';
-      familySessionLocked = false;
-      familySessionLockReason = '';
-      storeFamilySession(familySessionStorage(), activeTreeDir, '');
-      if (!demoMode) {
-        try {
-          localStorage.removeItem('drewo-view-session');
-        } catch { /* Session logout must still complete if local preferences are unavailable. */ }
-      }
-      const url = new URL(window.location.href);
-      url.searchParams.set('source', 'family');
-      url.searchParams.set('state', 'all-tree');
-      url.searchParams.delete('nek');
-      url.searchParams.delete('invite');
-      window.location.assign(`${url.pathname}${url.search}`);
-    });
+}
+
+let accountExitPending = false;
+
+async function leaveEditorAccount(switchAccount) {
+  if (accountExitPending || (!familyPreview && !accountAdminAccess)) return;
+  if (editStatus === 'saving') {
+    announce('Дождитесь окончания сохранения.');
+    return;
   }
+  if (hasUncommittedDraft() && !window.confirm('На сайте есть несохранённые правки. Выйти из древа?')) return;
+
+  accountExitPending = true;
+  const url = new URL(location.href);
+  url.hash = '';
+  for (const key of ['nek', 'invite', 'person', 'switch']) url.searchParams.delete(key);
+  url.searchParams.set('state', 'all-tree');
+  let revocation;
+  if (familyPreview) {
+    const token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
+    clearFamilyAccess(activeTreeDir);
+    familySessionTokenMemory = '';
+    const endpoint = document.querySelector('meta[name="waydean-publish-api"]')?.content?.trim();
+    revocation = revokeFamilySession({ endpoint, treeDir: activeTreeDir, token });
+    url.searchParams.set('source', 'family');
+  } else if (accountAdminAccess) {
+    try {
+      await drewoManagerAuth.signOut();
+    } catch {
+      accountExitPending = false;
+      announce('Не удалось выйти. Проверьте подключение и повторите попытку.');
+      return;
+    }
+    accountAdminAccess = null;
+    url.searchParams.set('source', 'account');
+  }
+  clearPrivatePhotos();
+  allowUnsavedExit = true;
+  $('.app-shell').style.visibility = 'hidden';
+  if (revocation && !(await revocation)) window.alert(FAMILY_LOGOUT_UNCONFIRMED);
+  if (switchAccount && familyPreview) {
+    location.replace('/atlas/?login=1&switch=1');
+    return;
+  }
+  if (switchAccount) url.searchParams.set('switch', '1');
+  location.replace(url.href);
 }
 
 async function requireFamilyPreviewSession(params, setLoadingText) {
@@ -3884,9 +4134,7 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
     familySessionTokenMemory = fromUrl.token;
     storeFamilySession(familySessionStorage(), activeTreeDir, fromUrl.token);
   }
-  let token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
-  let legacyViewSession = null;
-  try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
+  const token = familySessionTokenMemory || readFamilySession(familySessionStorage(), activeTreeDir);
   setLoadingText('Проверяем семейный доступ');
   if (token) {
     familySessionTokenMemory = token;
@@ -3896,15 +4144,7 @@ async function requireFamilyPreviewSession(params, setLoadingText) {
   try {
     const access = await resolveFamilyPreviewAccess({
     endpoint: familyEndpoint(), treeDir: activeTreeDir, token: '',
-    legacyViewSession, allowLegacyReadOnly: !demoMode
     });
-    if (access.legacyReadOnly) {
-      familyLegacyReadOnly = true;
-      familyLegacyViewPersonId = legacyViewSession.personId;
-      familySessionTokenMemory = '';
-      familySessionRole = '';
-      return true;
-    }
     const session = access.session;
     familySessionTokenMemory = session.sessionToken;
     familySessionRole = String(session.role || '').trim();
@@ -3939,7 +4179,14 @@ async function initialize() {
     accountPreview = params.get('source') === 'account';
     familyPreview = familyRoute.enabled;
     activeTreeDir = familyRoute.treeDir;
-    $('#openCurrentTree').hidden = !familyPreview;
+    const sharedFamilyPage = familyPreview && params.has('familyPath');
+    $('#openCurrentTree').hidden = !familyPreview || sharedFamilyPage;
+    if (sharedFamilyPage) {
+      const home = new URL(familyRoute.href);
+      home.search = new URLSearchParams({ source: 'family', familyPath: params.get('familyPath'), state: 'all-tree' });
+      home.hash = '';
+      $('.brand').href = home.href;
+    }
     activeTreeId = syntheticFixture ? 'demo' : activeTreeDir === 'drewo' ? 'hoti' : activeTreeDir;
     demoMode = !syntheticFixture && familyRoute.demoMode;
     if (demoMode && params.has('invite')) {
@@ -3952,14 +4199,13 @@ async function initialize() {
     $('#demoModeNotice').hidden = !demoMode;
     $('#demoLoginHint').hidden = !demoMode;
     if (demoMode) {
+      $('#waydeanFamilyRemember').closest('label').hidden = true;
       $('#waydeanFamilyLogin').value = 'demo';
       $('#waydeanFamilyPassword').value = 'демо';
       $('#waydeanFamilyLoginSubmit').textContent = 'Войти в демо';
       $('.load-error-actions a').hidden = true;
     }
     familySessionLocked = familyPreview;
-    familyLegacyReadOnly = false;
-    familyLegacyViewPersonId = '';
     familySessionLockReason = '';
     $('#familyLogout').hidden = true;
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname));
@@ -3992,14 +4238,12 @@ async function initialize() {
     if (accountPreview) {
       setLoadingText('Проверяем доступ к данным');
       await window.ensureWaydeanAdminSupabase?.();
-      accountAdminAccess = await requireWaydeanAdminAccess('drewo');
+      accountAdminAccess = await requireWaydeanAdminAccess('drewo', drewoManagerAuth);
     }
     $('#moreTreesCabinet').hidden = !accountAdminAccess;
     if (familyPreview && !(await requireFamilyPreviewSession(params, setLoadingText))) return;
     let initialFamilySnapshot = null;
-    if (familyPreview && !familyLegacyReadOnly) {
-      let legacyViewSession = null;
-      try { legacyViewSession = readLegacyTreeViewSession(window.localStorage); } catch { /* Legacy view memory is optional. */ }
+    if (familyPreview) {
       setLoadingText('Загружаем данные древа');
       try {
         initialFamilySnapshot = await callFamilyTreeAction('family-load', {}, {
@@ -4012,25 +4256,12 @@ async function initialize() {
         familySessionLocked = initialFamilySnapshot.locked !== false;
         familySessionLockReason = typeof initialFamilySnapshot.lockedReason === 'string' ? initialFamilySnapshot.lockedReason : '';
       } catch (error) {
-        const canUseLegacyReadOnly = !demoMode && Boolean(String(legacyViewSession?.personId || '').trim());
-        const mayFallBackToLegacy = canUseLegacyReadOnly
-          && ['WAYDEAN_FAMILY_AUTH_REQUIRED', 'WAYDEAN_FAMILY_AUTH_UNAVAILABLE'].includes(error?.code);
-        if (mayFallBackToLegacy) {
-          familyLegacyReadOnly = true;
-          familyLegacyViewPersonId = String(legacyViewSession.personId);
+        if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED' || error?.code === 'WAYDEAN_FAMILY_ACCESS_DENIED') {
           familySessionTokenMemory = '';
-          familySessionRole = '';
-          familySessionLocked = true;
-          familySessionLockReason = '';
           storeFamilySession(familySessionStorage(), activeTreeDir, '');
-        } else {
-          if (error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED') {
-            familySessionTokenMemory = '';
-            storeFamilySession(familySessionStorage(), activeTreeDir, '');
-            familySessionRole = '';
-          }
-          throw error;
+          familySessionRole = '';
         }
+        throw error;
       }
     }
     localTreeDraft = !syntheticFixture && (accountPreview || isLoopbackHost(location.hostname)
@@ -4054,9 +4285,11 @@ async function initialize() {
     $('#localBackupHeading').textContent = remoteEditor ? 'Черновик на этом устройстве' : 'Копии на этом устройстве';
     $('#createLocalBackup').textContent = remoteEditor ? 'Создать снимок черновика' : 'Создать снимок сейчас';
     document.body.classList.toggle('local-tree-draft', localTreeDraft);
-    $('#familyLogout').hidden = !familyPreview || familyLegacyReadOnly;
+    const hasAccount = Boolean(accountAdminAccess || (familyPreview && familySessionTokenMemory));
+    $('#familyLogout').hidden = !hasAccount;
+    $('#switchAccount').hidden = !hasAccount;
     pwaController = createWaydeanPwaController(renderPwaStatus, {
-      allowServerPush: accountPreview || (familyPreview && !familyLegacyReadOnly),
+      allowServerPush: accountPreview || familyPreview,
       accountAdminAction: accountPreview && accountAdminAccess
         ? (action, payload) => callWaydeanAdminAction(action, payload, accountAdminAccess)
         : null,
@@ -4099,7 +4332,7 @@ async function initialize() {
       accountBaseTree = cloneTree(root);
       accountBaseFingerprint = accountServerFingerprint;
       accountBaseActivityJson = accountServerActivityJson;
-    } else if (familyPreview && !familyLegacyReadOnly) {
+    } else if (familyPreview) {
       const serverSnapshot = initialFamilySnapshot;
       accountServerTreeJson = serverSnapshot.treeJson;
       accountServerActivityJson = serverSnapshot.activityJson || '[]';
@@ -4125,7 +4358,13 @@ async function initialize() {
         accountBaseActivityJson = accountServerActivityJson;
       }
     } else {
-      const response = await fetch(dataUrl, { cache: 'no-cache' });
+      // Only loopback development or a synthetic fixture may load static data.
+      if (!syntheticFixture && !isLoopbackHost(location.hostname)) {
+        const error = new Error('Для семейного древа требуется действующий вход.');
+        error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
+        throw error;
+      }
+      const response = await fetch(dataUrl, { cache: 'no-store' });
       if (!response.ok) throw new Error(`Tree data request failed: ${response.status}`);
       root = await response.json();
     }
@@ -4186,11 +4425,6 @@ async function initialize() {
       }
     }
     records = preparePreviewRecords(syntheticFixture || localTreeDraft ? fixtureRoot : root);
-    if (familyLegacyReadOnly && !records.some(person => String(person.id) === familyLegacyViewPersonId)) {
-      const error = new Error('Сохранённый профиль старого древа больше не найден.');
-      error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
-      throw error;
-    }
     $('#moreVideo').hidden = !(localTreeDraft || accountPreview || demoMode);
     fullDataDepth = Math.max(...records.map(person => person.generation));
     byId = new Map(records.map(person => [person.id, person]));

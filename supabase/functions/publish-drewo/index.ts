@@ -1,3 +1,4 @@
+import { backupListLabel, backupTimestamp, isSafeBackupName } from './backup-files.ts';
 import { mergeActivityLogs, mergeTreesForPublish } from './merge-tree.ts';
 import { authorizeWaydeanAdmin } from './waydean-admin-access.ts';
 import {
@@ -9,6 +10,11 @@ import {
 } from './waydean-admin-actions.ts';
 import { waydeanAdminPublishHasConflict, waydeanAdminRestoreHasConflict, waydeanAdminRestoreSafetySnapshot } from './waydean-admin-publish.ts';
 import { familyPublishGuardError } from './family-publish-guard.ts';
+import { hubOperatorDenial, publicTreeStatus } from './hub-access.ts';
+import { hubTreeMetrics } from './hub-tree-metrics.ts';
+import { familyAppManifestResponse } from './family-app-manifest.ts';
+import { passwordBudgetKeys, passwordClientAddress } from './password-budget.ts';
+import { photoFileCandidates, photoMediaType, photoPersonIdPattern, decodeGithubPhoto, MAX_PHOTO_BYTES } from './private-photo.mjs';
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.49.1';
 
@@ -19,11 +25,12 @@ import {
   assertCreatableTreeDir,
   buildInviteStubHtml,
   buildManifest,
-  buildReadme,
   buildRootTreeJson,
+  injectScriptJson as injectOrInsertScript,
   customizeTemplateHtml,
   invitePathForCode,
   isValidTreeCode,
+  knownTreeDirs,
   normalizeTreeCode,
   parseRegistry,
   serializeRegistry,
@@ -51,10 +58,23 @@ import { configureWebPushFromEnv, notifyAddedPeople } from './push-send.ts';
 import type { DrewoTreeRow, PushSubRow } from './push-notify.ts';
 import {
   NEK_SESSION_TTL_MS,
-  passwordFingerprint,
   signNekSession,
   verifyNekSession,
 } from './session.ts';
+import { createFamilyPasswordHash, passwordFingerprint, verifyFamilyPassword } from './password-hash.ts';
+import { isFamilyPlace } from '../../../atlas/family-geography.mjs';
+import { buildSummary } from '../../../atlas/public-summary-core.mjs';
+import {
+  authorizeFamilyAggregateConsent,
+  canPublishAggregateSummary,
+  FAMILY_AGGREGATE_POLICY_VERSION,
+} from './family-aggregate-consent.mjs';
+import {
+  FAMILY_PASSWORD_MAX_LENGTH,
+  familyPasswordLength,
+  newFamilyPasswordError,
+  normalizeFamilyPassword as normalizePassword,
+} from '../../../assets/drewo-family-password.mjs';
 
 import {
   LEGACY_VAULT_PATH,
@@ -71,7 +91,7 @@ import {
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
@@ -81,14 +101,9 @@ function jsonResponse(body: Record<string, unknown>, status = 200) {
     headers: {
       ...corsHeaders,
       'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
     },
   });
-}
-
-function normalizePassword(value: unknown) {
-  return String(value ?? '')
-    .trim()
-    .toLocaleLowerCase('ru-RU');
 }
 
 function normalizeTreeJson(raw: string): string {
@@ -101,36 +116,6 @@ async function fingerprintText(text: string): Promise<string> {
   return Array.from(new Uint8Array(hash))
     .map((b) => b.toString(16).padStart(2, '0'))
     .join('');
-}
-
-/** Replace or insert a JSON <script id="..."> block. */
-function injectOrInsertScript(html: string, scriptId: string, jsonText: string): string {
-  const normalized = String(jsonText ?? '').trim();
-  if (!normalized) return html;
-
-  const patterns = [
-    new RegExp(
-      `(<script\\b[^>]*\\bid\\s*=\\s*["']${scriptId}["'][^>]*>)([\\s\\S]*?)(<\\/script>)`,
-      'i'
-    ),
-    new RegExp(
-      `(<script\\b[^>]*\\bid\\s*=\\s*${scriptId}(?=[\\s>])[^>]*>)([\\s\\S]*?)(<\\/script>)`,
-      'i'
-    ),
-  ];
-
-  for (const re of patterns) {
-    const next = html.replace(re, (_m, open: string, _body: string, close: string) => {
-      return `${open}\n${normalized}\n${close}`;
-    });
-    if (next !== html) return next;
-  }
-
-  const tag = `\n<script type="application/json" id="${scriptId}">\n${normalized}\n</script>\n`;
-  if (/<\/body>/i.test(html)) {
-    return html.replace(/<\/body>/i, `${tag}</body>`);
-  }
-  return html + tag;
 }
 
 function extractScriptJson(html: string, scriptId: string): string | null {
@@ -152,14 +137,6 @@ function extractScriptJson(html: string, scriptId: string): string | null {
     }
   }
   return null;
-}
-
-function stampNow() {
-  return new Date()
-    .toISOString()
-    .replace(/[:.]/g, '-')
-    .replace('T', '_')
-    .slice(0, 19);
 }
 
 function githubHeaders(token: string, json = false): HeadersInit {
@@ -191,7 +168,8 @@ async function githubJson(
 async function githubGetFile(
   token: string,
   repo: string,
-  path: string
+  path: string,
+  { readContent = true }: { readContent?: boolean } = {}
 ): Promise<{ sha?: string; content?: string } | null> {
   const { ok, status, json } = await githubJson(
     token,
@@ -202,7 +180,7 @@ async function githubGetFile(
     throw new Error(String(json.message || `GitHub read failed ${status}`));
   }
   const content =
-    typeof json.content === 'string'
+    readContent && typeof json.content === 'string'
       ? decodeURIComponent(escape(atob(String(json.content).replace(/\n/g, ''))))
       : undefined;
   return {
@@ -229,10 +207,7 @@ function httpError(message: string, status: number) {
   return error;
 }
 
-/**
- * Trees / hub actions: same gate as before — signed-in Supabase user
- * (the existing admin account). Keep Email signup disabled in Supabase Auth.
- */
+/** Verify the Supabase caller; action-specific authorization follows separately. */
 async function requireHubUser(request: Request) {
   const supabaseUrl = Deno.env.get('SUPABASE_URL');
   const supabaseAnonKey = Deno.env.get('SUPABASE_ANON_KEY');
@@ -338,8 +313,6 @@ async function githubListDir(
     .filter((item) => item.name && item.path && item.sha);
 }
 
-const PHOTO_ID_RE = /^[a-zA-Z0-9][a-zA-Z0-9._-]{0,80}$/;
-
 function bytesToBase64(bytes: Uint8Array): string {
   let binary = '';
   const chunk = 0x2000;
@@ -371,7 +344,7 @@ function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unkno
     if (!item || typeof item !== 'object') continue;
     const rec = item as Record<string, unknown>;
     const personId = typeof rec.personId === 'string' ? rec.personId.trim() : '';
-    if (!PHOTO_ID_RE.test(personId)) {
+    if (!photoPersonIdPattern.test(personId)) {
       throw new Error('Некорректный id человека для фото');
     }
     const full = decodeDataUrl(rec.full);
@@ -393,11 +366,25 @@ function collectPhotoGitChanges(treeDir: string, photos: unknown, deletes: unkno
   const del = Array.isArray(deletes) ? deletes : [];
   for (const raw of del) {
     const personId = String(raw || '').trim();
-    if (!PHOTO_ID_RE.test(personId)) continue;
+    if (!photoPersonIdPattern.test(personId)) continue;
     out.push({ path: `${treeDir}/photos/${personId}.jpg`, delete: true });
     out.push({ path: `${treeDir}/photos/${personId}-thumb.jpg`, delete: true });
   }
   return out;
+}
+
+async function readBranchHead(token: string, repo: string, branch: string) {
+  const refRes = await githubJson(
+    token,
+    `https://api.github.com/repos/${repo}/git/ref/heads/${branch}`
+  );
+  if (!refRes.ok) {
+    throw new Error(String(refRes.json.message || `Cannot read ref ${branch}`));
+  }
+  const headSha = String((refRes.json.object as { sha?: string } | undefined)?.sha || '');
+  if (!headSha) throw new Error('Empty branch SHA');
+
+  return headSha;
 }
 
 /** One atomic commit for multiple file writes/deletes (much faster than Contents API). */
@@ -405,6 +392,7 @@ async function githubCommitChanges(options: {
   token: string;
   repo: string;
   message: string;
+  expectedHead?: string;
   branch?: string;
   changes: TreeChange[];
 }) {
@@ -418,15 +406,10 @@ async function githubCommitChanges(options: {
     return { skipped: true as const, commitSha: null as string | null };
   }
 
-  const refRes = await githubJson(
-    options.token,
-    `https://api.github.com/repos/${options.repo}/git/ref/heads/${branch}`
-  );
-  if (!refRes.ok) {
-    throw new Error(String(refRes.json.message || `Cannot read ref ${branch}`));
+  const headSha = await readBranchHead(options.token, options.repo, branch);
+  if (options.expectedHead && options.expectedHead !== headSha) {
+    throw httpError('Реестр обновился. Повторите создание древа.', 409);
   }
-  const headSha = String((refRes.json.object as { sha?: string } | undefined)?.sha || '');
-  if (!headSha) throw new Error('Empty branch SHA');
 
   const commitRes = await githubJson(
     options.token,
@@ -551,10 +534,87 @@ async function loadRegistry(token: string, repo: string): Promise<RegistryFile> 
   return parseRegistry(file?.content);
 }
 
-function knownTreeDirs(registry: RegistryFile): string[] {
-  const dirs = new Set<string>(LEGACY_TREE_DIRS);
-  for (const item of registry.trees) dirs.add(item.treeDir);
-  return Array.from(dirs);
+type PublicFamilySummary = {
+  version: number;
+  date: string;
+  scopes: Record<string, unknown>;
+};
+
+let cachedPublicFamilySummary: {
+  repository: string;
+  expiresAt: number;
+  summary: PublicFamilySummary;
+} | null = null;
+
+function emptyPublicFamilySummary(): PublicFamilySummary {
+  return { version: 1, date: new Date().toISOString().slice(0, 10), scopes: {} };
+}
+
+async function loadPublicFamilySummary(token: string, repo: string): Promise<PublicFamilySummary> {
+  const enabled = Deno.env.get('DREWO_AGGREGATE_STATS_ENABLED');
+  const configuredRepo = Deno.env.get('DREWO_PRIVATE_REPO') ?? '';
+  if (!canPublishAggregateSummary({ enabled, configuredRepo, requestedRepo: repo, repoIsPrivate: true })) {
+    return emptyPublicFamilySummary();
+  }
+
+  const metadata = await githubJson(token, `https://api.github.com/repos/${repo}`);
+  if (!canPublishAggregateSummary({
+    enabled,
+    configuredRepo,
+    requestedRepo: repo,
+    repoIsPrivate: metadata.ok && metadata.json.private === true,
+  })) return emptyPublicFamilySummary();
+
+  const now = Date.now();
+  if (cachedPublicFamilySummary?.repository === repo && cachedPublicFamilySummary.expiresAt > now) {
+    return cachedPublicFamilySummary.summary;
+  }
+
+  const { data, error } = await supabaseService().rpc('drewo_family_aggregate_consent', {
+    p_tree_dir: null,
+  });
+  if (error || !Array.isArray(data)) throw httpError('Семейная сводка временно недоступна.', 503);
+  const consentedDirs = [...new Set(data.filter((value): value is string =>
+    typeof value === 'string' && /^drewo(?:-[a-z0-9-]{1,48})?$/.test(value) && value !== DEMO_TREE_DIR
+  ))];
+  if (consentedDirs.length > 200) throw httpError('Семейная сводка временно недоступна.', 503);
+
+  const registry = await loadRegistry(token, repo);
+  const allowedDirs = new Set(knownTreeDirs(registry));
+  const treeRoots = new Map<string, unknown>();
+  const entries = (await Promise.all(consentedDirs.map(async (treeDir) => {
+    if (!allowedDirs.has(treeDir)) return null;
+    const [accessFile, treeFile, indexFile] = await Promise.all([
+      githubGetFile(token, repo, accessPath(treeDir)),
+      githubGetFile(token, repo, `${treeDir}/family-tree.json`),
+      githubGetFile(token, repo, `${treeDir}/index.html`),
+    ]);
+    if (!accessFile?.content) return null;
+    let rawAccess: unknown;
+    try {
+      rawAccess = JSON.parse(accessFile.content);
+    } catch {
+      return null;
+    }
+    if (!rawAccess || typeof rawAccess !== 'object' || Array.isArray(rawAccess)) return null;
+    const access = parseAccess(accessFile.content);
+    if (access.deletedAt || access.locked || access.billing.status === 'disabled') return null;
+    const treeJson = treeFile?.content?.trim()
+      || extractScriptJson(indexFile?.content || '', 'tree-data')
+      || '';
+    if (!treeJson) return null;
+    const root = JSON.parse(treeJson);
+    treeRoots.set(treeDir, root);
+    return { treeDir, active: true, aggregateConsent: true };
+  }))).filter((entry): entry is {treeDir: string; active: true; aggregateConsent: true} => entry !== null);
+
+  const summary = await buildSummary(entries, async (entry) => {
+    const root = treeRoots.get(entry.treeDir);
+    if (!root) throw new Error('Consented tree snapshot missing');
+    return root;
+  }) as PublicFamilySummary;
+  cachedPublicFamilySummary = { repository: repo, expiresAt: now + 60_000, summary };
+  return summary;
 }
 
 function resolveTreeDir(raw: unknown, registry?: RegistryFile): TreeDir | null {
@@ -588,14 +648,16 @@ async function loadVault(token: string, repo: string): Promise<VaultState> {
     githubGetFile(token, repo, LEGACY_VAULT_PATH),
   ]);
   const legacyPresent = Boolean(legacyFile);
-  const parsed = parseVaultFile(file?.content) ?? parseVaultFile(legacyFile?.content);
-  if (!parsed) return { map: emptyVaultMap(), available: true, legacyPresent };
-  try {
-    return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true, legacyPresent };
-  } catch {
-    // Rotated key or corrupted file: start over rather than locking out writes.
-    return { map: emptyVaultMap(), available: true, legacyPresent };
+  if (!file && !legacyFile) return { map: emptyVaultMap(), available: true, legacyPresent };
+  const parsed = parseVaultFile((file ?? legacyFile)?.content);
+  if (parsed) {
+    try {
+      return { map: await decryptVault(parsed, vaultKeyMaterial()), available: true, legacyPresent };
+    } catch {
+      // Preserve the existing vault if its key has changed.
+    }
   }
+  throw httpError('Не удалось прочитать хранилище семейных паролей. Проверьте ключ и резервную копию.', 503);
 }
 
 /** Writes the vault to `_private/` and removes any copy left in the published tree. */
@@ -612,11 +674,12 @@ function sessionSecret(): string {
   return Deno.env.get('DREWO_SESSION_SECRET') || Deno.env.get('GITHUB_TOKEN') || '';
 }
 
-/** 401/403 Response when the caller is not a signed-in Trees hub user, else null. */
+/** Fail closed unless the verified account is a configured Trees operator. */
 async function hubUserGuard(request: Request): Promise<Response | null> {
   try {
-    await requireHubUser(request);
-    return null;
+    const user = await requireHubUser(request);
+    const denied = hubOperatorDenial(user, Deno.env.get('DREWO_HUB_USER_IDS'));
+    return denied ? jsonResponse({ error: denied.error }, denied.status) : null;
   } catch (err) {
     const status = (err as Error & { status?: number }).status || 401;
     return jsonResponse({ error: err instanceof Error ? err.message : 'Войдите в Trees' }, status);
@@ -681,13 +744,12 @@ type ManifestItem = {
 };
 
 function fallbackEditorPassword(treeDir: TreeDir) {
-  if (treeDir === 'drewo-dada-yurt') {
-    return normalizePassword(Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? 'баташ');
-  }
   if (treeDir === 'drewo-reklama') {
     return normalizePassword(Deno.env.get('DREWO_REKLAMA_PASSWORD') ?? 'демо');
   }
-  return normalizePassword(Deno.env.get('DREWO_PASSWORD') ?? 'гуно');
+  if (treeDir === 'drewo-dada-yurt') return normalizePassword(Deno.env.get('DREWO_DADA_YURT_PASSWORD') ?? '');
+  if (treeDir === 'drewo') return normalizePassword(Deno.env.get('DREWO_PASSWORD') ?? '');
+  return '';
 }
 
 function superPasswordSecretName(treeDir: TreeDir) {
@@ -777,8 +839,8 @@ function parseAccess(raw?: string): AccessState {
   if (!raw) return base;
   try {
     const parsed = JSON.parse(raw) as Record<string, unknown>;
-    if (typeof parsed.passwordHash === 'string' && /^[a-f0-9]{64}$/i.test(parsed.passwordHash)) {
-      base.passwordHash = parsed.passwordHash.toLowerCase();
+    if (parsed.passwordHash != null && parsed.passwordHash !== '') {
+      base.passwordHash = typeof parsed.passwordHash === 'string' ? parsed.passwordHash : 'invalid';
     }
     base.locked = parsed.locked === true;
     if (typeof parsed.lockedReason === 'string') {
@@ -817,10 +879,6 @@ function serializeAccess(access: AccessState) {
 
 type AuthRole = 'editor' | 'super';
 
-async function hashPassword(normalized: string) {
-  return fingerprintText(`drewo-pw:${normalized}`);
-}
-
 async function resolveRole(
   password: unknown,
   treeDir: TreeDir,
@@ -830,96 +888,59 @@ async function resolveRole(
   if (!given) return null;
   const superPw = superPasswordValue(treeDir);
   if (superPw && given === superPw) return 'super';
-  if (access.passwordHash) {
-    const hashed = await hashPassword(given);
-    return hashed === access.passwordHash ? 'editor' : null;
+  if (access.passwordHash !== null) {
+    return await verifyFamilyPassword(given, access.passwordHash) ? 'editor' : null;
   }
   return given === fallbackEditorPassword(treeDir) ? 'editor' : null;
 }
 
-/** Brute-force guard for password checks (per tree + client IP, in-memory). */
-type AuthAttemptState = {
-  fails: number;
-  windowStart: number;
-  lockedUntil: number;
-};
-
-const AUTH_ATTEMPTS = new Map<string, AuthAttemptState>();
-const AUTH_FAIL_WINDOW_MS = 15 * 60 * 1000;
-const AUTH_MAX_FAILS = 5;
-const AUTH_LOCK_MS = 15 * 60 * 1000;
-/** How many unpinned auto-backups to keep when pruning after publish. */
 const AUTO_BACKUP_KEEP = 30;
 
-function clientIp(request: Request): string {
-  const cf = request.headers.get('cf-connecting-ip');
-  if (cf?.trim()) return cf.trim();
-  const xff = request.headers.get('x-forwarded-for');
-  if (xff) {
-    const first = xff.split(',')[0]?.trim();
-    if (first) return first;
+async function familySessionRevoked(sessionKey: string, revokeUntil?: number) {
+  const db = supabaseService();
+  const { data, error } = await db.rpc('drewo_family_session', {
+    p_session_key: sessionKey,
+    p_revoke_until: revokeUntil,
+  });
+  if (error || typeof data !== 'boolean') {
+    throw httpError('Проверка семейной сессии временно недоступна. Попробуйте позже.', 503);
   }
-  const real = request.headers.get('x-real-ip');
-  if (real?.trim()) return real.trim();
-  return 'unknown';
+  return data;
 }
 
-function authAttemptKey(treeDir: TreeDir, request: Request) {
-  return `${treeDir}:${clientIp(request)}`;
+async function reservePasswordAttempt(subject: string, request: Request) {
+  const keys = await passwordBudgetKeys(sessionSecret(), subject, passwordClientAddress(request.headers));
+  const db = supabaseService();
+  const { data, error } = await db.rpc('drewo_password_budget', keys);
+  const retryAfterSec = Number(data?.retry_after_sec);
+  if (error || !Number.isInteger(retryAfterSec) || retryAfterSec < 0
+      || (retryAfterSec === 0 && !Number.isSafeInteger(data?.bucket))) {
+    throw httpError('Семейный вход временно недоступен. Попробуйте позже.', 503);
+  }
+  return {
+    retryAfterSec,
+    async refund() {
+      try {
+        await db.rpc('drewo_password_budget', { ...keys, p_refund_bucket: data.bucket });
+      } catch { /* A failed refund leaves the attempt counted until the window expires. */ }
+    },
+  };
 }
 
-function getAuthAttempt(key: string): AuthAttemptState {
-  const now = Date.now();
-  let state = AUTH_ATTEMPTS.get(key);
-  if (!state) {
-    state = { fails: 0, windowStart: now, lockedUntil: 0 };
-    AUTH_ATTEMPTS.set(key, state);
-    return state;
-  }
-  if (state.lockedUntil > now) return state;
-  if (now - state.windowStart > AUTH_FAIL_WINDOW_MS) {
-    state = { fails: 0, windowStart: now, lockedUntil: 0 };
-    AUTH_ATTEMPTS.set(key, state);
-  }
-  return state;
-}
-
-function authLockResponse(state: AuthAttemptState) {
-  const retryAfterSec = Math.max(1, Math.ceil((state.lockedUntil - Date.now()) / 1000));
-  const mins = Math.max(1, Math.ceil(retryAfterSec / 60));
-  return new Response(
-    JSON.stringify({
-      error: `Слишком много попыток. Подождите ${mins} мин.`,
-      retryAfterSec,
-      lockedUntil: state.lockedUntil,
-    }),
-    {
-      status: 429,
-      headers: {
-        ...corsHeaders,
-        'Content-Type': 'application/json',
-        'Retry-After': String(retryAfterSec),
-      },
-    }
-  );
-}
-
-function recordAuthFailure(key: string): AuthAttemptState {
-  const now = Date.now();
-  let state = AUTH_ATTEMPTS.get(key);
-  if (!state || (state.lockedUntil <= now && now - state.windowStart > AUTH_FAIL_WINDOW_MS)) {
-    state = { fails: 0, windowStart: now, lockedUntil: 0 };
-  }
-  state.fails += 1;
-  if (state.fails >= AUTH_MAX_FAILS) {
-    state.lockedUntil = now + AUTH_LOCK_MS;
-  }
-  AUTH_ATTEMPTS.set(key, state);
-  return state;
-}
-
-function clearAuthFailures(key: string) {
-  AUTH_ATTEMPTS.delete(key);
+function authLockResponse(retryAfterSec: number) {
+  return new Response(JSON.stringify({
+    error: 'Слишком много попыток входа. Попробуйте позже.',
+    retryAfterSec,
+    lockedUntil: Date.now() + retryAfterSec * 1000,
+  }), {
+    status: 429,
+    headers: {
+      ...corsHeaders,
+      'Content-Type': 'application/json',
+      'Cache-Control': 'no-store',
+      'Retry-After': String(retryAfterSec),
+    },
+  });
 }
 
 function countPeopleFromTreeJson(treeJson: string): number {
@@ -976,25 +997,6 @@ function guessSavedAt(name: string) {
   const match = name.match(/(\d{4}-\d{2}-\d{2})_(\d{2})-(\d{2})-(\d{2})/);
   if (!match) return '';
   return `${match[1]}T${match[2]}:${match[3]}:${match[4]}Z`;
-}
-
-function backupListLabel(name: string, treeDir: TreeDir) {
-  const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return name
-    .replace(new RegExp(`^${prefix}-`), '')
-    .replace(/\.(html|json)$/, '')
-    .replace(/_/g, ' ');
-}
-
-function backupNamePrefix(treeDir: TreeDir) {
-  return treeDir;
-}
-
-function isSafeBackupName(name: string, treeDir: TreeDir) {
-  const prefix = backupNamePrefix(treeDir).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`^${prefix}-\\d{4}-\\d{2}-\\d{2}_\\d{2}-\\d{2}-\\d{2}\\.(html|json)$`).test(
-    name
-  );
 }
 
 async function listBackupFiles(token: string, repo: string, treeDir: TreeDir) {
@@ -1100,6 +1102,10 @@ Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response('ok', { headers: corsHeaders });
   }
+  if (request.method === 'GET') {
+    const url = new URL(request.url);
+    if (url.searchParams.get('action') === 'family-manifest') return familyAppManifestResponse(url);
+  }
   if (request.method !== 'POST') {
     return jsonResponse({ error: 'Method not allowed' }, 405);
   }
@@ -1161,12 +1167,27 @@ Deno.serve(async (request) => {
       if (adminActionTarget) action = adminActionTarget;
     }
 
-    const githubToken = Deno.env.get('GITHUB_TOKEN');
-    const githubRepo = Deno.env.get('GITHUB_REPO') ?? 'mansurkhatuev-coder/QuranAppWebsite';
+    // Drewo may use a private family-data repository without changing the
+    // shared GitHub settings used by the separate publish-content function.
+    const githubToken = Deno.env.get('DREWO_GITHUB_TOKEN') || Deno.env.get('GITHUB_TOKEN');
+    const githubRepo = Deno.env.get('DREWO_PRIVATE_REPO')
+      ?? Deno.env.get('GITHUB_REPO')
+      ?? 'mansurkhatuev-coder/QuranAppWebsite';
     if (!githubToken) {
-      return jsonResponse({ error: 'GITHUB_TOKEN secret is missing' }, 500);
+      return jsonResponse({ error: 'DREWO_GITHUB_TOKEN or GITHUB_TOKEN secret is missing' }, 500);
     }
 
+    if (action === 'public-family-summary') {
+      const summary = await loadPublicFamilySummary(githubToken, githubRepo);
+      return jsonResponse({ ok: true, ...summary });
+    }
+
+    let creationHead: string | undefined;
+    if (action === 'create-tree') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
+      creationHead = await readBranchHead(githubToken, githubRepo, 'main');
+    }
     const registry = await loadRegistry(githubToken, githubRepo);
     const allowedDirs = knownTreeDirs(registry);
 
@@ -1203,14 +1224,13 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: loginFailed }, 401);
       }
 
-      const attemptKey = `login:${login}:${clientIp(request)}`;
-      const attemptState = getAuthAttempt(attemptKey);
-      if (attemptState.lockedUntil > Date.now()) {
-        return authLockResponse(attemptState);
+      if (typeof body.password !== 'string' || !body.password.trim() || body.password.length > 256) {
+        return jsonResponse({ error: loginFailed }, 401);
       }
+      const hit = registry.trees.find((item) => item.login === login || item.code === login) || null;
+      const budget = await reservePasswordAttempt(hit ? `tree:${hit.treeDir}` : `unknown:${login}`, request);
+      if (budget.retryAfterSec) return authLockResponse(budget.retryAfterSec);
 
-      const hit =
-        registry.trees.find((item) => item.login === login || item.code === login) || null;
       const access = hit
         ? parseAccess(
             (await githubGetFile(githubToken, githubRepo, accessPath(hit.treeDir)))?.content
@@ -1218,24 +1238,8 @@ Deno.serve(async (request) => {
         : null;
       const role = hit && access ? await resolveRole(body.password, hit.treeDir, access) : null;
 
-      if (!hit || !role) {
-        const failed = recordAuthFailure(attemptKey);
-        if (failed.lockedUntil > Date.now()) {
-          return authLockResponse(failed);
-        }
-        const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
-        return jsonResponse(
-          {
-            error:
-              attemptsLeft > 0
-                ? `${loginFailed}. Осталось попыток: ${attemptsLeft}`
-                : loginFailed,
-            attemptsLeft,
-          },
-          401
-        );
-      }
-      clearAuthFailures(attemptKey);
+      if (!hit || !role) return jsonResponse({ error: loginFailed }, 401);
+      await budget.refund();
 
       const sessionToken = await signNekSession(
         {
@@ -1256,8 +1260,10 @@ Deno.serve(async (request) => {
       });
     }
 
-    /** Aggregate live stats for the Trees hub PWA (no password; same public fields as status). */
+    /** Management metadata is only used by the signed-in Trees hub. */
     if (action === 'hub-overview') {
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
       const trees = await Promise.all(
         allowedDirs.map(async (dir) => {
           const meta = registryEntryFor(registry, dir) || {
@@ -1268,10 +1274,12 @@ Deno.serve(async (request) => {
             note: '',
             createdAt: '',
           };
-          const [accessFile, manifestFile] = await Promise.all([
+          const [accessFile, manifestFile, treeFile] = await Promise.all([
             githubGetFile(githubToken, githubRepo, accessPath(dir)),
             githubGetFile(githubToken, githubRepo, manifestPath(dir)),
+            githubGetFile(githubToken, githubRepo, `${dir}/family-tree.json`),
           ]);
+          const metrics = hubTreeMetrics(treeFile?.content);
           const access = parseAccess(accessFile?.content);
           const lock = lockPresentation(access);
           const manifest = parseManifest(manifestFile?.content);
@@ -1283,13 +1291,13 @@ Deno.serve(async (request) => {
             ) ?? null;
           const baseline =
             [...manifest].reverse().find((item) => item.personCount > 0) ?? null;
-          const personCount = latestWithPeople?.personCount ?? 0;
+          const personCount = metrics?.people ?? latestWithPeople?.personCount ?? null;
           const addedSinceBaseline =
-            baseline && personCount >= baseline.personCount
+            baseline && personCount != null && personCount >= baseline.personCount
               ? personCount - baseline.personCount
               : null;
           const addedSincePrevious =
-            previousWithPeople && personCount >= previousWithPeople.personCount
+            previousWithPeople && personCount != null && personCount >= previousWithPeople.personCount
               ? personCount - previousWithPeople.personCount
               : null;
 
@@ -1307,6 +1315,10 @@ Deno.serve(async (request) => {
             deletedAt: lock.deletedAt,
             superConfigured: Boolean(superPasswordValue(dir)),
             personCount,
+            photos: metrics?.photos ?? null,
+            withYears: metrics?.withYears ?? null,
+            withBio: metrics?.withBio ?? null,
+            maxDepth: metrics?.maxDepth ?? null,
             backupCount: manifest.length,
             lastSavedAt: latestWithPeople?.savedAt ?? null,
             addedSinceBaseline,
@@ -1323,9 +1335,6 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'create-tree') {
-      const denied = await hubUserGuard(request);
-      if (denied) return denied;
-
       const code = normalizeTreeCode(
         typeof body.login === 'string' && body.login.trim() ? body.login : body.code
       );
@@ -1350,9 +1359,8 @@ Deno.serve(async (request) => {
       if (rootName.length < 1) {
         return jsonResponse({ error: 'Укажите имя корня' }, 400);
       }
-      if (password.length < 2 || password.length > 64) {
-        return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
-      }
+      const passwordError = newFamilyPasswordError(password);
+      if (passwordError) return jsonResponse({ error: passwordError }, 400);
 
       const treeDir = treeDirFromCode(code);
       try {
@@ -1402,7 +1410,11 @@ Deno.serve(async (request) => {
         rootName,
         treeJson,
       });
-      const passwordHash = await hashPassword(password);
+      const passwordHash = await createFamilyPasswordHash(password);
+      const sessionToken = await signNekSession({
+        treeDir, role: 'editor', exp: Date.now() + NEK_SESSION_TTL_MS,
+        pwdFp: passwordFingerprint(passwordHash),
+      }, sessionSecret());
       const access: AccessState = {
         ...emptyAccess(),
         passwordHash,
@@ -1438,6 +1450,7 @@ Deno.serve(async (request) => {
       await githubCommitChanges({
         token: githubToken,
         repo: githubRepo,
+        expectedHead: creationHead,
         message: `Create family tree ${treeDir} (${title})`,
         changes: [
           ...assetCopies,
@@ -1450,7 +1463,6 @@ Deno.serve(async (request) => {
             content: serializeManifest([]),
           },
           { path: `${treeDir}/manifest.webmanifest`, content: buildManifest(title) },
-          { path: `${treeDir}/README.md`, content: buildReadme(title, treeDir, code) },
           {
             path: `t/${code}/index.html`,
             content: buildInviteStubHtml({ title, code }),
@@ -1471,6 +1483,7 @@ Deno.serve(async (request) => {
         invitePath: invitePathForCode(code),
         inviteUrl: `https://waydean.ru${invitePathForCode(code)}`,
         createdAt: entry.createdAt,
+        sessionToken,
         vaultSaved: vaultChanges.length > 0,
         billing: publicBillingView(access.billing),
       });
@@ -1505,7 +1518,7 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'Нет такого древа в реестре' }, 404);
       }
       const password = normalizePassword(body.password);
-      if (password.length < 2 || password.length > 64) {
+      if (password.length < 2 || familyPasswordLength(password) > FAMILY_PASSWORD_MAX_LENGTH) {
         return jsonResponse({ error: 'Пароль семьи: от 2 до 64 символов' }, 400);
       }
 
@@ -1569,15 +1582,8 @@ Deno.serve(async (request) => {
     }
 
     if (action === 'set-billing' || action === 'soft-delete-tree') {
-      try {
-        await requireHubUser(request);
-      } catch (err) {
-        const status = (err as Error & { status?: number }).status || 401;
-        return jsonResponse(
-          { error: err instanceof Error ? err.message : 'Войдите в Trees' },
-          status
-        );
-      }
+      const denied = await hubUserGuard(request);
+      if (denied) return denied;
 
       const targetDir = resolveTreeDir(body.treeDir, registry);
       if (!targetDir) {
@@ -1718,7 +1724,6 @@ Deno.serve(async (request) => {
     const indexPath = `${treeDir}/index.html`;
     const jsonPath = `${treeDir}/family-tree.json`;
     const backupsDir = `${treeDir}/backups`;
-    const backupPrefix = backupNamePrefix(treeDir);
 
     if (isWaydeanAdminRequest && treeDir !== waydeanAdminTreeDir) {
       return jsonResponse({ ok: false, error: 'Waydean account access is limited to drewo' }, 403);
@@ -1756,7 +1761,10 @@ Deno.serve(async (request) => {
 
     const [accessFile, manifestFile] = await Promise.all([
       githubGetFile(githubToken, githubRepo, accessPath(treeDir)),
-      githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
+      action === 'status' || action === 'logout-family' || action === 'family-places'
+        || action === 'family-aggregate-consent'
+        ? Promise.resolve(null)
+        : githubGetFile(githubToken, githubRepo, manifestPath(treeDir)),
     ]);
     const access = parseAccess(accessFile?.content);
     const manifest = parseManifest(manifestFile?.content);
@@ -1764,65 +1772,112 @@ Deno.serve(async (request) => {
     const superConfigured = Boolean(superPasswordValue(treeDir));
 
     if (action === 'status') {
-      const lock = lockPresentation(access);
-      return jsonResponse({
-        ok: true,
-        treeDir,
-        locked: lock.locked,
-        lockedReason: lock.lockedReason,
-        billing: lock.billing,
-        deletedAt: lock.deletedAt,
-        superConfigured,
-      });
+      return jsonResponse(publicTreeStatus(treeDir, lockPresentation(access)));
     }
 
     if (action === 'record-visit' || action === 'presence-heartbeat' || action === 'presence-leave') {
       return jsonResponse({ ok: true, treeDir, ignored: true });
     }
 
-    const attemptKey = authAttemptKey(treeDir, request);
-
-    // A valid session token from `login-tree` replaces the password for this tree.
-    // Anything else (missing, expired, wrong tree, password changed since) falls
-    // back to the password check.
-    const rawSessionToken = waydeanAdminPublish
+    const rawSessionToken = isWaydeanAdminRequest
       ? ''
       : typeof body.sessionToken === 'string' ? body.sessionToken.trim() : '';
-    const sessionPayload = rawSessionToken
+    const verifiedSession = rawSessionToken
       ? await verifyNekSession(
           rawSessionToken,
           sessionSecret(),
           passwordFingerprint(access.passwordHash)
         )
       : null;
+    const sessionPayload = verifiedSession?.treeDir === treeDir ? verifiedSession : null;
+    if (action === 'logout-family') {
+      if (sessionPayload) await familySessionRevoked(sessionPayload.sessionKey, sessionPayload.exp);
+      return jsonResponse({ ok: true });
+    }
+    if (sessionPayload && await familySessionRevoked(sessionPayload.sessionKey)) {
+      return jsonResponse({ error: 'Семейная сессия завершена. Войдите снова.' }, 401);
+    }
+    if (action === 'family-places') {
+      if (!sessionPayload) return jsonResponse({ error: 'Требуется действующий вход в древо.' }, 401);
+      if (treeDir === DEMO_TREE_DIR || access.deletedAt) {
+        return jsonResponse({ error: 'Семейные отметки для этого древа недоступны.' }, 403);
+      }
+      const block = editsBlockedForRole(access, sessionPayload.role);
+      const mark = body.mark;
+      if (mark !== undefined) {
+        if (block.blocked) return jsonResponse({ error: 'Семейные отметки доступны только для просмотра.' }, 403);
+        if (!isFamilyPlace(mark) || typeof mark.present !== 'boolean') {
+          return jsonResponse({ error: 'Выберите место и тип отметки из каталога.' }, 400);
+        }
+      }
+      const { data, error } = await supabaseService().rpc('drewo_family_places', {
+        p_tree_dir: treeDir,
+        ...(mark === undefined ? {} : { p_place_id: mark.id, p_kind: mark.kind, p_present: mark.present }),
+      });
+      if (error || !Array.isArray(data)) throw httpError('Семейные отметки временно недоступны.', 503);
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        places: data,
+        canEdit: !block.blocked,
+        canManageConsent: sessionPayload.role === 'editor',
+      });
+    }
+    if (action === 'family-aggregate-consent') {
+      if (!sessionPayload) return jsonResponse({ error: 'Требуется действующий вход в древо.' }, 401);
+      const decision = body.decision === undefined ? null : body.decision;
+      const authorization = authorizeFamilyAggregateConsent({
+        role: sessionPayload.role,
+        treeDir,
+        deleted: Boolean(access.deletedAt),
+        locked: lockPresentation(access).locked,
+        decision,
+        attested: body.authorityAttested === true,
+      });
+      if (!authorization.ok) return jsonResponse({ error: authorization.error }, authorization.status);
+
+      const rpcArgs: Record<string, unknown> = { p_tree_dir: treeDir };
+      if (authorization.operation !== 'read') {
+        rpcArgs.p_decision = authorization.operation;
+        rpcArgs.p_policy_version = FAMILY_AGGREGATE_POLICY_VERSION;
+        rpcArgs.p_actor_role = sessionPayload.role;
+        rpcArgs.p_session_fingerprint = sessionPayload.sessionKey;
+      }
+      const { data, error } = await supabaseService().rpc('drewo_family_aggregate_consent', rpcArgs);
+      if (error || !data || typeof data !== 'object' || Array.isArray(data)) {
+        throw httpError('Согласие временно недоступно.', 503);
+      }
+      if (authorization.operation !== 'read') cachedPublicFamilySummary = null;
+      const consent = data as Record<string, unknown>;
+      return jsonResponse({
+        ok: true,
+        treeDir,
+        canManage: true,
+        consent: {
+          consented: consent.consented === true,
+          policyVersion: typeof consent.policyVersion === 'string' ? consent.policyVersion : null,
+          updatedAt: typeof consent.updatedAt === 'string' ? consent.updatedAt : null,
+        },
+      });
+    }
     let role: AuthRole | null = isWaydeanAdminRequest && !waydeanAdminLoad
       ? 'super'
-      : sessionPayload && sessionPayload.treeDir === treeDir ? sessionPayload.role : null;
+      : sessionPayload?.role ?? null;
+
+    // Photo reads always require a verified tree session or the account-admin gate.
+    if (action === 'photo-load' && !role) {
+      return jsonResponse({ ok: false, error: 'Требуется действующий вход в древо.' }, 401);
+    }
 
     if (!role) {
-      const attemptState = getAuthAttempt(attemptKey);
-      if (attemptState.lockedUntil > Date.now()) {
-        return authLockResponse(attemptState);
+      if (typeof body.password !== 'string' || !body.password.trim() || body.password.length > 256) {
+        return jsonResponse({ error: 'Требуется действующий вход в древо.' }, 401);
       }
+      const budget = await reservePasswordAttempt(`tree:${treeDir}`, request);
+      if (budget.retryAfterSec) return authLockResponse(budget.retryAfterSec);
       role = await resolveRole(body.password, treeDir, access);
-      if (!role) {
-        const failed = recordAuthFailure(attemptKey);
-        if (failed.lockedUntil > Date.now()) {
-          return authLockResponse(failed);
-        }
-        const attemptsLeft = Math.max(0, AUTH_MAX_FAILS - failed.fails);
-        return jsonResponse(
-          {
-            error:
-              attemptsLeft > 0
-                ? `Неверный пароль. Осталось попыток: ${attemptsLeft}`
-                : 'Неверный пароль',
-            attemptsLeft,
-          },
-          401
-        );
-      }
-      clearAuthFailures(attemptKey);
+      if (!role) return jsonResponse({ error: 'Неверный пароль' }, 401);
+      await budget.refund();
     }
 
     if (action === 'auth') {
@@ -1836,7 +1891,8 @@ Deno.serve(async (request) => {
         billing: lock.billing,
         deletedAt: lock.deletedAt,
         superConfigured,
-        sessionToken: await signNekSession(
+        // Keep the session identity and expiry fixed across repeated checks.
+        sessionToken: sessionPayload ? rawSessionToken : await signNekSession(
           {
             treeDir,
             role,
@@ -1878,6 +1934,39 @@ Deno.serve(async (request) => {
         locked: lock.locked,
         lockedReason: lock.lockedReason,
       });
+    }
+
+    if (action === 'photo-load') {
+      if (treeDir === DEMO_TREE_DIR) return jsonResponse({ ok: false, error: 'В демо нет семейных фотографий.' }, 404);
+      const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
+      const variant = body.variant;
+      const candidates = photoFileCandidates(personId, variant);
+      if (!candidates.length) return jsonResponse({ ok: false, error: 'Некорректный запрос фотографии.' }, 400);
+      const reply = (image: { contentType: string; contentBase64: string }) =>
+        jsonResponse({ ok: true, treeDir, personId, variant, ...image });
+
+      for (const file of candidates) {
+        const result = await githubJson(githubToken, `https://api.github.com/repos/${githubRepo}/contents/${treeDir}/photos/${encodeURIComponent(file)}`);
+        if (result.status === 404) continue;
+        if (!result.ok) return jsonResponse({ ok: false, error: 'Не удалось загрузить фотографию.' }, 502);
+        const image = decodeGithubPhoto(result.json);
+        if (!image) return jsonResponse({ ok: false, error: 'Файл фотографии не прошёл проверку.' }, 422);
+        return reply(image);
+      }
+
+      // Compatibility with older photos stored in the existing Supabase bucket.
+      // Download server-side only, never expose a public URL or a service key.
+      const bucket = supabaseService().storage.from('drewo-photos');
+      for (const file of candidates) {
+        const { data, error } = await bucket.download(`${treeDir}/${file}`);
+        if (error || !data) continue;
+        if (data.size > MAX_PHOTO_BYTES) return jsonResponse({ ok: false, error: 'Файл фотографии слишком большой.' }, 422);
+        const bytes = new Uint8Array(await data.arrayBuffer());
+        const contentType = photoMediaType(bytes);
+        if (!contentType) return jsonResponse({ ok: false, error: 'Файл фотографии не прошёл проверку.' }, 422);
+        return reply({ contentType, contentBase64: bytesToBase64(bytes) });
+      }
+      return jsonResponse({ ok: false, error: 'Фотография не найдена.' }, 404);
     }
 
     if (action === 'upload-photo') {
@@ -1944,7 +2033,7 @@ Deno.serve(async (request) => {
         );
       }
       const personId = typeof body.personId === 'string' ? body.personId.trim() : '';
-      if (!PHOTO_ID_RE.test(personId)) {
+      if (!photoPersonIdPattern.test(personId)) {
         return jsonResponse({ error: 'Некорректный id человека' }, 400);
       }
       const candidates = [
@@ -1952,7 +2041,9 @@ Deno.serve(async (request) => {
         `${treeDir}/photos/${personId}-thumb.jpg`,
       ];
       const existing = await Promise.all(
-        candidates.map(async (path) => ((await githubGetFile(githubToken, githubRepo, path)) ? path : null))
+        candidates.map(async (path) =>
+          (await githubGetFile(githubToken, githubRepo, path, { readContent: false })) ? path : null
+        )
       );
       const deletes = existing
         .filter((path): path is string => Boolean(path))
@@ -2109,15 +2200,11 @@ Deno.serve(async (request) => {
       const denied = requireSuper('set-password');
       if (denied) return denied;
       const nextPassword = normalizePassword(body.newPassword);
-      if (nextPassword.length < 2) {
-        return jsonResponse({ error: 'Новый пароль слишком короткий' }, 400);
-      }
-      if (nextPassword.length > 64) {
-        return jsonResponse({ error: 'Новый пароль слишком длинный' }, 400);
-      }
+      const passwordError = newFamilyPasswordError(nextPassword);
+      if (passwordError) return jsonResponse({ error: passwordError }, 400);
       const next: AccessState = {
         ...access,
-        passwordHash: await hashPassword(nextPassword),
+        passwordHash: await createFamilyPasswordHash(nextPassword),
       };
 
       const meta = registryEntryFor(registry, treeDir);
@@ -2240,8 +2327,8 @@ Deno.serve(async (request) => {
         return jsonResponse({ error: 'Нет дерева для снимка' }, 400);
       }
       const activityJson = extractScriptJson(current?.content || '', 'activity-log') || '[]';
-      const stamp = stampNow();
-      const backupName = `${backupPrefix}-${stamp}.json`;
+      const stamp = backupTimestamp();
+      const backupName = `${treeDir}-${stamp}.json`;
       const label =
         typeof body.label === 'string' ? body.label.trim().slice(0, 80) : 'Ручной снимок';
       const record = makeSnapshotRecord(treeJson, activityJson, { label, kind: 'snapshot' });
@@ -2310,7 +2397,7 @@ Deno.serve(async (request) => {
       if (!parsed) {
         return jsonResponse({ error: 'В бэкапе нет дерева' }, 400);
       }
-      const stamp = stampNow();
+      const stamp = backupTimestamp();
       const [current, currentJsonFile, existingBackups] = await Promise.all([
         githubGetFile(githubToken, githubRepo, indexPath),
         githubGetFile(githubToken, githubRepo, jsonPath),
@@ -2354,7 +2441,7 @@ Deno.serve(async (request) => {
       let htmlToWrite = injectOrInsertScript(current.content, 'tree-data', parsed.treeJson);
       htmlToWrite = injectOrInsertScript(htmlToWrite, 'activity-log', parsed.activityJson);
       const jsonBody = parsed.treeJson.endsWith('\n') ? parsed.treeJson : `${parsed.treeJson}\n`;
-      const newBackupName = `${backupPrefix}-${stamp}.json`;
+      const newBackupName = `${treeDir}-${stamp}.json`;
       const safetySnapshot = waydeanAdminRestoreSafetySnapshot({
         currentTreeJson,
         currentActivityJson,
@@ -2540,7 +2627,7 @@ Deno.serve(async (request) => {
       }
     }
 
-    const stamp = stampNow();
+    const stamp = backupTimestamp();
     const message =
       typeof body.message === 'string' && body.message.trim()
         ? body.message.trim()
@@ -2579,7 +2666,7 @@ Deno.serve(async (request) => {
       new Set(
         (Array.isArray(body.photoDeletes) ? body.photoDeletes : [])
           .map((value: unknown) => String(value || '').trim())
-          .filter((id: string) => PHOTO_ID_RE.test(id))
+          .filter((id: string) => photoPersonIdPattern.test(id))
       )
     );
     const photoDeleteCandidates = photoDeleteIds.flatMap((id) => [
@@ -2588,7 +2675,7 @@ Deno.serve(async (request) => {
     ]);
     const photoDeleteExisting = await Promise.all(
       photoDeleteCandidates.map(async (path) =>
-        (await githubGetFile(githubToken, githubRepo, path)) ? path : null
+        (await githubGetFile(githubToken, githubRepo, path, { readContent: false })) ? path : null
       )
     );
     const photoDeletes: TreeChange[] = photoDeleteExisting
@@ -2617,7 +2704,7 @@ Deno.serve(async (request) => {
     }
 
     const treeFilesChange = indexWillChange || jsonWillChange;
-    const backupName = `${backupPrefix}-${stamp}.json`;
+    const backupName = `${treeDir}-${stamp}.json`;
     const record = makeSnapshotRecord(publishTreeJson, publishActivityJson, {
       kind: 'auto',
       merged,
@@ -2759,6 +2846,7 @@ Deno.serve(async (request) => {
     });
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown publish error';
-    return jsonResponse({ error: message }, 500);
+    const status = (error as {status?: number})?.status;
+    return jsonResponse({ error: message }, status === 409 || status === 503 ? status : 500);
   }
 });

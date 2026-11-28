@@ -24,9 +24,9 @@ test('describes effective lock status and the inverse available action', () => {
 });
 
 test('validates family password equality using the legacy trim and case-insensitive rule', () => {
-  assert.deepEqual(validateFamilyPasswordChange('  NewPass  ', 'newpass'), {
+  assert.deepEqual(validateFamilyPasswordChange('  Новый семейный пароль  ', 'новый семейный пароль'), {
     ok: true,
-    normalizedPassword: 'newpass'
+    normalizedPassword: 'новый семейный пароль'
   });
   assert.deepEqual(validateFamilyPasswordChange('newpass', 'different'), {
     ok: false,
@@ -35,12 +35,18 @@ test('validates family password equality using the legacy trim and case-insensit
 });
 
 test('enforces the family password length accepted by the server', () => {
-  assert.deepEqual(validateFamilyPasswordChange('x', 'x'), {
-    ok: false,
-    error: 'Пароль должен содержать от 2 до 64 символов.'
-  });
-  assert.deepEqual(validateFamilyPasswordChange('x'.repeat(65), 'x'.repeat(65)), {
-    ok: false,
-    error: 'Пароль должен содержать от 2 до 64 символов.'
-  });
+  for (const length of [14, 65]) {
+    const password = '🌳'.repeat(length);
+    assert.deepEqual(validateFamilyPasswordChange(password, password), {
+      ok: false,
+      error: 'Пароль семьи должен содержать от 15 до 64 символов.'
+    });
+  }
+  for (const length of [15, 64]) {
+    const password = '🌳'.repeat(length);
+    assert.deepEqual(validateFamilyPasswordChange(` ${password} `, password), {
+      ok: true,
+      normalizedPassword: password
+    });
+  }
 });

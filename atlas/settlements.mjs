@@ -67,6 +67,16 @@ export const settlements = Object.freeze([
     labelPriority: 70,
     modelKey: 'kurchaloy-cluster',
   },
+  {
+    id:'sharoi-village', name:'Шарой', settlementType:'village',
+    coordinates:[45.8100,42.6297], accuracy:'Приблизительная точка села',
+    sourceRefs:['https://ru.ruwiki.ru/wiki/Шарой_(село)'], labelPriority:60,
+  },
+  {
+    id:'khoi-village', name:'Хой', settlementType:'village',
+    coordinates:[46.1272,42.7510], accuracy:'Приблизительная точка села',
+    sourceRefs:['https://ru.db-city.com/Россия--Чечня--Веденский-район--Хой'], labelPriority:60,
+  },
 ]);
 
 export const settlementById = new Map(settlements.map((settlement) => [settlement.id, settlement]));

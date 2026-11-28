@@ -4,15 +4,18 @@
  <meta charset="utf-8">
  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
  <meta name="theme-color" content="#102b29">
+ <link rel="manifest" href="/nek/manifest.webmanifest">
+ <link rel="apple-touch-icon" href="/nek/apple-touch-icon.png">
+ <script>try { document.documentElement.dataset.colorScheme = localStorage.getItem('drewo-color-scheme-v2') === 'light' ? 'light' : 'dark'; } catch {}</script>
  <title>Древо — атлас происхождения</title>
- <meta name="description" content="Интерактивный атлас Чечни: тухумы, тейпы, родовые места и башенные комплексы.">
+ <meta name="description" content="Семейные родословные и интерактивная карта Чечни.">
  <link rel="stylesheet" href="./assets/cormorant.css">
  <link rel="stylesheet" href="./assets/source-sans.css">
  <link rel="stylesheet" href="./vendor/maplibre-gl.css">
- <link rel="stylesheet" href="./style.css?v=f3463c6">
- <link rel="stylesheet" href="./opening.css?v=f3463c6">
- <link rel="stylesheet" href="./journey.css">
- <link rel="stylesheet" href="./interface.css">
+ <link rel="stylesheet" href="./style.css?v=f3463c8">
+ <link rel="stylesheet" href="./opening.css?v=f3463c9">
+ <link rel="stylesheet" href="./interface.css?v=20261127-6">
+  <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261127-4">
 </head>
 <body data-atlas-entrance="pending">
  <svg class="svg-defs" aria-hidden="true"><defs>
@@ -27,17 +30,23 @@
   <symbol id="i-branch" viewBox="0 0 24 24"><path d="M12 20V8m0 6-7-5m7 3 7-5"/><circle cx="12" cy="4.5" r="2.5"/><circle cx="4" cy="7" r="2"/><circle cx="20" cy="5" r="2"/></symbol>
   <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+  <symbol id="i-globe" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></symbol>
+  <symbol id="i-rotate-left" viewBox="0 0 24 24"><path d="M7 6 3 10l4 4M3 10h8a6 6 0 1 1-5.2 9"/></symbol>
+  <symbol id="i-rotate-right" viewBox="0 0 24 24"><path d="m17 6 4 4-4 4m4-4h-8a6 6 0 1 0 5.2 9"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="m12 3 2.1 6.1L20 11l-5.9 2.1L12 19l-2.1-5.9L4 11l5.9-1.9L12 3Z"/><path d="m19 16 .8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16Z"/></symbol>
+  <symbol id="i-north" viewBox="0 0 24 24"><path d="m12 3 7 16-7-3-7 3 7-16Zm0 13v6"/></symbol>
  </defs></svg>
 
  <main class="atlas-shell" id="atlas-shell" data-layout="side" data-sheet="peek">
-  <button id="return-chechnya" class="return-chechnya" type="button">↗ Вернуться в Чечню</button>
+  <button id="return-chechnya" class="return-chechnya" type="button"><svg aria-hidden="true"><use href="#i-back"/></svg>Вернуться в Чечню</button>
+  <button type="button" id="exit-family-map" hidden>Все места атласа</button>
   <div id="map" class="map" role="region" aria-label="Карта рельефа Чечни"></div>
   <div class="map-vignette" aria-hidden="true"></div>
 
   <header class="topbar" id="topbar">
    <button class="brand" id="brand-home" type="button" aria-label="Древо — обзор карты">
     <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 64 64"><path d="M24 58h16M32 58V21M32 46 18 33M32 38 45 25M32 29 23 20M32 24 38 15M25 39 13 37M23 38l-3-12M39 31l12-1M40 30l2-13"/><g fill="currentColor" stroke="none"><ellipse cx="32" cy="13" rx="3" ry="5"/><ellipse cx="21" cy="15" rx="3" ry="4" transform="rotate(-32 21 15)"/><ellipse cx="41" cy="11" rx="3" ry="4" transform="rotate(32 41 11)"/><ellipse cx="14" cy="23" rx="3" ry="4" transform="rotate(-45 14 23)"/><ellipse cx="10" cy="33" rx="3" ry="4" transform="rotate(-60 10 33)"/><ellipse cx="20" cy="25" rx="2.5" ry="4"/><ellipse cx="47" cy="21" rx="3" ry="4" transform="rotate(45 47 21)"/><ellipse cx="53" cy="29" rx="3" ry="4" transform="rotate(60 53 29)"/><ellipse cx="15" cy="43" rx="3" ry="4" transform="rotate(-65 15 43)"/><ellipse cx="45" cy="38" rx="3" ry="4" transform="rotate(45 45 38)"/></g></svg></span>
-    <span class="brand-word">Древо<small>АТЛАС ПРОИСХОЖДЕНИЯ</small></span>
+    <span class="brand-word">Древо<small>Семейные родословные</small></span>
    </button>
    <nav class="main-nav" aria-label="Разделы">
     <button class="active" data-tab="atlas" type="button" aria-current="page">Атлас</button>
@@ -47,41 +56,22 @@
    <div class="top-actions">
     <button class="top-action" id="search-toggle" type="button" aria-label="Поиск по атласу"><svg aria-hidden="true"><use href="#i-search"/></svg><span>Поиск</span></button>
     <button class="about-link" id="about" type="button">О проекте</button>
-    <a class="demo-tree-link" id="atlas-demo-tree" href="/drewo-reklama/" target="_blank" rel="noopener" aria-label="Открыть публичное демонстрационное родовое древо" title="Публичное демо-древо">
-     <svg aria-hidden="true"><use href="#i-branch"/></svg><span class="demo-full-label">Демо-древо</span><span class="demo-compact-label" aria-hidden="true">Демо</span>
-    </a>
-    <button class="login-link" id="atlas-login" type="button">Войти <svg><use href="#i-arrow"/></svg></button>
    </div>
   </header>
 
   <section class="atlas-opening" aria-labelledby="opening-title">
    <div class="intro" id="intro">
-    <div class="eyebrow"><span class="gold-line"></span>НОХЧИЙН МОХК · АТЛАС ЧЕЧНИ</div>
-    <h1 id="opening-title">Земля <em>предков.</em></h1>
-    <p>Тухумы, тейпы и родовые места на карте Чечни.</p>
+    <h1 id="opening-title">Семейное <em>древо</em></h1>
+    <p>Соберите поколения своей семьи и найдите родные места на карте Чечни.</p>
    </div>
-   <nav class="opening-dock" id="overview-group-dock" aria-label="Исследовать атлас">
-    <button class="opening-search" id="opening-search" type="button">
-     <svg aria-hidden="true"><use href="#i-search"/></svg>
-     <span><strong>Найти в атласе</strong><small>Тухум, тейп или место</small></span>
-     <svg class="opening-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-    </button>
+   <nav class="opening-dock" id="overview-group-dock" aria-label="Семейное древо и атлас">
+    <button class="opening-search" id="create-tree" type="button"><svg aria-hidden="true"><use href="#i-plus"/></svg>Создать древо</button>
     <div class="opening-catalogs">
-     <button class="opening-link" id="opening-roots" type="button" data-tab="roots">
-      <svg aria-hidden="true"><use href="#i-branch"/></svg>
-      <span><strong>Тухумы</strong><small>Каталог тейпов</small></span>
-      <svg class="opening-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-     </button>
-     <button class="opening-link" id="opening-places" type="button" data-tab="places">
-      <svg aria-hidden="true"><use href="#i-tower"/></svg>
-      <span><strong>Места</strong><small>Башни и селения</small></span>
-      <svg class="opening-arrow" aria-hidden="true"><use href="#i-arrow"/></svg>
-     </button>
+     <button class="opening-link" id="atlas-login" type="button"><svg aria-hidden="true"><use href="#i-branch"/></svg>Войти</button>
+     <a class="opening-link" href="/drewo-reklama/">Посмотреть демо</a>
     </div>
-    <button class="opening-create" id="create-tree" type="button">
-     <svg aria-hidden="true"><use href="#i-plus"/></svg><span>Создать древо</span>
-    </button>
-   </nav>
+    <button class="opening-create" id="opening-roots" data-tab="roots" type="button"><svg aria-hidden="true"><use href="#i-map"/></svg>Исследовать атлас</button>
+      </nav>
   </section>
 
   <aside class="explorer" id="explorer" aria-label="Каталог происхождения">
@@ -91,7 +81,7 @@
     <h2 class="panel-kicker" id="catalog-label" tabindex="-1">Тухумы</h2>
     <div class="panel-heading-actions">
      <span class="count" id="count" role="status"></span>
-     <button class="icon-button panel-toggle" id="catalog-toggle" type="button" aria-expanded="true" aria-label="Свернуть каталог"><span aria-hidden="true">−</span></button>
+     <button class="icon-button panel-toggle" id="catalog-toggle" type="button" aria-expanded="true" aria-label="Свернуть каталог"><svg aria-hidden="true"><use href="#i-minus"/></svg></button>
     </div>
    </div>
 
@@ -106,7 +96,7 @@
     <section class="aggregate-dashboard" id="aggregate-dashboard" hidden aria-label="Публичная сводка"></section>
     <div id="catalog-list" class="catalog-list"></div>
     <div class="catalog-empty" id="catalog-empty" hidden>
-     <span class="empty-mark" aria-hidden="true">✦</span>
+     <span class="empty-mark" aria-hidden="true"><svg><use href="#i-sparkle"/></svg></span>
      <p></p>
      <button id="catalog-back" class="text-action" type="button">К предыдущему разделу <svg><use href="#i-arrow"/></svg></button>
     </div>
@@ -118,7 +108,7 @@
   <div class="map-topline"><span class="map-status" id="map-status" role="status" aria-live="polite"><span class="small-dot"></span>Загружаем рельеф</span></div>
 
   <aside class="camera-rail" id="camera-rail" aria-label="Управление картой">
-   <button class="icon-button north-button" id="reset-north" type="button" aria-label="Север сверху" title="Север сверху"><span class="north-needle" aria-hidden="true">↑</span><small>N</small></button>
+   <button class="icon-button north-button" id="reset-north" type="button" aria-label="Север сверху" title="Север сверху"><svg class="north-needle" aria-hidden="true"><use href="#i-north"/></svg><small>N</small></button>
    <div class="zoom-group" aria-label="Масштаб карты">
     <button class="icon-button" id="zoom-in" type="button" aria-label="Приблизить"><svg><use href="#i-plus"/></svg></button>
     <button class="icon-button" id="zoom-out" type="button" aria-label="Отдалить"><svg><use href="#i-minus"/></svg></button>
@@ -129,13 +119,15 @@
   <section class="view-menu" id="view-menu" hidden aria-label="Вид и слои карты">
    <div class="view-menu-heading"><span>ВИД КАРТЫ</span><button class="icon-button" id="view-close" type="button" aria-label="Закрыть настройки вида"><svg><use href="#i-close"/></svg></button></div>
    <div class="view-actions">
+    <button class="view-action" id="family-view" type="button"><svg><use href="#i-branch"/></svg>Мой род</button>
     <button class="view-action" id="home-view" type="button"><svg><use href="#i-compass"/></svg><span>Общий вид</span></button>
-    <button class="view-action" id="world-view" type="button">Земля <span>↗</span></button>
-    <button class="view-action" id="rotate-left" type="button" aria-label="Повернуть влево на 15 градусов">Повернуть влево <span>↶</span></button>
-    <button class="view-action" id="rotate-right" type="button" aria-label="Повернуть вправо на 15 градусов">Повернуть вправо <span>↷</span></button>
+    <button class="view-action" id="world-view" type="button">Земля <svg aria-hidden="true"><use href="#i-globe"/></svg></button>
+    <button class="view-action" id="rotate-left" type="button" aria-label="Повернуть влево на 15 градусов">Повернуть влево <svg aria-hidden="true"><use href="#i-rotate-left"/></svg></button>
+    <button class="view-action" id="rotate-right" type="button" aria-label="Повернуть вправо на 15 градусов">Повернуть вправо <svg aria-hidden="true"><use href="#i-rotate-right"/></svg></button>
    </div>
    <label class="pitch-control" for="pitch-slider"><span>Наклон</span><output id="pitch-value">44°</output><input id="pitch-slider" type="range" min="0" max="60" value="44"></label>
    <div class="view-footer">
+    <button class="mode-switch" id="theme-toggle" aria-pressed="false" type="button"><span>Светлый интерфейс</span><span class="switch-track"><i></i></span></button>
     <button class="mode-switch" id="terrain-toggle" type="button" aria-pressed="true"><span>Объёмный рельеф</span><span class="switch-track"><i></i></span></button>
     <button class="view-action" id="motion-toggle" type="button" aria-pressed="true"><span>Движение облаков</span><span class="motion-dot"></span></button>
     <button class="view-action" id="sound-toggle" type="button" aria-pressed="false"><span>Звуки ветра</span><span class="motion-dot"></span></button>
@@ -148,7 +140,7 @@
     <source type="image/webp" srcset="./assets/landmarks/ushkaloi-480.webp 480w, ./assets/landmarks/ushkaloi-960.webp 960w, ./assets/landmarks/ushkaloi-1536.webp 1536w" sizes="274px">
     <img src="./assets/landmarks/ushkaloy-towers-generated.jpg" alt="Ушкалойские башни под скальной аркой над рекой" fetchpriority="high" width="1536" height="1024">
    </picture>
-   <span class="feature-caption"><small>УШКАЛОЙ · АРГУНСКОЕ УЩЕЛЬЕ</small><strong>Башни у дороги предков</strong><span>Открыть место <svg><use href="#i-arrow"/></svg></span></span>
+   <span class="feature-caption"><small>Иллюстрация, созданная ИИ</small><strong>Ушкалойские башни</strong><span>Открыть место <svg><use href="#i-arrow"/></svg></span></span>
   </button>
 
   <footer class="map-footer">
@@ -156,33 +148,80 @@
   </footer>
  </main>
 
- <main class="nek-preview" id="nek-preview" hidden aria-label="Вход и регистрация Некъ">
-  <section class="nek-landscape">
-   <button class="nek-brand" id="nek-brand-home" type="button" aria-label="Древо — атлас происхождения"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6 12 20h8L9 32h11l-5 7h18l-5-7h11L28 20h8L24 6Z"/><path d="M24 27v15"/></svg></span><span class="brand-word">Древо<small>АТЛАС ПРОИСХОЖДЕНИЯ</small></span></button>
-   <div class="nek-landscape-copy"><span class="eyebrow">ДРЕВО · НЭКЪ</span><h1>Храни<br>историю рода.</h1><p>Личный кабинет родословной</p></div>
-   <span class="nek-landscape-caption">ГОРЫ ЧЕЧНИ · ЗЕМЛЯ ПАМЯТИ</span>
-  </section>
-  <section class="nek-form-side">
-   <button class="nek-back" id="nek-back" type="button"><svg><use href="#i-back"/></svg>Вернуться в атлас</button>
-   <div class="nek-form-wrap">
-    <div class="nek-title"><span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M24 6 12 20h8L9 32h11l-5 7h18l-5-7h11L28 20h8L24 6Z"/><path d="M24 27v15"/></svg></span><span>НЭКЪ</span></div>
-    <p class="nek-kicker">ЕДИНЫЙ АККАУНТ</p>
-    <p id="nek-context" class="nek-tree-context" hidden></p>
-    <div class="nek-tabs" role="tablist" aria-label="Режим аккаунта"><button id="nek-login-tab" type="button" role="tab" aria-selected="true">Войти</button><button id="nek-register-tab" type="button" role="tab" aria-selected="false">Создать аккаунт</button></div>
-    <form id="nek-form">
-     <label for="nek-identity">Телефон или почта</label><input id="nek-identity" name="identity" autocomplete="username" inputmode="email" placeholder="Введите телефон или почту">
-     <label for="nek-password">Пароль</label><input id="nek-password" name="password" type="password" autocomplete="current-password" placeholder="Введите пароль">
-     <button class="nek-submit" type="submit">Продолжить <svg><use href="#i-arrow"/></svg></button>
-     <p class="nek-status" id="nek-status" role="status">Экран Некъ подготовлен отдельно; вход пока не подключён.</p>
-    </form>
-    <button id="nek-preview-continue" class="nek-preview-continue" type="button" hidden>Продолжить локальный просмотр →</button>
+ <dialog id="family-access" class="info-dialog access-dialog" aria-labelledby="access-title">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="access-title">Вход в древо</h2>
+  <p>Введите логин и пароль, которые вам передала семья.</p>
+  <form id="login-panel" method="post">
+   <label for="login-input">Логин семьи</label>
+   <input id="login-input" name="username" autocomplete="username" autocapitalize="none" spellcheck="false" required>
+   <label for="password-input">Пароль семьи</label>
+   <div class="password-field"><input id="password-input" name="password" type="password" autocomplete="current-password" required><button id="password-toggle" aria-pressed="false" type="button">Показать</button></div>
+   <label class="remember"><input type="checkbox" id="login-remember"> Запомнить меня (только логин)</label>
+   <p role="alert" id="login-error" hidden></p>
+   <button id="login-submit" class="access-primary" type="submit">Войти</button>
+  </form>
+  <p id="recent" hidden><a id="recent-link"></a></p>
+  <button class="owner-inline-link" type="button" id="owner-family-login">Войти в личный аккаунт</button>
+  <a href="/trees/">Вход управляющего</a>
+ </dialog>
+ <dialog id="atlas-account" class="info-dialog access-dialog" aria-labelledby="atlas-account-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="atlas-account-heading">Аккаунт</h2>
+  <div class="dialog-list">
+   <button class="access-primary" type="button" id="atlas-switch-account">Сменить аккаунт</button>
+   <button class="access-primary" type="button" id="atlas-sign-out">Выйти</button>
+  </div>
+ </dialog>
+ <dialog id="atlas-manager-account" class="info-dialog access-dialog" aria-labelledby="atlas-manager-account-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="atlas-manager-account-heading">Аккаунт управляющего</h2>
+  <p role="alert" id="atlas-manager-account-error" hidden></p>
+  <div class="dialog-list">
+   <button class="access-primary" type="button" id="atlas-manager-switch-account">Сменить аккаунт</button>
+   <button class="access-primary" type="button" id="atlas-manager-sign-out">Выйти</button>
+  </div>
+ </dialog>
+ <dialog id="family-map" class="info-dialog access-dialog" aria-labelledby="family-map-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="family-map-heading">Мой род</h2>
+  <p role="status"></p>
+  <div class="family-places"></div>
+  <section class="family-consent" hidden aria-labelledby="family-consent-heading">
+   <h3 id="family-consent-heading">Публичная семейная сводка</h3>
+   <p>При достаточном числе согласившихся семей в Atlas могут появиться только интервалы количества родословных, записей о людях и глубины поколений. Имена, даты, места и идентификаторы семей не публикуются.</p>
+   <label class="family-consent-attestation"><input type="checkbox" id="family-consent-attestation">Я представляю семью и получил согласие родственников на включение этого древа в обезличенную публичную сводку.</label>
+   <div class="family-consent-actions">
+    <button class="access-primary" type="button" data-consent-grant>Дать согласие</button>
+    <button class="family-consent-revoke" type="button" data-consent-revoke hidden>Отозвать согласие</button>
    </div>
+   <p class="family-consent-status" role="status" aria-live="polite"></p>
+   <p class="family-consent-limit">Семейный пароль не подтверждает личность представителя. Отзыв исключит древо из новых сводок в течение минуты; ранее сохранённые копии статистики удалить нельзя.</p>
   </section>
- </main>
-
+  <form class="family-place-form" hidden>
+   <label>Место в атласе<select name="place"></select></label>
+   <label>Связь с семьёй<select name="kind"><option>Родное место</option><option>Место рождения</option><option>Переселение</option></select></label>
+   <button class="access-primary">Добавить отметку</button>
+  </form>
+ </dialog>
+ <dialog id="create-access" class="info-dialog access-dialog" aria-labelledby="create-heading">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <h2 id="create-heading">Новое древо</h2>
+  <p>Создайте личный аккаунт и своё древо. На один аккаунт можно создать одно древо. Тухум и тейп можно не указывать.</p>
+  <button class="access-primary" type="button" id="owner-account-register">Создать аккаунт и древо</button>
+  <button class="owner-inline-link" type="button" id="owner-account-login">Уже есть аккаунт — войти</button>
+  <a href="https://wa.me/79288867854">Нужна помощь? Написать в WhatsApp</a>
+ </dialog>
+ <dialog id="owner-account-dialog" class="info-dialog access-dialog owner-account-dialog" aria-labelledby="owner-account-title">
+  <form method="dialog"><button class="icon-button dialog-close" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button></form>
+  <div id="owner-account-content" aria-live="polite"></div>
+ </dialog>
  <dialog id="info-dialog" class="info-dialog"><button class="icon-button dialog-close" type="button" aria-label="Закрыть"><svg><use href="#i-close"/></svg></button><div id="dialog-content"></div></dialog>
- <dialog id="photo-dialog" class="photo-dialog" aria-label="Фотография места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть фотографию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
+ <dialog id="photo-dialog" class="photo-dialog" aria-label="Иллюстрация места"><button class="icon-button photo-close" id="photo-close" type="button" aria-label="Закрыть иллюстрацию"><svg><use href="#i-close"/></svg></button><figure><picture id="photo-view-picture"><source id="photo-view-source" type="image/webp"><img id="photo-view-image" alt="" width="1536" height="1024"></picture><figcaption id="photo-view-caption"></figcaption></figure></dialog>
  <div id="toast" class="toast" role="status" aria-live="polite"></div>
- <script type="module" src="./app.mjs?v=f3463c6"></script>
+ <script defer src="/trees/supabase-config.js"></script>
+ <script defer src="/nek/nek.js?v=11"></script>
+  <script type="module" src="./access.js?v=owner-account-2"></script>
+ <script type="module" src="./app.mjs?v=20261127-5"></script>
 </body>
 </html>

@@ -2,17 +2,17 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="robots" content="noindex, nofollow" />
     <meta name="theme-color" content="#E6EDE8" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-    <meta name="apple-mobile-web-app-title" content="Trees" />
+    <meta name="apple-mobile-web-app-title" content="Древо" />
     <link rel="manifest" href="./manifest.webmanifest" />
     <link rel="apple-touch-icon" href="./apple-touch-icon.png" />
     <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png" />
-    <title>Trees — пульт древ</title>
+    <title>Древо — кабинет управляющего</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -20,7 +20,8 @@
       href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@400;500;600;700&display=swap"
     />
     <link rel="stylesheet" href="./trees.css?v=11" />
-  </head>
+    <link rel="stylesheet" href="/assets/drewo-motion.css?v=20261127-4">
+</head>
   <body>
     <div class="bg-stage" aria-hidden="true">
       <div class="bg-wash"></div>
@@ -53,8 +54,8 @@
 
     <div id="pwa-banner" class="pwa-banner" hidden>
       <div>
-        <strong>Установить Trees</strong>
-        <p>Пульт древ на экран Домой</p>
+        <strong>Установить кабинет</strong>
+        <p>Добавить на главный экран</p>
       </div>
       <div class="pwa-banner-actions">
         <button type="button" id="pwa-install" class="btn btn-primary">Установить</button>
@@ -72,12 +73,12 @@
     <div id="login-screen" class="login-shell">
       <div class="login-stage">
         <div class="hero-light" aria-hidden="true"></div>
-        <p class="brand-word brand-hero">Trees</p>
+        <p class="brand-word brand-hero">Древо</p>
         <span class="hero-rule" aria-hidden="true"></span>
-        <p class="login-tagline">Пульт разработчика: древа и оплаты. Семья сюда не заходит.</p>
+        <p class="login-tagline">Кабинет управляющего родословными</p>
         <p class="login-public">
-          Родственникам — публичный вход
-          <a href="/nek/">Некъ</a>
+          Для родственников
+          <a href="/atlas/?login=1">Семейный вход</a>
         </p>
         <form id="login-form" class="login-form" method="post" action="/trees/" autocomplete="on">
           <label>
@@ -102,6 +103,8 @@
               required
             />
           </label>
+          <label class="auth-remember"><input id="login-remember-account" type="checkbox"> <span>Запомнить меня <small>Сохранить email и сессию на устройстве</small></span></label>
+          <p class="muted">Без галочки вход останется только в этой вкладке.</p>
           <p id="login-setup-notice" class="muted" hidden>Сервис не настроен.</p>
           <button type="submit" class="btn btn-primary btn-block" id="login-submit">Войти</button>
           <p id="login-error" class="error" hidden>Неверные данные для входа</p>
@@ -112,11 +115,11 @@
     <div id="app-screen" class="shell" hidden>
       <header class="topbar">
         <div class="topbar-brand">
-          <p class="brand-word">Trees</p>
+          <p class="brand-word">Древо</p>
           <p class="muted" id="updated-at">Обновление…</p>
         </div>
         <div class="topbar-actions">
-          <a class="btn btn-ghost" href="/nek/" title="Публичный вход Некъ">Некъ</a>
+          <a class="btn btn-ghost" href="/atlas/" title="Открыть атлас">Атлас</a>
           <button type="button" class="btn btn-primary" id="create-tree-btn">Создать древо</button>
           <button type="button" class="icon-btn" id="refresh-btn" title="Обновить" aria-label="Обновить">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -125,13 +128,13 @@
             </svg>
           </button>
           <button type="button" class="btn btn-ghost" id="logout-btn">Выйти</button>
+          <button type="button" class="btn btn-ghost" id="switch-account-btn">Сменить аккаунт</button>
         </div>
       </header>
 
       <section class="hero-strip" aria-label="Сводка">
         <div class="hero-strip-copy">
           <h1 class="hero-strip-title">Ваши древа</h1>
-          <p class="muted">Состав, trial и продление в одном месте. WhatsApp сейчас, СБП позже.</p>
         </div>
         <div class="summary" aria-label="Числа">
           <div class="summary-stat">
@@ -172,11 +175,15 @@
           </button>
         </header>
         <p class="muted create-dialog-lead">
-          Пустое древо на сайте. Семье потом дадите имя и пароль — без лишних кодов в интерфейсе.
+          Сайт опубликует страницу семьи. Пароль защищает редактирование. Данные родословной хранятся в открытом репозитории.
         </p>
         <label>
-          Название
-          <input id="create-title" name="title" type="text" maxlength="80" required placeholder="Род Ахмада" />
+          Имя первого родственника
+          <input id="create-root" name="rootName" type="text" maxlength="80" required placeholder="Ахмад" />
+        </label>
+        <label>
+          Название (по желанию)
+          <input id="create-title" name="title" type="text" maxlength="80" minlength="2" placeholder="Семейное древо" />
         </label>
         <label>
           Логин семьи
@@ -186,7 +193,7 @@
             type="text"
             maxlength="25"
             required
-            pattern="[A-Za-z][A-Za-z0-9_-]{1,24}"
+            pattern="[A-Za-z][A-Za-z0-9_\-]{1,24}"
             title="Латиница, 2–25 символов, начинается с буквы (например hoti)"
             placeholder="hoti"
             autocapitalize="off"
@@ -195,25 +202,22 @@
             spellcheck="false"
           />
         </label>
-        <p class="field-hint">Латиницей, как <code>hoti</code>. Короткая ссылка <code id="create-path-preview">/t/…</code> (старый путь /drewo-…/ тоже останется)</p>
+        <p class="field-hint">Адрес для приглашений <code id="create-path-preview">/t/…</code></p>
         <label>
           Пароль семьи
-          <input id="create-password" name="password" type="text" maxlength="64" required minlength="2" autocomplete="off" inputmode="text" />
+          <input id="create-password" name="password" type="password" maxlength="128" required minlength="15" autocomplete="new-password" inputmode="text" aria-describedby="create-password-hint" />
         </label>
-        <label>
-          Имя корня
-          <input id="create-root" name="rootName" type="text" maxlength="80" required placeholder="Ахмад" />
-        </label>
+        <p class="field-hint" id="create-password-hint">От 15 до 64 символов. Можно использовать фразу из нескольких слов.</p>
         <label>
           Чей род
           <select id="create-ownership" name="ownership">
-            <option value="customer" selected>Заказчик (trial 30 дн.)</option>
+            <option value="customer" selected>Для заказчика · 30 пробных дней</option>
             <option value="mine">Моё / без оплаты</option>
           </select>
         </label>
         <label>
-          Заметка (только вам)
-          <input id="create-note" name="note" type="text" maxlength="200" placeholder="Имя заказчика, откуда заказ" />
+          Заметка для реестра (по желанию)
+          <input id="create-note" name="note" type="text" maxlength="200" placeholder="Без личных сведений" />
         </label>
         <p id="create-tree-error" class="error" hidden></p>
         <div class="create-dialog-actions">
@@ -228,6 +232,7 @@
     <script src="./billing-config.js?v=1"></script>
     <script src="../assets/drewo-billing.js?v=1"></script>
     <script src="./supabase-config.js?v=2"></script>
-    <script src="./trees.js?v=10"></script>
+    <script src="../admin/admin-supabase.js?v=16"></script>
+    <script type="module" src="./trees.js?v=18"></script>
   </body>
 </html>

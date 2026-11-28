@@ -39,10 +39,12 @@
   transition: background .18s ease, border-color .18s ease;
 }
 
-.self-person-button:hover,
 .self-person-button[aria-pressed="true"] {
   border-color: #e9c674;
   background: #d9ad5826;
+}
+@media (hover: hover) and (pointer: fine) {
+.self-person-button:hover { border-color: #e9c674; background: #d9ad5826; }
 }
 
 .self-person-note {

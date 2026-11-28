@@ -1,6 +1,6 @@
 /**
- * Client-side brute-force guard for Supabase login forms (admin + trees).
- * Mirrors drewo: 5 fails → ~15 min lock. Persists in localStorage.
+ * Client-side throttle for Supabase login forms (admin + trees).
+ * Five failures prompt a 15-minute local pause. Server-side Auth controls remain necessary.
  */
 (function initAuthLock(global) {
   const MAX_FAILS = 5;

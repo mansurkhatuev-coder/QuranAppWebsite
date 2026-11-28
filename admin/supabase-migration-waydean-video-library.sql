@@ -1,5 +1,7 @@
--- Private per-account storage for Waydean videos. Objects are only accessible
--- through an authenticated owner's folder; never expose this bucket publicly.
+-- Legacy migration for the former Waydean video library. The current exporter
+-- keeps rendered videos in the browser and does not upload them to Supabase.
+-- Keep this file as a record of the old setup; do not apply it for new exports.
+-- Objects in an already provisioned bucket must still remain private.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values (
   'waydean-videos',

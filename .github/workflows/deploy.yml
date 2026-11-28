@@ -21,6 +21,8 @@ concurrency:
 
 jobs:
   deploy:
+    # Explicit release gate: enable only after private-reader and legacy-route verification.
+    if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && vars.DREWO_PRIVATE_PAGES_READY == 'true'
     runs-on: ubuntu-latest
     environment:
       name: github-pages
@@ -29,21 +31,62 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # `_private/` holds the encrypted credential vault written by publish-drewo.
-      # It must never reach the public site; strip it from the checkout (not the repo).
-      - name: Strip private files from the published site
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Verify private family repository
+        env:
+          DREWO_PRIVATE_REPO: ${{ secrets.DREWO_PRIVATE_REPO }}
+          DREWO_PRIVATE_REPO_TOKEN: ${{ secrets.DREWO_PRIVATE_REPO_TOKEN }}
         run: |
-          rm -rf _private
-          rm -f trees/credentials.vault.json
-          if find . -path ./.git -prune -o -name 'credentials.vault.json' -print | grep -q .; then
-            echo "::error::credential vault would be published; refusing to deploy"
+          if [ -z "$DREWO_PRIVATE_REPO" ] || [ -z "$DREWO_PRIVATE_REPO_TOKEN" ]; then
+            echo "Missing private family repository settings"
             exit 1
           fi
+          if [[ ! "$DREWO_PRIVATE_REPO" =~ ^[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+$ ]]; then
+            echo "DREWO_PRIVATE_REPO must have the form owner/repository"
+            exit 1
+          fi
+          if [[ "$DREWO_PRIVATE_REPO" != "mansurkhatuev-coder/Drewo-family-data" ]]; then
+            echo "DREWO_PRIVATE_REPO does not match the configured family-data repository"
+            exit 1
+          fi
+          repo_metadata="$(curl --fail --silent --show-error \
+            -H "Accept: application/vnd.github+json" \
+            -H @- \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$DREWO_PRIVATE_REPO" \
+            <<<"Authorization: Bearer $DREWO_PRIVATE_REPO_TOKEN")"
+          if ! jq -e '.private == true' >/dev/null <<<"$repo_metadata"; then
+            echo "DREWO_PRIVATE_REPO is unavailable or is not private"
+            exit 1
+          fi
+
+      - name: Checkout private family source
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ secrets.DREWO_PRIVATE_REPO }}
+          ref: main
+          token: ${{ secrets.DREWO_PRIVATE_REPO_TOKEN }}
+          path: private-drewo
+          persist-credentials: false
+
+      - name: Verify private Pages build
+        run: node --test scripts/prepare-pages-artifact.test.mjs
+
+      - name: Build filtered Pages artifact
+        run: node scripts/prepare-pages-artifact.mjs --release --private-source private-drewo
+
+      - name: Remove private family source
+        if: always()
+        run: rm -rf -- private-drewo
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: dist/pages
 
       - name: Deploy to GitHub Pages
         id: deployment

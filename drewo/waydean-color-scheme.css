@@ -196,9 +196,9 @@ html[data-color-scheme="light"] body[data-theme] .graph .person-node {
   border-color: rgba(133, 98, 39, .72);
   box-shadow: 0 5px 16px rgba(41, 35, 25, .2), inset 0 1px 0 rgba(255, 255, 255, .95);
 }
-html[data-color-scheme="light"] body[data-theme] .graph .person-node:hover,
 html[data-color-scheme="light"] body[data-theme] .graph .person-node:focus-visible,
 html[data-color-scheme="light"] body[data-theme] .graph .person-node.selected { border-color: #8b611f; box-shadow: 0 0 0 2px rgba(164, 121, 46, .34), 0 8px 20px rgba(41, 35, 25, .22); }
+@media (hover: hover) and (pointer: fine) { html[data-color-scheme="light"] body[data-theme] .graph .person-node:hover { border-color: #8b611f; box-shadow: 0 0 0 2px rgba(164, 121, 46, .34), 0 8px 20px rgba(41, 35, 25, .22); } }
 html[data-color-scheme="light"] .node-avatar { background: radial-gradient(ellipse at 50% 34%, #d3c7ad, #a99d83 70%); border-color: #9e7c42; }
 html[data-color-scheme="light"] .node-avatar svg,
 html[data-color-scheme="light"] .profile-avatar svg,

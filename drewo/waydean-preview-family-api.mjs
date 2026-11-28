@@ -1,4 +1,4 @@
-const FAMILY_ACTIONS = new Set(['family-load', 'publish', 'vapid-public', 'subscribe', 'unsubscribe']);
+const FAMILY_ACTIONS = new Set(['family-load', 'family-places', 'family-aggregate-consent', 'photo-load', 'publish', 'vapid-public', 'subscribe', 'unsubscribe']);
 
 export function canEditFamilyTreeRole(role) {
   return role === 'editor' || role === 'super';
@@ -93,6 +93,10 @@ export async function callFamilyTreeAction(action, payload = {}, {
   if (action === 'family-load'
     && (typeof result.treeJson !== 'string' || typeof result.fingerprint !== 'string' || !result.fingerprint)) {
     throw familyError({ error: 'Сервис не вернул актуальный снимок семейного древа.' }, 502, 'WAYDEAN_FAMILY_REQUEST_FAILED');
+  }
+  if (action === 'family-aggregate-consent'
+    && (!result.consent || typeof result.consent.consented !== 'boolean')) {
+    throw familyError({ error: 'Сервис не вернул состояние семейного согласия.' }, 502, 'WAYDEAN_FAMILY_REQUEST_FAILED');
   }
   return result;
 }

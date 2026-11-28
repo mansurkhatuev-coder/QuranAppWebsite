@@ -1,7 +1,7 @@
-import {Map,setWorkerUrl} from './vendor/maplibre-gl.mjs';
+import {LngLatBounds,Map,setWorkerUrl} from './vendor/maplibre-gl.mjs';
 import {groups,sites} from './catalog.mjs';
 import {createCameraController,focusCenterAtAltitude} from './camera.mjs';
-import {createAtlasMarkers} from './markers.mjs';
+import {createAtlasMarkers} from './markers.mjs?v=family-2';
 import {computeLayoutMode,computeOverviewCamera} from './viewport.mjs';
 import {createTerrainSceneLayer} from './terrain-scene.mjs';
 import {mercatorPosition,computeProjectedFit,sampleReliefElevation} from './relief.mjs';
@@ -43,7 +43,8 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
  const initialPitch=()=>innerHeight<600?32:innerWidth<900?35:46;
  const terrainSource={type:'raster-dem',tiles:[new URL('./data/terrain/{z}/{x}/{y}.png',location.href).href.replaceAll('%7B','{').replaceAll('%7D','}')],encoding:'terrarium',tileSize:256,minzoom:5,maxzoom:10,bounds:[44.4,42.35,46.75,44.2],attribution:'AWS Terrain Tiles'};
  const style=createAtlasStyle(terrainSource);
- const map=new Map({container:'map',style,center:[45.8,43.05],zoom:7.3,pitch:initialPitch(),bearing:-17,minZoom:0,maxZoom:12.3,maxPitch:60,attributionControl:false,renderWorldCopies:false,canvasContextAttributes:{antialias:true}});
+ const modestGPU=navigator.deviceMemory<=4 || navigator.connection?.saveData===true;
+ const map=new Map({pixelRatio:Math.min(devicePixelRatio,modestGPU?1.5:2),container:'map',style,center:[45.8,43.05],zoom:7.3,pitch:initialPitch(),bearing:-17,minZoom:0,maxZoom:12.3,maxPitch:60,attributionControl:false,renderWorldCopies:false,canvasContextAttributes:{antialias:!modestGPU}});
  map.setCenterClampedToGround(false);
  const zoomBy=createAtlasZoom(map,{reducedMotion:()=>reduce.matches});
  const terrainConfig=()=>({source:'terrain-dem',exaggeration:1.8});
@@ -84,6 +85,22 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
    camera.focus({center:target,zoom,padding,elevation:0});
   };
   if(ready)action();else pendingCameraAction=action;
+ }
+ function fitFamilyPlaces(marks){
+  if(!ready)return;
+  const ids=new Set(marks.map(mark=>mark.id));
+  const places=markers.getEntries().filter(entry=>ids.has(entry.item.id));
+  if(places.length===1){
+   const [place]=places;
+   focusCoordinate(place.item.center,place.type==='city'?9.5:10.2);
+  }else if(places.length>1){
+   const placeBounds=new LngLatBounds();
+   for(const place of places)placeBounds.extend(place.item.center);
+   const fitted=map.cameraForBounds(placeBounds,{bearing:map.getBearing(),padding:48,maxZoom:9.5});
+   if(!fitted)return;
+   homeFitRemaining=0;homeFitVersion++;
+   camera.focus({...fitted,elevation:0});
+  }
  }
  function fitOverview({animate=false}={}){
   homeFitVersion++;
@@ -153,7 +170,6 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   if(map.getLayer('fallback-hillshade'))map.setLayoutProperty('fallback-hillshade','visibility','visible');
   addFallbackBoundary();
   if(terrainEnabled)map.setTerrain(terrainConfig());
-  map.on('render',projectFallbackMarkers);
   report('degraded',reason);
  }
  function projectFallbackMarkers(){
@@ -187,11 +203,12 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   const loadedManifest=await manifestResponse.json();
   // Keep one shared depth for the wall, underside, camera and marker projection.
   reliefManifest={...loadedManifest,baseElevationMeters:Math.max(-1000,loadedManifest.baseElevationMeters??-1800)};
-  const heightsResponse=await fetch('./data/relief/heights.f32');
+  const [heightsResponse,cellsResponse]=await Promise.all([
+   fetch('./data/relief/heights.f32'),fetch('./data/relief/cells.u8')
+  ]);
   if(!heightsResponse.ok)throw new Error(`Relief grid returned HTTP ${heightsResponse.status}`);
   const buffer=await heightsResponse.arrayBuffer();
   if(buffer.byteLength!==reliefManifest.size*reliefManifest.size*4)throw new Error('Relief height grid has an unexpected byte length');
-  const cellsResponse=await fetch('./data/relief/cells.u8');
   if(!cellsResponse.ok)throw new Error(`Relief clipping cells returned HTTP ${cellsResponse.status}`);
   const cellBuffer=await cellsResponse.arrayBuffer();
   if(cellBuffer.byteLength!==(reliefManifest.size-1)**2)throw new Error('Relief clipping cells have an unexpected byte length');
@@ -207,7 +224,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
    framePoints.push(pointAt(west+(east-west)*column/(reliefManifest.size-1),north+(south-north)*row/(reliefManifest.size-1),reliefGrid.data[row*reliefManifest.size+column]*reliefManifest.heightExaggeration));
   }
   markers.setRelief(reliefManifest,reliefGrid);
-  const landmarks=[...cities.filter(city=>city.kind==='city'),...sites.map(site=>({...site,kind:'tower'}))];
+  const landmarks=[...cities.filter(city=>city.settlementType!=='village'),...sites.map(site=>({...site,kind:'tower'}))];
   reliefLayer=createTerrainSceneLayer({
    manifest:reliefManifest,grid:reliefGrid,
    maskUrl:new URL('./data/relief/boundary-mask.png',import.meta.url).href,
@@ -245,7 +262,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
 
  map.once('load',()=>{loadMap().catch(error=>{console.error('Atlas map setup failed',error);activateFallback();finishSetup('degraded','Облегчённый рельеф · каталог работает');});});
  map.on('error',event=>{
-  const message=event.error?.message??'';mapErrors.push(message||'Неизвестная ошибка MapLibre');
+  const message=event.error?.message??'';if(mapErrors.length>=32)mapErrors.shift();mapErrors.push(message||'Неизвестная ошибка MapLibre');
   if(/WebGL|context lost/i.test(message))report('unavailable','Карта недоступна · каталог работает');
   else if(mapStatus==='loading'||mapStatus==='ready')report('degraded','Рельеф доступен частично');
  });
@@ -308,6 +325,7 @@ export async function createAtlas({onHome=()=>{},onGroup=()=>{},onSite=()=>{},on
   home(padding=currentPadding){if(padding)setPadding(padding);const action=()=>fitOverview({animate:true});if(ready)action();else pendingCameraAction=action;},
   zoom(amount){if(!ready)return;zoomBy(amount,{duration:300,reducedMotion:reduce.matches});},
   setLayer(next){activeLayer=['all','groups','sites'].includes(next)?next:'all';updateMarkers();diagnostic?.refresh();},
+  setFamilyPlaces:marks=>markers.setFamilyPlaces(marks),fitFamilyPlaces,
   setSelection:selection=>markers.setSelection(selection),
   setGroupPreview:(id,origin)=>markers.setPreview(id?{type:'group',id,origin}:null),
   setLabelOcclusion:rects=>markers.setOcclusionRects(rects),

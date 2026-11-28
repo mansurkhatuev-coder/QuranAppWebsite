@@ -42,12 +42,11 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke
 .brand-word small{display:block;margin-top:8px;font:600 8px/1 var(--atlas-body);letter-spacing:.2em;color:var(--atlas-accent)}
 .main-nav{height:100%;margin-inline:auto;display:flex;align-items:stretch;gap:34px}
 .main-nav button{position:relative;min-width:44px;padding:0 8px;color:var(--atlas-muted);font-size:14px}
-.main-nav button:hover,.main-nav .active{color:#f2e5bd}
+.main-nav .active{color:#f2e5bd}
 .main-nav .active::after{position:absolute;content:'';height:2px;left:8px;right:8px;bottom:0;background:var(--atlas-accent)}
 .top-actions{display:flex;align-items:center;gap:22px;min-width:230px;justify-content:flex-end}
 .top-action,.about-link{display:flex;align-items:center;gap:9px;font-size:13px;color:var(--atlas-muted);white-space:nowrap}
 .top-action svg,.about-link svg{width:17px;height:17px}
-.top-action:hover,.about-link:hover{color:var(--atlas-text)}
 
 /* Intro and the single desktop content panel */
 .eyebrow,.panel-kicker,.micro{font-size:10px;font-weight:600;letter-spacing:.17em;color:var(--atlas-accent)}
@@ -60,21 +59,21 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke
 .panel-heading-actions{display:flex;align-items:center;gap:10px}
 .count{color:var(--atlas-muted);font-size:12px;white-space:nowrap}
 .icon-button{width:44px;height:44px;min-width:44px;min-height:44px;display:grid;place-items:center;border-radius:50%;color:#e5e3d2;transition:background-color .18s,color .18s}
-.icon-button:hover{background:#ffffff14;color:#fff1c8}
-.panel-toggle{display:grid;border-radius:6px;width:36px;height:36px;min-width:36px;min-height:36px;font-size:23px}
+.panel-toggle{display:grid;border-radius:6px;width:36px;height:36px;min-width:36px;min-height:36px}
+.panel-toggle svg{width:18px;height:18px}
 .sheet-handle{display:none}
 .catalog-body{display:flex;flex:1;flex-direction:column;min-height:0;padding:0 18px 16px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#a6a78557 transparent}
 .search-field{height:46px;min-height:46px;display:flex;align-items:center;gap:10px;padding:0 13px;border:1px solid #c9c79a44;border-radius:5px;background:#0d28265e;color:#b9c5b5}
 .search-field:focus-within{border-color:#d8bd7a9c;box-shadow:0 0 0 2px #d8bd7a20}
 .search-field>svg{width:18px;height:18px;flex:none}
-.search-field input{width:100%;min-width:0;height:100%;padding:0;border:0;outline:0;background:transparent;color:var(--atlas-text);font-size:14px}
+.search-field input{width:100%;min-width:0;height:100%;padding:0;border:0;outline:0;background:transparent;color:var(--atlas-text);font-size:16px}
 .search-field input::placeholder{color:#acb9ac;opacity:1}
 .search-field kbd{font-size:17px;color:#aebcaa}
 .search-results{position:relative;z-index:2;max-height:min(46vh,360px);overflow:auto;padding:5px 0;border-bottom:1px solid var(--atlas-line);background:#14342f}
 .search-result{width:100%;min-height:48px;padding:8px 6px;display:flex;align-items:center;justify-content:space-between;gap:16px;border-bottom:1px solid #ffffff0d;text-align:left}
 .search-result span{font-size:15px;color:var(--atlas-text)}
 .search-result small{font-size:12px;color:var(--atlas-muted)}
-.search-result:hover,.search-result[aria-selected=true]{background:#d8bd7a14}
+.search-result[aria-selected=true]{background:#d8bd7a14}
 .no-results{padding:16px 6px;color:var(--atlas-muted);font-size:14px}
 .catalog-heading{margin:18px 0 8px;min-height:36px;display:flex;align-items:center;justify-content:space-between;gap:10px}
 .breadcrumbs{min-width:0;display:flex;align-items:center;gap:7px;overflow:hidden;color:#f0dfaa;font-size:14px}
@@ -104,19 +103,18 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke
 .aggregate-depth>p{margin:0;color:#aebbac;font-size:10px;line-height:1.4}
 .aggregate-privacy{margin:10px 1px 0;color:#c1cbbd;font-size:10px;line-height:1.45}
 .catalog-row{width:100%;min-height:49px;display:flex;align-items:center;gap:11px;padding:7px 4px;border-bottom:1px solid #ffffff10;text-align:left}
-.catalog-row:hover{background:#fffefa08}
 .row-number{width:20px;flex:none;color:#91a396;font-size:11px;font-variant-numeric:tabular-nums}
 .row-number svg{width:18px;height:18px;vertical-align:middle;color:var(--atlas-accent)}
 .row-title{min-width:0;flex:1;color:#f1eedf;font:500 19px/1.1 var(--atlas-serif);letter-spacing:.01em}
 .row-meta{color:var(--atlas-muted);font-size:12px;text-align:right}
 .row-arrow{width:18px;height:18px;flex:none;color:#d2bd84;transition:transform .18s}
-.catalog-row:hover .row-arrow{transform:translateX(3px)}
 .row-arrow svg{width:100%;height:100%}
 .catalog-foot{margin-top:auto;padding:15px 1px 1px;display:flex;align-items:center;gap:8px;color:#aebbab;font-size:12px}
 .small-dot{display:inline-block;width:6px;height:6px;flex:none;border-radius:50%;background:var(--atlas-accent)}
 .catalog-empty{min-height:210px;padding:26px 12px 18px;display:grid;justify-items:start;align-content:center;gap:12px;color:var(--atlas-muted)}
 .catalog-empty p{max-width:265px;margin:0;font:400 20px/1.35 var(--atlas-serif);color:var(--atlas-text)}
-.empty-mark{color:var(--atlas-accent);font-size:19px}
+.empty-mark{display:block;width:22px;height:22px;color:var(--atlas-accent)}
+.empty-mark svg{width:100%;height:100%}
 .text-action{display:flex;align-items:center;gap:8px;color:#d6c48f;font-size:13px}
 .text-action svg{width:17px;height:17px}
 
@@ -141,7 +139,6 @@ svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.5;stroke
 .detail-meta svg{width:18px;height:18px;flex:none}
 .detail-note{margin:14px 0 0;color:var(--atlas-paper-muted);font-size:12px;line-height:1.4}
 .detail-map-action{width:100%;min-height:46px;margin-top:18px;padding:0 14px;display:flex;align-items:center;justify-content:space-between;border:1px solid #314c3b62;border-radius:4px;color:#294537;text-align:left;font-size:14px}
-.detail-map-action:hover{background:#d9ddc8}
 .detail-map-action svg{width:17px;height:17px}
 .photo-missing{min-height:120px;display:grid;place-items:center;background:#d6d4c3;color:#4f6051;font:400 20px/1.3 var(--atlas-serif)}
 body.has-place .region-caption{opacity:0}
@@ -152,9 +149,8 @@ body.is-exploring .region-caption{opacity:0}
 .map-status{min-height:32px;display:flex;align-items:center;gap:8px;padding:0 12px;border:1px solid #e8ddb044;border-radius:18px;background:#163b32b5;color:var(--atlas-text);font-size:12px;backdrop-filter:blur(8px)}
 .camera-rail{top:50%;right:28px;transform:translateY(-50%);display:flex;flex-direction:column;align-items:center;gap:4px;padding:5px;border:1px solid #e2d5ab42;border-radius:28px;background:#15382feb;box-shadow:0 12px 36px #0b211c4a;backdrop-filter:blur(12px)}
 .camera-rail>.icon-button{color:#e8e5d4}
-.camera-rail>.icon-button:hover{color:#f4dfaa}
 .north-button{position:relative;color:#efdc9e!important}
-.north-needle{display:inline-block;transform-origin:center;transition:transform .16s linear;font-size:24px;line-height:1}
+.north-needle{width:24px;height:24px;transform-origin:center;transition:transform .16s linear}
 .north-button small{position:absolute;top:5px;right:6px;font-size:7px;font-weight:700;color:var(--atlas-accent)}
 .zoom-group{display:grid;gap:0;border-block:1px solid #e2d5ab29}
 .view-toggle[aria-expanded=true]{background:#d8bd7a;color:#213d34}
@@ -163,9 +159,7 @@ body.is-exploring .region-caption{opacity:0}
 .view-menu-heading .icon-button{width:40px;height:40px;min-width:40px;min-height:40px}
 .view-actions{display:grid;grid-template-columns:1fr 1fr;gap:4px}
 .view-action{min-height:44px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 9px;border-radius:4px;color:#dce3d5;text-align:left;font-size:13px}
-.view-action:hover{background:#ffffff12}
 .view-action>svg{width:17px;height:17px;flex:none}
-.view-action>span:last-child{color:var(--atlas-accent);font-size:18px}
 .pitch-control{margin:14px 4px 10px;display:grid;grid-template-columns:1fr auto;gap:4px 10px;color:#e0e3d3;font-size:13px}
 .pitch-control output{color:var(--atlas-accent);font-variant-numeric:tabular-nums}
 .pitch-control input{grid-column:1/-1;width:100%;height:28px;margin:2px 0 0;accent-color:var(--atlas-accent)}
@@ -180,7 +174,6 @@ body.is-exploring .region-caption{opacity:0}
 
 /* A small editorial entry point, not a second dashboard */
 .feature-card{right:98px;bottom:92px;width:274px;padding:0;overflow:hidden;display:flex;flex-direction:column;border:1px solid #e6d6a24a;border-radius:7px;background:#17382fc9;text-align:left;box-shadow:0 15px 40px #0a211b66;transition:transform .22s,border-color .22s}
-.feature-card:hover{transform:translateY(-3px);border-color:#e0c67d99}
 .feature-picture{display:block;width:100%;aspect-ratio:3/2;overflow:hidden}
 .feature-card img{display:block;width:100%;height:100%;object-fit:cover;object-position:50% 56%}
 .feature-caption{width:100%;padding:12px 15px 13px;display:grid;gap:5px;background:#14362fed;color:#f0eddc}
@@ -429,7 +422,6 @@ body.is-exploring .explorer{display:flex}
 #nek-form input{width:100%;min-height:49px;padding:0 15px;border:1px solid #67726355;border-radius:4px;background:#f6f0e4;color:#263e31;font-size:15px}
 #nek-form input::placeholder{color:#889082}
 .nek-submit{min-height:50px;margin-top:17px;padding:0 18px;display:flex;align-items:center;justify-content:center;gap:12px;border-radius:4px;background:linear-gradient(105deg,#c58d4e,#916332);color:#fff5df;font-size:15px;font-weight:650}
-.nek-submit:hover{filter:brightness(1.08)}
 .nek-submit svg{width:18px;height:18px}
 .nek-status{min-height:36px;margin:8px 0 0;color:#657266;font-size:12px;line-height:1.45}
 body.nek-open .atlas-shell{display:none}
@@ -452,4 +444,18 @@ body.nek-open .atlas-shell{display:none}
  .nek-form-wrap{width:min(440px,100%)}
  .nek-kicker{margin-top:24px}
  #nek-form{padding-top:16px}
+}
+
+@media (hover: hover) and (pointer: fine) {
+ .main-nav button:hover{color:#f2e5bd}
+ .top-action:hover,.about-link:hover{color:var(--atlas-text)}
+ .icon-button:hover{background:#ffffff14;color:#fff1c8}
+ .search-result:hover{background:#d8bd7a14}
+ .catalog-row:hover{background:#fffefa08}
+ .catalog-row:hover .row-arrow{transform:translateX(3px)}
+ .detail-map-action:hover{background:#d9ddc8}
+ .camera-rail>.icon-button:hover{color:#f4dfaa}
+ .view-action:hover{background:#ffffff12}
+ .feature-card:hover{transform:translateY(-3px);border-color:#e0c67d99}
+ .nek-submit:hover{filter:brightness(1.08)}
 }

@@ -1,13 +1,10 @@
 (function initNek() {
   const RECENT_KEY = 'nek:lastTree';
   const REMEMBER_KEY = 'nek:remember';
-  const PWA_DISMISS_KEY = 'nek:pwaDismissed';
   const PUBLISH_URL =
     (window.SUPABASE_CONFIG && window.SUPABASE_CONFIG.publishDrewoUrl) ||
     'https://rivjkiksknnesahrvamf.supabase.co/functions/v1/publish-drewo';
 
-  const stage = document.querySelector('.stage');
-  const loginOpen = document.getElementById('login-open');
   const loginPanel = document.getElementById('login-panel');
   const loginInput = document.getElementById('login-input');
   const passwordInput = document.getElementById('password-input');
@@ -15,22 +12,13 @@
   const rememberInput = document.getElementById('login-remember');
   const loginSubmit = document.getElementById('login-submit');
   const loginError = document.getElementById('login-error');
-  const loginCancel = document.getElementById('login-cancel');
-  const lead = document.getElementById('lead');
   const recent = document.getElementById('recent');
   const recentLink = document.getElementById('recent-link');
-  const pwaBanner = document.getElementById('pwa-banner');
-  const pwaInstall = document.getElementById('pwa-install');
-  const pwaDismiss = document.getElementById('pwa-dismiss');
 
-  const leadDefault =
-    'Родственники входят по логину и паролю семьи. Без регистрации.';
-  const leadLogin =
-    'Логин и пароль семьи — те, что прислал родственник. Доступ откроется сразу.';
   const submitLabel = 'Войти';
 
-  let deferredInstall = null;
   let busy = false;
+  let pendingLogin = null;
 
   function reducedMotion() {
     return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -41,9 +29,9 @@
     let value = String(raw || '').trim();
     try {
       if (/^https?:\/\//i.test(value) || value.includes('waydean.ru') || value.includes('/t/')) {
-        const withProto = /^https?:\/\//i.test(value) ? value : 'https://' + value.replace(/^\/+/, '');
+        const withProto = value.startsWith('/') ? new URL(value, window.location.origin).href : /^https?:\/\//i.test(value) ? value : 'https://' + value.replace(/^\/+/, '');
         const url = new URL(withProto, window.location.origin);
-        const fromQuery = url.searchParams.get('c') || url.searchParams.get('code');
+        const fromQuery = url.searchParams.get('u') || url.searchParams.get('c') || url.searchParams.get('code');
         if (fromQuery) value = fromQuery;
         else {
           const parts = url.pathname.split('/').filter(Boolean);
@@ -96,17 +84,6 @@
     loginPanel?.classList.toggle('is-busy', on);
   }
 
-  function showLoginMode(on) {
-    if (!stage || !loginPanel) return;
-    stage.classList.toggle('is-login', on);
-    loginPanel.hidden = !on;
-    if (lead) lead.textContent = on ? leadLogin : leadDefault;
-    clearError();
-    if (!on) return;
-    const target = loginInput?.value.trim() ? passwordInput : loginInput;
-    target?.focus();
-  }
-
   function readRemembered() {
     try {
       const raw = localStorage.getItem(REMEMBER_KEY);
@@ -134,7 +111,7 @@
     const raw = String(data.path || '').trim() || '/' + String(data.treeDir || '') + '/';
     try {
       const url = new URL(raw, window.location.origin);
-      if (url.origin !== window.location.origin) return '';
+      if (url.origin !== window.location.origin || !/^\/drewo(?:-[a-z0-9-]+)?\/$/.test(url.pathname)) return '';
       return url.pathname;
     } catch (err) {
       return '';
@@ -152,14 +129,14 @@
       window.NekRemember(path, String(data.title || ''));
     }
 
-    const target = path + '?nek=' + encodeURIComponent(token);
-    if (reducedMotion()) {
-      window.location.assign(target);
-      return true;
+    let target = path;
+    try {
+      sessionStorage.setItem('nek-session:' + path.split('/')[1], token);
+    } catch {
+      target += '#nek=' + encodeURIComponent(token);
     }
-    loginPanel?.classList.add('is-done');
-    stage?.classList.add('is-done');
-    window.setTimeout(() => window.location.assign(target), 400);
+    passwordInput.value = '';
+    window.location.assign(target);
     return true;
   }
 
@@ -177,6 +154,8 @@
 
     clearError();
     setBusy(true);
+    const request = new AbortController();
+    pendingLogin = request;
 
     let session = null;
     let failure = '';
@@ -184,6 +163,7 @@
     try {
       const response = await fetch(PUBLISH_URL, {
         method: 'POST',
+        signal: request.signal,
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'login-tree', login: loginValue, password }),
       });
@@ -194,8 +174,8 @@
         // Wait time is decided by the server; show its text as is.
         failure = apiError || 'Попробуйте позже';
       } else if (!response.ok || !data.ok) {
-        failure = apiError || 'Неверный логин или пароль';
-        wrongCredentials = true;
+        wrongCredentials = response.status === 401;
+        failure = apiError || (wrongCredentials ? 'Неверный логин или пароль' : 'Сервер не ответил. Повторите попытку.');
       } else {
         session = data;
       }
@@ -203,6 +183,8 @@
       failure = 'Нет связи с сервером. Проверьте интернет и попробуйте снова.';
     }
 
+    if (request.signal.aborted) return;
+    pendingLogin = null;
     if (session && enterTree(session)) return;
 
     setBusy(false);
@@ -213,8 +195,16 @@
     }
   }
 
-  loginOpen?.addEventListener('click', () => showLoginMode(true));
-  loginCancel?.addEventListener('click', () => showLoginMode(false));
+  loginPanel?.closest('dialog')?.addEventListener('close', () => {
+    pendingLogin?.abort();
+    pendingLogin = null;
+    passwordInput.value = '';
+    passwordInput.type = 'password';
+    passwordToggle.textContent = 'Показать';
+    passwordToggle.setAttribute('aria-pressed','false');
+    setBusy(false);
+    clearError();
+  });
 
   loginPanel?.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -233,13 +223,12 @@
     passwordInput.focus();
   });
 
-  const remembered = readRemembered();
+  const params = new URLSearchParams(window.location.search);
+  const remembered = params.get('switch') === '1' ? '' : readRemembered();
   if (remembered && loginInput) {
     loginInput.value = remembered;
     if (rememberInput) rememberInput.checked = true;
   }
-
-  const params = new URLSearchParams(window.location.search);
 
   // Invite links (/t/<code>) land here as ?login=1&u=<code> to prefill the login.
   const invited = normalizeLogin(params.get('u') || params.get('c') || params.get('code'));
@@ -247,9 +236,6 @@
     loginInput.value = invited;
   }
 
-  if (params.get('login') === '1' || invited) {
-    showLoginMode(true);
-  }
 
   try {
     const raw = localStorage.getItem(RECENT_KEY);
@@ -257,7 +243,7 @@
       const data = JSON.parse(raw);
       const path = String(data?.path || '').trim();
       const title = String(data?.title || '').trim();
-      if (path.startsWith('/') && !path.startsWith('//')) {
+      if (treePathOf({path}) && path === treePathOf({path})) {
         recentLink.href = path;
         recentLink.textContent = title
           ? `Открыть «${title}»`
@@ -284,41 +270,4 @@
     }
   };
 
-  if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-      void navigator.serviceWorker.register('./sw.js').catch(() => {});
-    });
-  }
-
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    deferredInstall = event;
-    try {
-      if (localStorage.getItem(PWA_DISMISS_KEY) === '1') return;
-    } catch (err) {
-      /* ignore */
-    }
-    if (pwaBanner) pwaBanner.hidden = false;
-  });
-
-  pwaInstall?.addEventListener('click', async () => {
-    if (!deferredInstall) return;
-    deferredInstall.prompt();
-    try {
-      await deferredInstall.userChoice;
-    } catch (err) {
-      /* ignore */
-    }
-    deferredInstall = null;
-    if (pwaBanner) pwaBanner.hidden = true;
-  });
-
-  pwaDismiss?.addEventListener('click', () => {
-    if (pwaBanner) pwaBanner.hidden = true;
-    try {
-      localStorage.setItem(PWA_DISMISS_KEY, '1');
-    } catch (err) {
-      /* ignore */
-    }
-  });
 })();

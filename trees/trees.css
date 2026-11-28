@@ -1686,14 +1686,62 @@ select {
 }
 
 @media (max-width: 560px) {
-  .topbar-actions {
+  .topbar {
     flex-wrap: wrap;
-    justify-content: flex-end;
+    align-items: flex-start;
+  }
+
+  .topbar-brand {
+    width: 100%;
+  }
+
+  .topbar-actions {
+    display: grid;
+    width: 100%;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-areas:
+      "create create"
+      "atlas refresh"
+      "logout switch";
+    gap: 0.5rem;
+  }
+
+  .topbar-actions > * {
+    min-width: 0;
+    width: 100%;
+    justify-self: stretch;
+  }
+
+  .topbar-actions > a {
+    grid-area: atlas;
+    justify-content: center;
   }
 
   .topbar-actions #create-tree-btn {
-    order: 3;
-    width: 100%;
+    grid-area: create;
+  }
+
+  .topbar-actions #refresh-btn {
+    grid-area: refresh;
+  }
+
+  .topbar-actions #logout-btn {
+    grid-area: logout;
+  }
+
+  .topbar-actions #switch-account-btn {
+    grid-area: switch;
+    white-space: normal;
+  }
+
+  .topbar-actions .btn,
+  .topbar-actions .icon-btn {
+    min-height: 44px;
+    padding-inline: 0.65rem;
+  }
+
+  .topbar-actions .btn {
+    font-size: 0.86rem;
   }
 
   .tree-card {
@@ -1836,4 +1884,13 @@ html.is-bg-paused .shaft,
 html.is-bg-paused .leaf,
 html.is-bg-paused .hero-light {
   animation-play-state: paused;
+}
+
+.create-dialog {
+ max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 20px);
+ overflow-y: auto; overscroll-behavior: contain;
+}
+.create-dialog-actions {
+ position: sticky; bottom: 0; padding-block: 8px;
+ background: var(--surface);
 }

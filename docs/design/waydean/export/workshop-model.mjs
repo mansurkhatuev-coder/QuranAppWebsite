@@ -4,19 +4,12 @@ export const EXPORT_WORKSHOP_HANDOFF_KEY = "waydean.export-workshop.handoff.v1";
 export const PRINT_HANDOFF_KEY = "waydean.print-handoff.v1";
 export { VIDEO_HANDOFF_KEY };
 
-export const FAMILY_TREE_IDS = Object.freeze([
-  "hoti",
-  "drewo-adam",
-  "drewo-dada-yurt",
-  "drewo-eldarovy",
-  "drewo-guzat",
-  "drewo-reklama"
-]);
-const FAMILY_TREE_ID_SET = new Set(FAMILY_TREE_IDS);
-const TREE_IDS = new Set(["demo", ...FAMILY_TREE_IDS]);
-
 export function isFamilyTreeId(treeId) {
-  return FAMILY_TREE_ID_SET.has(String(treeId ?? ""));
+  return treeId === "hoti" || (typeof treeId === "string" && /^drewo-[a-z][a-z0-9-]{1,24}$/.test(treeId));
+}
+
+function isWorkshopTree(treeId) {
+  return treeId === "demo" || isFamilyTreeId(treeId);
 }
 const SCOPE_TYPES = new Set(["all", "path", "branch"]);
 const RETURN_CONTEXTS = new Set(["account", "family", "preview"]);
@@ -61,7 +54,7 @@ function normalizePrintPeople(value, videoPeople) {
 }
 
 function normalizeWorkshopHandoff(value) {
-  if (!value || typeof value !== "object" || value.version !== 1 || !TREE_IDS.has(value.treeId)) return null;
+  if (!value || typeof value !== "object" || value.version !== 1 || !isWorkshopTree(value.treeId)) return null;
   const people = normalizeTreePeople(value.video?.tree?.people);
   if (!people || people.some(person => !person.id || !person.name)) return null;
   const printPeople = normalizePrintPeople(value.printPeople, people);
@@ -122,7 +115,7 @@ function normalizeWorkshopHandoff(value) {
 
 export function createExportWorkshopHandoff(records, options = {}) {
   const treeId = String(options.treeId ?? "");
-  if (!TREE_IDS.has(treeId)) throw new TypeError("Export workshop tree ID is unsupported");
+  if (!isWorkshopTree(treeId)) throw new TypeError("Export workshop tree ID is unsupported");
   if (!Array.isArray(records) || records.length === 0 || records.length > 5000) {
     throw new TypeError("Export workshop needs a non-empty tree snapshot");
   }

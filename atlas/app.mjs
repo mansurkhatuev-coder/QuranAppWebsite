@@ -1,8 +1,6 @@
 import {groups,sites,searchCatalog} from './catalog.mjs';
-import {createAtlas} from './map.mjs';
 import {getPlaceMedia,imageFor} from './media.mjs';
 import {createInitialState,transition,restoreEntry,contextPanel} from './atlas-state.mjs?v=f3463c6';
-import {createTreeWizard} from './create-tree-view.mjs';
 import {settlements} from './settlements.mjs';
 import {rivers} from './rivers.mjs';
 import {createBottomSheet,getSheetStops} from './sheet.mjs';
@@ -15,6 +13,10 @@ const shell=$('#atlas-shell');
 const state=createInitialState();
 const runtime={mapStatus:'loading'};
 let atlas=null;
+let activeFamilyPlaces=null;
+const atlasPlaceIds=new Set([...settlements,...sites].map(place=>place.id));
+const atlasPlaceKinds=new Set(['Родное место','Место рождения','Переселение']);
+let publicSummary=null;
 let sheetController=null;
 let currentEntry=null;
 let previousState=null;
@@ -23,18 +25,10 @@ let measureFrame=0;
 let routeCounter=0;
 let lastViewport=null;
 let lastMapSize=null;
-let nekOpenedFromAtlas=false;
-let nekTreeContext=null;
-let nekReturnToConfirmation=false;
-const treeWizard=createTreeWizard({onAccount:({context})=>{
- nekTreeContext=context;
- openNekPreview('register');
-},onClose:()=>scheduleViewport()});
-
 const icon=id=>`<svg aria-hidden="true"><use href="#i-${id}"/></svg>`;
 const escapeRoute=value=>encodeURIComponent(value??'');
 const teipCountLabel=count=>`${count} ${count%10===1&&count%100!==11?'тейп':count%10>=2&&count%10<=4&&(count%100<12||count%100>14)?'тейпа':'тейпов'}`;
-const statusLabel={loading:'Собираем рельеф',ready:'Атлас готов',degraded:'Облегчённый рельеф',unavailable:'Карта недоступна · каталог работает'};
+const statusLabel={loading:'Загрузка рельефа',ready:'Атлас готов',degraded:'Облегчённый рельеф',unavailable:'Карта недоступна · каталог работает'};
 const motionPreference=matchMedia('(prefers-reduced-motion: reduce)');
 let atmosphereEnabled=!motionPreference.matches;
 const windAmbience=createWindAmbience();
@@ -74,7 +68,7 @@ function currentRoute(value=state){
 }
 
 function routeState(hash){
- const parts=(hash||'').replace(/^#\/?/,'').split('/').filter(Boolean).map(decodeURIComponent);
+ const parts=(hash||'').replace(/^#\/?/,'').split('/').filter(Boolean);
  const next=createInitialState();
  if(computeLayoutMode({width:innerWidth,height:innerHeight}).panel==='bottom'){
   if(['roots','places'].includes(parts[0]))next.sheet='half';
@@ -107,7 +101,6 @@ function replaceCurrentEntry(){
 
 function saveViewState(){
  if(!currentEntry)return;
- if(document.body.classList.contains('nek-open')||history.state?.nekPreview)return;
  currentEntry={...currentEntry,state:restoreEntry(state),camera:atlas?.captureCamera()??currentEntry.camera};
  if(history.state?.atlasEntry?.id===currentEntry.id){
   history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
@@ -115,6 +108,7 @@ function saveViewState(){
 }
 
 function route(event,{returnFocusId=null,afterRender=null,replace=false}={}){
+ if(event.type==='GO_HOME'||event.type==='EXIT_MAP_ONLY'||event.type==='SET_LAYER')clearFamilyMarkers();
  previousState=restoreEntry(state);
  const next=transition(state,event);
  const resetPanelScroll=['GO_HOME','SELECT_GROUP','SELECT_TEIP','SELECT_PLACE','GO_TO_GROUP','SET_LAYER','DISMISS_INTRO'].includes(event.type);
@@ -212,73 +206,48 @@ function breadcrumb(label,action){
 function currentGroup(){return groups.find(group=>group.id===state.groupId)??null;}
 function currentTeip(){return currentGroup()?.teips.find(teip=>teip.id===state.teipId)??null;}
 
-function aggregateMetric(label,value,note){
- const card=document.createElement('article');card.className='aggregate-metric';
- const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
- const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
- const detail=document.createElement('span');detail.className='aggregate-metric-note';detail.textContent=note;
- card.append(name,amount,detail);
- return card;
-}
-
-function renderAggregateDashboard({group=null,teip=null}={}){
- const panel=$('#aggregate-dashboard');
+function renderAggregateDashboard({group=null,teip=null,settlement=null,panel=$('#aggregate-dashboard')}={}){
  panel.replaceChildren();
- panel.hidden=false;
-
- const teipCount=groups.reduce((total,item)=>total+item.teips.length,0);
- const placeCount=group?sites.filter(site=>site.group===group.id).length:0;
- const heading=document.createElement('div');heading.className='aggregate-heading';
- const kicker=document.createElement('span');kicker.className='aggregate-kicker';kicker.textContent='ПУБЛИЧНАЯ СВОДКА · ДЕМО';
- const title=document.createElement('h3');title.textContent=teip?`Тейп ${teip.name}`:group?`Тухум ${group.name}`:'Атлас Чечни';
- const intro=document.createElement('p');intro.textContent='Только общие числа — без имён и карточек людей.';
- heading.append(kicker,title,intro);
-
- const grid=document.createElement('div');grid.className='aggregate-grid';
- let metrics;
+ const metrics=[];
  if(teip){
-  metrics=[
-   ['Открытых родословных','—','публичные данные не подключены'],
-   ['Людей в открытых деревьях','—','без имён и профилей'],
-   ['Поколений с источниками','—','подтверждённая сводка появится позже'],
-   ['Мест в демо-атласе',String(placeCount),'приблизительные связи']
-  ];
+  const linked=sites.filter(site=>site.group===group.id && site.teipId===teip.id);
+  if(linked.length)metrics.push(['Исторические места',linked.length]);
+ }else if(settlement){
+  const linked=sites.filter(site=>site.settlementId===settlement.id);
+  if(linked.length)metrics.push(['Исторические объекты',linked.length]);
  }else if(group){
-  metrics=[
-   ['Тейпов в демо-каталоге',String(group.teips.length),'выборка для прототипа'],
-   ['Открытых родословных','—','публичные данные не подключены'],
-   ['Людей в открытых деревьях','—','без имён и профилей'],
-   ['Поколений с источниками','—','подтверждённая сводка появится позже']
-  ];
+  metrics.push(['Тейпы в каталоге',group.teips.length]);
+  const places=sites.filter(site=>site.group===group.id);
+  if(places.length)metrics.push(['Места в каталоге тухума',places.length]);
+  const villages=new Set(places.map(place=>place.settlementId).filter(Boolean));
+  if(villages.size)metrics.push(['Селения с объектами каталога',villages.size]);
  }else{
-  metrics=[
-   ['Тухумов в демо-каталоге',String(groups.length),'выборка для прототипа'],
-   ['Тейпов в демо-каталоге',String(teipCount),'выборка для прототипа'],
-   ['Открытых родословных','—','публичные данные не подключены'],
-   ['Людей в открытых деревьях','—','без имён и профилей']
-  ];
+  metrics.push(['Тухумы в каталоге',groups.length],['Тейпы в каталоге',groups.reduce((n,g)=>n+g.teips.length,0)],['Исторические места',sites.length]);
  }
- metrics.forEach(([label,value,note])=>grid.append(aggregateMetric(label,value,note)));
-
- const depth=document.createElement('section');depth.className='aggregate-depth';
- const depthHeading=document.createElement('div');depthHeading.className='aggregate-depth-heading';
- const depthTitle=document.createElement('h4');depthTitle.textContent='Глубина поколений';
- const depthValue=document.createElement('span');depthValue.textContent='—';
- depthHeading.append(depthTitle,depthValue);
- const scale=document.createElement('div');scale.className='aggregate-depth-scale';scale.setAttribute('aria-hidden','true');
- ['I','II','III','IV','V','VI','VII+'].forEach(label=>{const step=document.createElement('span');step.textContent=label;scale.append(step);});
- const depthNote=document.createElement('p');depthNote.textContent='Показатель появится после публикации проверенных и разрешённых к показу данных.';
- depth.append(depthHeading,scale,depthNote);
-
- const privacy=document.createElement('p');privacy.className='aggregate-privacy';
- privacy.textContent='Родословные и имена открываются отдельно — с учётом настроек доступа семьи.';
- panel.append(heading,grid,depth,privacy);
- if(group){
-  const create=document.createElement('button');create.type='button';create.className='context-create-tree';
-  create.textContent=teip?`Создать древо в тейпе ${teip.name}`:`Создать древо · ${group.name}`;
-  create.addEventListener('click',()=>treeWizard.open({groupId:group.id,teipId:teip?.id}));
-  panel.prepend(create);
+ const scope=teip?`teip/${group.id}/${teip.id}`:group?`group/${group.id}`:settlement?`city/${settlement.id}`:'project';
+ const published=publicSummary?.scopes?.[scope];
+ if(published){
+  for(const [key,label] of Object.entries({trees:'Родословные с согласием семьи',people:'Записи о людях',teips:'Представленные тейпы',settlements:'Родовые селения'})){
+   if(published[key])metrics.push([label,published[key]]);
+  }
+  for(const [depth,count] of Object.entries(published.depth??{}))metrics.push([`Древ с глубиной ${depth} поколений`,count]);
  }
+ if(metrics.length){
+  const grid=document.createElement('div');grid.className='aggregate-grid';
+  for(const [label,value] of metrics){
+   const card=document.createElement('article');card.className='aggregate-metric';
+   const name=document.createElement('span');name.className='aggregate-metric-label';name.textContent=label;
+   const amount=document.createElement('strong');amount.className='aggregate-metric-value';amount.textContent=value;
+   card.append(name,amount);grid.append(card);
+  }
+  panel.append(grid);
+ }
+ const note=document.createElement('p');note.className='aggregate-privacy';
+ note.textContent=published
+  ?`Семейная сводка на ${publicSummary.date}. Количество древ и записей показано интервалами.`
+  :'Семейная сводка пока недоступна для этого раздела. Для публикации нужны согласие семей и достаточное число родословных.';
+ panel.append(note);
+ panel.hidden=false;
 }
 
 function makePlacePicture(media,{className='',sizes='(min-width: 900px) 340px, 100vw',loading='lazy'}={}){
@@ -354,7 +323,7 @@ function renderRows(){
    button.append(label,type);
    button.addEventListener('click',()=>{
     if(match.type==='Река')route({type:'SELECT_RIVER',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet});
-    else if(match.type==='Город')openCity(match.id);
+    else if(match.type==='Город'||match.type==='Селение')openCity(match.id);
     else if(match.type==='Место')route({type:'SELECT_PLACE',id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'full':state.sheet},{returnFocusId:button.id});
     else if(match.type==='Тейп')route({type:'SELECT_TEIP',groupId:match.group,id:match.id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet},{returnFocusId:button.id});
     else openGroup(match.id,{focusTargetId:button.id});
@@ -382,7 +351,7 @@ function renderRows(){
   else{
    list.hidden=true;
    empty.hidden=false;
-   empty.querySelector('p').textContent='Тейпы в демо-каталоге пока не добавлены.';
+   empty.querySelector('p').textContent='В каталоге пока нет тейпов этого тухума.';
   }
  }else{
   count=`${groups.length} тухумов`;
@@ -413,16 +382,16 @@ function renderPlace(){
   image.className='detail-photo-image';image.style.objectPosition=media.focalPoint;
   image.addEventListener('error',()=>{figure.replaceChildren();figure.classList.add('photo-missing');const missing=document.createElement('span');missing.textContent='Изображение недоступно';figure.append(missing);});
   figure.append(picture);
-  const expand=document.createElement('button');expand.type='button';expand.className='detail-photo-button';expand.setAttribute('aria-label','Открыть фотографию крупно');expand.innerHTML=icon('search');expand.addEventListener('click',openPhoto);figure.append(expand);
+  const expand=document.createElement('button');expand.type='button';expand.className='detail-photo-button';expand.setAttribute('aria-label','Увеличить иллюстрацию');expand.innerHTML=icon('search');expand.addEventListener('click',openPhoto);figure.append(expand);
  }else{figure.classList.add('photo-missing');const missing=document.createElement('span');missing.textContent='Изображение недоступно';figure.append(missing);}
  const content=document.createElement('div');content.className='detail-content';
  const area=document.createElement('span');area.className='micro';area.textContent=place.area;
  const title=document.createElement('h2');title.textContent=place.fullName;
- const description=document.createElement('p');description.className='detail-description';description.textContent=place.description;
  const meta=document.createElement('div');meta.className='detail-meta';meta.innerHTML=`${icon('tower')}<span></span>`;meta.querySelector('span').textContent=place.kind;
- const note=document.createElement('p');note.className='detail-note';note.textContent='Точка на карте приблизительная.';
+ const note=document.createElement('p');note.className='detail-note';note.textContent='Точка на карте приблизительная. Иллюстрация создана ИИ. ';
+ const source=document.createElement('a');source.href=place.source;source.textContent='Сведения об объекте';source.rel='noreferrer';source.target='_blank';note.append(source);
  const showMap=document.createElement('button');showMap.type='button';showMap.className='detail-map-action';showMap.id='show-place-map';showMap.innerHTML=`<span>Показать на карте</span>${icon('arrow')}`;showMap.addEventListener('click',()=>{setSheet('peek');atlas?.focusSite(place.id,{focus:true,padding:lastViewport?.padding});scheduleViewport();});
- content.append(area,title,description,meta,note,showMap);
+ content.append(area,title,meta,note,showMap);
  detail.append(toolbar,figure,content);
  detail.scrollTop=0;
  detail.hidden=false;
@@ -470,17 +439,25 @@ function renderCity(city=settlements.find(item=>item.id===state.cityId),isRiver=
  const detail=$('#place-detail');detail.replaceChildren();detail.hidden=false;
  $('#explorer').classList.add('has-place');shell.classList.add('has-place');document.body.classList.add('has-place');
  const toolbar=document.createElement('div');toolbar.className='detail-toolbar';
- const back=document.createElement('button');back.type='button';back.className='detail-back';back.textContent='← Назад';back.addEventListener('click',goBack);
+ const back=document.createElement('button');back.type='button';back.className='detail-back';back.append(icon('back'),document.createTextNode('Назад'));back.addEventListener('click',goBack);
  const close=document.createElement('button');close.type='button';close.className='detail-close';close.textContent='Закрыть';close.addEventListener('click',goBack);toolbar.append(back,close);
  const content=document.createElement('div');content.className='detail-content city-content';
- const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'РЕКИ ЧЕЧНИ':'ГОРОДА ЧЕЧНИ';
+ const kicker=document.createElement('span');kicker.className='micro';kicker.textContent=isRiver?'Река':city.settlementType==='village'?'Селение':'Город';
  const title=document.createElement('h2');title.textContent=city.name;
- const intro=document.createElement('p');intro.className='detail-description';intro.textContent=isRiver?'Река на карте родных мест. Рассмотрите её русло, долины и близлежащие населённые пункты.':'Город на карте родных мест. Отсюда можно перейти к выбору происхождения и подготовить своё родовое древо.';
  const coordinates=city.coordinates??city.center;
  const location=document.createElement('p');location.className='detail-meta';location.textContent=`${coordinates[1].toFixed(4)}° с. ш. · ${coordinates[0].toFixed(4)}° в. д.`;
- const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла ↗':'Место на OpenStreetMap ↗';
- const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.textContent='Создать родовое древо →';create.addEventListener('click',()=>treeWizard.open());
- content.append(kicker,title,intro,location,source,create);detail.append(toolbar,content);detail.scrollTop=0;
+ const source=document.createElement('a');source.href=city.sourceRefs?.[0]??city.source;source.target='_blank';source.rel='noreferrer';source.className='city-source';source.textContent=isRiver?'Источник русла':'Источник координат';
+ const sourceArrow=document.createElementNS('http://www.w3.org/2000/svg','svg');sourceArrow.setAttribute('aria-hidden','true');const sourceArrowUse=document.createElementNS('http://www.w3.org/2000/svg','use');sourceArrowUse.setAttribute('href','#i-arrow');sourceArrow.append(sourceArrowUse);source.append(sourceArrow);
+ const create=document.createElement('button');create.type='button';create.className='context-create-tree';create.append(document.createTextNode('Создать родовое древо'),icon('arrow'));create.addEventListener('click',()=>document.querySelector('#create-tree').click());
+ content.append(kicker,title,location,source,create);if(!isRiver){
+  const panel=document.createElement('section');
+  panel.id='settlement-summary';
+  panel.className='aggregate-dashboard';
+  panel.setAttribute('aria-label',`Публичная сводка о населённом пункте ${city.name}`);
+  renderAggregateDashboard({settlement:city,panel});
+  content.append(panel);
+ }
+ detail.append(toolbar,content);detail.scrollTop=0;
 }
 
 function focusTarget(id){
@@ -532,27 +509,12 @@ function stateTransitionFromHash(){
 }
 
 window.addEventListener('popstate',event=>{
- if(event.state?.nekPreview&&/^#\/nek\/(login|register)$/.test(location.hash)){
-  nekTreeContext=treeWizard.restoreAccountContext();
-  openNekPreview(location.hash.endsWith('register')?'register':'login',{replace:true});
-  nekOpenedFromAtlas=true;
-  return;
- }
- if(document.body.classList.contains('nek-open')){
-  $('#nek-preview').hidden=true;
-  document.body.classList.remove('nek-open');
-  nekOpenedFromAtlas=false;
- }
+ clearFamilyMarkers();
  const outgoing=currentEntry;
  const entry=event.state?.atlasEntry;
  const backwards=entry&&outgoing&&entry.index<outgoing.index;
  const preserveCamera=Boolean(backwards&&outgoing.state?.view==='place'&&outgoing.manuallyMoved);
  restoreFromHistory(entry,{preserveCamera,returnFocusId:backwards?outgoing.returnFocusId:null});
- if(nekTreeContext){
-  if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
-  nekReturnToConfirmation=false;
-  nekTreeContext=null;
- }
 });
 
 function openPhoto(){
@@ -565,7 +527,7 @@ function openPhoto(){
  image.alt=media.alt;
  image.width=media.width??1536;
  image.height=media.height??1024;
- $('#photo-view-caption').textContent=place.fullName;
+ $('#photo-view-caption').textContent=place.fullName+' · Иллюстрация, созданная ИИ';
  $('#photo-dialog').dataset.placeId=place.id;
  $('#photo-dialog').showModal();
  $('#photo-close').focus();
@@ -580,7 +542,7 @@ function updateLayout(){
  const mapResized=lastMapSize&&(Math.abs(mapSize.width-lastMapSize.width)>1||Math.abs(mapSize.height-lastMapSize.height)>1);
  lastMapSize=mapSize;
  const visual=window.visualViewport;
- const elements=[$('#topbar'),$('#intro'),$('#overview-group-dock'),$('#explorer'),$('#camera-rail'),$('#map-topline'),$('#featured-place'),$('#view-menu').hidden?null:$('#view-menu')].filter(element=>{
+ const elements=[$('#topbar'),$('#intro'),$('#overview-group-dock'),$('#explorer'),$('#camera-rail'),$('#map-topline'),$('#featured-place'),$('#view-menu'),$('#exit-family-map')].filter(element=>{
   if(!element||element.hidden)return false;
   if(element.id==='camera-rail'&&state.view==='overview'&&mode.panel==='bottom')return false;
   const style=getComputedStyle(element),rect=element.getBoundingClientRect();
@@ -606,7 +568,8 @@ function updateLayout(){
  if(atlas?.isReady?.()){
   atlas.resize();
   const viewportChanged=Boolean(mapResized||previousPanel&&previousPanel!==measured.mode.panel);
-  if(viewportChanged&&!currentEntry?.manuallyMoved){
+  if(viewportChanged&&activeFamilyPlaces)atlas.fitFamilyPlaces(activeFamilyPlaces);
+  else if(viewportChanged&&!currentEntry?.manuallyMoved){
    if(state.view==='overview')atlas.home(measured.padding);
    else if(state.view==='river'&&state.riverId&&measured.mode.panel==='side')atlas.focusRiver(state.riverId,{focus:true,padding:measured.padding});
    else if(state.view==='city'&&state.cityId&&measured.mode.panel==='side')atlas.focusCity(state.cityId,{focus:true,padding:measured.padding});
@@ -638,41 +601,6 @@ function openSearch(triggerId=document.activeElement?.id){
  });
 }
 
-function setNekMode(mode){
- const register=mode==='register';
- $('#nek-login-tab').setAttribute('aria-selected',String(!register));
- $('#nek-register-tab').setAttribute('aria-selected',String(register));
- $('#nek-password').autocomplete=register?'new-password':'current-password';
- $('#nek-status').textContent=register?'Экран создания аккаунта подготовлен; регистрация пока не подключена.':'Экран Некъ подготовлен отдельно; вход пока не подключён.';
- $('#nek-context').hidden=!nekTreeContext;
- $('#nek-preview-continue').hidden=!nekTreeContext;
- if(nekTreeContext)$('#nek-context').textContent=`Ваш черновик: ${nekTreeContext.groupName} / ${nekTreeContext.teipName} / ${nekTreeContext.treeName}`;
- if(document.body.classList.contains('nek-open'))history.replaceState({...history.state,nekPreview:true},'',`#/nek/${register?'register':'login'}`);
-}
-
-function openNekPreview(mode='login',{replace=false}={}){
- const route=`#/nek/${mode==='register'?'register':'login'}`;
- nekOpenedFromAtlas=!replace;
- if(replace)history.replaceState({...history.state,nekPreview:true},'',route);
- else history.pushState({...history.state,nekPreview:true},'',route);
- setNekMode(mode);
- $('#nek-preview').hidden=false;
- document.body.classList.add('nek-open');
- if(!replace)$('#nek-back').focus({preventScroll:true});
-}
-
-function closeNekPreview(){
- if(nekOpenedFromAtlas&&location.hash.startsWith('#/nek/')&&history.state?.nekPreview){history.back();return;}
- $('#nek-preview').hidden=true;
- document.body.classList.remove('nek-open');
- nekOpenedFromAtlas=false;
- history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
- if(nekTreeContext){
-  if(nekReturnToConfirmation)treeWizard.confirmAccountPreview();else treeWizard.resume();
-  nekReturnToConfirmation=false;nekTreeContext=null;
- }
-}
-
 function openGroup(id,{focusTargetId=null}={}){
  if(!groups.some(group=>group.id===id))return;
  const sheet=lastViewport?.mode?.panel==='bottom'?'half':state.sheet;
@@ -681,12 +609,14 @@ function openGroup(id,{focusTargetId=null}={}){
 
 function openSite(id,{focusTargetId=null}={}){
  if(!sites.some(site=>site.id===id))return;
+ if(!$('#exit-family-map').hidden)route({type:'EXIT_MAP_ONLY'},{replace:true});
  const sheet=lastViewport?.mode?.panel==='bottom'?'full':state.sheet;
  route({type:'SELECT_PLACE',id,sheet},{returnFocusId:focusTargetId??`catalog-row-${id}`});
 }
 
 function openCity(id){
  if(!settlements.some(city=>city.id===id))return;
+ if(!$('#exit-family-map').hidden)route({type:'EXIT_MAP_ONLY'},{replace:true});
  route({type:'SELECT_CITY',id,sheet:lastViewport?.mode?.panel==='bottom'?'half':state.sheet});
 }
 
@@ -701,19 +631,55 @@ function setAtmosphere(next){
  $('#motion-toggle').setAttribute('aria-pressed',String(atmosphereEnabled));
 }
 
+async function showFamilyMap(){
+ clearFamilyMarkers();
+ try {
+  const {openFamilyView}=await import('./family-view.mjs?v=5');
+  await openFamilyView({dialog:$('#family-map'),
+   showMarkers:marks=>showPlacesOnMap(marks),
+   showPlace:place=>{if(place.coordinates)openCity(place.id);else openSite(place.id);},
+   showTeip:(group,teip)=>route({type:'SELECT_TEIP',groupId:group.id,id:teip.id,sheet:'half'})
+  });
+ }catch{toast('Семейная карта сейчас недоступна');}
+}
+function showPlacesOnMap(marks){
+ if(!atlas){toast('Карта пока недоступна');return;}
+ const unique=new Map((Array.isArray(marks)?marks:[])
+  .filter(mark=>atlasPlaceIds.has(mark?.id)&&atlasPlaceKinds.has(mark?.kind))
+  .map(mark=>[`${mark.id}:${mark.kind}`,{id:mark.id,kind:mark.kind}]));
+ const places=Array.from(unique.values());
+ if(!places.length){toast('В этом древе пока нет мест из каталога Atlas');return;}
+ const ownerDialog=$('#owner-account-dialog');if(ownerDialog.open)ownerDialog.close();
+ $('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');
+ route({type:'ENTER_MAP_ONLY'},{replace:true});
+ activeFamilyPlaces=places;
+ atlas.setFamilyPlaces(places);
+ $('#exit-family-map').hidden=false;
+ requestAnimationFrame(()=>{
+  if(activeFamilyPlaces===places)atlas.fitFamilyPlaces(places);
+ });
+}
+window.addEventListener('drewo-atlas:owner-places',event=>showPlacesOnMap(event.detail?.marks));
+$('#family-view').addEventListener('click',()=>{
+ $('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');
+ void showFamilyMap();
+});
+function clearFamilyMarkers(){
+ if(!activeFamilyPlaces)return;
+ activeFamilyPlaces=null;
+ atlas?.setFamilyPlaces(null);$('#exit-family-map').hidden=true;
+}
+$('#exit-family-map').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
+window.addEventListener('pagehide',()=>{
+ clearFamilyMarkers();
+ if($('#family-map').open)$('#family-map').close();
+ $('#family-map .family-places').replaceChildren();
+});
+const familyEntry=location.hash==='#/family';
 $('#brand-home').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#return-chechnya').addEventListener('click',()=>route({type:'GO_HOME'},{replace:true}));
 $('#world-view').addEventListener('click',()=>{if(currentEntry)currentEntry.manuallyMoved=true;$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();requestAnimationFrame(()=>atlas?.goWorld());});
-$('#create-tree').addEventListener('click',()=>treeWizard.open());
-$('#atlas-login').addEventListener('click',()=>{nekTreeContext=null;openNekPreview('login');});
-$('#nek-preview-continue').addEventListener('click',()=>{nekReturnToConfirmation=true;closeNekPreview();});
-$('#nek-back').addEventListener('click',closeNekPreview);
-$('#nek-brand-home').addEventListener('click',closeNekPreview);
-$('#nek-login-tab').addEventListener('click',()=>setNekMode('login'));
-$('#nek-register-tab').addEventListener('click',()=>setNekMode('register'));
-$('#nek-form').addEventListener('submit',event=>{event.preventDefault();$('#nek-status').textContent='Локальный экран не отправляет данные. Подключение входа Некъ будет отдельным этапом.';});
 $('#search-toggle').addEventListener('click',()=>state.view==='search'?goBack():openSearch('search-toggle'));
-$('#opening-search').addEventListener('click',()=>openSearch('opening-search'));
 $('#search').addEventListener('focus',()=>{if(state.view!=='search')openSearch();});
 $('#search').addEventListener('input',event=>route({type:'SET_QUERY',query:event.target.value},{replace:true}));
 $('#search').addEventListener('keydown',event=>{
@@ -730,7 +696,7 @@ $('#catalog-toggle').addEventListener('click',event=>{
  const collapsed=$('#explorer').classList.toggle('catalog-collapsed');
  event.currentTarget.setAttribute('aria-expanded',String(!collapsed));
  event.currentTarget.setAttribute('aria-label',collapsed?'Развернуть каталог':'Свернуть каталог');
- event.currentTarget.querySelector('span').textContent=collapsed?'+':'−';
+ event.currentTarget.querySelector('use').setAttribute('href',collapsed?'#i-plus':'#i-minus');
  scheduleViewport();
 });
 $('#catalog-back').addEventListener('click',()=>{
@@ -792,10 +758,10 @@ $('#map-only').addEventListener('click',()=>{
  $('#view-menu').hidden=false;$('#view-toggle').setAttribute('aria-expanded','true');scheduleViewport();
 });
 $('#about').addEventListener('click',()=>{
- $('#dialog-content').innerHTML='<div class="eyebrow">ДРЕВО · АТЛАС ПРОИСХОЖДЕНИЯ</div><h2>Земля хранит<br>общую память.</h2><p>Карта помогает исследовать тухумы, тейпы и места памяти. Публичная сводка показывает только общие числа, без имён и карточек людей.</p><p>Каждая родословная открывается отдельно — с учётом настроек доступа семьи. Этот локальный экран использует демонстрационный каталог, а не полный проверенный реестр.</p><div class="dialog-list"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer">Высоты местности<small>Локальная ограниченная копия Terrain Tiles</small></a><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Граница региона<small>© OpenStreetMap contributors</small></a></div>';
+ $('#dialog-content').innerHTML='<h2>О Древе</h2><p>Семьи собирают родословные в редакторе. В атласе можно найти тейп, увидеть рельеф и открыть карточку исторического места. Каталог неполный, классификация тейпов предварительная.</p><div class="dialog-list"><a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noreferrer">Высоты местности<small>Локальная ограниченная копия Terrain Tiles</small></a><a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noreferrer">Граница региона<small>© OpenStreetMap contributors</small></a></div>';
  $('#info-dialog').showModal();
 });
-$('.dialog-close').addEventListener('click',()=>$('#info-dialog').close());
+$('#info-dialog .dialog-close').addEventListener('click',()=>$('#info-dialog').close());
 $('#photo-close').addEventListener('click',()=>$('#photo-dialog').close());
 $('#info-dialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
 $('#photo-dialog').addEventListener('click',event=>{if(event.target===event.currentTarget)event.currentTarget.close();});
@@ -806,7 +772,6 @@ document.addEventListener('keydown',event=>{
  if(event.key==='/'&&!['INPUT','TEXTAREA'].includes(document.activeElement.tagName)){event.preventDefault();openSearch();}
  if(event.key==='Escape'){
   if($('#photo-dialog').open||$('#info-dialog').open)return;
-  if(document.body.classList.contains('nek-open')){closeNekPreview();return;}
   if(!$('#view-menu').hidden){$('#view-menu').hidden=true;$('#view-toggle').setAttribute('aria-expanded','false');scheduleViewport();return;}
   if(state.view==='search'){if((currentEntry?.index??0)>0)history.back();else route({type:'CLOSE_SEARCH'},{replace:true});return;}
   if(['place','city','river','teip','group'].includes(state.view)){goBack();return;}
@@ -826,15 +791,30 @@ window.visualViewport?.addEventListener('resize',scheduleViewport,{passive:true}
 document.addEventListener('visibilitychange',()=>atlas?.setPageVisible(!document.hidden));
 motionPreference.addEventListener('change',event=>{setAtmosphere(!event.matches);});
 
-const initialNekMode=location.hash.match(/^#\/nek\/(login|register)$/)?.[1]??null;
-Object.assign(state,routeState(initialNekMode?'#/':location.hash));
+Object.assign(state,routeState(location.hash));
 currentEntry=makeEntry(state,0,null);
-history.replaceState({...history.state,atlasEntry:currentEntry},'',initialNekMode?`#/nek/${initialNekMode}`:currentRoute());
+if(familyEntry)void showFamilyMap();
+history.replaceState({...history.state,atlasEntry:currentEntry},'',currentRoute());
 render();
-if(initialNekMode){nekTreeContext=treeWizard.restoreAccountContext();openNekPreview(initialNekMode,{replace:true});}
 scheduleViewport();
 
+const summaryEndpoint=window.SUPABASE_CONFIG?.publishDrewoUrl;
+if(summaryEndpoint)fetch(summaryEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'public-family-summary'}),cache:'no-store'}).then(response=>{
+ if(!response.ok)throw new Error('summary unavailable');
+ return response.json();
+}).then(summary=>{
+ if(summary.ok!==true || summary.version!==1 || !summary.scopes)return;
+ publicSummary=summary;
+ if(state.view==='city'){
+  const panel=$('#settlement-summary');
+  const settlement=settlements.find(item=>item.id===state.cityId);
+  if(panel&&settlement)renderAggregateDashboard({settlement,panel});
+ }
+ if(['overview','explore','group','teip'].includes(state.view))renderAggregateDashboard({group:currentGroup(),teip:currentTeip()});
+}).catch(()=>{});
+
 try{
+ const {createAtlas}=await import('./map.mjs?v=family-3');
  atlas=await createAtlas({
   onHome:()=>route({type:'GO_HOME'},{replace:true}),
   onGroup:id=>openGroup(id),
@@ -857,6 +837,7 @@ try{
   atlas.setLayer(state.layer);atlas.setSelection(state.selectedEntity);
   scheduleViewport();
   requestAnimationFrame(()=>{
+  if(activeFamilyPlaces){atlas.fitFamilyPlaces(activeFamilyPlaces);return;}
   if(state.view==='group'&&state.groupId)atlas.setGroup(state.groupId,{focus:true,padding:lastViewport?.padding});
   else if(state.view==='river'&&state.riverId)atlas.focusRiver(state.riverId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});
   else if(state.view==='city'&&state.cityId)atlas.focusCity(state.cityId,{focus:lastViewport?.mode?.panel==='side',padding:lastViewport?.padding});
@@ -869,8 +850,7 @@ try{
 }catch(error){
  console.error('Atlas initialization failed',error);
  setMapStatus('unavailable');
- $('#map').style.background='url(./assets/relief-overview.png) center/cover';
- toast('Карта сейчас недоступна. Каталог и карточки работают.');
+ $('#map').style.background='url(./assets/relief-overview.webp) center/cover';
 }
 
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)saveViewState();});

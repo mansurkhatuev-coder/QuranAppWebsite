@@ -28,3 +28,17 @@ Deno.test('invite stub without a usable code still lands on the login form', () 
   assertStringIncludes(html, 'location.replace("/nek/?login=1")');
   assertEquals(html.includes('evil'), false);
 });
+
+Deno.test('generated shell preserves punctuation in names and keeps one snapshot on repeated updates', async () => {
+  const {injectScriptJson, customizeTemplateHtml} = await import('./create-tree.ts');
+  const name = 'Тест < 1900 · $&';
+  const json = JSON.stringify({id:'first',name,sons:[]});
+  const html = customizeTemplateHtml({
+    html:'<html><title>Древо</title><body></body></html>', treeDir:'drewo-test',
+    title:name, rootName:name, treeJson:json
+  });
+  const saved = injectScriptJson(html,'tree-data',json);
+  assertEquals(html,saved);
+  const match = saved.match(/id="tree-data">([^<]*)<\/script>/);
+  assertEquals(JSON.parse(match?.[1] || '{}').name,name);
+});

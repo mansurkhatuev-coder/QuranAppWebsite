@@ -82,7 +82,7 @@
   text-underline-offset: 3px;
 }
 
-.waydean-login-switch:hover { color: #fff1cb; }
+@media (hover: hover) and (pointer: fine) { .waydean-login-switch:hover { color: #fff1cb; } }
 
 .waydean-admin-login .waydean-admin-login-error {
   color: #ffbdad;
@@ -139,7 +139,7 @@
   text-transform: uppercase;
 }
 .more-popover .more-group > .more-item { border: 1px solid rgba(211, 192, 149, .12); border-radius: 8px; }
-.more-popover .more-group > .more-item:hover { border-color: rgba(223, 190, 112, .38); }
+@media (hover: hover) and (pointer: fine) { .more-popover .more-group > .more-item:hover { border-color: rgba(223, 190, 112, .38); } }
 .more-popover .more-group .appearance-controls { margin: 0; }
 .account-admin-tools #accountAdminPasswordOpen { margin-top: 2px; }
 

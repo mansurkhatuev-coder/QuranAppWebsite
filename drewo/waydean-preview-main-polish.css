@@ -153,5 +153,5 @@ body.years-hijri .node-years-layer.is-hijri { opacity: 1; }
   .tree-controls #zoomValue { display: none; }
   .tree-controls button { width: 32px; min-width: 32px; height: 32px; padding: 0; }
   .tree-controls #whoAmI { font-size: 0; }
-  .tree-controls #whoAmI::before { content: "◎"; font-size: 17px; }
+
 }

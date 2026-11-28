@@ -28,24 +28,15 @@ export type NekSessionPayload = {
   treeDir: string;
   role: 'editor' | 'super';
   exp: number; // unix ms
-  /** Short fingerprint of the family password at sign time — see passwordFingerprint. */
+  /** Fingerprint of the stored password record at sign time. */
   pwdFp: string;
 };
-
-/**
- * Ties a session to the password that created it: changing the family password
- * changes the fingerprint, so old tokens stop verifying.
- */
-export function passwordFingerprint(passwordHash?: string | null): string {
-  const hash = String(passwordHash ?? '').toLowerCase();
-  return /^[a-f0-9]{8,}$/.test(hash) ? hash.slice(0, 8) : 'nopwhash';
-}
 
 export async function signNekSession(
   payload: NekSessionPayload,
   secret: string
 ): Promise<string> {
-  const body = b64url(encoder.encode(JSON.stringify(payload)));
+  const body = b64url(encoder.encode(JSON.stringify({ ...payload, sid: crypto.randomUUID() })));
   const key = await hmacKey(secret);
   const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, encoder.encode(body)));
   return `${body}.${b64url(sig)}`;
@@ -59,7 +50,7 @@ export async function verifyNekSession(
   token: string,
   secret: string,
   expectedPwdFp: string
-): Promise<NekSessionPayload | null> {
+): Promise<(NekSessionPayload & { sessionKey: string }) | null> {
   const parts = String(token || '').split('.');
   if (parts.length !== 2) return null;
   try {
@@ -72,11 +63,17 @@ export async function verifyNekSession(
       encoder.encode(body)
     );
     if (!ok) return null;
-    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body))) as NekSessionPayload;
-    if (!payload?.treeDir || !payload.exp || payload.exp < Date.now()) return null;
+    const payload = JSON.parse(new TextDecoder().decode(b64urlToBytes(body))) as
+      NekSessionPayload & { sid?: string };
+    if (!payload?.treeDir || !Number.isSafeInteger(payload.exp) || payload.exp <= Date.now()) return null;
     if (payload.role !== 'editor' && payload.role !== 'super') return null;
     if (!payload.pwdFp || payload.pwdFp !== expectedPwdFp) return null;
-    return payload;
+    // Older tokens have no nonce. Use their signed body as a stable identifier
+    // regardless of the representation of the HMAC suffix.
+    const identity = payload.sid ? `sid:${payload.treeDir}:${payload.sid}` : `legacy:${body}`;
+    const digest = await crypto.subtle.digest('SHA-256', encoder.encode(identity));
+    const sessionKey = Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, '0')).join('');
+    return { ...payload, sessionKey };
   } catch {
     return null;
   }

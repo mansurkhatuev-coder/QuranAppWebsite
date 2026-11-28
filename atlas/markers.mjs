@@ -15,6 +15,8 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
   return entry.zoomVisible;
  };
  let activeLayer='all',selection=null,hovered=null,preview=null,frame=0,manifest=null,grid=null,occlusionRects=[];
+ let familyPlaces=null;
+ const inLayer=entry=>familyPlaces ? familyPlaces.has(entry.item.id) : MAP_LAYERS[activeLayer].has(entry.type);
  const labelSizes=new WeakMap();
  const overlay=documentRef.createElement('div');
  overlay.className='atlas-marker-layer';
@@ -37,7 +39,7 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
   const hit=documentRef.createElement('button');
   hit.type='button';hit.className='atlas-marker-hit';
   {
-   hit.setAttribute('aria-label',`${type==='river'?'Открыть реку':type==='city'?'Открыть город':type==='site'?'Открыть место':'Открыть тухум'}: ${item.name}`);
+   hit.setAttribute('aria-label',`${type==='river'?'Открыть реку':type==='city'?(item.settlementType==='village'?'Открыть селение':'Открыть город'):type==='site'?'Открыть место':'Открыть тухум'}: ${item.name}`);
    hit.setAttribute('aria-pressed','false');
   }
 
@@ -55,7 +57,7 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
   hit.addEventListener('pointerenter',()=>{hovered={type,id:item.id};scheduleLabels();});
   hit.addEventListener('pointerleave',()=>{if(hovered?.type===type&&hovered.id===item.id)hovered=null;scheduleLabels();});
   overlay.append(anchor);
-  const entry={anchor,hit,visual,label,item,type,screen:null};entries.push(entry);return entry;
+  const entry={anchor,hit,visual,label,item,type,screen:null,actionLabel:hit.getAttribute('aria-label')};entries.push(entry);return entry;
  }
 
  groups.filter(item=>Array.isArray(item.center)&&item.center.length===2).forEach(item=>make(item,'group'));
@@ -73,7 +75,7 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
    const repeatedPlaceName=entry.type==='group'&&!focused&&!selected&&!isHovered&&entries.some(other=>other.type==='city'&&other.item.name===entry.item.name&&other.screen?.visible&&Math.hypot(other.screen.x-entry.screen.x,other.screen.y-entry.screen.y)<140);
    if(repeatedPlaceName){entry.label.hidden=true;return false;}
    entry.labelZoomVisible=zoomVisible(map.getZoom(),entry.type==='site'?9.5:entry.item.priority>=90?8:10,entry.labelZoomVisible);
-   const show=focused||selected||isHovered||entry.type==='group'||entry.type==='city'||(entry.type==='river'?entry.labelZoomVisible:activeLayer==='sites'||entry.labelZoomVisible);
+   const show=focused||selected||isHovered||familyPlaces?.has(entry.item.id)||entry.type==='group'||entry.type==='city'||(entry.type==='river'?entry.labelZoomVisible:activeLayer==='sites'||entry.labelZoomVisible);
    if(!show){entry.label.hidden=true;return false;}
    entry.label.hidden=false;return true;
   });
@@ -116,9 +118,8 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
  }
  function scheduleLabels(){if(frame)return;frame=requestAnimationFrame(updateLabelVisibility);}
  function sync(){
-  const visible=MAP_LAYERS[activeLayer]??MAP_LAYERS.all;
   for(const entry of entries){
-   const show=visible.has(entry.type);
+   const show=inLayer(entry);
    entry.anchor.hidden=!show||!entry.screen?.visible||!scaleVisible(entry);
    const selected=selection?.type===entry.type&&selection.id===entry.item.id;
    entry.anchor.classList.toggle('is-selected',Boolean(selected));
@@ -140,7 +141,7 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
    return sampleSurfaceElevation(manifest,grid,x,y,stride)*(manifest.heightExaggeration??1)/(2*Math.PI*6378137*Math.cos(latitude));
   };
   for(const entry of entries){
-   const visibleInLayer=MAP_LAYERS[activeLayer].has(entry.type)&&scaleVisible(entry);
+   const visibleInLayer=inLayer(entry)&&scaleVisible(entry);
    const base=mercatorPosition(entry.item.center);
    const altitude=raised?sampleSurfaceElevation(manifest,grid,base.x,base.y,stride)*(manifest.heightExaggeration??1)+6:0;
    const position=mercatorPosition(entry.item.center,altitude);
@@ -170,7 +171,7 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
     entry.anchor.classList.toggle('label-east',point.x<112);
     entry.anchor.classList.toggle('label-west',point.x>width-112);
    }
-   entry.anchor.hidden=!MAP_LAYERS[activeLayer].has(entry.type)||!visible||!scaleVisible(entry);
+   entry.anchor.hidden=!inLayer(entry)||!visible||!scaleVisible(entry);
   }
   updatePreviewLink();scheduleLabels();
  }
@@ -179,6 +180,21 @@ export function createAtlasMarkers(map,groups,sites,{onGroup=()=>{},onSite=()=>{
  documentRef.fonts?.ready?.then(scheduleLabels);
 
  return {
+  setFamilyPlaces(marks){
+   familyPlaces=marks?new Map():null;
+   for(const {id,kind} of marks??[]){
+    if(!familyPlaces.has(id))familyPlaces.set(id,new Set());
+    familyPlaces.get(id).add(kind);
+   }
+   for(const entry of entries){
+    const kinds=familyPlaces?.get(entry.item.id);
+    const description=kinds?` · ${Array.from(kinds).join(', ')}`:'';
+    entry.label.textContent=entry.item.name+description;
+    entry.hit.setAttribute('aria-label',entry.actionLabel+description);
+    entry.anchor.classList.toggle('is-family-marker',Boolean(kinds));
+   }
+   sync();map.triggerRepaint?.();
+  },
   setLayer(next){const layer=MAP_LAYERS[next]?next:'all';if(layer===activeLayer)return;activeLayer=layer;sync();map.triggerRepaint?.();},
   setSelection(next){selection=next?{type:next.type,id:next.id}:null;sync();},
   setPreview(next){preview=next?{type:next.type,id:next.id,origin:next.origin}:null;sync();},

@@ -28,8 +28,9 @@ function safeEndpoint(value) {
   return url.href;
 }
 
-async function postFamilyAction(endpoint, payload, fetcher) {
+async function postFamilyAction(endpoint, payload, fetcher, options = {}) {
   const response = await fetcher(safeEndpoint(endpoint), {
+    ...options,
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(payload)
@@ -37,6 +38,24 @@ async function postFamilyAction(endpoint, payload, fetcher) {
   const data = await response.json().catch(() => ({}));
   if (!response.ok || data?.ok !== true) throw familyError(data, response.status);
   return data;
+}
+
+export const FAMILY_LOGOUT_UNCONFIRMED = 'Вы вышли в этом браузере. Сервер не подтвердил завершение сессии.';
+
+export async function revokeFamilySession({ endpoint, treeDir, token, fetcher = fetch }) {
+  if (!token) return true;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 5000);
+  try {
+    await postFamilyAction(endpoint, {
+      action: 'logout-family', treeDir: normalizeTreeDir(treeDir), sessionToken: token
+    }, fetcher, { cache: 'no-store', redirect: 'error', signal: controller.signal });
+    return true;
+  } catch {
+    return false;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 function safeTreePath(treeDir, path) {
@@ -72,9 +91,16 @@ export function storeFamilySession(storage, treeDir = DEFAULT_TREE_DIR, token = 
   }
 }
 
-export function readLegacyTreeViewSession(storage, now = Date.now()) {
+export function familySessionRedirect({ treeDir, path, token, storage }) {
+  const target = safeTreePath(treeDir, path);
+  return storeFamilySession(storage, treeDir, token)
+    ? target
+    : `${target}#nek=${encodeURIComponent(token)}`;
+}
+
+export function readLegacyTreeViewSession(storage, now = Date.now(), treeDir = DEFAULT_TREE_DIR) {
   try {
-    const value = JSON.parse(String(storage?.getItem('drewo-view-session') || ''));
+    const value = JSON.parse(String(storage?.getItem(normalizeTreeDir(treeDir) + '-view-session') || ''));
     const personId = String(value?.personId || '').trim();
     const savedAt = Number(value?.at || 0);
     if (!personId || !Number.isFinite(savedAt) || savedAt <= 0 || now - savedAt > 30 * 24 * 60 * 60 * 1000) {
@@ -89,7 +115,9 @@ export function readLegacyTreeViewSession(storage, now = Date.now()) {
 export function consumeFamilyTokenFromUrl(href) {
   try {
     const url = new URL(href);
-    const token = String(url.searchParams.get('nek') || '').trim();
+    const fragmentToken = url.hash.startsWith('#nek=') ? new URLSearchParams(url.hash.slice(1)).get('nek') : '';
+    const token = String(fragmentToken || url.searchParams.get('nek') || '').trim();
+    if (fragmentToken) url.hash = '';
     url.searchParams.delete('nek');
     return {
       token,
@@ -135,32 +163,15 @@ export async function verifyFamilySession({ endpoint, treeDir = DEFAULT_TREE_DIR
   return data;
 }
 
+// Remembered identity is a preference, never proof of family authorization.
 export async function resolveFamilyPreviewAccess({
   endpoint,
   treeDir = DEFAULT_TREE_DIR,
   token,
-  legacyViewSession = null,
-  allowLegacyReadOnly = true,
   fetcher = fetch
 }) {
-  const canUseLegacyReadOnly = allowLegacyReadOnly
-    && Boolean(String(legacyViewSession?.personId || '').trim());
-  if (!String(token || '').trim() && canUseLegacyReadOnly) {
-    return { authenticated: false, legacyReadOnly: true, session: null };
-  }
-
-  try {
-    const session = await verifyFamilySession({ endpoint, treeDir, token, fetcher });
-    return { authenticated: true, legacyReadOnly: false, session };
-  } catch (error) {
-    if (canUseLegacyReadOnly && (
-      error?.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED'
-      || error?.code === 'WAYDEAN_FAMILY_AUTH_UNAVAILABLE'
-    )) {
-      return { authenticated: false, legacyReadOnly: true, session: null };
-    }
-    throw error;
-  }
+  const session = await verifyFamilySession({ endpoint, treeDir, token, fetcher });
+  return { authenticated: true, legacyReadOnly: false, session };
 }
 
 export async function loginFamilySession({
@@ -169,7 +180,6 @@ export async function loginFamilySession({
   password,
   treeDir = DEFAULT_TREE_DIR,
   allowTreeRedirect = true,
-  origin = globalThis.location?.origin || 'https://waydean.ru',
   storage,
   fetcher = fetch
 }) {
@@ -195,11 +205,9 @@ export async function loginFamilySession({
       error.code = 'WAYDEAN_FAMILY_AUTH_REQUIRED';
       throw error;
     }
-    const targetPath = safeTreePath(targetTree, loginData.path);
-    const targetUrl = new URL(targetPath, origin);
-    targetUrl.searchParams.set('nek', token);
+    const redirectUrl = familySessionRedirect({ treeDir: targetTree, path: loginData.path, token, storage });
     storeFamilySession(storage, expectedTree, '');
-    return { redirect: true, redirectUrl: `${targetUrl.pathname}${targetUrl.search}` };
+    return { redirect: true, redirectUrl };
   }
 
   const session = await verifyFamilySession({ endpoint, treeDir: expectedTree, token, fetcher });

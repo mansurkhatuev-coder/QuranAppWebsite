@@ -8,6 +8,7 @@ import {
   readFamilySession,
   resolveFamilyInvite,
   resolveFamilyPreviewAccess,
+  revokeFamilySession,
   storeFamilySession,
   verifyFamilySession
 } from './waydean-preview-family-auth.mjs';
@@ -25,6 +26,25 @@ function memoryStorage() {
 function jsonResponse(value, status = 200) {
   return new Response(JSON.stringify(value), { status });
 }
+
+test('family logout submits the current session and requires confirmation', async () => {
+  const options = { endpoint: 'https://example.test/publish-drewo', treeDir: 'drewo', token: 'family-session' };
+  assert.equal(await revokeFamilySession({
+    ...options,
+    fetcher: async (url, request) => {
+      assert.equal(url, options.endpoint);
+      assert.equal(request.method, 'POST');
+      assert.equal(request.redirect, 'error');
+      assert.deepEqual(JSON.parse(request.body), {
+        action: 'logout-family', treeDir: 'drewo', sessionToken: 'family-session'
+      });
+      return jsonResponse({ ok: true });
+    }
+  }), true);
+  assert.equal(await revokeFamilySession({
+    ...options, fetcher: async () => jsonResponse({ error: 'Unavailable' }, 503)
+  }), false);
+});
 
 test('stores family sessions in tab-scoped storage under the legacy tree key', () => {
   const storage = memoryStorage();
@@ -49,28 +69,24 @@ test('recognizes the still-valid remembered identity from the legacy tree', () =
   assert.equal(readLegacyTreeViewSession(storage, now), null);
 });
 
-test('opens a remembered legacy tree as read-only when its server session has expired', async () => {
-  const result = await resolveFamilyPreviewAccess({
+test('expired server sessions cannot use remembered identity as authorization', async () => {
+  await assert.rejects(resolveFamilyPreviewAccess({
     endpoint: 'https://example.test/functions/publish-drewo',
     treeDir: 'drewo',
     token: 'expired-token',
     legacyViewSession: { personId: 'mansur' },
     fetcher: async () => jsonResponse({ error: 'Сессия истекла' }, 401)
-  });
-
-  assert.deepEqual(result, { authenticated: false, legacyReadOnly: true, session: null });
+  }), error => error.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED');
 });
 
-test('uses the old tree remembered identity when its tab-scoped token is unavailable', async () => {
-  const result = await resolveFamilyPreviewAccess({
+test('remembered identity never replaces a missing token', async () => {
+  await assert.rejects(resolveFamilyPreviewAccess({
     endpoint: 'https://example.test/functions/publish-drewo',
     treeDir: 'drewo',
     token: '',
     legacyViewSession: { personId: 'mansur' },
     fetcher: async () => { throw new Error('No request should be needed'); }
-  });
-
-  assert.deepEqual(result, { authenticated: false, legacyReadOnly: true, session: null });
+  }), error => error.code === 'WAYDEAN_FAMILY_AUTH_REQUIRED');
 });
 
 test('does not silently open the family tree without a valid legacy view session', async () => {
@@ -142,23 +158,30 @@ test('does not store a token when family credentials are rejected', async () => 
   assert.equal(readFamilySession(storage, 'drewo'), '');
 });
 
-test('redirects credentials for a different tree only to the server-resolved same-origin path', async () => {
-  const result = await loginFamilySession({
+test('hands off another family session via tab storage or a URL fragment', async () => {
+  const options = {
     endpoint: 'https://example.test/functions/publish-drewo',
     login: 'other',
     password: 'family-password',
     treeDir: 'drewo',
-    origin: 'https://waydean.ru',
     fetcher: async () => jsonResponse({
       ok: true,
       treeDir: 'other-tree',
       path: '/other-tree/',
       sessionToken: 'signed token'
     })
-  });
-  assert.deepEqual(result, {
+  };
+  const storage = memoryStorage();
+  storeFamilySession(storage, 'drewo', 'previous-token');
+  assert.deepEqual(await loginFamilySession({ ...options, storage }), {
     redirect: true,
-    redirectUrl: '/other-tree/?nek=signed+token'
+    redirectUrl: '/other-tree/'
+  });
+  assert.equal(readFamilySession(storage, 'other-tree'), 'signed token');
+  assert.equal(readFamilySession(storage, 'drewo'), '');
+  assert.deepEqual(await loginFamilySession(options), {
+    redirect: true,
+    redirectUrl: '/other-tree/#nek=signed%20token'
   });
 });
 
@@ -187,7 +210,6 @@ test('rejects a redirected family path that could leave the current site', async
     login: 'other',
     password: 'family-password',
     treeDir: 'drewo',
-    origin: 'https://waydean.ru',
     fetcher: async () => jsonResponse({
       ok: true,
       treeDir: 'other-tree',
@@ -244,4 +266,26 @@ test('resolves invitation codes through the existing public invitation endpoint'
   assert.deepEqual(request, { action: 'resolve-invite', code: 'hoti' });
   assert.equal(invite.treeDir, 'drewo');
   assert.equal(invite.invitePath, '/t/hoti');
+});
+
+test('storage-restricted family handoff consumes the fragment and keeps the family route',async()=>{
+  const {consumeFamilyTokenFromUrl}=await import('./waydean-preview-family-auth.mjs');
+  assert.deepEqual(consumeFamilyTokenFromUrl('https://example.test/drewo-sample/?source=family#nek=example'),{
+    token:'example',cleanUrl:'/drewo-sample/?source=family'
+  });
+});
+
+test('remembered identity does not authorize access during an API outage', async () => {
+  await assert.rejects(resolveFamilyPreviewAccess({
+    endpoint:'https://example.test/functions/publish-drewo', treeDir:'drewo',
+    token:'signed-token', legacyViewSession:{personId:'synthetic'}, allowLegacyReadOnly:true,
+    fetcher:async()=>{throw new Error('offline')}
+  }), error=>error.code==='WAYDEAN_FAMILY_AUTH_UNAVAILABLE');
+});
+test('valid server session still opens the correct family', async () => {
+  const session={ok:true,treeDir:'drewo',role:'viewer',sessionToken:'valid'};
+  assert.deepEqual(await resolveFamilyPreviewAccess({
+    endpoint:'https://example.test/functions/publish-drewo', treeDir:'drewo', token:'valid',
+    fetcher:async()=>jsonResponse(session)
+  }),{authenticated:true,legacyReadOnly:false,session});
 });

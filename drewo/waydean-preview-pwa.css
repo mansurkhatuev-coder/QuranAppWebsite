@@ -10,7 +10,7 @@
 .pwa-notification-block{margin-top:10px;padding:0 12px 10px;border:1px solid #ffffff17;border-radius:9px;background:#ffffff05;}
 .pwa-notification-block .pwa-state-row{align-items:flex-start;}
 .pwa-notification-action{width:100%;margin-top:8px;padding:10px;border:1px solid #ffffff26;border-radius:7px;background:#ffffff08;color:#e4d8ba;}
-.pwa-notification-action:hover:not(:disabled){border-color:#d4ac5a;background:#d4ac5a14;}
+@media (hover: hover) and (pointer: fine){.pwa-notification-action:hover:not(:disabled){border-color:#d4ac5a;background:#d4ac5a14;}}
 .pwa-notification-action:disabled{opacity:.5;cursor:not-allowed;}
 .pwa-note{margin:10px 1px 0;}
 .pwa-push-note{display:grid;gap:5px;margin-top:10px;padding:12px;border-left:2px solid #d2a84f88;background:#d4ac5a0a;}

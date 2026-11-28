@@ -27,9 +27,11 @@
     background: linear-gradient(135deg, rgba(218, 183, 111, .8), rgba(137, 101, 48, .8));
     background-clip: padding-box;
   }
+  @media (hover: hover) and (pointer: fine) {
   .graph-viewport::-webkit-scrollbar-thumb:hover {
     background: linear-gradient(135deg, #f1d38f, #b58b49);
     background-clip: padding-box;
+  }
   }
 
   .person-node {
@@ -40,15 +42,16 @@
     transition: border-color .16s ease, box-shadow .16s ease, filter .16s ease;
   }
 
+  @media (hover: hover) and (pointer: fine) {
   .person-node:hover {
     z-index: 2;
     border-color: rgba(255, 215, 125, .9);
     box-shadow: 0 0 0 2px rgba(217, 173, 88, .18), 0 12px 30px rgba(0, 0, 0, .5);
     filter: brightness(1.08);
   }
+  }
 
-  .person-node.selected,
-  .person-node.selected:hover {
+  .person-node.selected {
     z-index: 3;
     border-color: #ffe18c;
     box-shadow: 0 0 0 2px #dfa93a, 0 0 30px #ffc34cbb, 0 12px 35px #000d;
@@ -87,11 +90,13 @@
     transition: color .15s ease, border-color .15s ease, background .15s ease, transform .12s ease, box-shadow .15s ease;
   }
 
+  @media (hover: hover) and (pointer: fine) {
   .tree-controls button:hover:not(:disabled) {
     border-color: rgba(255, 215, 125, .78);
     background: linear-gradient(180deg, rgba(217, 173, 88, .2), rgba(217, 173, 88, .08));
     color: #fff0c7;
     box-shadow: 0 3px 12px rgba(217, 173, 88, .14);
+  }
   }
 
   .tree-controls button:active:not(:disabled) {

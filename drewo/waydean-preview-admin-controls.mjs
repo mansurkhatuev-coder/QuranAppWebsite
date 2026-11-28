@@ -1,3 +1,5 @@
+import { newFamilyPasswordError, normalizeFamilyPassword } from '../assets/drewo-family-password.mjs?v=1';
+
 export function accountLockPresentation(locked, lockedReason = '', canToggleLock = true) {
   const isLocked = locked === true;
   const canToggle = canToggleLock === true;
@@ -13,13 +15,12 @@ export function accountLockPresentation(locked, lockedReason = '', canToggleLock
 }
 
 export function validateFamilyPasswordChange(password, confirmation) {
-  const normalizedPassword = String(password ?? '').trim().toLocaleLowerCase('ru-RU');
-  const normalizedConfirmation = String(confirmation ?? '').trim().toLocaleLowerCase('ru-RU');
+  const normalizedPassword = normalizeFamilyPassword(password);
+  const normalizedConfirmation = normalizeFamilyPassword(confirmation);
   if (normalizedPassword !== normalizedConfirmation) {
     return { ok: false, error: 'Пароли не совпадают.' };
   }
-  if (normalizedPassword.length < 2 || normalizedPassword.length > 64) {
-    return { ok: false, error: 'Пароль должен содержать от 2 до 64 символов.' };
-  }
+  const error = newFamilyPasswordError(normalizedPassword);
+  if (error) return { ok: false, error };
   return { ok: true, normalizedPassword };
 }

@@ -200,5 +200,5 @@
 @media (max-width: 340px) {
   .topbar .premium { display: none; }
   .tree-controls #whoAmI { min-width: 38px; width: 38px; padding: 0; font-size: 0; }
-  .tree-controls #whoAmI::before { content: "◎"; font-size: 19px; }
+
 }
