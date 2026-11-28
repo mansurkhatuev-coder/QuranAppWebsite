@@ -3,10 +3,11 @@ import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { secureLegacyReader } from './secure-legacy-reader.mjs';
 
-const excludedDirectories = new Set(['.git', '.github', '_private', 'backups', 'node_modules', 'dist']);
+const excludedDirectories = new Set(['.git', '.github', '_private', 'backups', 'node_modules', 'dist', 'private-drewo']);
 const excludedFiles = new Set(['access.json', 'credentials.vault.json', 'push-subscriptions.json', 'activity-log.json', 'family-tree.json', 'tree-data.json']);
 const privateScriptIds = new Set(['tree-data', 'activity-log']);
 const retiredTreeReason = 'Древо удалено из каталога';
+const familyDirPattern = /^drewo(?:-[a-z0-9-]+)?$/i;
 
 function retiredTreePage() {
   return `<!doctype html>
@@ -70,7 +71,7 @@ export function isPrivateArtifact(path) {
   if (['supabase', 'scripts'].includes(parts[0])) return true;
   if (name === '.gitignore' || name === 'start-waydean-local.cmd' || /\.test\.[cm]?[jt]s$/i.test(name)) return true;
   if (parts.includes('photos') && parts.some(part => /^drewo(?:-|$)/.test(part))) return true;
-  if (excludedFiles.has(name) || parts.join('/') === 'trees/registry.json') return true;
+  if (excludedFiles.has(name) || ['trees/registry.json', 'docs/drewo-modernization-status.md'].includes(parts.join('/'))) return true;
   return /^\.env(?:\.|$)/i.test(name) || /\.(?:sqlite|sqlite3|db|pem|key)$/i.test(name);
 }
 
@@ -92,8 +93,9 @@ function verifyHtml(html, path) {
   }
 }
 
-async function copyPublicTree(source, destination, legacyAccess, base = '') {
+async function copyPublicTree(source, destination, legacyAccess, base = '', skipFamilyDirs = false) {
   for (const entry of await readdir(source, { withFileTypes: true })) {
+    if (!base && skipFamilyDirs && entry.isDirectory() && familyDirPattern.test(entry.name)) continue;
     const path = base ? join(base, entry.name) : entry.name;
     if (isPrivateArtifact(path)) continue;
     const from = join(source, entry.name), to = join(destination, entry.name);
@@ -106,7 +108,7 @@ async function copyPublicTree(source, destination, legacyAccess, base = '') {
         continue;
       }
       await mkdir(to, { recursive: true });
-      await copyPublicTree(from, to, legacyAccess, path);
+      await copyPublicTree(from, to, legacyAccess, path, skipFamilyDirs);
     } else if (info.isFile()) {
       if (/\.html?$/i.test(entry.name)) {
         let clean = stripEmbeddedFamilyData(await readFile(from, 'utf8'));
@@ -125,6 +127,33 @@ async function copyPublicTree(source, destination, legacyAccess, base = '') {
   }
 }
 
+async function copyPrivateFamilyPages(privateSource, destination, legacyAccess) {
+  for (const entry of await readdir(privateSource, { withFileTypes: true })) {
+    if (!entry.isDirectory() || !familyDirPattern.test(entry.name)) continue;
+    const from = join(privateSource, entry.name);
+    const sourceInfo = await lstat(from);
+    if (sourceInfo.isSymbolicLink()) throw new Error(`Refusing symlink in private Pages source: ${entry.name}`);
+    if (legacyAccess.retired.has(entry.name)) {
+      const to = join(destination, entry.name);
+      await mkdir(to, { recursive: true });
+      await writeFile(join(to, 'index.html'), retiredTreePage(), 'utf8');
+      continue;
+    }
+    if (!legacyAccess.allowed.has(entry.name)) continue;
+    const to = join(destination, entry.name);
+    await mkdir(to, { recursive: true });
+    await copyPublicTree(from, to, legacyAccess, entry.name);
+  }
+
+  for (const treeDir of legacyAccess.allowed) {
+    const source = join(privateSource, treeDir);
+    const info = await lstat(source).catch(error => error.code === 'ENOENT' ? null : Promise.reject(error));
+    if (!info?.isDirectory() || info.isSymbolicLink()) {
+      throw new Error(`Private Pages source is missing an allowed family route: ${treeDir}`);
+    }
+  }
+}
+
 export async function verifyPublicTree(destination, base = '') {
   for (const entry of await readdir(destination, { withFileTypes: true })) {
     const path = base ? join(base, entry.name) : entry.name;
@@ -138,11 +167,23 @@ export async function verifyPublicTree(destination, base = '') {
   }
 }
 
-export async function preparePagesArtifact(sourceRoot, destinationRoot = join(sourceRoot, 'dist/pages'), { release = false } = {}) {
+export async function preparePagesArtifact(sourceRoot, destinationRoot = join(sourceRoot, 'dist/pages'), { release = false, privateSourceRoot } = {}) {
   const source = resolve(sourceRoot), destination = resolve(destinationRoot);
+  const privateSource = privateSourceRoot ? resolve(source, privateSourceRoot) : null;
+  if (privateSource && !release) throw new Error('A private Pages source is only supported in release mode');
   const buildRoot = join(source, 'dist');
   if (destination !== join(buildRoot, 'pages')) throw new Error('Pages output must be <checkout>/dist/pages');
   const sourceReal = await realpath(source);
+  if (privateSource) {
+    const privateInfo = await lstat(privateSource);
+    if (!privateInfo.isDirectory() || privateInfo.isSymbolicLink()) throw new Error('Private Pages source must be a regular directory');
+    const privateReal = await realpath(privateSource);
+    const realBuildRoot = join(sourceReal, 'dist');
+    if (privateReal === sourceReal || !privateReal.startsWith(sourceReal + sep)
+        || privateReal === realBuildRoot || privateReal.startsWith(realBuildRoot + sep)) {
+      throw new Error('Private Pages source must be a checkout directory outside the build output');
+    }
+  }
   const statOrMissing = path => lstat(path).catch(error => error.code === 'ENOENT' ? null : Promise.reject(error));
   for (const path of [buildRoot, destination]) {
     const info = await statOrMissing(path);
@@ -156,11 +197,25 @@ export async function preparePagesArtifact(sourceRoot, destinationRoot = join(so
     let legacyAccess;
     if (release) {
       const { knownTreeDirs, parseRegistry, REGISTRY_PATH } = await import('../supabase/functions/publish-drewo/create-tree.ts');
-      const registry = parseRegistry(await readFile(join(source, REGISTRY_PATH), 'utf8'));
+      const registrySource = privateSource || source;
+      const registryPath = join(registrySource, REGISTRY_PATH);
+      const registryInfo = await lstat(registryPath);
+      if (!registryInfo.isFile() || registryInfo.isSymbolicLink()) throw new Error('Pages registry must be a regular file');
+      const registryRaw = await readFile(registryPath, 'utf8');
+      if (privateSource) {
+        let registryData;
+        try { registryData = JSON.parse(registryRaw); }
+        catch { throw new Error('Private Pages registry is not valid JSON'); }
+        if (!registryData || !Array.isArray(registryData.trees)) {
+          throw new Error('Private Pages registry must contain a trees array');
+        }
+      }
+      const registry = parseRegistry(registryRaw);
       const allowed = new Set(knownTreeDirs(registry));
-      legacyAccess = { allowed, missing: new Set(), retired: await findRetiredLegacyTreeDirs(source, allowed) };
+      legacyAccess = { allowed, missing: new Set(), retired: await findRetiredLegacyTreeDirs(registrySource, allowed) };
     }
-    await copyPublicTree(source, destination, legacyAccess);
+    await copyPublicTree(source, destination, legacyAccess, '', Boolean(privateSource));
+    if (privateSource) await copyPrivateFamilyPages(privateSource, destination, legacyAccess);
     if (legacyAccess?.missing.size) {
       const routes = [...legacyAccess.missing].sort().map(dir => `/${dir}/`).join(', ');
       throw new Error(`Pages release blocked: legacy family routes unsupported by the API: ${routes}`);
@@ -176,6 +231,11 @@ export async function preparePagesArtifact(sourceRoot, destinationRoot = join(so
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const root = resolve(dirname(fileURLToPath(import.meta.url)), '..');
   const release = process.argv.includes('--release');
-  preparePagesArtifact(root, undefined, { release }).then(() => console.log('Filtered Pages artifact ready in dist/pages'))
+  const privateSourceIndex = process.argv.indexOf('--private-source');
+  const privateSourceRoot = privateSourceIndex >= 0 ? process.argv[privateSourceIndex + 1] : undefined;
+  if (privateSourceIndex >= 0 && (!privateSourceRoot || privateSourceRoot.startsWith('--'))) {
+    console.error('--private-source requires a checked-out private repository path');
+    process.exitCode = 1;
+  } else preparePagesArtifact(root, undefined, { release, privateSourceRoot }).then(() => console.log('Filtered Pages artifact ready in dist/pages'))
     .catch(error => { console.error(error.message); process.exitCode = 1; });
 }
