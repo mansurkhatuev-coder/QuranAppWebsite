@@ -34,5 +34,5 @@ begin
 end;
 $$;
 
-revoke all on function public.drewo_increment_visit(text) from public;
+revoke all on function public.drewo_increment_visit(text) from public, anon, authenticated;
 grant execute on function public.drewo_increment_visit(text) to service_role;
